@@ -1,0 +1,49 @@
+
+
+### {{APP_NAME}} BASELINES ###
+
+{% for detection in objects %}
+{% if (detection.type == 'Baseline') %}
+[{{APP_NAME}} - {{ detection.name }}]
+action.{{APP_NAME|lower}}= 0
+action.{{APP_NAME|lower}}.enabled = 1
+action.{{APP_NAME|lower}}.search_type = support
+action.{{APP_NAME|lower}}.full_search_name = {{APP_NAME}} - {{ detection.name }}
+description = {{ detection.description }}
+action.{{APP_NAME|lower}}.creation_date = {{ detection.date }}
+action.{{APP_NAME|lower}}.modification_date = {{ detection.date }}
+{% if detection.tags.analytic_story is defined %}
+action.{{APP_NAME|lower}}.analytic_story = {{ detection.tags.analytic_story | tojson }}
+{% else %}
+action.{{APP_NAME|lower}}.analytic_story = []
+{% endif %}
+action.{{APP_NAME|lower}}.data_models = {{ detection.datamodel | tojson }}
+cron_schedule = {{ detection.deployment.scheduling.cron_schedule }}
+enableSched = 1
+dispatch.earliest_time = {{ detection.deployment.scheduling.earliest_time }}
+dispatch.latest_time = {{ detection.deployment.scheduling.latest_time }}
+{% if detection.deployment.scheduling.schedule_window is defined %}
+schedule_window = {{ detection.deployment.scheduling.schedule_window }}
+{% endif %}
+{% if detection.providing_technologies is defined %}
+action.{{APP_NAME|lower}}.providing_technologies = {{ detection.providing_technologies | tojson }}
+{% else %}
+action.{{APP_NAME|lower}}.providing_technologies = []
+{% endif %}
+action.{{APP_NAME|lower}}.eli5 = {{ detection.description }}
+{% if detection.how_to_implement is defined %}
+action.{{APP_NAME|lower}}.how_to_implement = {{ detection.how_to_implement }}
+{% else %}
+action.{{APP_NAME|lower}}.how_to_implement = none
+{% endif %}
+{% if detection.disabled is defined %}
+disabled = false
+{% else %}
+disabled = true
+{% endif %}
+is_visible = false
+search = {{ detection.search }}
+
+{% endif %}
+{% endfor %}
+

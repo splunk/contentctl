@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "splunk-contentctl"
 version = "0.1.0"
-description = "Toolset for building, testing, and deploying Splunk Apps which are combinations of detections, playbooks etc."
+description = "An all-in-one tool for creating, validating, generating, building, and deploying Security Content for Splunk."
 authors = ["Splunk Threat Research Team <research@splunk.com>"]
+license = "Apache 2.0"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -10,7 +11,7 @@ attackcti = "^0.3.7"
 docker = "^6.0.0"
 GitPython = "^3.1.27"
 Jinja2 = "^3.1.2"
-jsonschema = "^4.13.0"
+jsonschema = "^4.14.0"
 mock = "^4.0.3"
 pycvesearch = "^1.2"
 pydantic = "^1.9.2"
@@ -19,9 +20,9 @@ PyYAML = "<6.0.0,>=5.4.1"
 questionary = "^1.10.0"
 requests = "^2.28.1"
 six = "^1.16.0"
-splunk-appinspect = "^2.23.0"
+splunk-appinspect = "^2.25.0"
 splunk-packaging-toolkit = "^1.0.1"
-splunk-sdk = "^1.7.0"
+splunk-sdk = "^1.7.1"
 wrapt-timeout-decorator = "^1.3.12"
 xmltodict = "^0.13.0"
 

@@ -1,0 +1,31 @@
+## Splunk app configuration file
+
+[install]
+is_configured = false
+state = enabled
+state_change_requires_restart = false
+build = {{APP_BUILD_NUMBER}}
+
+[triggers]
+reload.analytic_stories = simple
+reload.usage_searches = simple
+reload.use_case_library = simple
+reload.correlationsearches = simple
+reload.analyticstories = simple
+reload.governance = simple
+reload.managed_configurations = simple
+reload.postprocess = simple
+reload.content-version = simple
+reload.es_investigations = simple
+
+[launcher]
+author = {{APP_AUTHOR_NAME}}
+version = {{APP_VERSION}}
+description = {{APP_DESCRIPTION}}
+
+[ui]
+is_visible = true
+label      = {{APP_TITLE}}
+
+[package]
+id = {{APP_NAME}}

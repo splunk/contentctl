@@ -17,7 +17,6 @@ from typing import Union, Tuple
 import jinja2
 import art.ascii_art
 
-
 DEFAULT_HIERARCHY_FILE = pathlib.Path("folder_hierarchy.json")
 DEFAULT_SECURITY_CONTENT_ROOT = pathlib.Path() 
 JINJA2_TEMPLATE_EXTENSION = ".j2"
@@ -193,6 +192,34 @@ def create_structure(root:dict, source_path:pathlib.Path, target_path:pathlib.Pa
     
     
     
+def git_init_remote_repo(answers:dict):
+    repo_path = os.path.join(answers['output_path'], answers['APP_NAME'])
+    print(f"Pushing new repo to {answers['git_repo_target']} from source dir {repo_path}...", end='', flush=True)
+    
+    #Code in this block is fror pygit
+    try:
+        bare_repo = git.Repo.init(repo_path, bare=False, b=answers['git_main_branch'])
+    except Exception as e:
+        raise(Exception(f"Error initializing repo: {str(e)}"))
+    try:
+        bare_repo.git.add(all=True)
+    except Exception as e:
+        raise(Exception(f"Error adding new content to initial commit: {str(e)}"))
+    try:
+        bare_repo.git.commit("-m", f"Initialization of skeleton for new app {answers['APP_NAME']}")
+    except Exception as e:
+        raise(Exception(f"Error making first local commit to repo: {str(e)}"))
+    try:
+        bare_repo.git.remote("add", "origin", answers['git_repo_target'])
+        bare_repo.git.remote("-v")
+    except Exception as e:
+        raise(Exception(f"Error adding remote origin for git repo: {str(e)}"))
+
+    try:
+        bare_repo.git.push("-u", "origin", answers['git_main_branch'])
+    except Exception as e:
+        raise(Exception(f"Error pushing first commit to remote repo.  Please verify that {answers['git_repo_target']} exists and you have the appropriate access and tokens loaded for this repo: {str(e)}"))
+    print("done!")
 
 def get_answers_to_questions(questions:list[dict], output_path:str, force_defaults:bool=False)->dict[str,str]:
     
@@ -212,6 +239,9 @@ def get_answers_to_questions(questions:list[dict], output_path:str, force_defaul
             if value_name == "output_path":
                 question['default'] = output_path
             if force_defaults is False:
+                default = question['default']
+                if default in answers:
+                    question['default'] = answers[default]
                 this_answer = questionary.prompt(question)
                 if this_answer == {}:
                     #This will occur if the user CTRL-C (or otherwise stops) the process
@@ -312,6 +342,8 @@ def build_inquire(args, mock:bool, input_template_data:dict, output_template:Uni
         else:
             raise(Exception(f"Output template was NONE, but MOCK was enabled, so an output template must be provided"))
 
+    else:
+        git_init_remote_repo(answers)
 
 
 

@@ -70,6 +70,24 @@
             "message": "Enter a description of the app",
             "name": "APP_DESCRIPTION",
             "default": "New Splunk app that does interesting things"
+        },
+        {
+            "type": "confirm",
+            "message": "You're using git, right? You should use git",
+            "name": "using_git",
+            "default": "Y"
+        },
+        {
+            "type": "input",
+            "message": "Enter the address of the git repo you want to use.  Make sure this repo already exists!  For example, https://github.com/splunk/security_content.  If you're using GitHub, check here for how to create a new repository and use the full path: https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository",
+            "name": "git_repo_target",
+            "default": "https://github.com/USERNAME_OR_ENTERPRISE_NAME/YOUR_REPO_NAME"
+        },
+        {
+            "type": "input",
+            "message": "Enter the name for your main branch.  It's probably main.",
+            "name": "git_main_branch",
+            "default": "main"
         }
     ],
     "hierarchy": {

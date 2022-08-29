@@ -45,6 +45,7 @@ from bin.contentctl_project.contentctl_core.application.use_cases.build import B
 from bin.contentctl_project.contentctl_core.application.use_cases.inspect import Inspect
 
 
+
 def init():
     return
     print("""

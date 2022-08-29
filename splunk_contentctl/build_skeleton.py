@@ -20,6 +20,7 @@ import art.ascii_art
 DEFAULT_HIERARCHY_FILE = pathlib.Path("folder_hierarchy.json")
 DEFAULT_SECURITY_CONTENT_ROOT = pathlib.Path() 
 JINJA2_TEMPLATE_EXTENSION = ".j2"
+SPLUNKBASE_UI_APP_URL = "https://splunkbase.splunk.com/app/{uid}/"
 
 def printAtDepth(value:str, depth:int, indent:str='   ')->None:
     indentation = indent * depth
@@ -271,6 +272,105 @@ def get_answers_to_questions(questions:list[dict], output_path:str, force_defaul
     
     return answers
 
+def ask_for_another_app(app_data:list[dict])->dict:
+    descriptions = []
+    releases = []
+    
+    for app in app_data:
+        description = f"{app['title']} (appid: {app['appid']}, {SPLUNKBASE_UI_APP_URL.format(uid=app['uid'])})"
+        release_list = app['releases']
+        descriptions.append(description)
+        releases.append(release_list)
+    while True:
+        ans = questionary.autocomplete("Type the name of an app to install", choices=descriptions).ask()
+        if ans is not None:
+            if ans in descriptions:
+                break
+            else:
+                print(f"'{ans}' is not a valid choice. Please try again.")
+            
+        if ans is None:
+            print("We will assume that Ctrl-C means you don't want to add an app.")
+            return {}
+    
+    #Now print out the releases and let the user user
+    whole_app = app_data[descriptions.index(ans)]
+    release = questionary.select("Which release would you like to install (newest selected by default)", choices=whole_app['releases'], default=whole_app['releases'][0]).ask()
+    if release is None:
+        #This will occur if the user CTRL-C (or otherwise stops) the process
+        #we will exit from the tool with a nonzero code
+        print("CTRL-C (or similar) detected... setup is not complete.  Exiting with nonzero status code")
+        sys.exit(1)        
+    
+    return {"uid":whole_app['uid'], "appid":whole_app["appid"], "title":whole_app['title'], "version":release}
+    
+    
+    
+
+def get_apps_to_install(initial_apps:list[dict], force_refresh_app_data:bool=False)->list[dict]:
+    apps_to_install = []
+    FILENAME = "scratch.json"
+    if force_refresh_app_data:
+        import splunkbase_enumerator
+        print("Loading latest app data from Splunkbase")
+        app_data = splunkbase_enumerator.simple()
+    elif os.path.exists(FILENAME):
+        print(f"Loading cached app data from {FILENAME}")
+        with open(FILENAME, "r") as dat:
+            app_data = json.load(dat)
+    else:
+        raise(Exception("Cannot load app data from Splunkbase or from file!"))
+    
+
+    if len(initial_apps) > 0:
+        print(f"There are {len(initial_apps)} configured for installation.  Let's check each one.")
+        for app in initial_apps:
+            app_to_install = confirm_app_and_version(app)
+            if app_to_install == {}:
+                continue
+            apps_to_install.append(app_to_install)
+    while True:
+        more = questionary.confirm("Do you want to install more apps?").ask()
+        if more is True:
+            another_app = ask_for_another_app(app_data)
+            if another_app == {}:
+                return apps_to_install
+            else:
+                apps_to_install.append(another_app)
+        elif more is False:
+            return apps_to_install
+        else:
+            #This will occur if the user CTRL-C (or otherwise stops) the process
+            #we will exit from the tool with a nonzero code
+            print("CTRL-C (or similar) detected... setup is not complete.  Exiting with nonzero status code")
+            sys.exit(1)   
+
+
+
+    
+
+def confirm_app_and_version(app:dict)->dict:
+    app_summary = f"{app['title']} (appid: {app['appid']}, {SPLUNKBASE_UI_APP_URL.format(uid=app['uid'])})"
+    answer = questionary.confirm(f"Install {app_summary}?").ask()
+    if answer is True:
+        #Now get the version of the app to install
+        release = questionary.select("Which release would you like to install (newest selected by default)", choices=app['releases'], default=app['releases'][0]).ask()
+        if release is None:
+            #This will occur if the user CTRL-C (or otherwise stops) the process
+            #we will exit from the tool with a nonzero code
+            print("CTRL-C (or similar) detected... setup is not complete.  Exiting with nonzero status code")
+            sys.exit(1)        
+        return {"uid":app['uid'], "appid":app["appid"], "title":app['title'], "version":release}
+
+
+    elif answer is False:
+        #Empty dict means no app to install
+        return {}
+    else:
+        #This will occur if the user CTRL-C (or otherwise stops) the process
+        #we will exit from the tool with a nonzero code
+        print("CTRL-C (or similar) detected... setup is not complete.  Exiting with nonzero status code")
+        sys.exit(1)        
 
 
 def init(args):
@@ -279,14 +379,14 @@ def init(args):
     output_template = None
     mock=False
     args.force_defaults = True
-    build_inquire(args,mock, input_template, output_template)
+    build_inquire(args, mock, input_template, output_template)
 
 def configure(args):
     
     input_template = args.template_object
     output_template = args.output_file
     mock = True
-    build_inquire(args,mock, input_template, output_template)
+    build_inquire(args, mock, input_template, output_template)
 
 def build_inquire(args, mock:bool, input_template_data:dict, output_template:Union[TextIOWrapper,None]=None ):
     #Update this due to the way that argparse assigned the value top force_defaults argument
@@ -320,6 +420,8 @@ def build_inquire(args, mock:bool, input_template_data:dict, output_template:Uni
     answers = get_answers_to_questions(input_template_data['questions'], 
                                        args.template_answers['output_path'], 
                                        force_defaults=args.force_defaults)
+    
+    input_template_data['apps'] = get_apps_to_install(input_template_data['apps'])
     
     
 

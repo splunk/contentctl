@@ -6,36 +6,36 @@ json_root_schema = {
     "properties": {
         "questions": {
             "type": "array",
-                    "items": {
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "default": {
+                        "type": "string"
+                    },
+                    "jsonschema_validator": {
                         "type": "object",
                         "properties": {
                             "type": {
-                                "type": "string"
+                                "type": "string",
                             },
-                            "message": {
+                            "pattern": {
                                 "type": "string"
-                            },
-                            "name": {
-                                "type": "string"
-                            },
-                            "default": {
-                                "type": "string"
-                            },
-                            "jsonschema_validator": {
-                                "type": "object",
-                                "properties": {
-                                    "type": {
-                                        "type": "string",
-                                    },
-                                    "pattern": {
-                                        "type": "string"
-                                    }
-                                }
                             }
-
-                        },
-                        "required": ["type", "message", "name", "default"]
+                        }
                     }
+
+                },
+                "required": ["type", "message", "name", "default"]
+            }
         },
         "apps": {
             "type": "array",
@@ -43,26 +43,26 @@ json_root_schema = {
                 "type": "object",
                 "properties": {
                     "uid": {
-                        "type":"string"
+                        "type": "string"
                     },
                     "appid": {
-                        "type":"string"
+                        "type": "string"
                     },
                     "title": {
-                        "type":"string"
+                        "type": "string"
                     },
                     "description": {
-                        "type":"string"
+                        "type": "string"
                     },
                     "description": {
-                        "type":"string"
+                        "type": "string"
                     },
                     "release": {
                         "type": "string"
-                        }
                     }
                 }
             }
+
         },
         "hierarchy": {
 

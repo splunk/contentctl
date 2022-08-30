@@ -1,9 +1,13 @@
 import requests
 import json
-import time
 import xml.etree.ElementTree 
 import threading
 import queue
+from typing import Union
+import os.path
+import sys
+
+SPLUNKBASE_APP_INFO_CACHE = "splunkbase_app_info_cache.json"
 URL_TEMPLATE = "https://splunkbase.splunk.com/api/v2/apps/?order=popular&offset={offset}&archive={archive}&product=all&limit={limit}"
 ENRICH_TEMPLATE = "https://splunkbase.splunk.com/api/apps/entriesbyid/{app_id}/"
 LIMIT = 99
@@ -98,48 +102,92 @@ def complex():
 
 DEFAULT_LIMIT = 100
 TARGET_URL = "https://splunkbase.splunk.com/api/v1/app/?include=releases&limit={limit}&offset={offset}&order={order}"
-def simple(limit:int=DEFAULT_LIMIT, order:str="latest", include_archived:bool=False)->list[dict]:
+
+def get_all_app_data_from_file()->list[dict]:
+    if not os.path.exists(SPLUNKBASE_APP_INFO_CACHE):
+        print(f"Could not load Splunkbase App Info Cache: {SPLUNKBASE_APP_INFO_CACHE}")
+        return None
+    
+    with open(SPLUNKBASE_APP_INFO_CACHE, "r") as info_cache_file:
+        json_data = json.load(info_cache_file)
+    
+    return json_data
+    
+    
+
+
+def get_all_app_data_from_splunkbase(limit:int=DEFAULT_LIMIT, order:str="latest", include_archived:bool=False, force_refresh_app_data:bool=False)->Union[list[dict],None]:
     offset = 0
     all_apps = []
+    number_of_archived_apps = 0
     
-    while True:
-        print(f"Checking offset {offset}")
-        request_url = TARGET_URL.format(limit=limit, offset = offset, order = order)
-        req = requests.get(request_url)
-        content = req.content
-        json_obj = json.loads(content)
-        results = json_obj['results']
-        total = json_obj['total']
-        
-        for result in results:
-            if result['is_archived'] and include_archived == False:
-                #Don't add this to the list
-                continue
+    print("Downloading the latest application info from Splunkbase.  This may take a minute...",end='',flush=True)
+    try:
+        while True:
+            request_url = TARGET_URL.format(limit=limit, offset = offset, order = order)
+            req = requests.get(request_url)
+            if req.status_code != 200:
+                if force_refresh_app_data is True:
+                    raise(Exception(f"Failed to reach Splunkbase API with the request {request_url} and App Data Update is required."))
+                else:
+                    print(f"Failed to reach Splunkbase API with the request {request_url} but App Data Update is not required.  Falling back to file {SPLUNKBASE_APP_INFO_CACHE}")
+                    return None
+            content = req.content
+            json_obj = json.loads(content)
+            results = json_obj['results']
+            total = json_obj['total']
+            
+            for result in results:
+                if 'is_archived' in result and result['is_archived'] and include_archived == False:
+                    #Don't add this to the list
+                    number_of_archived_apps += 1
+                    continue
+                else:
+                    app_obj = {'uid': result['uid'], 'appid': result['appid'], 'title': result['title'], 'description': result['description'], 'releases': [r['title'] for r in result['releases']]} 
+                    all_apps.append(app_obj)
+
+
+            #Do another round. We check the return every time because
+            #a new app COULD be created and added while we're checking
+            if offset > total:
+                break
             else:
-                app_obj = {'uid': result['uid'], 'appid': result['appid'], 'title': result['title'], 'description': result['description'], 'releases': [r['title'] for r in result['releases']]} 
-                all_apps.append(app_obj)
-
-
-        #Do another round. We check the return every time because
-        #a new app COULD be created and added while we're checking
-        if offset > total:
-            break
+                offset += limit
+    except Exception as e:
+        if force_refresh_app_data:
+            raise(Exception(f"Splunkbase API Error and App Data Update is required: {str(e)}"))
         else:
-            offset += limit
+            print(f"Splunkbase API Error: {str(e)}")
+            return None
+
+    print("done")
 
     #Sort all of the apps by title (human readable name)
     all_apps = sorted(all_apps, key=lambda a: a['title'])
-    print(f"Total apps in Splunklbase : {total}")
-    print(f"Enumerated Splunkbase apps: {len(all_apps)}")
-    print(f"Delta between all and enum: {total - len(all_apps)}")
+    
+    if (number_of_archived_apps + len(all_apps)) != total:
+        raise(Exception(f"Total number of apps [{total}] does not equal non-archived [{len(all_apps)}] + archived [{number_of_archived_apps}] ({len(all_apps) + number_of_archived_apps})")) 
+    
+    print(f"Total apps found in Splunkbase : {total}")
+    if include_archived is False:
+        print(f"Number of archived apps ignored: {number_of_archived_apps}")
 
-    with open("scratch.json", "w") as app_data:
+    print(f"Updating {SPLUNKBASE_APP_INFO_CACHE}...", end='', flush=True)
+    with open(SPLUNKBASE_APP_INFO_CACHE, "w") as app_data:
         json.dump(all_apps, app_data, indent=3) 
+    print("done")
     return all_apps
 
-'''
-all_apps = simple()
-with open("scratch.json", "w") as app_data:
-    json.dump(all_apps, app_data, indent=3)
-'''
 
+def get_all_app_data(limit:int=DEFAULT_LIMIT, order:str="latest", include_archived:bool=False, force_refresh_app_data:bool=False)->list[dict]:
+    
+    try:
+        app_data = get_all_app_data_from_splunkbase(limit, order, include_archived, force_refresh_app_data)
+        if app_data is None:
+            app_data = get_all_app_data_from_file()
+        
+    except Exception as e:
+        print(f"Failure getting Splunkbase App Data: {str(e)}.\nQuitting...")
+        sys.exit(1)
+
+    return app_data

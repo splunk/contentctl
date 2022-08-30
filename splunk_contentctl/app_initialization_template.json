@@ -90,6 +90,9 @@
             "default": "main"
         }
     ],
+    "apps": {
+
+    },
     "hierarchy": {
         "type": "folder",
         "name": "security_content",

@@ -37,6 +37,33 @@ json_root_schema = {
                         "required": ["type", "message", "name", "default"]
                     }
         },
+        "apps": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "uid": {
+                        "type":"string"
+                    },
+                    "appid": {
+                        "type":"string"
+                    },
+                    "title": {
+                        "type":"string"
+                    },
+                    "description": {
+                        "type":"string"
+                    },
+                    "description": {
+                        "type":"string"
+                    },
+                    "release": {
+                        "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "hierarchy": {
 
             "type": "object",

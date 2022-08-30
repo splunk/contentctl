@@ -16,6 +16,7 @@ import jsonschema
 from typing import Union, Tuple
 import jinja2
 import art.ascii_art
+import splunkbase_enumerator
 
 DEFAULT_HIERARCHY_FILE = pathlib.Path("folder_hierarchy.json")
 DEFAULT_SECURITY_CONTENT_ROOT = pathlib.Path() 
@@ -309,18 +310,7 @@ def ask_for_another_app(app_data:list[dict])->dict:
 
 def get_apps_to_install(initial_apps:list[dict], force_refresh_app_data:bool=False)->list[dict]:
     apps_to_install = []
-    FILENAME = "scratch.json"
-    if force_refresh_app_data:
-        import splunkbase_enumerator
-        print("Loading latest app data from Splunkbase")
-        app_data = splunkbase_enumerator.simple()
-    elif os.path.exists(FILENAME):
-        print(f"Loading cached app data from {FILENAME}")
-        with open(FILENAME, "r") as dat:
-            app_data = json.load(dat)
-    else:
-        raise(Exception("Cannot load app data from Splunkbase or from file!"))
-    
+    app_data = splunkbase_enumerator.get_all_app_data(force_refresh_app_data=force_refresh_app_data)
 
     if len(initial_apps) > 0:
         print(f"There are {len(initial_apps)} configured for installation.  Let's check each one.")

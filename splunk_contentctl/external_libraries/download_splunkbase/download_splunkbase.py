@@ -3,6 +3,8 @@ import requests
 import cgi
 import argparse
 from bs4 import BeautifulSoup
+import os
+import pathlib
 
 
 def get_form_details(form):
@@ -33,7 +35,7 @@ def submit_form(session, form):
         session.get(action, data=form_data)
 
 
-def download(username, password, app_id, version):
+def download(username, password, app_id, version, target_directory=pathlib.Path('.')):
     print(f'Downloading app with id {app_id} version {version}...')
     url = f'https://splunkbase.splunk.com/app/{app_id}/release/{version}/download'
     urlauth = 'https://account.splunk.com/api/v1/okta/auth'
@@ -51,10 +53,14 @@ def download(username, password, app_id, version):
     # The second request returns the package
     response = session.get(url)
     _, params = cgi.parse_header(response.headers.get('Content-Disposition'))
-    filename = params['filename']
-    with open(filename, 'wb') as f:
+    if not os.path.exists(target_directory):
+        os.makedirs(target_directory)
+    full_path = os.path.join(target_directory, params['filename'])
+    
+    with open(full_path, 'wb') as f:
+        print(f"Writing {params['filename']} to {target_directory}")
         f.write(response.content)
-    print(f'Successfully downloaded package {filename}')
+    print(f'Successfully downloaded package {full_path}')
 
 
 if __name__ == '__main__':

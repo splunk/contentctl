@@ -43,7 +43,7 @@ json_root_schema = {
                 "type": "object",
                 "properties": {
                     "uid": {
-                        "type": "string"
+                        "type": "integer"
                     },
                     "appid": {
                         "type": "string"

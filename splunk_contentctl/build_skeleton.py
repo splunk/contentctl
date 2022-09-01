@@ -17,6 +17,7 @@ from typing import Union, Tuple
 import jinja2
 import art.ascii_art
 import splunkbase_enumerator
+import git
 
 DEFAULT_HIERARCHY_FILE = pathlib.Path("folder_hierarchy.json")
 DEFAULT_SECURITY_CONTENT_ROOT = pathlib.Path() 
@@ -303,26 +304,43 @@ def ask_for_another_app(app_data:list[dict])->dict:
         print("CTRL-C (or similar) detected... setup is not complete.  Exiting with nonzero status code")
         sys.exit(1)        
     
-    return {"uid":whole_app['uid'], "appid":whole_app["appid"], "title":whole_app['title'], "version":release}
+    return {"uid":whole_app['uid'], "appid":whole_app["appid"], "title":whole_app['title'], "release":release}
     
     
     
+def app_upgrade_available(app:dict, all_apps:list[dict])->Union[str,None]:
+    
+    full_app = get_app_by_appid(app['appid'],all_apps)
+    if full_app['releases'][0] != app['release']:
+        return full_app['releases'][0]
+    else:
+        return None
 
-def get_apps_to_install(initial_apps:list[dict], force_refresh_app_data:bool=False)->list[dict]:
+
+
+
+def get_apps_to_install(initial_apps:list[dict], force_refresh_app_data:bool=False, mock:bool=False)->list[dict]:
     apps_to_install = []
-    app_data = splunkbase_enumerator.get_all_app_data(force_refresh_app_data=force_refresh_app_data)
+    all_apps = splunkbase_enumerator.get_all_app_data(force_refresh_app_data=force_refresh_app_data)
+
+    if mock is False:
+        for app in initial_apps:
+            if app_upgrade_available(app, all_apps):
+                print(f"{app['title']} upgrade available {app['release']}-->{app_upgrade_available(app, all_apps)}")
+        return initial_apps
 
     if len(initial_apps) > 0:
         print(f"There are {len(initial_apps)} configured for installation.  Let's check each one.")
         for app in initial_apps:
-            app_to_install = confirm_app_and_version(app)
+            app_to_install = confirm_app_and_version(app,all_apps)
             if app_to_install == {}:
                 continue
             apps_to_install.append(app_to_install)
+    
     while True:
-        more = questionary.confirm("Do you want to install more apps?").ask()
+        more = questionary.confirm("Do you want to add apps to install?").ask()
         if more is True:
-            another_app = ask_for_another_app(app_data)
+            another_app = ask_for_another_app(all_apps)
             if another_app == {}:
                 return apps_to_install
             else:
@@ -336,21 +354,36 @@ def get_apps_to_install(initial_apps:list[dict], force_refresh_app_data:bool=Fal
             sys.exit(1)   
 
 
+def get_app_by_appid(appid:int, all_apps:list[dict])->dict:
+    for app in all_apps:
+        if app['appid'] == appid:
+            return app
+    raise(Exception(f"appid [{appid}] not found in list of apps from Splunkbase.  Are you sure it exists?"))
+
+
+
+def confirm_app_and_version(app:dict, all_apps:list[dict])->dict:
+    app_summary = f"{app['title']}, release: {app['release']} (appid: {app['appid']}, {SPLUNKBASE_UI_APP_URL.format(uid=app['uid'])})"
+    full_app = get_app_by_appid(app['appid'], all_apps)
 
     
+    if app['release'] != full_app['releases'][0]:
+        print(f"There is a newer version of '{app['title']}' {app['release']}-->{full_app['releases'][0]}")
+    
+    if app['release'] not in full_app['releases']:
+        print(f"Warning, the specified version {app['release']} does not exist in releases {full_app['releases']}. Defaulting to newest version {full_app['releases'][0]}")
+        app['release'] = full_app['releases'][0]
 
-def confirm_app_and_version(app:dict)->dict:
-    app_summary = f"{app['title']} (appid: {app['appid']}, {SPLUNKBASE_UI_APP_URL.format(uid=app['uid'])})"
-    answer = questionary.confirm(f"Install {app_summary}?").ask()
+    answer = questionary.confirm(f"{app_summary}\nInstall this app and version?").ask()
     if answer is True:
         #Now get the version of the app to install
-        release = questionary.select("Which release would you like to install (newest selected by default)", choices=app['releases'], default=app['releases'][0]).ask()
+        release = questionary.select("Which release would you like to install", choices=full_app['releases'], default=app['release']).ask()
         if release is None:
             #This will occur if the user CTRL-C (or otherwise stops) the process
             #we will exit from the tool with a nonzero code
             print("CTRL-C (or similar) detected... setup is not complete.  Exiting with nonzero status code")
             sys.exit(1)        
-        return {"uid":app['uid'], "appid":app["appid"], "title":app['title'], "version":release}
+        return {"uid":app['uid'], "appid":app["appid"], "title":app['title'], "release":release}
 
 
     elif answer is False:
@@ -399,6 +432,7 @@ def build_inquire(args, mock:bool, input_template_data:dict, output_template:Uni
     
     
     
+    
 
 
     
@@ -411,7 +445,8 @@ def build_inquire(args, mock:bool, input_template_data:dict, output_template:Uni
                                        args.template_answers['output_path'], 
                                        force_defaults=args.force_defaults)
     
-    input_template_data['apps'] = get_apps_to_install(input_template_data['apps'])
+    
+    input_template_data['apps'] = get_apps_to_install(input_template_data['apps'], mock=mock)
     
     
 

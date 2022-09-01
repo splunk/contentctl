@@ -105,8 +105,8 @@ TARGET_URL = "https://splunkbase.splunk.com/api/v1/app/?include=releases&limit={
 
 def get_all_app_data_from_file()->list[dict]:
     if not os.path.exists(SPLUNKBASE_APP_INFO_CACHE):
-        print(f"Could not load Splunkbase App Info Cache: {SPLUNKBASE_APP_INFO_CACHE}")
-        return None
+        raise(Exception(f"Could not load Splunkbase App Info Cache: {SPLUNKBASE_APP_INFO_CACHE}"))
+        
     
     with open(SPLUNKBASE_APP_INFO_CACHE, "r") as info_cache_file:
         json_data = json.load(info_cache_file)
@@ -120,17 +120,19 @@ def get_all_app_data_from_splunkbase(limit:int=DEFAULT_LIMIT, order:str="latest"
     offset = 0
     all_apps = []
     number_of_archived_apps = 0
+    soft_error_string = f"Failed to reach Splunkbase API, but App Data Update is not required.  Falling back to file {SPLUNKBASE_APP_INFO_CACHE}"
     
     print("Downloading the latest application info from Splunkbase.  This may take a minute...",end='',flush=True)
     try:
         while True:
+            print(".",end='',flush=True)
             request_url = TARGET_URL.format(limit=limit, offset = offset, order = order)
             req = requests.get(request_url)
             if req.status_code != 200:
                 if force_refresh_app_data is True:
                     raise(Exception(f"Failed to reach Splunkbase API with the request {request_url} and App Data Update is required."))
                 else:
-                    print(f"Failed to reach Splunkbase API with the request {request_url} but App Data Update is not required.  Falling back to file {SPLUNKBASE_APP_INFO_CACHE}")
+                    print(soft_error_string)
                     return None
             content = req.content
             json_obj = json.loads(content)
@@ -157,7 +159,7 @@ def get_all_app_data_from_splunkbase(limit:int=DEFAULT_LIMIT, order:str="latest"
         if force_refresh_app_data:
             raise(Exception(f"Splunkbase API Error and App Data Update is required: {str(e)}"))
         else:
-            print(f"Splunkbase API Error: {str(e)}")
+            print(f"Failed to reach Splunkbase API, but App Data Update is not required.  Falling back to file {SPLUNKBASE_APP_INFO_CACHE}")
             return None
 
     print("done")
@@ -185,6 +187,7 @@ def get_all_app_data(limit:int=DEFAULT_LIMIT, order:str="latest", include_archiv
         app_data = get_all_app_data_from_splunkbase(limit, order, include_archived, force_refresh_app_data)
         if app_data is None:
             app_data = get_all_app_data_from_file()
+            print("Splunkbase App Data loaded from file")
         
     except Exception as e:
         print(f"Failure getting Splunkbase App Data: {str(e)}.\nQuitting...")

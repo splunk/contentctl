@@ -19,7 +19,7 @@ json_root_schema = {
                         "type": "string"
                     },
                     "default": {
-                        "type": "string"
+                        "type": ["string","boolean"]
                     },
                     "jsonschema_validator": {
                         "type": "object",

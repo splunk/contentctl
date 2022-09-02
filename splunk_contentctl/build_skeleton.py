@@ -215,7 +215,6 @@ def git_init_remote_repo(answers:dict):
         raise(Exception(f"Error making first local commit to repo: {str(e)}"))
     try:
         bare_repo.git.remote("add", "origin", answers['git_repo_target'])
-        bare_repo.git.remote("-v")
     except Exception as e:
         raise(Exception(f"Error adding remote origin for git repo: {str(e)}"))
 

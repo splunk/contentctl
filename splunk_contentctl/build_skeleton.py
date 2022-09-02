@@ -18,6 +18,7 @@ import jinja2
 import art.ascii_art
 import splunkbase_enumerator
 import git
+from external_libraries.download_splunkbase import download_splunkbase
 
 DEFAULT_HIERARCHY_FILE = pathlib.Path("folder_hierarchy.json")
 DEFAULT_SECURITY_CONTENT_ROOT = pathlib.Path() 
@@ -460,6 +461,7 @@ def build_inquire(args, mock:bool, input_template_data:dict, output_template:Uni
         create_structure(hierarchy, source_path, output_path, answers, force_defaults=args.force_defaults,mock=mock)
     except Exception as e:
         print(f"There was an exception creating the skeleton: {str(e)} ")
+        sys.exit(1)
     
     
     if mock is True:
@@ -470,7 +472,29 @@ def build_inquire(args, mock:bool, input_template_data:dict, output_template:Uni
             raise(Exception(f"Output template was NONE, but MOCK was enabled, so an output template must be provided"))
 
     else:
+        
         git_init_remote_repo(answers)
+        apps = input_template_data['apps']
+        output_app_path = pathlib.Path(os.path.join(answers['output_path'], answers['APP_NAME'],"apps"))
+        download_all_splunkbase_apps(apps, output_app_path)
+
+def download_all_splunkbase_apps(apps:list[dict], output_path:pathlib.Path):
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+        print(f"Created directory for storing apps: {output_path}")
+    
+    #Download all of the apps to the appointed directory
+    try:
+        #Make these questionary questions or command line.... but don't
+        #allow them to be cached to a file
+        username = input("username: ")
+        password = input("password: ")
+        download_splunkbase.download_all_apps(username, password, apps, output_path)
+    except Exception as e:
+        print(f"Error downloading app(s) from Splunkbase: {str(e)}")
+        sys.exit(1)
+    
 
 
 

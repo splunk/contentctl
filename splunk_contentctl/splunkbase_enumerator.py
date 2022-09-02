@@ -181,10 +181,14 @@ def get_all_app_data_from_splunkbase(limit:int=DEFAULT_LIMIT, order:str="latest"
     return all_apps
 
 
-def get_all_app_data(limit:int=DEFAULT_LIMIT, order:str="latest", include_archived:bool=False, force_refresh_app_data:bool=False)->list[dict]:
+def get_all_app_data(limit:int=DEFAULT_LIMIT, order:str="latest", include_archived:bool=False, force_refresh_app_data:bool=False, force_no_splunkbase:bool=True)->list[dict]:
     
     try:
-        app_data = get_all_app_data_from_splunkbase(limit, order, include_archived, force_refresh_app_data)
+        if force_no_splunkbase is False:
+            app_data = get_all_app_data_from_splunkbase(limit, order, include_archived, force_refresh_app_data)
+        else:
+            #Forcing us to use the file, not Splunkbase
+            app_data = None
         if app_data is None:
             app_data = get_all_app_data_from_file()
             print("Splunkbase App Data loaded from file")

@@ -34,8 +34,74 @@ def submit_form(session, form):
     elif method == 'get':
         session.get(action, data=form_data)
 
+def download_all_apps(username, password, apps:list[dict], target_directory:pathlib.Path=pathlib.Path('.')):
+    session = login_and_get_splunkbase_session(username, password)
+    for app in apps[0:1]:
+        appid = app['appid']
+        release = app['release']
+        uid = app['uid']
+        download_app_with_session(session, appid,uid,release,target_directory)
+    for app in apps[1:]:
+        appid = app['appid']
+        release = app['release']
+        uid = app['uid']
+        download_app_with_session(session, appid,uid,release,target_directory)
 
-def download(username, password, app_id, version, target_directory=pathlib.Path('.')):
+def download_app_with_session(session:requests.Session, appid:str, uid:int,release:str,target_directory:pathlib.Path=pathlib.Path('.')):
+    print(f'Downloading app {appid} version {release}...',end='',flush=True)
+
+    url = f'https://splunkbase.splunk.com/app/{uid}/release/{release}/download'
+    '''
+    # Try requesting the download url for the release. The first request actually returns a okta intersitual page that needs to be resolved and submitted
+    if first:    
+        soup = BeautifulSoup(session.get(url).content, 'html.parser')
+    
+        # Scrape out the intersitual page and submit it
+        submit_form(session, soup.find('form'))
+    '''
+    
+    # The second request returns the package
+    response = session.get(url)
+    
+    _, params = cgi.parse_header(response.headers.get('Content-Disposition'))
+    
+    if not os.path.exists(target_directory):
+        os.makedirs(target_directory)
+    
+    filename = f"{appid}_{uid}_{release}.tar.gz"
+    full_path = os.path.join(target_directory, filename)
+    
+    with open(full_path, 'wb') as f:
+        f.write(response.content)
+    print(f'done')
+
+
+
+def login_and_get_splunkbase_session(username, password)->requests.Session:
+    print(f"Logging into Splunkbase...",end='', flush=True)
+    urlauth = 'https://account.splunk.com/api/v1/okta/auth'
+    session = requests.session()
+    # Base auth with okta, store cookies
+    auth_req = session.post(
+        urlauth, json={'username': username, 'password': password}).json()
+    if 'status_code' in auth_req and auth_req['status_code'] != 200:
+        raise ValueError('Error authenticating, response: ',
+                         auth_req['message'])
+    
+    #First request has to get past in interstitial. This doesn't even need to be a real app!
+    #We can just use the placeholder uid=0 and release="0.0.0"
+    url = 'https://splunkbase.splunk.com/app/{uid}/release/{release}/download'.format(uid=0,release="0.0.0")
+    # Try requesting the download url for the release. The first request actually returns a okta intersitual 
+    # page that needs to be resolved and submitted
+    
+    soup = BeautifulSoup(session.get(url).content, 'html.parser')
+    # Scrape out the intersitual page and submit it
+    submit_form(session, soup.find('form'))
+
+    print("done")
+    return session
+
+def download(username, password, app_id, version, title=None, target_directory=pathlib.Path('.')):
     print(f'Downloading app with id {app_id} version {version}...')
     url = f'https://splunkbase.splunk.com/app/{app_id}/release/{version}/download'
     urlauth = 'https://account.splunk.com/api/v1/okta/auth'
@@ -55,6 +121,7 @@ def download(username, password, app_id, version, target_directory=pathlib.Path(
     _, params = cgi.parse_header(response.headers.get('Content-Disposition'))
     if not os.path.exists(target_directory):
         os.makedirs(target_directory)
+    raise(Exception("implement proper file name"))
     full_path = os.path.join(target_directory, params['filename'])
     
     with open(full_path, 'wb') as f:

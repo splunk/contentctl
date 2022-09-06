@@ -75,7 +75,7 @@
             "type": "confirm",
             "message": "You're using git, right? You should use git",
             "name": "using_git",
-            "default": "Y"
+            "default": true
         },
         {
             "type": "input",

@@ -490,10 +490,9 @@ def download_all_splunkbase_apps(apps:list[dict], output_path:pathlib.Path):
     try:
         #Make these questionary questions or command line.... but don't
         #allow them to be cached to a file
-        #username = input("username: ")
-        #password = input("password: ")
-        username = "emcginnistwo"
-        password = "letMeGet4ll@pps"
+        username = input("username: ")
+        password = input("password: ")
+        
         download_splunkbase.download_all_apps(username, password, apps, output_path)
     except Exception as e:
         print(f"Error downloading app(s) from Splunkbase: {str(e)}")

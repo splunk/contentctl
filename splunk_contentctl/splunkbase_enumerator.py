@@ -181,7 +181,7 @@ def get_all_app_data_from_splunkbase(limit:int=DEFAULT_LIMIT, order:str="latest"
     return all_apps
 
 
-def get_all_app_data(limit:int=DEFAULT_LIMIT, order:str="latest", include_archived:bool=False, force_refresh_app_data:bool=False, force_no_splunkbase:bool=True)->list[dict]:
+def get_all_app_data(limit:int=DEFAULT_LIMIT, order:str="latest", include_archived:bool=False, force_refresh_app_data:bool=False, force_no_splunkbase:bool=False)->list[dict]:
     
     try:
         if force_no_splunkbase is False:

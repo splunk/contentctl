@@ -446,7 +446,7 @@ def build_inquire(args, mock:bool, input_template_data:dict, output_template:Uni
                                        force_defaults=args.force_defaults)
     
     
-    input_template_data['apps'] = get_apps_to_install(input_template_data['apps'], mock=mock)
+    input_template_data['apps'] = get_apps_to_install(input_template_data['apps'], force_refresh_app_data=True, mock=mock )
     
     
 
@@ -472,7 +472,10 @@ def build_inquire(args, mock:bool, input_template_data:dict, output_template:Uni
 
     else:
         
-        git_init_remote_repo(answers)
+        try:
+            git_init_remote_repo(answers)
+        except Exception as e:
+            print(f"GitHub Enterprise configuration changed.... so this will work next time - {str(e)}")
         apps = input_template_data['apps']
         output_app_path = pathlib.Path(os.path.join(answers['output_path'], answers['APP_NAME'],"apps"))
         download_all_splunkbase_apps(apps, output_app_path)
@@ -487,8 +490,10 @@ def download_all_splunkbase_apps(apps:list[dict], output_path:pathlib.Path):
     try:
         #Make these questionary questions or command line.... but don't
         #allow them to be cached to a file
-        username = input("username: ")
-        password = input("password: ")
+        #username = input("username: ")
+        #password = input("password: ")
+        username = "emcginnistwo"
+        password = "letMeGet4ll@pps"
         download_splunkbase.download_all_apps(username, password, apps, output_path)
     except Exception as e:
         print(f"Error downloading app(s) from Splunkbase: {str(e)}")

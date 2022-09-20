@@ -229,11 +229,18 @@ def validate(args) -> None:
     if args.cached_and_offline:
         LinkValidator.initialize_cache(args.cached_and_offline)
 
+    if args.product == 'SPLUNK_ENTERPRISE_APP':
+        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
+    elif args.product == 'SSA':
+        product = SecurityContentProduct.SSA
+    else:
+        print("ERROR: product " + args.product + " not supported")
+        sys.exit(1)   
 
     director_input_dto = DirectorInputDto(
         input_path = args.path,
-        output_path = '',
         attack_enrichment = AttackEnrichment.get_attack_lookup(args.path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
+        product = product,
         force_cached_or_offline = args.cached_and_offline,
         check_references = args.check_references,
         skip_enrichment = args.skip_enrichment

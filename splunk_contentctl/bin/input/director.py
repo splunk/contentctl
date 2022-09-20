@@ -18,8 +18,8 @@ from bin.helper.utils import Utils
 @dataclass(frozen=True)
 class DirectorInputDto:
     input_path: str
-    output_path: str
     attack_enrichment: dict
+    product: SecurityContentProduct
     force_cached_or_offline: bool 
     check_references: bool
     skip_enrichment: bool
@@ -61,16 +61,21 @@ class Director():
         self.story_builder = StoryBuilder('ESCU', self.input_dto.check_references)
         self.detection_builder = DetectionBuilder(self.input_dto.force_cached_or_offline, self.input_dto.check_references, self.input_dto.skip_enrichment)
 
-        self.createSecurityContent(SecurityContentType.unit_tests)
-        self.createSecurityContent(SecurityContentType.lookups)
-        self.createSecurityContent(SecurityContentType.macros)
-        self.createSecurityContent(SecurityContentType.deployments)
-        self.createSecurityContent(SecurityContentType.baselines)
-        self.createSecurityContent(SecurityContentType.investigations)
-        self.createSecurityContent(SecurityContentType.playbooks)
-        self.createSecurityContent(SecurityContentType.detections)
-        self.createSecurityContent(SecurityContentType.stories)
-
+        if self.input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP:
+            self.createSecurityContent(SecurityContentType.unit_tests)
+            self.createSecurityContent(SecurityContentType.lookups)
+            self.createSecurityContent(SecurityContentType.macros)
+            self.createSecurityContent(SecurityContentType.deployments)
+            self.createSecurityContent(SecurityContentType.baselines)
+            self.createSecurityContent(SecurityContentType.investigations)
+            self.createSecurityContent(SecurityContentType.playbooks)
+            self.createSecurityContent(SecurityContentType.detections)
+            self.createSecurityContent(SecurityContentType.stories)
+        
+        elif self.input_dto.product == SecurityContentProduct.SSA:
+            self.createSecurityContent(SecurityContentType.unit_tests)
+            self.createSecurityContent(SecurityContentType.detections)
+            
 
     def createSecurityContent(self, type: SecurityContentType) -> list:
         objects = []
@@ -87,14 +92,20 @@ class Director():
         progress_percent = 0
         type_string = "UNKNOWN TYPE"
 
-        #Non threaded, production version of the construction code
-        files_without_ssa = [f for f in files if 'ssa___' not in f]
-        for index,file in enumerate(files_without_ssa):
+        security_content_files = None
+
+        if self.input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP:
+            security_content_files = [f for f in files if 'ssa___' not in f]
+        elif self.input_dto.product == SecurityContentProduct.SSA:
+            security_content_files = [f for f in files if 'ssa___' in f]
+
+
+        for index,file in enumerate(security_content_files):
         
             print(file)
             #Index + 1 because we are zero indexed, not 1 indexed.  This ensures
             # that printouts end at 100%, not some other number 
-            progress_percent = ((index+1)/len(files_without_ssa)) * 100
+            progress_percent = ((index+1)/len(security_content_files)) * 100
             try:
                 type_string = "UNKNOWN TYPE"
                 if type == SecurityContentType.lookups:

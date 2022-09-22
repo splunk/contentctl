@@ -5,7 +5,7 @@ from bin.output.json_writer import JsonWriter
 from bin.objects.enums import SecurityContentType
 
 
-class ApiJsonWriter():
+class ApiJsonOutput():
 
     def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:

@@ -1,4 +1,4 @@
-
+import sys
 
 from dataclasses import dataclass
 
@@ -18,26 +18,38 @@ class ValidateInputDto:
 class Validate:
 
     def execute(self, input_dto: ValidateInputDto) -> None:
-        if input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP:
-            director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
-            director = Director(director_output_dto)
-            director.execute(input_dto.director_input_dto)
+        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
+        director = Director(director_output_dto)
+        director.execute(input_dto.director_input_dto)      
 
-        # elif input_dto.product == SecurityContentProduct.SSA:
-        #     factory_output_dto = BAFactoryOutputDto([],[])
-        #     factory = BAFactory(factory_output_dto)
-        #     factory.execute(input_dto.ba_factory_input_dto)        
+        # uuid validation all objects
+        try:
+            security_content_objects = director_output_dto.detections + director_output_dto.stories + director_output_dto.baselines + director_output_dto.investigations + director_output_dto.playbooks + director_output_dto.deployments
+            self.validate_duplicate_uuids(security_content_objects)
 
+            # validate tests
+            self.validate_detection_exist_for_test(director_output_dto.tests, director_output_dto.detections)
 
-        # validate detections
-
-        # uuid validation
-
-        # validate tests
-        self.validate_detection_exist_for_test(director_output_dto.tests, director_output_dto.detections)
+        except ValueError as e:
+            print(e)
+            sys.exit(1)
         
         print('Validation of security content successful.')
-        
+
+
+
+    def validate_duplicate_uuids(self, security_content_objects):
+        duplicate_uuids = list()
+        set_objects = set()
+        for elem in security_content_objects:
+            if elem.id in set_objects:
+                duplicate_uuids.append(elem)
+            else:
+                set_objects.add(elem.id)
+    
+        if len(duplicate_uuids):
+            raise ValueError('ERROR: Duplicate ID found in objects:\n' + '\n'.join([obj.name for obj in duplicate_uuids]))
+
 
     def validate_detection_exist_for_test(self, tests : list, detections: list):
         for test in tests:
@@ -47,4 +59,5 @@ class Validate:
                      found_detection = True
 
             if not found_detection:
-                ValueError("detection doesn't exist for test file: " + test.name)
+                raise ValueError("ERROR: detection doesn't exist for test file: " + test.name)
+

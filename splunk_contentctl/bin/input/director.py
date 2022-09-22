@@ -61,7 +61,7 @@ class Director():
         self.story_builder = StoryBuilder('ESCU', self.input_dto.check_references)
         self.detection_builder = DetectionBuilder(self.input_dto.force_cached_or_offline, self.input_dto.check_references, self.input_dto.skip_enrichment)
 
-        if self.input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP:
+        if self.input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP or self.input_dto.product == SecurityContentProduct.API:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
@@ -94,7 +94,7 @@ class Director():
 
         security_content_files = None
 
-        if self.input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP:
+        if self.input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP or self.input_dto.product == SecurityContentProduct.API:
             security_content_files = [f for f in files if 'ssa___' not in f]
         elif self.input_dto.product == SecurityContentProduct.SSA:
             security_content_files = [f for f in files if 'ssa___' in f]

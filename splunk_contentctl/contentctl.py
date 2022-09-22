@@ -10,25 +10,10 @@ import hierarchy_schema
 import json
 
 from bin.objects.link_validator import LinkValidator
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'bin/contentctl_project')))
-
 from bin.actions.validate import ValidateInputDto, Validate
-# from bin.actions.doc_gen import DocGenInputDto, DocGen
-# from bin.actions.new_content import NewContentInputDto, NewContent
-# from bin.actions.reporting import ReportingInputDto, Reporting
+from bin.actions.generate import GenerateInputDto, Generate
 from bin.input.director import DirectorInputDto
-from bin.output.ba_yml_writer import BAYmlWriter
-from bin.output.api_json_writer import ApiJsonWriter
-from bin.objects.enums import SecurityContentProduct
-from bin.output.conf_writer import ConfWriter
-from bin.output.doc_md_writer import DocMdWriter
-from bin.output.svg_writer import SvgWriter
-from bin.output.attack_nav_writer import AttackNavWriter
-from bin.objects.enums import SecurityContentType
-# from bin.actions.deploy import Deploy
-# from bin.actions.build import Build
-# from bin.actions.inspect import Inspect
+from bin.objects.enums import SecurityContentType, SecurityContentProduct
 from bin.enrichments.attack_enrichment import AttackEnrichment
 
 
@@ -131,7 +116,41 @@ def content_changer(args) -> None:
 
 
 def generate(args) -> None:
-    pass
+    
+    if args.cached_and_offline:
+        LinkValidator.initialize_cache(args.cached_and_offline) 
+
+    if args.product == 'SPLUNK_ENTERPRISE_APP':
+        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
+    elif args.product == 'SSA':
+        product = SecurityContentProduct.SSA
+    elif args.product == 'API':
+        product = SecurityContentProduct.API
+    else:
+        print("ERROR: product " + args.product + " not supported")
+        sys.exit(1)   
+
+    director_input_dto = DirectorInputDto(
+        input_path = args.path,
+        attack_enrichment = AttackEnrichment.get_attack_lookup(args.path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
+        product = product,
+        force_cached_or_offline = args.cached_and_offline,
+        check_references = args.check_references,
+        skip_enrichment = args.skip_enrichment
+    )
+
+    generate_input_dto = GenerateInputDto(
+        director_input_dto = director_input_dto,
+        product = product,
+        output_path = os.path.abspath(args.output)
+    )
+
+    generate = Generate()
+    generate.execute(generate_input_dto)
+
+    if args.cached_and_offline:
+        LinkValidator.close_cache()
+
     # app_path = os.path.join(args.template_answers['output_path'], args.template_answers['APP_NAME'])
     # dist_output_path = os.path.join(app_path, 
     #                                 'dist', 
@@ -216,15 +235,6 @@ def cloud_deploy(args) -> None:
 
 
 def validate(args) -> None:
-    #app_path = os.path.join(args.template_answers['output_path'], args.template_answers['APP_NAME'])
-    
-    # if 'product' not in args.template_answers:
-    #     print("ERROR: missing name 'product' in template answers.")
-    #     sys.exit(1)     
-
-    # if args.template_answers['product'] not in ['SPLUNK_ENTERPRISE_APP', 'SSA', 'all']:
-    #     print("ERROR: invalid product. valid products are all, SPLUNK_ENTERPRISE_APP, or SSA.")
-    #     sys.exit(1)
 
     if args.cached_and_offline:
         LinkValidator.initialize_cache(args.cached_and_offline)
@@ -253,47 +263,6 @@ def validate(args) -> None:
 
     validate = Validate()
     validate.execute(validate_input_dto)
-
-    #Save runtime by only generating the required factory inputs
-    # factory_input_dto = None
-    # ba_factory_input_dto = None
-    # if args.template_answers['product'] in ["SPLUNK_ENTERPRISE_APP", "all"]:
-    #     factory_input_dto = FactoryInputDto(
-    #         os.path.abspath(app_path),
-    #         SecurityContentBasicBuilder(),
-    #         SecurityContentDetectionBuilder(force_cached_or_offline=args.cached_and_offline, check_references=args.check_references, skip_enrichment=args.skip_enrichment),
-    #         SecurityContentStoryBuilder(check_references=args.check_references, app_name=args.template_answers['APP_NAME']),
-    #         SecurityContentBaselineBuilder(check_references=args.check_references),
-    #         SecurityContentInvestigationBuilder(check_references=args.check_references),
-    #         SecurityContentPlaybookBuilder(input_path=app_path, check_references=args.check_references),
-    #         SecurityContentDirector(),
-    #         AttackEnrichment.get_attack_lookup(app_path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment)
-    #     )
-    # if args.template_answers['product'] in ["SSA", "all"]:
-    #     ba_factory_input_dto = BAFactoryInputDto(
-    #         os.path.abspath(app_path),
-    #         SecurityContentBasicBuilder(),
-    #         SecurityContentDetectionBuilder(force_cached_or_offline = args.cached_and_offline, check_references=args.check_references, skip_enrichment=args.skip_enrichment),
-    #         SecurityContentDirector()
-    #     )
-    
-    # if args.template_answers['product'] in ["SPLUNK_ENTERPRISE_APP", "all"]:
-    #     validate_input_dto = ValidateInputDto(
-    #         factory_input_dto,
-    #         ba_factory_input_dto,
-    #         SecurityContentProduct.SPLUNK_ENTERPRISE_APP
-    #     )
-    #     validate = Validate()
-    #     validate.execute(validate_input_dto)
-
-    # if args.template_answers['product'] in ["SSA", "all"]:
-    #     validate_input_dto = ValidateInputDto(
-    #         factory_input_dto,
-    #         ba_factory_input_dto,
-    #         SecurityContentProduct.SSA
-    #     )
-    #     validate = Validate()
-    #     validate.execute(validate_input_dto)
 
     if args.cached_and_offline:
         LinkValidator.close_cache()
@@ -411,21 +380,17 @@ def main(args):
 
     validate_parser.add_argument("-pr", "--product", required=False, type=str, default='SPLUNK_ENTERPRISE_APP', 
                                  help="Type of package to create, choose between all, `SPLUNK_ENTERPRISE_APP` or `SSA`.")
-    validate_parser.add_argument('--check_references', action=argparse.BooleanOptionalAction, help="The number of threads to use to resolve references.  "
-                                   "Larger numbers will result in faster resolution, but will be more likely to hit rate limits or use a large amount of "
-                                   "bandwidth.  A larger number of threads is particularly useful on high-bandwidth connections, but does not improve "
-                                   "performance on slow connections.")
     #validate_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
     
     validate_parser.set_defaults(func=validate, check_references=False, epilog="""
                 Validates security manifest for correctness, adhering to spec and other common items.""")
 
-    #generate_parser.add_argument("-o", "--output", required=True, type=str,
-    #    help="Path where to store the deployment package")
-    #generate_parser.add_argument("-pr", "--product", required=False, type=str, default="SPLUNK_ENTERPRISE_APP",
-    #    help="Type of package to create, choose between `SPLUNK_ENTERPRISE_APP`, `SSA` or `API`.")
-    generate_parser.set_defaults(func=generate)
-    generate_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
+    generate_parser.add_argument("-o", "--output", required=True, type=str,
+       help="Path where to store the deployment package")
+    generate_parser.add_argument("-pr", "--product", required=False, type=str, default="SPLUNK_ENTERPRISE_APP",
+       help="Type of package to create, choose between `SPLUNK_ENTERPRISE_APP`, `SSA` or `API`.")
+    generate_parser.set_defaults(func=generate, check_references=False)
+    #generate_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
     
     #content_changer_choices = ContentChanger.enumerate_content_changer_functions()
     #content_changer_parser.add_argument("-cf", "--change_function", required=True, metavar='{ ' + ', '.join(content_changer_choices) +' }' , type=str, choices=content_changer_choices, 

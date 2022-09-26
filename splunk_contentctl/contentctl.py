@@ -12,9 +12,13 @@ import json
 from bin.objects.link_validator import LinkValidator
 from bin.actions.validate import ValidateInputDto, Validate
 from bin.actions.generate import GenerateInputDto, Generate
+from bin.actions.reporting import ReportingInputDto, Reporting
+from bin.actions.new_content import NewContentInputDto, NewContent
+from bin.actions.doc_gen import DocGenInputDto, DocGen
 from bin.input.director import DirectorInputDto
 from bin.objects.enums import SecurityContentType, SecurityContentProduct
 from bin.enrichments.attack_enrichment import AttackEnrichment
+from bin.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
 
 
 def init():
@@ -99,20 +103,6 @@ def initialize(args)->None:
 
 def content_changer(args) -> None:
     pass
-    # factory_input_dto = ObjectFactoryInputDto(
-    #     os.path.abspath(args.template_answers['output_path']),
-    #     SecurityContentObjectBuilder(),
-    #     SecurityContentDirector()
-    # )
-
-    # input_dto = ContentChangerInputDto(
-    #     ObjToYmlAdapter(args.template_answers['output_path']),
-    #     factory_input_dto,
-    #     args.change_function
-    # )
-
-    # content_changer = ContentChanger()
-    # content_changer.execute(input_dto)
 
 
 def generate(args) -> None:
@@ -151,78 +141,6 @@ def generate(args) -> None:
     if args.cached_and_offline:
         LinkValidator.close_cache()
 
-    # app_path = os.path.join(args.template_answers['output_path'], args.template_answers['APP_NAME'])
-    # dist_output_path = os.path.join(app_path, 
-    #                                 'dist', 
-    #                                 args.template_answers['APP_NAME'])
-
-    # if 'product' not in args.template_answers:
-    #     print("ERROR: missing name 'product' in template answers.")
-    #     sys.exit(1)     
-
-    # if args.template_answers['product'] not in ['SPLUNK_ENTERPRISE_APP', 'SSA', 'API', 'all']:
-    #     print("ERROR: invalid product. valid products are SPLUNK_ENTERPRISE_APP, SSA or API.")
-    #     sys.exit(1)
-
-
-    # if args.cached_and_offline:
-    #     LinkValidator.initialize_cache(args.cached_and_offline)
-
-    # #Save runtime by only generating the required factory inputs
-    # factory_input_dto = None
-    # ba_factory_input_dto = None
-    # if args.template_answers['product'] in ["SPLUNK_ENTERPRISE_APP", "API"]:
-    #     factory_input_dto = FactoryInputDto(
-    #         os.path.abspath(app_path),
-    #         SecurityContentBasicBuilder(),
-    #         SecurityContentDetectionBuilder(force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
-    #         SecurityContentStoryBuilder(app_name=args.template_answers['APP_NAME']),
-    #         SecurityContentBaselineBuilder(),
-    #         SecurityContentInvestigationBuilder(),
-    #         SecurityContentPlaybookBuilder(input_path=app_path),
-    #         SecurityContentDirector(),
-    #         AttackEnrichment.get_attack_lookup(app_path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment)
-    #     )
-    # if args.template_answers['product'] in ["SSA", "API"]:
-    #     ba_factory_input_dto = BAFactoryInputDto(
-    #         os.path.abspath(app_path),
-    #         SecurityContentBasicBuilder(),
-    #         SecurityContentDetectionBuilder(force_cached_or_offline = args.cached_and_offline, skip_enrichment=args.skip_enrichment),
-    #         SecurityContentDirector()
-    #     )
-
-
-    # if args.template_answers['product'] == "SPLUNK_ENTERPRISE_APP":
-    #     generate_input_dto = GenerateInputDto(
-    #         os.path.abspath(dist_output_path),
-    #         factory_input_dto,
-    #         ba_factory_input_dto,
-    #         ObjToConfAdapter(app_path, args.template_answers['APP_NAME']),
-    #         SecurityContentProduct.SPLUNK_ENTERPRISE_APP,
-    #     )
-    # elif args.template_answers['product'] == "API":
-    #     generate_input_dto = GenerateInputDto(
-    #         os.path.abspath(dist_output_path),
-    #         factory_input_dto,
-    #         ba_factory_input_dto,
-    #         ObjToJsonAdapter(),
-    #         SecurityContentProduct.API
-    #     )
-    # elif args.template_answers['product'] == "SSA":
-    #     generate_input_dto = GenerateInputDto(
-    #         os.path.abspath(dist_output_path),
-    #         factory_input_dto,
-    #         ba_factory_input_dto,
-    #         ObjToYmlAdapter(app_path),
-    #         SecurityContentProduct.SSA
-    #     ) 
-    # else:
-    #     raise(Exception(f"Unsupported product type {args.template_answers['product']}"))
-    # generate = Generate()
-    # generate.execute(generate_input_dto)
-
-    # if args.cached_and_offline:
-    #     LinkValidator.close_cache()
 
 def build(args) -> None:
     Build(args)
@@ -269,70 +187,58 @@ def validate(args) -> None:
 
 
 def doc_gen(args) -> None:
-    pass
-    # docgen_output_dir = os.path.join(args.template_answers['output_path'], 
-    #                             args.template_answers['APP_NAME'], 
-    #                             'docs')
-    # factory_input_dto = FactoryInputDto(
-    #     os.path.abspath(args.template_answers['output_path']),
-    #     SecurityContentBasicBuilder(),
-    #     SecurityContentDetectionBuilder(force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
-    #     SecurityContentStoryBuilder(app_name=args.template_answers['APP_NAME']),
-    #     SecurityContentBaselineBuilder(),
-    #     SecurityContentInvestigationBuilder(),
-    #     SecurityContentPlaybookBuilder(input_path=args.args.template_answers['output_path']),
-    #     SecurityContentDirector(),
-    #     AttackEnrichment.get_attack_lookup(args.template_answers['output_path'], force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment)
-    # )
+    director_input_dto = DirectorInputDto(
+        input_path = args.path,
+        attack_enrichment = AttackEnrichment.get_attack_lookup(args.path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
+        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP,
+        force_cached_or_offline = args.cached_and_offline,
+        check_references = False,
+        skip_enrichment = False
+    )
 
-    # doc_gen_input_dto = DocGenInputDto(
-    #     os.path.abspath(docgen_output_dir),
-    #     factory_input_dto,
-    #     ObjToMdAdapter()
-    # )
+    doc_gen_input_dto = DocGenInputDto(
+        director_input_dto = director_input_dto,
+        output_path = os.path.abspath(args.output)
+    )
 
-    # doc_gen = DocGen()
-    # doc_gen.execute(doc_gen_input_dto)
+    doc_gen = DocGen()
+    doc_gen.execute(doc_gen_input_dto)
 
 
 def new_content(args) -> None:
-    pass
-    # if args.type == 'detection':
-    #     contentType = SecurityContentType.detections
-    # elif args.type == 'story':
-    #     contentType = SecurityContentType.stories
-    # else:
-    #     print("ERROR: type " + args.type + " not supported")
-    #     sys.exit(1)
 
-    # new_content_factory_input_dto = NewContentFactoryInputDto(contentType)
-    # new_content_input_dto = NewContentInputDto(new_content_factory_input_dto, ObjToYmlAdapter(args.template_answers['output_path']))
-    # new_content = NewContent()
-    # new_content.execute(new_content_input_dto)
+    if args.type == 'detection':
+        contentType = SecurityContentType.detections
+    elif args.type == 'story':
+        contentType = SecurityContentType.stories
+    else:
+        print("ERROR: type " + args.type + " not supported")
+        sys.exit(1)
 
+    new_content_generator_input_dto = NewContentGeneratorInputDto(type = contentType)
+    new_content_input_dto = NewContentInputDto(new_content_generator_input_dto, os.path.abspath(args.output))
+    new_content = NewContent()
+    new_content.execute(new_content_input_dto)
+ 
 
 def reporting(args) -> None:
-    pass
-    # factory_input_dto = FactoryInputDto(
-    #     os.path.abspath(args.template_answers['output_path']),
-    #     SecurityContentBasicBuilder(),
-    #     SecurityContentDetectionBuilder(force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
-    #     SecurityContentStoryBuilder(app_name=args.template_answers['APP_NAME']),
-    #     SecurityContentBaselineBuilder(),
-    #     SecurityContentInvestigationBuilder(),
-    #     SecurityContentPlaybookBuilder(input_path=args.template_answers['output_path']),
-    #     SecurityContentDirector(),
-    #     AttackEnrichment.get_attack_lookup(args.template_answers['output_path'], force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment)
-    # )
 
-    # reporting_input_dto = ReportingInputDto(
-    #     factory_input_dto,
-    #     ObjToSvgAdapter(),
-    #     ObjToAttackNavAdapter()
-    # )
+    director_input_dto = DirectorInputDto(
+        input_path = args.path,
+        attack_enrichment = AttackEnrichment.get_attack_lookup(args.path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
+        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP,
+        force_cached_or_offline = args.cached_and_offline,
+        check_references = False,
+        skip_enrichment = False
+    )
 
-    # reporting = Reporting()
-    # reporting.execute(reporting_input_dto)
+    reporting_input_dto = ReportingInputDto(
+        director_input_dto = director_input_dto,
+        output_path = os.path.abspath(args.output)
+    )
+
+    reporting = Reporting()
+    reporting.execute(reporting_input_dto)
 
 
 def main(args):
@@ -398,15 +304,18 @@ def main(args):
     
     content_changer_parser.set_defaults(func=content_changer)
 
-    #docgen_parser.add_argument("-o", "--output", required=True, type=str,
-    #    help="Path where to store the documentation")
-    docgen_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
+    docgen_parser.add_argument("-o", "--output", required=True, type=str,
+       help="Path where to store the documentation")
     docgen_parser.set_defaults(func=doc_gen)
 
     new_content_parser.add_argument("-t", "--type", required=True, type=str,
         help="Type of security content object, choose between `detection`, `story`")
+    new_content_parser.add_argument("-o", "--output", required=True, type=str,
+        help="output path to store the detection or story")
     new_content_parser.set_defaults(func=new_content)
 
+    reporting_parser.add_argument("-o", "--output", required=True, type=str,
+        help="output path to store the detection or story")
     reporting_parser.set_defaults(func=reporting)
 
     #build_parser.add_argument("-o", "--output_dir", required=False, default="build", type=str, help="Directory to output the built package to (default is 'build')")

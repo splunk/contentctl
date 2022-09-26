@@ -5,7 +5,7 @@ from bin.objects.enums import SecurityContentType
 from bin.output.jinja_writer import JinjaWriter
 
 
-class SvgWriter():
+class SvgOutput():
 
     def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
         

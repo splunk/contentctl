@@ -21,7 +21,7 @@ from bin.objects.macro import Macro
 from bin.objects.lookup import Lookup
 from bin.objects.baseline import Baseline
 from bin.objects.playbook import Playbook
-from bin.objects.link_validator import LinkValidator
+from bin.helper.link_validator import LinkValidator
 
 
 
@@ -133,10 +133,11 @@ class Detection(BaseModel, SecurityContentObject):
                 raise ValueError('name is longer then 67 chars: ' + values["name"])
         return values
 
-   
-    @validator('references')
-    def references_check(cls, v, values):
-        return LinkValidator.SecurityContentObject_validate_references(v, values)
+# disable it because of performance reasons
+    # @validator('references')
+    # def references_check(cls, v, values):
+    #     LinkValidator.check_references(v, values["name"])
+    #     return v
 
     @validator('search')
     def search_validate(cls, v, values):

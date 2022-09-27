@@ -9,7 +9,7 @@ import jsonschema
 import hierarchy_schema
 import json
 
-from bin.objects.link_validator import LinkValidator
+
 from bin.actions.validate import ValidateInputDto, Validate
 from bin.actions.generate import GenerateInputDto, Generate
 from bin.actions.reporting import ReportingInputDto, Reporting
@@ -106,9 +106,6 @@ def content_changer(args) -> None:
 
 
 def generate(args) -> None:
-    
-    if args.cached_and_offline:
-        LinkValidator.initialize_cache(args.cached_and_offline) 
 
     if args.product == 'SPLUNK_ENTERPRISE_APP':
         product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
@@ -122,10 +119,8 @@ def generate(args) -> None:
 
     director_input_dto = DirectorInputDto(
         input_path = args.path,
-        attack_enrichment = AttackEnrichment.get_attack_lookup(args.path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
         product = product,
-        force_cached_or_offline = args.cached_and_offline,
-        check_references = args.check_references,
+        create_attack_csv = True,
         skip_enrichment = args.skip_enrichment
     )
 
@@ -137,9 +132,6 @@ def generate(args) -> None:
 
     generate = Generate()
     generate.execute(generate_input_dto)
-
-    if args.cached_and_offline:
-        LinkValidator.close_cache()
 
 
 def build(args) -> None:
@@ -154,9 +146,6 @@ def cloud_deploy(args) -> None:
 
 def validate(args) -> None:
 
-    if args.cached_and_offline:
-        LinkValidator.initialize_cache(args.cached_and_offline)
-
     if args.product == 'SPLUNK_ENTERPRISE_APP':
         product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
     elif args.product == 'SSA':
@@ -167,10 +156,8 @@ def validate(args) -> None:
 
     director_input_dto = DirectorInputDto(
         input_path = args.path,
-        attack_enrichment = AttackEnrichment.get_attack_lookup(args.path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
         product = product,
-        force_cached_or_offline = args.cached_and_offline,
-        check_references = args.check_references,
+        create_attack_csv = False,
         skip_enrichment = args.skip_enrichment
     )
 
@@ -182,18 +169,14 @@ def validate(args) -> None:
     validate = Validate()
     validate.execute(validate_input_dto)
 
-    if args.cached_and_offline:
-        LinkValidator.close_cache()
 
 
 def doc_gen(args) -> None:
     director_input_dto = DirectorInputDto(
         input_path = args.path,
-        attack_enrichment = AttackEnrichment.get_attack_lookup(args.path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
         product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP,
-        force_cached_or_offline = args.cached_and_offline,
-        check_references = False,
-        skip_enrichment = False
+        create_attack_csv = False,
+        skip_enrichment = args.skip_enrichment
     )
 
     doc_gen_input_dto = DocGenInputDto(
@@ -225,11 +208,9 @@ def reporting(args) -> None:
 
     director_input_dto = DirectorInputDto(
         input_path = args.path,
-        attack_enrichment = AttackEnrichment.get_attack_lookup(args.path, force_cached_or_offline=args.cached_and_offline, skip_enrichment=args.skip_enrichment),
         product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP,
-        force_cached_or_offline = args.cached_and_offline,
-        check_references = False,
-        skip_enrichment = False
+        create_attack_csv = False,
+        skip_enrichment = args.skip_enrichment
     )
 
     reporting_input_dto = ReportingInputDto(
@@ -250,12 +231,10 @@ def main(args):
         description="Use `contentctl.py action -h` to get help with any Splunk Security Content action")
     parser.add_argument("-p", "--path", required=True, 
                                         help="path to the Splunk Security Content folder",)
-    parser.add_argument("--cached_and_offline", action=argparse.BooleanOptionalAction,
-        help="Force cached/offline resources.  While this makes execution much faster, it may result in enrichment which is out of date. This is suitable for use only in development or disconnected environments.")
     parser.add_argument("--skip_enrichment", action=argparse.BooleanOptionalAction,
         help="Skip enrichment of CVEs.  This can significantly decrease the amount of time needed to run content_ctl.")
 
-    parser.set_defaults(cached_and_offline=False, func=lambda _: parser.print_help())
+    parser.set_defaults(func=lambda _: parser.print_help())
 
     
     
@@ -287,15 +266,13 @@ def main(args):
     validate_parser.add_argument("-pr", "--product", required=False, type=str, default='SPLUNK_ENTERPRISE_APP', 
                                  help="Type of package to create, choose between all, `SPLUNK_ENTERPRISE_APP` or `SSA`.")
     #validate_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
-    
-    validate_parser.set_defaults(func=validate, check_references=False, epilog="""
-                Validates security manifest for correctness, adhering to spec and other common items.""")
+    validate_parser.set_defaults(func=validate)
 
     generate_parser.add_argument("-o", "--output", required=True, type=str,
        help="Path where to store the deployment package")
     generate_parser.add_argument("-pr", "--product", required=False, type=str, default="SPLUNK_ENTERPRISE_APP",
        help="Type of package to create, choose between `SPLUNK_ENTERPRISE_APP`, `SSA` or `API`.")
-    generate_parser.set_defaults(func=generate, check_references=False)
+    generate_parser.set_defaults(func=generate)
     #generate_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
     
     #content_changer_choices = ContentChanger.enumerate_content_changer_functions()

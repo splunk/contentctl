@@ -13,15 +13,14 @@ from bin.input.story_builder import StoryBuilder
 from bin.objects.enums import SecurityContentType
 from bin.objects.enums import SecurityContentProduct
 from bin.helper.utils import Utils
+from bin.enrichments.attack_enrichment import AttackEnrichment
 
 
 @dataclass(frozen=True)
 class DirectorInputDto:
     input_path: str
-    attack_enrichment: dict
     product: SecurityContentProduct
-    force_cached_or_offline: bool 
-    check_references: bool
+    create_attack_csv : bool
     skip_enrichment: bool
 
 @dataclass()
@@ -45,21 +44,26 @@ class Director():
     investigation_builder: InvestigationBuilder
     story_builder: StoryBuilder
     detection_builder: DetectionBuilder
+    attack_enrichment: dict
 
 
     def __init__(self, output_dto: DirectorOutputDto) -> None:
         self.output_dto = output_dto
-          
+        self.attack_enrichment = dict()
+
 
     def execute(self, input_dto: DirectorInputDto) -> None:
         self.input_dto = input_dto
 
+        if not self.input_dto.skip_enrichment:
+            self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path, self.input_dto.create_attack_csv)
+
         self.basic_builder = BasicBuilder()
         self.playbook_builder = PlaybookBuilder(self.input_dto.input_path)
-        self.baseline_builder = BaselineBuilder(self.input_dto.check_references)
-        self.investigation_builder = InvestigationBuilder(self.input_dto.check_references)
-        self.story_builder = StoryBuilder('ESCU', self.input_dto.check_references)
-        self.detection_builder = DetectionBuilder(self.input_dto.force_cached_or_offline, self.input_dto.check_references, self.input_dto.skip_enrichment)
+        self.baseline_builder = BaselineBuilder()
+        self.investigation_builder = InvestigationBuilder()
+        self.story_builder = StoryBuilder('ESCU')
+        self.detection_builder = DetectionBuilder(self.input_dto.skip_enrichment)
 
         if self.input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP or self.input_dto.product == SecurityContentProduct.API:
             self.createSecurityContent(SecurityContentType.unit_tests)
@@ -155,8 +159,8 @@ class Director():
                         type_string = "Detections"
                         self.constructDetection(self.detection_builder, file, 
                             self.output_dto.deployments, self.output_dto.playbooks, self.output_dto.baselines,
-                            self.output_dto.tests, self.input_dto.attack_enrichment, self.output_dto.macros,
-                            self.output_dto.lookups, self.input_dto.force_cached_or_offline)
+                            self.output_dto.tests, self.attack_enrichment, self.output_dto.macros,
+                            self.output_dto.lookups, self.input_dto.skip_enrichment)
                         detection = self.detection_builder.getObject()
                         self.output_dto.detections.append(detection)
             
@@ -185,7 +189,7 @@ class Director():
             sys.exit(1)
 
 
-    def constructDetection(self, builder: DetectionBuilder, path: str, deployments: list, playbooks: list, baselines: list, tests: list, attack_enrichment: dict, macros: list, lookups: list, force_cached_or_offline: bool = False) -> None:
+    def constructDetection(self, builder: DetectionBuilder, path: str, deployments: list, playbooks: list, baselines: list, tests: list, attack_enrichment: dict, macros: list, lookups: list, skip_enrichment : bool) -> None:
         builder.reset()
         builder.setObject(path)
         builder.addDeployment(deployments)
@@ -197,11 +201,13 @@ class Director():
         builder.addBaseline(baselines)
         builder.addPlaybook(playbooks)
         builder.addUnitTest(tests)
-        builder.addMitreAttackEnrichment(attack_enrichment)
         builder.addMacros(macros)
         builder.addLookups(lookups)
-        builder.addCve()
-        builder.addSplunkApp()
+        
+        if not skip_enrichment:
+            builder.addMitreAttackEnrichment(self.attack_enrichment)
+            builder.addCve()
+            builder.addSplunkApp()
 
 
     def constructStory(self, builder: StoryBuilder, path: str, detections: list, baselines: list, investigations: list) -> None:

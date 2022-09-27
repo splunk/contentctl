@@ -6,7 +6,6 @@ from pydantic import BaseModel, validator, ValidationError
 
 from bin.objects.security_content_object import SecurityContentObject
 from bin.objects.playbook_tags import PlaybookTag
-from bin.objects.link_validator import LinkValidator
 
 
 
@@ -25,8 +24,4 @@ class Playbook(BaseModel, SecurityContentObject):
     app_list: list
     tags: PlaybookTag
 
-    
-    @validator('references')
-    def references_check(cls, v, values):
-        return LinkValidator.SecurityContentObject_validate_references(v, values)
 

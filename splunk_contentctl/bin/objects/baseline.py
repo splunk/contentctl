@@ -10,7 +10,6 @@ from bin.objects.security_content_object import SecurityContentObject
 from bin.objects.enums import DataModel
 from bin.objects.baseline_tags import BaselineTags
 from bin.objects.deployment import Deployment
-from bin.objects.link_validator import LinkValidator
 
 
 class Baseline(BaseModel, SecurityContentObject):
@@ -83,12 +82,6 @@ class Baseline(BaseModel, SecurityContentObject):
         except UnicodeEncodeError:
             raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
         return v
-
-    @validator('references')
-    def references_check(cls, v, values):
-
-        return LinkValidator.SecurityContentObject_validate_references(v, values)
-
 
     @validator('search')
     def search_validate(cls, v, values):

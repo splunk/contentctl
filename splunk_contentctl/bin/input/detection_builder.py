@@ -15,23 +15,16 @@ from bin.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 
 class DetectionBuilder():
     security_content_obj : SecurityContentObject
-    #Only SecurityContentDetectionBuilder cares about force_cached_or_offline because it is
-    #used for CveEnrichment.enrich_cve and SplunkAppEnrichment.enrich_splunk_app
     force_cached_or_offline: bool 
-    check_references: bool
     skip_enrichment: bool
 
-    def __init__(self, force_cached_or_offline: bool = False, check_references: bool = False, skip_enrichment:bool = False):
-        self.force_cached_or_offline = force_cached_or_offline
-        self.check_references = check_references
+    def __init__(self, skip_enrichment:bool = False):
         self.skip_enrichment = skip_enrichment
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
         yml_dict["tags"]["name"] = yml_dict["name"]
-        yml_dict["check_references"] = self.check_references
         self.security_content_obj = Detection.parse_obj(yml_dict)
-        del(yml_dict["check_references"])
         self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
 
 
@@ -247,7 +240,7 @@ class DetectionBuilder():
             self.security_content_obj.cve_enrichment = []
             if self.security_content_obj.tags.cve:
                 for cve in self.security_content_obj.tags.cve:
-                    self.security_content_obj.cve_enrichment.append(CveEnrichment.enrich_cve(cve, force_cached_or_offline = self.force_cached_or_offline))
+                    self.security_content_obj.cve_enrichment.append(CveEnrichment.enrich_cve(cve))
 
     def addSplunkApp(self) -> None:
         if self.skip_enrichment:
@@ -256,7 +249,7 @@ class DetectionBuilder():
             self.security_content_obj.splunk_app_enrichment = []
             if self.security_content_obj.tags.supported_tas:
                 for splunk_app in self.security_content_obj.tags.supported_tas:
-                    self.security_content_obj.splunk_app_enrichment.append(SplunkAppEnrichment.enrich_splunk_app(splunk_app, force_cached_or_offline=self.force_cached_or_offline))
+                    self.security_content_obj.splunk_app_enrichment.append(SplunkAppEnrichment.enrich_splunk_app(splunk_app))
 
     def reset(self) -> None:
         self.security_content_obj = None

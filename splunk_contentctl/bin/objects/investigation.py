@@ -12,7 +12,6 @@ from bin.objects.security_content_object import SecurityContentObject
 from bin.objects.enums import AnalyticsType
 from bin.objects.enums import DataModel
 from bin.objects.investigation_tags import InvestigationTags
-from bin.objects.link_validator import LinkValidator
 
 
 class Investigation(BaseModel, SecurityContentObject):
@@ -80,10 +79,6 @@ class Investigation(BaseModel, SecurityContentObject):
         except UnicodeEncodeError:
             raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
         return v
-
-    @validator('references')
-    def references_check(cls, v, values):
-        return LinkValidator.SecurityContentObject_validate_references(v, values)
 
     @validator('search')
     def search_validate(cls, v, values):

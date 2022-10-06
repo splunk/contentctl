@@ -1,17 +1,18 @@
-
+import argparse
 import copy
-
-
+import csv
+from ctypes.wintypes import tagRECT
+import json
 import os
-
+import queue
 import random
-
+import secrets
 import shutil
-
+import string
 import subprocess
 import sys
-
-
+import threading
+import time
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from posixpath import basename
@@ -20,30 +21,33 @@ from timeit import default_timer as timer
 from typing import Union
 from urllib.parse import urlparse
 import signal
-
+import pathlib
 
 import docker
 import requests
 import requests.packages.urllib3
 from docker.client import DockerClient
 from requests import get
+from modules.test_driver import Detection
 
 
 
-from bin.detection_testing.modules import container_manager, new_arguments2, testing_service, validate_args, utils, github_service
-from bin.detection_testing.modules.validate_args import validate, validate_and_write, ES_APP_NAME
+from modules import (container_manager, new_arguments2,
+                     testing_service, validate_args, utils)
+from modules.github_service import GithubService
+from modules.validate_args import validate, validate_and_write, ES_APP_NAME
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
-index_file_local_path = "bin/detection_testing/indexes.conf.tar"
+index_file_local_path = "indexes.conf.tar"
 index_file_container_path = os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")
 
 # Should be the last one we copy.
-datamodel_file_local_path = "bin/detection_testing/datamodels.conf.tar"
+datamodel_file_local_path = "datamodels.conf.tar"
 datamodel_file_container_path = os.path.join(
     SPLUNK_CONTAINER_APPS_DIR, "Splunk_SA_CIM")
 
 
-authorizations_file_local_path = "bin/detection_testing/authorize.conf.tar"
+authorizations_file_local_path = "authorize.conf.tar"
 authorizations_file_container_path = "/opt/splunk/etc/system/local"
 
 CONTAINER_APP_DIRECTORY = "apps"
@@ -130,54 +134,55 @@ def copy_local_apps_to_directory(apps: dict[str, dict], splunkbase_username:tupl
     return target_directory
 
 
-def ensure_security_content(branch: str, commit_hash: Union[str,None], pr_number: Union[int, None], persist_security_content: bool) -> tuple[github_service.GithubService, bool]:
-    if persist_security_content is True and os.path.exists("security_content"):
+def ensure_security_content(settings:dict) -> GithubService:
+    repo_folder = GithubService.get_folder_name_from_repo_url(settings['repo_url'])
+    if settings['persist_security_content'] is True and os.path.exists(repo_folder):
         print("****** You chose --persist_security_content and the security_content directory exists. "
               "We will not check out the repo again. Please be aware, this could cause issues if your "
               "repo is out of date or if a previous build failed to download all required tools and "\
               "libraries.  If this occurs, it is suggested to change the "\
               "persist_security_content setting to false. ******")
               
-        repo = github_service.GithubService(
-            branch, commit_hash, persist_security_content=persist_security_content)
+        github_service = GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'], persist_security_content=True)
+        
 
     else:
-        if persist_security_content is True and not os.path.exists("security_content"):
+        if settings['persist_security_content'] is True and not os.path.exists(repo_folder):
             print("Error - you chose --persist_security_content but the security_content directory does not exist!"
                   "  We will check it out for you.")
-            persist_security_content = False
+            settings['persist_security_content'] = False
 
-        elif os.path.exists("security_content/"):
+        elif os.path.exists(repo_folder):
             print("Deleting the security_content directory")
             try:
-                shutil.rmtree("security_content/", ignore_errors=True)
+                shutil.rmtree(repo_folder, ignore_errors=True)
                 print("Successfully removed security_content directory")
             except Exception as e:
                 print(
-                    "Error - could not remove the security_content directory: [%s].\n\tQuitting..." % (str(e)))
+                    f"Error - could not remove the {repo_folder} directory: {str(e)}.\n\tQuitting...")
                 sys.exit(1)
 
-        if pr_number:
-            repo = github_service.GithubService(branch, commit_hash, pr_number)
+        if settings['pr_number']:
+            github_service = GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'], PR_number=settings['pr_number'])
         else:
-            repo = github_service.GithubService(branch, commit_hash)
+            github_service = GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'])
 
-    return repo, persist_security_content
+    return github_service
 
 
-def generate_escu_app(persist_security_content: bool = False) -> str:
+def generate_escu_app(root_dir:str, persist_security_content: bool = False) -> str:
     # Go into the security content directory
     print("****GENERATING ESCU APP****")
-    os.chdir("security_content")
-    if persist_security_content is False:
-        commands = ["python3 -m venv .venv",
-                    ". ./.venv/bin/activate",
-                    "python -m pip install wheel",
-                    "python -m pip install -r requirements.txt",
-                    "python3 ../../../contentctl.py --path . --skip_enrichment generate --product ESCU --output dist/escu"]
-    else:
-        commands = [". ./.venv/bin/activate",
-                    "python3 ../../../contentctl.py --path . --skip_enrichment generate --product ESCU --output dist/escu"]
+    os.chdir(root_dir)
+    
+    GENERATE_FOLDER = "dist/escu"
+    commands = [f"python ../../../contentctl.py --path . --skip_enrichment generate --product ESCU --output {GENERATE_FOLDER}"]
+    #copy all of the mlmodel files
+    
+    for model in pathlib.Path("lookups").rglob("*.mlmodel"):
+        #Copy any of the required mlmodels
+        target = os.path.join(GENERATE_FOLDER, "lookups", model.name)
+        shutil.copyfile(model, target)
     ret = subprocess.run("; ".join(commands),
                          shell=True, capture_output=True)
     if ret.returncode != 0:
@@ -185,104 +190,53 @@ def generate_escu_app(persist_security_content: bool = False) -> str:
             ret.stderr))
         sys.exit(1)
 
-    ret = subprocess.run("tar -czf DA-ESS-ContentUpdate.spl -C dist/escu .",
+    BUILD_FOLDER = "build"
+    BUILD_SOURCE_FOLDER  = "DA-ESS-ContentUpdate"
+    
+    PACKAGE_FILE = f"{BUILD_SOURCE_FOLDER}.tgz"
+    PACKAGE_PATH = os.path.join(BUILD_FOLDER, PACKAGE_FILE)
+    
+    shutil.rmtree(BUILD_FOLDER,ignore_errors=True)
+    os.mkdir(BUILD_FOLDER)
+
+    shutil.copytree(GENERATE_FOLDER, os.path.join(BUILD_FOLDER, BUILD_SOURCE_FOLDER))
+    
+    ret = subprocess.run(f"tar -czf {PACKAGE_PATH} -C {BUILD_FOLDER} {BUILD_SOURCE_FOLDER}",
                          shell=True, capture_output=True)
     if ret.returncode != 0:
         print("Error generating new content.\n\tQuitting and dumping error...\n[%s]" % (
             ret.stderr))
         sys.exit(1)
 
-    output_file_name = "DA-ESS-ContentUpdate-latest.tar.gz"
-    output_file_path_from_slim_latest = os.path.join(
-        "upload", output_file_name)
-    output_file_path_from_security_content = os.path.join(
-        "slim_packaging", "slim_latest", output_file_path_from_slim_latest)
-    output_file_path_from_root = os.path.join(
-        "security_content", output_file_path_from_security_content)
-
-    if persist_security_content is True:
-        try:
-            os.remove(output_file_path_from_security_content)
-        except FileNotFoundError:
-            # No problem if we fail to remove it, that just means it wasn't there and we didn't need to
-            pass
-        except Exception as e:
-            print("Error deleting the (possibly) existing old ESCU File: [%s]" % (
-                str(e)), file=sys.stderr)
-            sys.exit(1)
-
-        # There remove the latest file if it exists
-        commands = ["cd slim_packaging/slim_latest",
-                    ". ./.venv/bin/activate",
-                    "cp -R ../../dist/escu DA-ESS-ContentUpdate",
-                    "slim package -o upload DA-ESS-ContentUpdate",
-                    "cp upload/DA-ESS-ContentUpdate*.tar.gz %s" % (output_file_path_from_slim_latest)]
-
-    else:
-        os.mkdir("slim_packaging")
-        
-        try:
-            SPLUNK_PACKAGING_TOOLKIT_URL = "https://download.splunk.com/misc/packaging-toolkit/splunk-packaging-toolkit-0.9.0.tar.gz"
-            SPLUNK_PACKAGING_TOOLKIT_FILENAME = 'splunk-packaging-toolkit-latest.tar.gz'
-            print("Downloading the Splunk Packaging Toolkit from %s..." %
-                  (SPLUNK_PACKAGING_TOOLKIT_URL), end='')
-            response = get(SPLUNK_PACKAGING_TOOLKIT_URL)
-            response.raise_for_status()
-            with open(SPLUNK_PACKAGING_TOOLKIT_FILENAME, 'wb') as slim_file:
-                slim_file.write(response.content)
-            print("Done")
-        except Exception as e:
-            print("Error downloading the Splunk Packaging Toolkit: [%s].\n\tQuitting..." %
-                  (str(e)), file=sys.stderr)
-            sys.exit(1)
-        
-        commands = ["rm -rf slim_packaging/slim_latest",
-                    "mkdir slim_packaging/slim_latest",
-                    "cd slim_packaging",
-                    "tar -zxf ../splunk-packaging-toolkit-latest.tar.gz -C slim_latest --strip-components=1",
-                    "cd slim_latest",
-                    "python3 -m venv .venv",
-                    ". ./.venv/bin/activate",
-                    "python -m pip install --upgrade pip",
-                    "python -m pip install wheel",
-                    "python -m pip install semantic_version",
-                    "python -m pip install .",
-                    "cp -R ../../dist/escu DA-ESS-ContentUpdate",
-                    "slim package -o upload DA-ESS-ContentUpdate",
-                    "cp upload/DA-ESS-ContentUpdate*.tar.gz %s" % (output_file_path_from_slim_latest)]
-
-    ret = subprocess.run("; ".join(commands),
-                         shell=True, capture_output=True)
-    if ret.returncode != 0: 
-        print("Command List:\n%s" % (commands))
-        print("Error generating new ESCU Package.\n\tQuitting and dumping error...\n[%s]" % (
-            ret.stderr.decode('utf-8')), file=sys.stderr)
-        sys.exit(1)
     os.chdir("../")
 
-    return output_file_path_from_root
+    return os.path.join(root_dir, PACKAGE_PATH)
 
 
 
-def finish_mock(settings: dict, detections: list[str], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
+def finish_mock(settings: dict, detections: list[Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
     num_containers = settings['num_containers']
 
+    #convert the list of Detection objects into a list of filename strings
+    detection_filesnames = [str(d.detectionFile.path) for d in detections]
+    
     for output_file_index in range(0, num_containers):
         fname = output_file_template % (output_file_index)
 
         # Get the n'th detection for this file
-        detection_tests = detections[output_file_index::num_containers]
+        detection_tests = detection_filesnames[output_file_index::num_containers]
         normalized_detection_names = []
         # Normalize the test filename to the name of the detection instead.
         # These are what we should write to the file
         for d in detection_tests:
             filename = os.path.basename(d)
             filename = filename.replace(".test.yml", ".yml")
-            leading = os.path.split(d)[0]
-            leading = leading.replace("tests/", "detections/")
-            new_name = os.path.join(
-                "security_content", leading, filename)
-            normalized_detection_names.append(new_name)
+            #leading = os.path.split(d)[0]
+            #leading = leading.replace()
+            #new_name = os.path.join(
+            #    "security_content", leading, filename)
+            #normalized_detection_names.append(new_name)
+            normalized_detection_names.append(d.replace(".test.yml", ".yml").replace("tests/", "detections/"))
 
         # Generate an appropriate config file for this test
         mock_settings = copy.deepcopy(settings)
@@ -321,7 +275,6 @@ def finish_mock(settings: dict, detections: list[str], output_file_template: str
 
 
 def main(args: list[str]):
-    
     #Disable insecure warnings.  We make a number of HTTPS requests to Splunk
     #docker containers that we've set up.  Without this line, we get an 
     #insecure warning every time due to invalid cert.
@@ -397,9 +350,8 @@ def main(args: list[str]):
     # Check out security content if required
     try:
         #Make sure we fix up the persist_securiy_content argument if it is passed in error (we say it exists but it doesn't)
-        repo, settings['persist_security_content'] = ensure_security_content(
-            settings['branch'], settings['commit_hash'], settings['pr_number'], settings['persist_security_content'])
-        settings['commit_hash'] = repo.commit_hash
+        github_service = ensure_security_content(settings)
+        settings['commit_hash'] = github_service.commit_hash
     except Exception as e:
         print("\nFailure checking out git repository: [%s]"\
               "\n\tCommit Hash: [%s]"\
@@ -407,6 +359,9 @@ def main(args: list[str]):
               "\n\tPR         : [%s]\n\tQuitting..."%
               (str(e),settings['commit_hash'],settings['branch'],settings['pr_number']),file=sys.stderr)
         sys.exit(1)
+    
+    
+    
 
     #passes = [{'search_string': '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes where (Processes.process_name ="7z.exe" OR Processes.process_name = "7za.exe" OR Processes.original_file_name = "7z.exe" OR Processes.original_file_name =  "7za.exe") AND (Processes.process="*\\\\C$\\\\*" OR Processes.process="*\\\\Admin$\\\\*" OR Processes.process="*\\\\IPC$\\\\*") by Processes.original_file_name Processes.parent_process_name Processes.parent_process Processes.process_name Processes.process Processes.parent_process_id Processes.process_id  Processes.dest Processes.user | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `7zip_commandline_to_smb_share_path_filter` | stats count | where count > 0', 'detection_name': '7zip CommandLine To SMB Share Path', 'detection_file': 'endpoint/7zip_commandline_to_smb_share_path.yml', 'success': True, 'error': False, 'diskUsage': '286720', 'runDuration': '0.922', 'scanCount': '4897'}]
     #github_service.update_and_commit_passed_tests(passes)
@@ -420,10 +375,11 @@ def main(args: list[str]):
         sys.exit(1)
 
     try:
-        all_test_files = repo.get_test_files(settings['mode'],
-                                                    settings['folders'],
-                                                    settings['types'],
-                                                    settings['detections_list'])
+        all_detections = github_service.detections_to_test(settings['mode'], detections_list=settings['detections_list'])
+        #all_test_files = github_service.get_test_files(settings['mode'],
+        #                                            settings['folders'],
+        #                                            settings['types'],
+        #                                            settings['detections_list'])
         
         #We randomly shuffle this because there are likely patterns in searches.  For example,
         #cloud/endpoint/network likely have different impacts on the system.  By shuffling,
@@ -431,15 +387,20 @@ def main(args: list[str]):
         #we are running on GitHub Actions against multiple machines.  Hopefully, this
         #will reduce that chnaces the some machines run and complete quickly while
         #others take a long time.
-        random.shuffle(all_test_files)        
+        random.shuffle(all_detections)        
+    
+    
+    
 
     except Exception as e:
         print("Error getting test files:\n%s"%(str(e)), file=sys.stderr)
         print("\tQuitting...", file=sys.stderr)
         sys.exit(1)
-
-    print("***This run will test [%d] detections!***"%(len(all_test_files)))
     
+    
+    print("***This run will test [%d] detections!***"%(len(all_detections)))
+    
+
 
     
 
@@ -455,8 +416,8 @@ def main(args: list[str]):
         sys.exit(1)
     else:
         # Generate the ESCU package from this branch.
-        #source_path = generate_escu_app(settings['persist_security_content'])
-        settings['apps']['SPLUNK_ES_CONTENT_UPDATE']['local_path'] = "build/my_app.tar.gz"
+        source_path = generate_escu_app(github_service.repo_folder, settings['persist_security_content'])
+        settings['apps']['SPLUNK_ES_CONTENT_UPDATE']['local_path'] = source_path
         
 
     # Copy all the apps, to include ESCU (whether pregenerated or just generated)
@@ -476,7 +437,7 @@ def main(args: list[str]):
     # If this is a mock run, finish it now
     if settings['mock']:
         #The function below 
-        if finish_mock(settings, all_test_files):
+        if finish_mock(settings, all_detections):
             # mock was successful!
             print("Mock successful!  Manifests generated!")
             sys.exit(0)
@@ -531,7 +492,7 @@ def main(args: list[str]):
     signal.signal(signal.SIGINT, shutdown_signal_handler_setup)
 
     try:
-        cm = container_manager.ContainerManager(all_test_files,
+        cm = container_manager.ContainerManager(all_detections,
                                                 FULL_DOCKER_HUB_CONTAINER_NAME,
                                                 settings['local_base_container_name'],
                                                 settings['num_containers'],
@@ -542,6 +503,7 @@ def main(args: list[str]):
                                                 files_to_copy_to_container=files_to_copy_to_container,
                                                 web_port_start=8000,
                                                 management_port_start=8089,
+                                                hec_port_start=8088,
                                                 mounts=mounts,
                                                 show_container_password=settings['show_splunk_app_password'],
                                                 container_password=settings['splunk_app_password'],
@@ -568,6 +530,9 @@ def main(args: list[str]):
     except Exception as e:
         print("Error - there was an error running the tests: [%s]\n\tQuitting..."%(str(e)),file=sys.stderr)
         sys.exit(1)
+
+
+    cm.synchronization_object.resultsManager.generate_results_file(pathlib.Path("summary.json"))
 
     #github_service.update_and_commit_passed_tests(cm.synchronization_object.successes)
     

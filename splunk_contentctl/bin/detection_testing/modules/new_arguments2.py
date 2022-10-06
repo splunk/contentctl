@@ -1,7 +1,7 @@
 import argparse
 import json
 from typing import OrderedDict, Union
-from bin.detection_testing.modules import validate_args
+from modules import validate_args
 import sys
 
 DEFAULT_CONFIG_FILE = "test_config.json"
@@ -198,9 +198,9 @@ def parse(args) -> tuple[str, dict]:
                             help="After a detection runs, pause and allow the user to log into "\
                             "the Splunk server to debug the detection.  Wait for the user "\
                             "to hit enter before removing the test data and moving on to the next test.")
-    print(args)
-    args = parser.parse_args(args)
-    print(args)
+
+    args = parser.parse_args()
+
 
     # Run the appropriate parser
     try:

@@ -9,8 +9,9 @@ import os.path
 import random
 import requests
 import shutil
-from bin.detection_testing.modules import splunk_sdk, testing_service, test_driver
-
+from modules import splunk_sdk
+from modules import testing_service
+from modules import test_driver
 import time
 import timeit
 from typing import Union
@@ -18,6 +19,8 @@ import threading
 import wrapt_timeout_decorator
 import sys
 import traceback
+import uuid
+import requests
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/%d/release/%s/download"
 SPLUNK_START_ARGS = "--accept-license"
 
@@ -32,6 +35,7 @@ class SplunkContainer:
         apps: OrderedDict,
         web_port_tuple: tuple[str, int],
         management_port_tuple: tuple[str, int],
+        hec_port_tuple: tuple[str,int],
         container_password: str,
         files_to_copy_to_container: OrderedDict = OrderedDict(),
         mounts: list[docker.types.Mount] = [],
@@ -57,9 +61,10 @@ class SplunkContainer:
         self.environment = self.make_environment(
             apps, container_password, splunkbase_username, splunkbase_password
         )
-        self.ports = self.make_ports(web_port_tuple, management_port_tuple)
+        self.ports = self.make_ports(web_port_tuple, management_port_tuple, hec_port_tuple)
         self.web_port = web_port_tuple[1]
         self.management_port = management_port_tuple[1]
+        self.hec_port = hec_port_tuple[1]
         self.container = self.make_container()
 
         self.thread = threading.Thread(target=self.run_container, )
@@ -68,6 +73,8 @@ class SplunkContainer:
         self.container_start_time = -1
         self.test_start_time = -1
         self.num_tests_completed = 0
+
+        
 
 
 
@@ -236,7 +243,8 @@ class SplunkContainer:
             # v also removes volumes linked to the container
             container.remove(
                 v=removeVolumes, force=forceRemove
-            )  # remove it even if it is running. remove volumes as well
+            )
+            # remove it even if it is running. remove volumes as well
             # No need to print that the container has been removed, it is expected behavior
             return True
         except Exception as e:
@@ -356,6 +364,36 @@ class SplunkContainer:
 
         print("Finished copying files to [%s]" % (self.container_name))
         self.wait_for_splunk_ready()
+        self.configure_hec()
+    
+    def configure_hec(self):
+        try:
+
+            auth = ('admin', self.container_password)
+            address = f"https://{self.splunk_ip}:{self.management_port}/services/data/inputs/http"
+            data = {
+                "name": "DOCKER_TEST_TESTING_HEC",
+                "index": "main",
+                "indexes": "main,_internal,_audit", #this needs to support all the indexes in test files
+                "useACK": True
+            }
+            import urllib3
+            urllib3.disable_warnings()
+            r = requests.post(address, data=data, auth=auth, verify=False)
+            if r.status_code == 201:
+                import xmltodict
+                asDict = xmltodict.parse(r.text)
+                #Long, messy way to get the token we need. This could use more error checking for sure.
+                self.tokenString = [m['#text'] for m in asDict['feed']['entry']['content']['s:dict']['s:key'] if '@name' in m and m['@name']=='token'][0]
+                self.channel = str(uuid.uuid4())
+                
+            else:
+                raise(Exception(f"Error setting up hec.  Response code from {address} was [{r.status_code}]: {r.text} "))
+            
+        except Exception as e:
+            print(f"There was an issue setting up HEC.... of course.  {str(e)}")
+            _ = input("waiting here....")
+        
         
     def successfully_finish_tests(self)->None:
         try:
@@ -423,37 +461,55 @@ class SplunkContainer:
              
             # There is a detection to test
             
-            print("Container [%s]--->[%s]" %
-                  (self.container_name, detection_to_test))
+            print(f"Container [{self.container_name}]--->[{str(detection_to_test.detectionFile.path)}]")
             try:
-                result = testing_service.test_detection_wrapper(
-                    self.container_name,
+                
+                result = testing_service.test_detection(
                     self.splunk_ip,
-                    self.container_password,
                     self.management_port,
+                    self.container_password,
                     detection_to_test,
                     self.synchronization_object.attack_data_root_folder,
                     wait_on_failure=self.interactive_failure,
-                    wait_on_completion = self.interactive
+                    wait_on_completion = self.interactive,
+                    container=self
                 )
                 
-                
-                self.synchronization_object.addResult(result, duration_string =  datetime.timedelta(seconds=round(timeit.default_timer() - current_test_start_time)))
 
-                # Remove the data from the test that we just ran.  We MUST do this when running on CI because otherwise, we will download
-                # a massive amount of data over the course of a long path and will run out of space on the relatively small CI runner drive
-                shutil.rmtree(result["attack_data_directory"],ignore_errors=True)
+                self.synchronization_object.addResult(detection_to_test)
+                #self.synchronization_object.addResult(result, timeit.default_timer() - current_test_start_time)
+
+                
             except Exception as e:
                 print(
                     "Warning - uncaught error in detection test for [%s] - this should not happen: [%s]"
-                    % (detection_to_test, str(e))
+                    % (detection_to_test.testFile.path, str(e))
                 )
+                try:
+                    self.synchronization_object.addResult(detection_to_test)
+                except Exception as e:
+                    print(f"Adding a failed result to the queue failed with error: {str(e)}")
+    
+                ###begin testing block
+                #self.num_tests_completed += 1
+
+                # Try to get something from the queue
+            
+                #detection_to_test = self.synchronization_object.getTest()
                 
+                #continue
+                ###end testing block
+    
+    
+    
+    
+    
                 #traceback.print_exc()
                 #import pdb
                 #pdb.set_trace()
                 # Fill in all the "Empty" fields with default values. Otherwise, we will not be able to 
                 # process the result correctly.  
+                '''
                 detection_to_test.replace("security_content/tests", "security_content/detections")
                 try:
                     test_file_obj = testing_service.load_file(os.path.join("security_content/", detection_to_test))
@@ -470,6 +526,7 @@ class SplunkContainer:
 
 
                 )
+                '''
             self.num_tests_completed += 1
 
             # Try to get something from the queue

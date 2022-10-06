@@ -6,22 +6,25 @@ import docker.types
 import os
 import random
 
-from bin.detection_testing.modules import splunk_container, test_driver
+from modules import splunk_container
 import string
+from modules import test_driver
 import threading
 import time
 import timeit
 
 from typing import Union
+from modules.test_objects import ResultsManager, Detection
 
 WEB_PORT_STRING = "8000/tcp"
+HEC_PORT_STRING = "8088/tcp"
 MANAGEMENT_PORT_STRING = "8089/tcp"
 
 
 class ContainerManager:
     def __init__(
         self,
-        test_list: list[str],
+        test_list: list[Detection],
         full_docker_hub_name: str,
         container_name_template: str,
         num_containers: int,
@@ -32,6 +35,7 @@ class ContainerManager:
         files_to_copy_to_container: OrderedDict = OrderedDict(),
         web_port_start: int = 8000,
         management_port_start: int = 8089,
+        hec_port_start: int = 8088,
         mounts: list[dict[str, str]] = [],
         show_container_password:bool=True,
         container_password: Union[str, None] = None,
@@ -50,6 +54,7 @@ class ContainerManager:
 
         self.mounts = self.create_mounts(mounts)
         self.apps = apps
+        
         
 
         if container_password is None:
@@ -74,6 +79,7 @@ class ContainerManager:
             num_containers,
             web_port_start,
             management_port_start,
+            hec_port_start,
             splunkbase_username,
             splunkbase_password,
             files_to_copy_to_container,
@@ -158,6 +164,7 @@ class ContainerManager:
         num_containers: int,
         web_port_start: int,
         management_port_start: int,
+        hec_port_start: int,
         splunkbase_username: Union[str, None] = None,
         splunkbase_password: Union[str, None] = None,
         files_to_copy_to_container: OrderedDict = OrderedDict(),
@@ -174,10 +181,8 @@ class ContainerManager:
         for index in range(num_containers):
             container_name = container_name_template % index
             web_port_tuple = (WEB_PORT_STRING, web_port_start + index)
-            management_port_tuple = (
-                MANAGEMENT_PORT_STRING,
-                management_port_start + index,
-            )
+            management_port_tuple = (MANAGEMENT_PORT_STRING, management_port_start + 2*index)
+            hec_port_tuple = (HEC_PORT_STRING, hec_port_start + 2*index)
             
             new_containers.append(
                 splunk_container.SplunkContainer(
@@ -187,6 +192,7 @@ class ContainerManager:
                     self.apps,
                     web_port_tuple,
                     management_port_tuple,
+                    hec_port_tuple,
                     self.container_password,
                     files_to_copy_to_container,
                     self.mounts,

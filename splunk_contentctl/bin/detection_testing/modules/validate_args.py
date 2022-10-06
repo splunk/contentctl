@@ -2,7 +2,7 @@ import argparse
 import copy
 import io
 import json
-from bin.detection_testing.modules import jsonschema_errorprinter
+import modules.jsonschema_errorprinter as jsonschema_errorprinter
 import sys
 from typing import Union
 
@@ -12,6 +12,14 @@ ES_APP_NAME = "SPLUNK_ES_CONTENT_UPDATE"
 setup_schema = {
     "type": "object",
     "properties": {
+        "main_branch": {
+            "type": "string",
+            "default": "develop"
+        },
+        "repo_url": {
+            "type": "string",
+            "default": "https://github.com/splunk/security_content"
+        },
         "branch": {
             "type": "string",
             "default": "develop"
@@ -108,7 +116,7 @@ setup_schema = {
                   "SPLUNK_ADD_ON_FOR_MICROSOFT_WINDOWS": {
                     "app_number": 742,
                     "app_version": "8.5.0",
-                    "http_path": "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_850.tgz"
+                    "http_path": "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_850_PATCHED.tgz"
                   },
                   "SPLUNK_ADD_ON_FOR_NGINX": {
                     "app_number": 3258,
@@ -159,8 +167,13 @@ setup_schema = {
                     "app_number": 2734,
                     "app_version": "1.9.2",
                     "http_path": "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/url-toolbox_192.tgz"
-                  }
-
+                  },
+                  "SPLUNK_TA_MICROSOFT_CLOUD_SERVICES": {
+                    "app_number": 3110,
+                    "app_version": "4.5.0",
+                    "http_path": "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-cloud-services_450.tgz"
+                }
+                  
             }
         },
 
@@ -332,6 +345,7 @@ def validate(configuration: dict, skip_password_accessibility_check: bool = True
     # v = jsonschema.Draft201909Validator(argument_schema)
 
     try:
+
         validation_errors, validated_json = jsonschema_errorprinter.check_json(
             configuration, setup_schema)
 

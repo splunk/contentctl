@@ -28,7 +28,7 @@
       "SPLUNK_ADD_ON_FOR_MICROSOFT_WINDOWS": {
         "app_number": 742,
         "app_version": "8.5.0",
-        "http_path": "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_850.tgz"
+        "http_path": "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_850_PATCHED.tgz"
       },
       "SPLUNK_ADD_ON_FOR_NGINX": {
         "app_number": 3258,
@@ -84,8 +84,14 @@
         "app_number": 2734,
         "app_version": "1.9.2",
         "http_path": "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/url-toolbox_192.tgz"
-      }
+      },
+      "SPLUNK_TA_MICROSOFT_CLOUD_SERVICES": {
+        "app_number": 3110,
+        "app_version": "4.5.0",
+        "http_path": "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-cloud-services_450.tgz"
+    }
   },
+  "main_branch": "develop",
   "branch": "BRANCH_DOES_NOT_EXIST_USE_CLI_ARGUMENT",
   "commit_hash": null,
   "container_tag": "latest",
@@ -105,6 +111,7 @@
   "num_containers": 10,
   "persist_security_content": false,
   "pr_number": null,
+  "repo_url": "https://github.com/splunk/security_content",
   "reuse_image": true,
   "show_splunk_app_password": false,
   "splunk_app_password": null,

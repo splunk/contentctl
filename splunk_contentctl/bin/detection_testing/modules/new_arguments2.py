@@ -3,88 +3,32 @@ import json
 from typing import OrderedDict
 from bin.detection_testing.modules import validate_args
 import sys
-
+import io
+import os
 DEFAULT_CONFIG_FILE = "test_config.json"
 
 
-def configure_action(args) -> tuple[str, dict]:
-    settings = OrderedDict()
-    if args.input_config_file is None:
-        settings, schema = validate_args.validate({})
-    else:
-        settings, schema = validate_args.validate_file(args.input_config_file)
-
-    if settings is None:
-        print("Failure while processing settings\n\tQuitting...", file=sys.stderr)
-        sys.exit(1)
-
-    new_config = {}
-    for arg in settings:
-        default = settings[arg]
-        default_string = str(default).replace("'", '"')
-
-        if 'enum' in schema['properties'][arg]:
-            choice = input("%s [default: %s | choices: {%s}]: " % (
-                arg, default_string, ','.join(schema['properties'][arg]['enum'])))
-        else:
-            choice = input("%s [default: %s]: " % (arg, default_string))
-        choice = choice.strip()
-        if len(choice) == 0:
-            print("\tNothing entered, using default:")
-            new_config[arg] = default
-            formatted_print = default
-        else:
-            if choice.lower() in ["true", "false"] and schema['properties'][arg]['type'] == "boolean":
-                new_config[arg] = json.loads(choice.lower())
-                formatted_print = choice.lower()
-            else:
-
-                if choice in ['true', 'false'] or (choice.isdigit() and schema['properties'][arg]['type'] != "integer"):
-                    choice = '"' + choice + '"'
-                # replace all single quotes with doubles quotes to make valid json
-                elif "'" in choice:
-                    print('''Found %d single quotes (') in input... we will convert these to double quotes (") to ensure valida json.''' % (
-                        choice.count("'")))
-                    choice = choice.replace("'", '"')
-                elif '"' in choice:
-                    # Do nothing
-                    pass
-                elif choice.isdigit():
-                    pass
-                else:
-                    choice = '"' + choice + '"'
-
-                new_config[arg] = json.loads(choice)
-                formatted_print = choice
-        # We print out choice instead of new_config[arg] because the json.loads() messes up the quotation marks again
-        print("\t{0}\n".format(formatted_print))
-
-    # Now parse the new config and make sure it's good
-    validated_new_settings, schema = validate_args.validate_and_write(
-        new_config, args.output_config_file, skip_password_accessibility_check=False)
-    if validated_new_settings == None:
-        print("Could not update settings.\n\tQuitting...", file=sys.stderr)
-        sys.exit(1)
-
-    return ("configure", validated_new_settings)
+def configure_action(args) -> None:
+    print("Configure not supported")
+    sys.exit(1)
 
 
-def update_config_with_cli_arguments(args_dict: dict) -> tuple[str, dict]:
+def update_config_with_cli_arguments(all_args:dict, config_file: io.TextIOWrapper) -> tuple[str, dict]:
     # First load the config file
 
-    settings, _ = validate_args.validate_file(args_dict['config_file'])
+    settings = validate_args.validate_file(config_file)
     if settings is None:
         print("Failure while processing settings in [%s].\n\tQuitting..." % (
-            args_dict['config_file'].name), file=sys.stderr)
+            config_file.name), file=sys.stderr)
         sys.exit(1)
 
     # Then update it with the values that were passed as command line arguments
-    for key, value in args_dict.items():
+    for key, value in all_args.items():
         if key in settings:
             settings[key] = value
 
     # Validate again to make sure we didn't break anything
-    settings, _ = validate_args.validate(settings,skip_password_accessibility_check=False)
+    settings = validate_args.validate(settings)
     if settings is None:
         print("Failure while processing updated settings from command line.\n\tQuitting...", file=sys.stderr)
         sys.exit(1)
@@ -94,28 +38,18 @@ def update_config_with_cli_arguments(args_dict: dict) -> tuple[str, dict]:
 
 def run_action(args) -> tuple[str, dict]:
 
-    config = update_config_with_cli_arguments(args.__dict__)
+    config = update_config_with_cli_arguments(args.__dict__, args.__dict__['config_file'])
 
     return config
 
 
 def parse(args) -> tuple[str, dict]:
-    '''
-    try:
-        with open(DEFAULT_CONFIG_FILE, 'r') as settings_file:
-            default_settings = json.load(settings_file)
-    except Exception as e:
-        print("Error loading settings file %s: %s"%(DEFAULT_CONFIG_FILE, str(e)), file=sys.stderr)
-        sys.exit(1)
-    '''
-
-    import os
     # if there is no default config file, then generate one
     if not os.path.exists(DEFAULT_CONFIG_FILE):
         print("No default configuration file [%s] found.  Creating one..." % (
             DEFAULT_CONFIG_FILE))
         with open(DEFAULT_CONFIG_FILE, 'w') as cfg:
-            validate_args.validate_and_write({}, cfg, skip_password_accessibility_check=True)
+            validate_args.validate_and_write({}, cfg)
 
     parser = argparse.ArgumentParser(
         description="Use 'SOME_PROGRAM_NAME_STRING --help' to get help with the arguments")

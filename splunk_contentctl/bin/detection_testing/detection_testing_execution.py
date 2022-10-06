@@ -19,7 +19,7 @@ import requests
 
 
 
-from bin.detection_testing.modules import container_manager, new_arguments2, test_driver, validate_args, utils, github_service
+from bin.detection_testing.modules import container_manager, new_arguments2, test_driver, validate_args, utils, github_service, constants
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
 index_file_local_path = "bin/detection_testing/indexes.conf.tar"
@@ -308,7 +308,7 @@ def main(args: list[str]):
     #sys.exit(0)
     # Make a backup of this config containing the hash and stripped credentials.
     # This makes the test perfectly reproducible.
-    reproduce_test_config, _ = validate_args.validate_and_write(settings, output_file=None, strip_credentials=True)
+    reproduce_test_config = validate_args.validate_and_write(settings, output_file=None)
     if reproduce_test_config == None:
         print("Error - there was an error writing out the file to reproduce the test.  This should not happen, as all "\
               "settings should have been validated by this point.\n\tQuitting...",file=sys.stderr)
@@ -346,12 +346,12 @@ def main(args: list[str]):
 
 
     # Check to see if we want to install ESCU and whether it was preeviously generated and we should use that file
-    if validate_args.ES_APP_NAME in settings['apps'] and settings['apps'][validate_args.ES_APP_NAME]['local_path'] is not None:
+    if constants.ES_APP_NAME in settings['apps'] and settings['apps'][constants.ES_APP_NAME]['local_path'] is not None:
         # Using a pregenerated ESCU, no need to build it
         pass
 
-    elif validate_args.ES_APP_NAME not in settings['apps']:
-        print(f"{validate_args.ES_APP_NAME} was not found in {settings['apps'].keys()}.  We assume this is an error and shut down.\n\t"
+    elif constants.ES_APP_NAME not in settings['apps']:
+        print(f"{constants.ES_APP_NAME} was not found in {settings['apps'].keys()}.  We assume this is an error and shut down.\n\t"
               "Quitting...", file=sys.stderr)
         sys.exit(1)
     else:

@@ -6,9 +6,8 @@ import docker.types
 import os
 import random
 
-from modules import splunk_container
+from bin.detection_testing.modules import splunk_container, test_driver
 import string
-from modules import test_driver
 import threading
 import time
 import timeit

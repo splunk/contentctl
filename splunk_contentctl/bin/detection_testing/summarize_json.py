@@ -3,7 +3,7 @@ from collections import OrderedDict
 import argparse
 import sys
 import json
-from modules import validate_args
+from bin.detection_testing.modules import validate_args
 import os.path
 from operator import itemgetter
 import copy

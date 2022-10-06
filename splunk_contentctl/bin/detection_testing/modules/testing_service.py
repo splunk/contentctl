@@ -8,9 +8,7 @@ import sys
 import os
 import time
 import requests
-from modules.DataManipulation import DataManipulation
-from modules import utils
-from modules import splunk_sdk
+from bin.detection_testing.modules import DataManipulation, utils, splunk_sdk
 import timeit
 from typing import Union, Tuple
 from os.path import relpath

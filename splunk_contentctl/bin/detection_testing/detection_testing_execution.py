@@ -30,22 +30,20 @@ from requests import get
 
 
 
-from modules import (container_manager, new_arguments2,
-                     testing_service, validate_args, utils)
-from modules.github_service import GithubService
-from modules.validate_args import validate, validate_and_write, ES_APP_NAME
+from bin.detection_testing.modules import container_manager, new_arguments2, testing_service, validate_args, utils, github_service
+from bin.detection_testing.modules.validate_args import validate, validate_and_write, ES_APP_NAME
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
-index_file_local_path = "indexes.conf.tar"
+index_file_local_path = "bin/detection_testing/indexes.conf.tar"
 index_file_container_path = os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")
 
 # Should be the last one we copy.
-datamodel_file_local_path = "datamodels.conf.tar"
+datamodel_file_local_path = "bin/detection_testing/datamodels.conf.tar"
 datamodel_file_container_path = os.path.join(
     SPLUNK_CONTAINER_APPS_DIR, "Splunk_SA_CIM")
 
 
-authorizations_file_local_path = "authorize.conf.tar"
+authorizations_file_local_path = "bin/detection_testing/authorize.conf.tar"
 authorizations_file_container_path = "/opt/splunk/etc/system/local"
 
 CONTAINER_APP_DIRECTORY = "apps"
@@ -132,7 +130,7 @@ def copy_local_apps_to_directory(apps: dict[str, dict], splunkbase_username:tupl
     return target_directory
 
 
-def ensure_security_content(branch: str, commit_hash: Union[str,None], pr_number: Union[int, None], persist_security_content: bool) -> tuple[GithubService, bool]:
+def ensure_security_content(branch: str, commit_hash: Union[str,None], pr_number: Union[int, None], persist_security_content: bool) -> tuple[github_service.GithubService, bool]:
     if persist_security_content is True and os.path.exists("security_content"):
         print("****** You chose --persist_security_content and the security_content directory exists. "
               "We will not check out the repo again. Please be aware, this could cause issues if your "
@@ -140,7 +138,7 @@ def ensure_security_content(branch: str, commit_hash: Union[str,None], pr_number
               "libraries.  If this occurs, it is suggested to change the "\
               "persist_security_content setting to false. ******")
               
-        github_service = GithubService(
+        repo = github_service.GithubService(
             branch, commit_hash, persist_security_content=persist_security_content)
 
     else:
@@ -160,11 +158,11 @@ def ensure_security_content(branch: str, commit_hash: Union[str,None], pr_number
                 sys.exit(1)
 
         if pr_number:
-            github_service = GithubService(branch, commit_hash, pr_number)
+            repo = github_service.GithubService(branch, commit_hash, pr_number)
         else:
-            github_service = GithubService(branch, commit_hash)
+            repo = github_service.GithubService(branch, commit_hash)
 
-    return github_service, persist_security_content
+    return repo, persist_security_content
 
 
 def generate_escu_app(persist_security_content: bool = False) -> str:
@@ -323,6 +321,7 @@ def finish_mock(settings: dict, detections: list[str], output_file_template: str
 
 
 def main(args: list[str]):
+    
     #Disable insecure warnings.  We make a number of HTTPS requests to Splunk
     #docker containers that we've set up.  Without this line, we get an 
     #insecure warning every time due to invalid cert.
@@ -398,9 +397,9 @@ def main(args: list[str]):
     # Check out security content if required
     try:
         #Make sure we fix up the persist_securiy_content argument if it is passed in error (we say it exists but it doesn't)
-        github_service, settings['persist_security_content'] = ensure_security_content(
+        repo, settings['persist_security_content'] = ensure_security_content(
             settings['branch'], settings['commit_hash'], settings['pr_number'], settings['persist_security_content'])
-        settings['commit_hash'] = github_service.commit_hash
+        settings['commit_hash'] = repo.commit_hash
     except Exception as e:
         print("\nFailure checking out git repository: [%s]"\
               "\n\tCommit Hash: [%s]"\
@@ -421,7 +420,7 @@ def main(args: list[str]):
         sys.exit(1)
 
     try:
-        all_test_files = github_service.get_test_files(settings['mode'],
+        all_test_files = repo.get_test_files(settings['mode'],
                                                     settings['folders'],
                                                     settings['types'],
                                                     settings['detections_list'])
@@ -456,8 +455,8 @@ def main(args: list[str]):
         sys.exit(1)
     else:
         # Generate the ESCU package from this branch.
-        source_path = generate_escu_app(settings['persist_security_content'])
-        settings['apps']['SPLUNK_ES_CONTENT_UPDATE']['local_path'] = source_path
+        #source_path = generate_escu_app(settings['persist_security_content'])
+        settings['apps']['SPLUNK_ES_CONTENT_UPDATE']['local_path'] = "build/my_app.tar.gz"
         
 
     # Copy all the apps, to include ESCU (whether pregenerated or just generated)

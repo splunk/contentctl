@@ -2,7 +2,7 @@ import argparse
 import copy
 import io
 import json
-import modules.jsonschema_errorprinter as jsonschema_errorprinter
+from bin.detection_testing.modules import jsonschema_errorprinter
 import sys
 from typing import Union
 
@@ -332,7 +332,6 @@ def validate(configuration: dict, skip_password_accessibility_check: bool = True
     # v = jsonschema.Draft201909Validator(argument_schema)
 
     try:
-
         validation_errors, validated_json = jsonschema_errorprinter.check_json(
             configuration, setup_schema)
 

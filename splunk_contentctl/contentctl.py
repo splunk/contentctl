@@ -1,10 +1,13 @@
 
 DEFAULT_CONFIGURE_TEMPLATE_FILE = "app_initialization_template.json"
 DEFAULT_CONFIGURE_OUTPUT_FILE =   "app_initialization_configured.json"
+from codecs import ignore_errors
 from io import TextIOWrapper
+import shutil
 import sys
 import argparse
 import os
+
 import jsonschema
 import hierarchy_schema
 import json
@@ -92,14 +95,14 @@ def get_default_answers_from_template(questions:list[dict])->dict:
 
 
 def configure(args)->None:
-    pass
-    # import build_skeleton
-    # build_skeleton.configure(args)
+    #pass
+    import build_skeleton
+    build_skeleton.configure(args)
 
 def initialize(args)->None:
-    pass    
-    # import build_skeleton
-    # build_skeleton.init(args)
+        
+    import build_skeleton
+    build_skeleton.init(args)
 
 def content_changer(args) -> None:
     pass
@@ -143,6 +146,62 @@ def inspect(args) -> None:
 def cloud_deploy(args) -> None:
     Deploy(args)
 
+
+# By design, runs validate/generate/build/inspect(optional) before kicking off test
+# This way, we can move all of the package generation code out of detection testing,
+# Saving us a huge amount of work.
+def test(args, force_local_appinspect=False) -> None:
+    args.skip_enrichment = True
+    args.product = "SPLUNK_ENTERPRISE_APP"
+    args.output = os.path.join(args.path, "dist/my_app")
+    '''
+    try:
+        validate(args)
+    except Exception as e:
+        print("Test Failed - Error during App Content Validation")
+        sys.exit(1)
+    
+    try:
+        generate(args)
+    except Exception as e:
+        print("Test Failed - Error during App Content Generation")
+        sys.exit(1)
+    
+    '''
+    try:
+        build(args)
+    except Exception as e:
+        print(f"Test Failed - Error during App Build: {str(e)}")
+        sys.exit(1)
+    
+    if force_local_appinspect:
+        try:
+            inspect(args)
+        except Exception as e:
+            print("Test Failed - Error during App Inspection")
+            sys.exit(1)
+    else:
+        print("Skipping inspection")
+    import bin.detection_testing.detection_testing_execution
+    new_argv = ["run", "--mode", "all"]
+    bin.detection_testing.detection_testing_execution.main(new_argv)
+    
+
+def build(args):
+    import tarfile
+    shutil.rmtree("build", ignore_errors=True)
+    os.mkdir("build")
+
+    import pathlib
+    sourceDir = pathlib.Path("build/my_app/my_app")
+    shutil.copytree(args.output, sourceDir, dirs_exist_ok=True)
+
+    with tarfile.open("build/my_app.tar.gz", "w:gz") as app:
+        app.add(sourceDir, arcname="my_app")
+    
+
+def Test(args):
+    print("we start the test :)")
 
 def validate(args) -> None:
 
@@ -254,6 +313,7 @@ def main(args):
     inspect_parser = actions_parser.add_parser("inspect", help="Run appinspect to ensure that an app meets minimum requirements for deployment.")
     cloud_deploy_parser = actions_parser.add_parser("cloud_deploy", help="Install an application on a target Splunk Cloud Instance.")    
 
+    test_parser = actions_parser.add_parser("test", help="Run a test of the detections locally")
 
     configure_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_TEMPLATE_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
     configure_parser.add_argument("-ro", "--force_defaults", required=False, action=argparse.BooleanOptionalAction, help="Only create required folders, files, and templates.  Do not ask for user input")
@@ -313,7 +373,7 @@ def main(args):
     cloud_deploy_parser.add_argument("--server", required=False, default="https://admin.splunk.com", type=str, help="Override server URL (default 'https://admin.splunk.com')")
     cloud_deploy_parser.set_defaults(func=cloud_deploy)
     
-    
+    test_parser.set_defaults(func=test)
 
     # # parse them
     args = parser.parse_args()

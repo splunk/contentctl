@@ -14,7 +14,7 @@ from collections import OrderedDict
 from typing import Union
 
 import psutil
-import summarize_json
+from bin.detection_testing import summarize_json
 
 
 class TestDriver:

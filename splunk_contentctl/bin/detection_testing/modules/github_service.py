@@ -11,7 +11,7 @@ import datetime
 import git
 import yaml
 from git.objects import base
-from modules import testing_service
+from bin.detection_testing.modules import testing_service
 import pathlib
 
 # Logger

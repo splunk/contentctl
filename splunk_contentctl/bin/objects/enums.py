@@ -43,3 +43,13 @@ class SecurityContentProduct(enum.Enum):
     SPLUNK_ENTERPRISE_APP = 1
     SSA = 2
     API = 3
+
+class PostTestBehavior(str, enum.Enum):
+    always_pause = "always_pause"
+    pause_on_failure = "pause_on_failure"
+    never_pause = "never_pause"
+
+class DetectionTestingMode(str, enum.Enum):
+    selected = "selected"
+    changes = "changes"
+    all = "all"

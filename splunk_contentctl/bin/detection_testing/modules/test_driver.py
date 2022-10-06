@@ -14,12 +14,12 @@ from collections import OrderedDict
 from typing import Union
 
 import psutil
-import summarize_json
+from bin.detection_testing import summarize_json
 
 import pathlib
 import yaml
 
-from modules.test_objects import Detection, ResultsManager
+from bin.detection_testing.modules.test_objects import Detection, ResultsManager
 
 
 

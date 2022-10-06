@@ -1,20 +1,12 @@
-import argparse
 import copy
-import csv
-from ctypes.wintypes import tagRECT
-import json
 import os
-import queue
 import random
-import secrets
 import shutil
-import string
-import subprocess
+import docker
 import sys
-import threading
-import time
+
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import datetime
 from posixpath import basename
 from tempfile import mkdtemp
 from timeit import default_timer as timer
@@ -23,31 +15,23 @@ from urllib.parse import urlparse
 import signal
 import pathlib
 
-import docker
 import requests
-import requests.packages.urllib3
-from docker.client import DockerClient
-from requests import get
-from modules.test_driver import Detection
 
 
 
-from modules import (container_manager, new_arguments2,
-                     testing_service, validate_args, utils)
-from modules.github_service import GithubService
-from modules.validate_args import validate, validate_and_write, ES_APP_NAME
+from bin.detection_testing.modules import container_manager, new_arguments2, test_driver, validate_args, utils, github_service
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
-index_file_local_path = "indexes.conf.tar"
+index_file_local_path = "bin/detection_testing/indexes.conf.tar"
 index_file_container_path = os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")
 
 # Should be the last one we copy.
-datamodel_file_local_path = "datamodels.conf.tar"
+datamodel_file_local_path = "bin/detection_testing/datamodels.conf.tar"
 datamodel_file_container_path = os.path.join(
     SPLUNK_CONTAINER_APPS_DIR, "Splunk_SA_CIM")
 
 
-authorizations_file_local_path = "authorize.conf.tar"
+authorizations_file_local_path = "bin/detection_testing/authorize.conf.tar"
 authorizations_file_container_path = "/opt/splunk/etc/system/local"
 
 CONTAINER_APP_DIRECTORY = "apps"
@@ -134,8 +118,8 @@ def copy_local_apps_to_directory(apps: dict[str, dict], splunkbase_username:tupl
     return target_directory
 
 
-def ensure_security_content(settings:dict) -> GithubService:
-    repo_folder = GithubService.get_folder_name_from_repo_url(settings['repo_url'])
+def ensure_security_content(settings:dict) -> github_service.GithubService:
+    repo_folder = github_service.GithubService.get_folder_name_from_repo_url(settings['repo_url'])
     if settings['persist_security_content'] is True and os.path.exists(repo_folder):
         print("****** You chose --persist_security_content and the security_content directory exists. "
               "We will not check out the repo again. Please be aware, this could cause issues if your "
@@ -143,7 +127,7 @@ def ensure_security_content(settings:dict) -> GithubService:
               "libraries.  If this occurs, it is suggested to change the "\
               "persist_security_content setting to false. ******")
               
-        github_service = GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'], persist_security_content=True)
+        repo = github_service.GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'], persist_security_content=True)
         
 
     else:
@@ -163,58 +147,14 @@ def ensure_security_content(settings:dict) -> GithubService:
                 sys.exit(1)
 
         if settings['pr_number']:
-            github_service = GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'], PR_number=settings['pr_number'])
+            repo = github_service.GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'], PR_number=settings['pr_number'])
         else:
-            github_service = GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'])
+            repo = github_service.GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'])
 
-    return github_service
-
-
-def generate_escu_app(root_dir:str, persist_security_content: bool = False) -> str:
-    # Go into the security content directory
-    print("****GENERATING ESCU APP****")
-    os.chdir(root_dir)
-    
-    GENERATE_FOLDER = "dist/escu"
-    commands = [f"python ../../../contentctl.py --path . --skip_enrichment generate --product ESCU --output {GENERATE_FOLDER}"]
-    #copy all of the mlmodel files
-    
-    for model in pathlib.Path("lookups").rglob("*.mlmodel"):
-        #Copy any of the required mlmodels
-        target = os.path.join(GENERATE_FOLDER, "lookups", model.name)
-        shutil.copyfile(model, target)
-    ret = subprocess.run("; ".join(commands),
-                         shell=True, capture_output=True)
-    if ret.returncode != 0:
-        print("Error generating new content.\n\tQuitting and dumping error...\n[%s]" % (
-            ret.stderr))
-        sys.exit(1)
-
-    BUILD_FOLDER = "build"
-    BUILD_SOURCE_FOLDER  = "DA-ESS-ContentUpdate"
-    
-    PACKAGE_FILE = f"{BUILD_SOURCE_FOLDER}.tgz"
-    PACKAGE_PATH = os.path.join(BUILD_FOLDER, PACKAGE_FILE)
-    
-    shutil.rmtree(BUILD_FOLDER,ignore_errors=True)
-    os.mkdir(BUILD_FOLDER)
-
-    shutil.copytree(GENERATE_FOLDER, os.path.join(BUILD_FOLDER, BUILD_SOURCE_FOLDER))
-    
-    ret = subprocess.run(f"tar -czf {PACKAGE_PATH} -C {BUILD_FOLDER} {BUILD_SOURCE_FOLDER}",
-                         shell=True, capture_output=True)
-    if ret.returncode != 0:
-        print("Error generating new content.\n\tQuitting and dumping error...\n[%s]" % (
-            ret.stderr))
-        sys.exit(1)
-
-    os.chdir("../")
-
-    return os.path.join(root_dir, PACKAGE_PATH)
+    return repo
 
 
-
-def finish_mock(settings: dict, detections: list[Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
+def finish_mock(settings: dict, detections: list[test_driver.Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
     num_containers = settings['num_containers']
 
     #convert the list of Detection objects into a list of filename strings
@@ -260,7 +200,7 @@ def finish_mock(settings: dict, detections: list[Detection], output_file_templat
 
         try:
             with open(fname, 'w') as outfile:
-                validated_settings, b = validate_and_write(configuration=mock_settings, output_file = outfile, strip_credentials=True)
+                validated_settings, b = validate_args.validate_and_write(configuration=mock_settings, output_file = outfile, strip_credentials=True)
                 if validated_settings is None:
                     print(
                         "There was an error validating the updated mock settings.\n\tQuitting...", file=sys.stderr)
@@ -406,18 +346,18 @@ def main(args: list[str]):
 
 
     # Check to see if we want to install ESCU and whether it was preeviously generated and we should use that file
-    if ES_APP_NAME in settings['apps'] and settings['apps'][ES_APP_NAME]['local_path'] is not None:
+    if validate_args.ES_APP_NAME in settings['apps'] and settings['apps'][validate_args.ES_APP_NAME]['local_path'] is not None:
         # Using a pregenerated ESCU, no need to build it
         pass
 
-    elif ES_APP_NAME not in settings['apps']:
-        print(f"{ES_APP_NAME} was not found in {settings['apps'].keys()}.  We assume this is an error and shut down.\n\t"
+    elif validate_args.ES_APP_NAME not in settings['apps']:
+        print(f"{validate_args.ES_APP_NAME} was not found in {settings['apps'].keys()}.  We assume this is an error and shut down.\n\t"
               "Quitting...", file=sys.stderr)
         sys.exit(1)
     else:
         # Generate the ESCU package from this branch.
-        source_path = generate_escu_app(github_service.repo_folder, settings['persist_security_content'])
-        settings['apps']['SPLUNK_ES_CONTENT_UPDATE']['local_path'] = source_path
+        
+        settings['apps']['SPLUNK_ES_CONTENT_UPDATE']['local_path'] = "build/my_app.tar.gz"
         
 
     # Copy all the apps, to include ESCU (whether pregenerated or just generated)

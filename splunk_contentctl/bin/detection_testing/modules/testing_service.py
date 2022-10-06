@@ -5,16 +5,16 @@ import json
 
 #import ansible_runner
 
-from modules.DataManipulation import DataManipulation
-from modules import utils
-from modules import splunk_sdk
+from bin.detection_testing.modules.DataManipulation import DataManipulation
+from bin.detection_testing.modules import utils
+from bin.detection_testing.modules import splunk_sdk
 
 
 from os.path import relpath
 from tempfile import mkdtemp, mkstemp
 
 import splunklib.client as client
-from modules.test_objects import Detection, Test, Baseline, TestResult, AttackData
+from bin.detection_testing.modules.test_objects import Detection, Test, Baseline, TestResult, AttackData
 
 
 from typing import Union

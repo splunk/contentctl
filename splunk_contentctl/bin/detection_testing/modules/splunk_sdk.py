@@ -7,8 +7,8 @@ import requests
 import time
 import timeit
 import datetime
-from typing import Union, Tuple
-from modules.testing_service import TestResult
+from typing import Union
+from bin.detection_testing.modules.test_objects import TestResult
 DEFAULT_EVENT_HOST = "ATTACK_DATA_HOST"
 DEFAULT_DATA_INDEX = set(["main"])
 FAILURE_SLEEP_INTERVAL_SECONDS = 60

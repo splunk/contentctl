@@ -11,8 +11,8 @@ import datetime
 import git
 import yaml
 from git.objects import base
-from modules.test_driver import Detection
-from modules import testing_service
+from bin.detection_testing.modules.test_objects import Detection
+from bin.detection_testing.modules import testing_service
 
 import pathlib
 

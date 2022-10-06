@@ -8,10 +8,9 @@ import docker.models.containers
 import os.path
 import random
 import requests
-import shutil
-from modules import splunk_sdk
-from modules import testing_service
-from modules import test_driver
+
+from bin.detection_testing.modules import splunk_sdk, testing_service, test_driver
+
 import time
 import timeit
 from typing import Union

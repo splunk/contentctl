@@ -2,7 +2,7 @@ import argparse
 import copy
 import io
 import json
-import modules.jsonschema_errorprinter as jsonschema_errorprinter
+from bin.detection_testing.modules import jsonschema_errorprinter
 import sys
 from typing import Union
 

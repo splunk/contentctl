@@ -6,15 +6,15 @@ import docker.types
 import os
 import random
 
-from modules import splunk_container
+
 import string
-from modules import test_driver
 import threading
 import time
 import timeit
 
 from typing import Union
-from modules.test_objects import ResultsManager, Detection
+from bin.detection_testing.modules import splunk_container, test_driver
+from bin.detection_testing.modules.test_objects import ResultsManager, Detection
 
 WEB_PORT_STRING = "8000/tcp"
 HEC_PORT_STRING = "8088/tcp"

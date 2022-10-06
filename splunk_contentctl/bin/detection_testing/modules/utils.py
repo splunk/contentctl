@@ -7,7 +7,7 @@ def download_file_from_http(url:str, destination_file:str, overwrite_file:bool=F
         print(f"[{destination_file}] already exists...using cached version")
         return
     if verbose_print:
-        print(f"downloading to [{destination_file}]...",end="")
+        print(f"downloading to [{destination_file}]...",end="", flush=True)
     try:
         file_to_download = requests.get(url, stream=True)
         if file_to_download.status_code != 200:

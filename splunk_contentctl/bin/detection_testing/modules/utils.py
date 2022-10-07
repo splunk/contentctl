@@ -1,5 +1,7 @@
 import os
 import requests
+import random
+import string
 
 
 def download_file_from_http(url:str, destination_file:str, overwrite_file:bool=False, chunk_size:int=1024*1024, verbose_print:bool=False)->None:
@@ -23,3 +25,18 @@ def download_file_from_http(url:str, destination_file:str, overwrite_file:bool=F
         if verbose_print:
             print("FAILED")
         raise e
+
+# taken from attack_range
+def get_random_password(password_min_length: int = 16, password_max_length: int = 26) -> str:
+    random_source = string.ascii_letters + string.digits
+    password = random.choice(string.ascii_lowercase)
+    password += random.choice(string.ascii_uppercase)
+    password += random.choice(string.digits)
+
+    for i in range(random.randrange(password_min_length, password_max_length)):
+        password += random.choice(random_source)
+
+    password_list = list(password)
+    random.SystemRandom().shuffle(password_list)
+    password = "".join(password_list)
+    return password

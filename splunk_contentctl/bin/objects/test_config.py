@@ -28,6 +28,7 @@ from bin.objects.baseline import Baseline
 from bin.objects.playbook import Playbook
 from bin.helper.link_validator import LinkValidator
 from bin.objects.app import App
+from bin.detection_testing.modules import utils
 
 
 ALWAYS_PULL = True
@@ -48,13 +49,13 @@ class TestConfig(BaseModel, SecurityContentObject):
     pr_number: Union[int,None] = None
     splunk_app_password: Union[str,None] = None
     mock:bool 
-    splunkbase_username:str
-    splunkbase_password:str
+    splunkbase_username:Union[str,None]
+    splunkbase_password:Union[str,None]
     apps: list[App]
     
 
 
-    def validate_git_hash(self, hash:str, branch_name:str)->bool:
+    def validate_git_hash(self, hash:str, branch_name:Union[str,None])->bool:
         #Get a list of all branches
         repo = git.Repo(self.path)
 
@@ -145,7 +146,7 @@ class TestConfig(BaseModel, SecurityContentObject):
     @validator('main_branch')
     def valid_main_branch(cls, v):
         try:
-            cls.validate_git_branch_name(v, "branch")
+            cls.validate_git_branch_name(v)
         except:
             raise ValueError(f"Error validating main git branch name: {v}")
         return v
@@ -153,16 +154,16 @@ class TestConfig(BaseModel, SecurityContentObject):
     @validator('test_branch')
     def validate_test_branch(cls, v):
         try:
-            cls.validate_git_branch_name(v, "branch")
+            cls.validate_git_branch_name(v)
         except:
             raise ValueError(f"Error validating main git branch name: {v}")
         return v
 
     @validator('hash')
-    def validate_hash(cls, v):
+    def validate_hash(cls, v, values):
         try:
             #We can a hash with this function too
-            cls.validate_git_branch_name(v, "hash")
+            cls.validate_git_hash(v, values['test_branch'])
         except:
             raise ValueError(f"Error validating main git branch name: {v}")
         return v
@@ -238,48 +239,46 @@ class TestConfig(BaseModel, SecurityContentObject):
 
         return v
 
-    @validator('datamodel')
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError('not valid data model: ' + values["name"])
+    @validator('splunk_app_password')
+    def validate_splunk_app_password(cls, v):
+        if v == None:
+            #No app password was provided, so generate one
+            v = utils.get_random_password()
+        else:
+            MIN_PASSWORD_LENGTH = 6
+            if len(v) < MIN_PASSWORD_LENGTH:
+                raise(ValueError(f"Password is less than {MIN_PASSWORD_LENGTH}. This password is extremely weak, please change it."))
         return v
 
-    @validator('description', 'how_to_implement')
-    def encode_error(cls, v, values, field):
-        try:
-            v.encode('ascii')
-        except UnicodeEncodeError:
-            raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
+    @validator('splunkbase_username')
+    def validate_splunkbase_username(cls,v):
         return v
+    
+    @validator('splunkbase_password')
+    def validate_splunkbase_password(cls,v,values):
+        if v == None and values['splunkbase_password'] == None:
+            return v
+        elif (v == None and values['splunkbase_password'] != None) or \
+             (v != None and values['splunkbase_password'] == None):
+            raise(ValueError("splunkbase_username OR splunkbase_password "\
+                             "was provided, but not both.  You must provide"\
+                             " neither of these value or both, but not just "\
+                             "1 of them"))
+        else:
+            return v
 
-    @root_validator
-    def search_validation(cls, values):
-        if 'ssa_' not in values['file_path']:
-            if not '_filter' in values['search']:
-                raise ValueError('filter macro missing in: ' + values["name"])
-            if any(x in values['search'] for x in ['eventtype=', 'sourcetype=', ' source=', 'index=']):
-                if not 'index=_internal' in values['search']:
-                    raise ValueError('Use source macro instead of eventtype, sourcetype, source or index in detection: ' + values["name"])
-        return values
-
-    @root_validator
-    def name_max_length(cls, values):
-        # Check max length only for ESCU searches, SSA does not have that constraint
-        if 'ssa_' not in values['file_path']:
-            if len(values["name"]) > 67:
-                raise ValueError('name is longer then 67 chars: ' + values["name"])
-        return values
-
-# disable it because of performance reasons
-    # @validator('references')
-    # def references_check(cls, v, values):
-    #     LinkValidator.check_references(v, values["name"])
-    #     return v
-
-    @validator('search')
-    def search_validate(cls, v, values):
-        # write search validator
+    @validator('apps')
+    def validate_apps(cls, v, values):
+        app_errors = []
+        #ensure that the splunkbase username and password are provided
+        splunkbase_credentials = values['splunkbase_username'] != None and values['splunkbase_password'] != None
+        for app in v:
+            if app.download_from_splunkbase and not splunkbase_credentials:
+                #We must fetch this app from splunkbase, but don't have credentials to do so
+                error_string = f"Unable to download {app.name} from Splunkbase - missing splunkbase_username and/or splunkbase_password"
+                app_errors.append(error_string)
+        if len(app_errors) != 0:
+            error_string = '\n\t'.join(app_errors)
+            raise(ValueError(f"Error parsing apps to install:\n\t{error_string}"))
+        
         return v
-
- 

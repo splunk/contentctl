@@ -35,7 +35,7 @@ def getTestConfigFromYMLFile(path:pathlib.Path):
 class TestConfig(BaseModel):
     # detection spec
     repo_path: str
-    repo_url: str
+    repo_url: Union[str,None] = None
     main_branch: str
     test_branch: Union[str,None] = None
     commit_hash: Union[str,None] = None
@@ -78,9 +78,10 @@ class TestConfig(BaseModel):
                 raise(ValueError(f"hash '{hash} not found in branch '{branch_name}' for repo located at {self.path}/{self.repo_url}\n"\
                                   "If the hash is new, try pulling the repo."))
 
-    def validate_git_branch_name(self, name:str)->bool:
+    @staticmethod
+    def validate_git_branch_name(repo_path:str, repo_url:str, name:str)->bool:
         #Get a list of all branches
-        repo = git.Repo(self.path)
+        repo = git.Repo(repo_path)
         
         all_branches = [branch.name for branch in repo.refs]
         #remove "origin/" from the beginning of each branch name
@@ -92,14 +93,15 @@ class TestConfig(BaseModel):
         
         else:
             if ALWAYS_PULL:
-                raise(ValueError(f"branch '{name}' not found in repo located at {self.path}/{self.repo_url}"))
+                raise(ValueError(f"branch '{name}' not found in repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"))
             else:
-                raise(ValueError(f"branch '{name}' not found in repo located at {self.path}/{self.repo_url}\n"\
+                raise(ValueError(f"branch '{name}' not found in repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"\
                     "If the branch is new, try pulling the repo."))
     
-    def validate_git_pull_request(self, pr_number:int)->str:
+    @staticmethod
+    def validate_git_pull_request(repo_path:str, pr_number:int)->str:
         #Get a list of all branches
-        repo = git.Repo(self.path)
+        repo = git.Repo(repo_path)
         #List of all remotes that match this format.  If the PR exists, we
         #should find exactly one in the format SHA_HASH\tpull/pr_number/head
         pr_and_hash = repo.git.ls_remote("origin", f"pull/{pr_number}/head")
@@ -111,7 +113,7 @@ class TestConfig(BaseModel):
         hash, _ = pr_and_hash.split('\t')
         return hash
 
-    @validator('repo_path')
+    @validator('repo_path', always=True)
     def validate_repo_path(cls,v):
         try:
             path = pathlib.Path(v)
@@ -134,31 +136,49 @@ class TestConfig(BaseModel):
         return v
 
 
-    @validator('repo_url')
-    def validate_repo_url(cls, v):
+    @validator('repo_url', always=True)
+    def validate_repo_url(cls, v, values):
+        #First try to get the value from the repo
         try:
-            validators.url(v)
+            remote_url_from_repo = git.Repo(values['repo_path']).remotes.origin.url
+        except Exception as e:
+            raise(ValueError(f"Error reading remote_url from the repo located at {values['repo_path']}"))
+        
+        if v is not None and remote_url_from_repo != v:
+            raise(ValueError(f"The url of the remote repo supplied in the config file {v} does not "\
+                              f"match the value read from the repository at {values['repo_path']}, {remote_url_from_repo}"))
+        
+        
+        if v is None:    
+            v = remote_url_from_repo
+
+        #Ensure that the url is the proper format
+        try:
+            if bool(validators.url(v)) == False:
+                raise(Exception)
         except:
-            raise(ValueError(f"Error validating the repo_url: {v}"))
+            raise(ValueError(f"Error validating the repo_url. The url is not valid: {v}"))
+        
+
         return v
 
-    @validator('main_branch')
-    def valid_main_branch(cls, v):
+    @validator('main_branch', always=True)
+    def valid_main_branch(cls, v, values):
         try:
-            cls.validate_git_branch_name(v)
+            cls.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
+        except Exception as e:
+            raise ValueError(f"Error validating main git branch name: {str(e)}")
+        return v
+
+    @validator('test_branch', always=True)
+    def validate_test_branch(cls, v, values):
+        try:
+            cls.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
         except:
             raise ValueError(f"Error validating main git branch name: {v}")
         return v
 
-    @validator('test_branch')
-    def validate_test_branch(cls, v):
-        try:
-            cls.validate_git_branch_name(v)
-        except:
-            raise ValueError(f"Error validating main git branch name: {v}")
-        return v
-
-    @validator('commit_hash')
+    @validator('commit_hash', always=True)
     def validate_hash(cls, v, values):
         try:
             #We can a hash with this function too
@@ -167,7 +187,7 @@ class TestConfig(BaseModel):
             raise ValueError(f"Error validating main git branch name: {v}")
         return v
     
-    @validator('full_image_path')
+    @validator('full_image_path', always=True)
     def validate_full_image_path(cls,v):
         #This behavior may change if we start supporting local/offline containers and 
         #the logic to build them
@@ -185,7 +205,7 @@ class TestConfig(BaseModel):
     #presumably the post test behavior is validated by the enum?
     #presumably the mode is validated by the enum? 
     
-    @validator('detections_list')
+    @validator('detections_list', always=True)
     def validate_detections_list(cls, v, values):
         #A detections list can only be provided if the mode is selected
         #otherwise, we must throw an error
@@ -214,13 +234,13 @@ class TestConfig(BaseModel):
 
         return v
 
-    @validator('num_containers')
+    @validator('num_containers', always=True)
     def validate_num_containers(cls, v):
         if v < 1:
             raise(ValueError(f"Error validating num_containers. Test must be run with at least 1 container, not {v}"))
         return v
 
-    @validator('pr_number')
+    @validator('pr_number', always=True)
     def validate_pr_number(cls, v, values):
         if v == None:
             return v
@@ -238,7 +258,7 @@ class TestConfig(BaseModel):
 
         return v
 
-    @validator('splunk_app_password')
+    @validator('splunk_app_password', always=True)
     def validate_splunk_app_password(cls, v):
         if v == None:
             #No app password was provided, so generate one
@@ -249,11 +269,11 @@ class TestConfig(BaseModel):
                 raise(ValueError(f"Password is less than {MIN_PASSWORD_LENGTH}. This password is extremely weak, please change it."))
         return v
 
-    @validator('splunkbase_username')
+    @validator('splunkbase_username', always=True)
     def validate_splunkbase_username(cls,v):
         return v
     
-    @validator('splunkbase_password')
+    @validator('splunkbase_password', always=True)
     def validate_splunkbase_password(cls,v,values):
         if v == None and values['splunkbase_password'] == None:
             return v
@@ -266,7 +286,7 @@ class TestConfig(BaseModel):
         else:
             return v
 
-    @validator('apps')
+    @validator('apps', always=True)
     def validate_apps(cls, v, values):
         app_errors = []
         #ensure that the splunkbase username and password are provided

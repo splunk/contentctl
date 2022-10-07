@@ -1,4 +1,3 @@
-from msilib.schema import AppId
 import string
 import uuid
 import requests
@@ -99,7 +98,7 @@ class App(BaseModel):
                 raise(ValueError(f"Error validating the http_path: {v}"))
         return v
     
-    @validator('splunkbase_rul')
+    @validator('splunkbase_path')
     def validate_splunkbase_path(cls, v, values):
         if values['local_path'] is None and values['http_path'] is None:
             #We must get this from splunkbase

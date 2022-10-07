@@ -1,57 +1,56 @@
-from multiprocessing.sharedctypes import Value
-from re import L, S
-import uuid
-import string
-import requests
-import time
-import sys
 import validators
 import pathlib
 import git
+import yaml
 import os 
-from pydantic import BaseModel, validator, root_validator
+from pydantic import BaseModel, validator
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Union
 import docker
 
 
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.enums import AnalyticsType
+
+
 from bin.objects.enums import PostTestBehavior, DetectionTestingMode
-from bin.objects.detection_tags import DetectionTags
-from bin.objects.deployment import Deployment
-from bin.objects.unit_test import UnitTest
-from bin.objects.macro import Macro
-from bin.objects.lookup import Lookup
-from bin.objects.baseline import Baseline
-from bin.objects.playbook import Playbook
-from bin.helper.link_validator import LinkValidator
+
 from bin.objects.app import App
 from bin.detection_testing.modules import utils
 
 
 ALWAYS_PULL = True
 
-class TestConfig(BaseModel, SecurityContentObject):
+
+def getTestConfigFromYMLFile(path:pathlib.Path):
+    try:
+        with open(path, "r") as config_handle:
+            cfg = yaml.safe_load(config_handle)
+        return TestConfig.parse_obj(cfg)
+
+    except Exception as e:
+        print(f"Error loading test configuration file '{path}': {str(e)}")
+
+
+
+
+class TestConfig(BaseModel):
     # detection spec
-    path: str
+    repo_path: str
     repo_url: str
     main_branch: str
     test_branch: Union[str,None] = None
     commit_hash: Union[str,None] = None
     full_image_path: str = "registry.hub.docker.com/splunk/splunk:latest"
     container_name: str = "splunk_detection_testing_%d"
-    post_test_behavior: PostTestBehavior
+    post_test_behavior: PostTestBehavior = PostTestBehavior.pause_on_failure
     mode: DetectionTestingMode = DetectionTestingMode.changes
     detections_list: Union[list[str], None] = None
     num_containers: int = 1
     pr_number: Union[int,None] = None
     splunk_app_password: Union[str,None] = None
-    mock:bool 
+    mock:bool = False
     splunkbase_username:Union[str,None]
     splunkbase_password:Union[str,None]
-    apps: list[App]
+    apps: list[App] = []
     
 
 
@@ -112,8 +111,8 @@ class TestConfig(BaseModel, SecurityContentObject):
         hash, _ = pr_and_hash.split('\t')
         return hash
 
-    @validator('path')
-    def validate_path(cls,v):
+    @validator('repo_path')
+    def validate_repo_path(cls,v):
         try:
             path = pathlib.Path(v)
         except Exception as e:
@@ -159,7 +158,7 @@ class TestConfig(BaseModel, SecurityContentObject):
             raise ValueError(f"Error validating main git branch name: {v}")
         return v
 
-    @validator('hash')
+    @validator('commit_hash')
     def validate_hash(cls, v, values):
         try:
             #We can a hash with this function too
@@ -202,7 +201,7 @@ class TestConfig(BaseModel, SecurityContentObject):
         all_errors = []
         for detection in v:
             try:
-                full_path = os.path.join(values['path'], detection)
+                full_path = os.path.join(values['repo_path'], detection)
                 if not pathlib.Path(full_path).exists():
                     all_errors.append(full_path)
             except Exception as e:

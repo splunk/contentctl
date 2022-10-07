@@ -1,4 +1,5 @@
-from re import S
+from multiprocessing.sharedctypes import Value
+from re import L, S
 import uuid
 import string
 import requests
@@ -12,7 +13,7 @@ from pydantic import BaseModel, validator, root_validator
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Union
-
+import docker
 
 
 from bin.objects.security_content_object import SecurityContentObject
@@ -36,34 +37,79 @@ class TestConfig(BaseModel, SecurityContentObject):
     path: str
     repo_url: str
     main_branch: str
-    test_branch: str
-    commit_hash: str
-    container_name: str
+    test_branch: Union[str,None] = None
+    commit_hash: Union[str,None] = None
+    full_image_path: str = "registry.hub.docker.com/splunk/splunk:latest"
+    container_name: str = "splunk_detection_testing_%d"
     post_test_behavior: PostTestBehavior
-    mode: str
+    mode: DetectionTestingMode = DetectionTestingMode.changes
     detections_list: Union[list[str], None] = None
-    num_containers: int
-    pr_number: int
-    splunk_app_password: str
+    num_containers: int = 1
+    pr_number: Union[int,None] = None
+    splunk_app_password: Union[str,None] = None
     mock:bool 
     splunkbase_username:str
     splunkbase_password:str
     apps: list[App]
     
 
-    def validate_git_branch_name(self, name:str, object_type:str)->bool:
+
+    def validate_git_hash(self, hash:str, branch_name:str)->bool:
         #Get a list of all branches
         repo = git.Repo(self.path)
-        all_branches = [branch.name for branch in repo.remote().refs]
+
+        try:
+            all_branches_containing_hash = repo.get.branch("--contains", hash).split('\n')
+            #this is a list of all branches that contain the hash.  They are in the format:
+            #* <some number of spaces> branchname (if the branch contains the hash)
+            #<some number of spaces>   branchname (if the branch does not contain the hash)
+            #Note, of course, that a hash can be in 0, 1, more branches!
+            for branch_string in all_branches_containing_hash:
+                if branch_string.split(' ')[0] == "*" and (branch_string.split(' ')[-1] == branch_name or branch_name==None):
+                    #Yes, the hash exists in the branch!
+                    return True
+            #If we get here, it does not exist in the given branch
+            raise(Exception("Does not exist in branch"))
+
+        except Exception as e:
+            if ALWAYS_PULL:
+                raise(ValueError(f"hash '{hash} not found in branch '{branch_name}' for repo located at {self.path}/{self.repo_url}"))
+            else:
+                raise(ValueError(f"hash '{hash} not found in branch '{branch_name}' for repo located at {self.path}/{self.repo_url}\n"\
+                                  "If the hash is new, try pulling the repo."))
+
+    def validate_git_branch_name(self, name:str)->bool:
+        #Get a list of all branches
+        repo = git.Repo(self.path)
+        
+        all_branches = [branch.name for branch in repo.refs]
+        #remove "origin/" from the beginning of each branch name
+        all_branches = [branch.replace("origin/","") for branch in all_branches]
+
+
         if name in all_branches:
             return True
+        
         else:
             if ALWAYS_PULL:
-                raise(ValueError(f"{object_type} {name} not found in repo located at {self.path}/{self.repo_url}"))
+                raise(ValueError(f"branch '{name}' not found in repo located at {self.path}/{self.repo_url}"))
             else:
-                raise(ValueError(f"{object_type} {name} not found in repo located at {self.path}/{self.repo_url}. "\
+                raise(ValueError(f"branch '{name}' not found in repo located at {self.path}/{self.repo_url}\n"\
                     "If the branch is new, try pulling the repo."))
-
+    
+    def validate_git_pull_request(self, pr_number:int)->str:
+        #Get a list of all branches
+        repo = git.Repo(self.path)
+        #List of all remotes that match this format.  If the PR exists, we
+        #should find exactly one in the format SHA_HASH\tpull/pr_number/head
+        pr_and_hash = repo.git.ls_remote("origin", f"pull/{pr_number}/head")
+        if len(pr_and_hash) == 0:
+            raise(ValueError(f"pr_number {pr_number} not found in Remote {repo.remote().url}"))
+        elif len(pr_and_hash) > 1:
+            raise(ValueError(f"Somehow, more than 1 PR was found with pr_number {pr_number}:\n{pr_and_hash}\nThis should not happen."))
+        
+        hash, _ = pr_and_hash.split('\t')
+        return hash
 
     @validator('path')
     def validate_path(cls,v):
@@ -121,12 +167,19 @@ class TestConfig(BaseModel, SecurityContentObject):
             raise ValueError(f"Error validating main git branch name: {v}")
         return v
     
-    @validator('container_name')
-    def validate_container_name(cls,v):
-        #Stub to validate container name - should this actually pull
-        #the container as well?  What is the best way to reconcile
-        #between local images and images that are hosted somewhere
-        #such as docker hub?
+    @validator('full_image_path')
+    def validate_full_image_path(cls,v):
+        #This behavior may change if we start supporting local/offline containers and 
+        #the logic to build them
+        if ':' not in v:
+            raise(ValueError(f"Error, the image_name {v} does not include a tag.  A tagged container MUST be included to ensure consistency when testing"))
+        if ALWAYS_PULL:
+            #Check to make sure we have the latest version of the image
+            try:
+                client = docker.from_env()
+                client.images.pull(v)
+            except Exception as e:
+                raise(ValueError(f"Error checking for the latest version of the image {v}: {str(e)}"))
         return v
     
     #presumably the post test behavior is validated by the enum?
@@ -158,12 +211,32 @@ class TestConfig(BaseModel, SecurityContentObject):
             raise(Exception(ValueError(f"Paths to the following detections in 'detections_list' "\
                                         "were invalid: \n\t{joined_errors}")))
 
-        
+
         return v
 
-    
+    @validator('num_containers')
+    def validate_num_containers(cls, v):
+        if v < 1:
+            raise(ValueError(f"Error validating num_containers. Test must be run with at least 1 container, not {v}"))
+        return v
 
+    @validator('pr_number')
+    def validate_pr_number(cls, v, values):
+        if v == None:
+            return v
+        
+        hash = cls.validate_git_pull_request(v)
+        #Ensure that the hash is equal to the one in the config file, if it exists.
+        if values['commit_hash'] is None:
+            values['commit_hash'] = hash
+        else:
+            if values['commit_hash'] != hash:
+                raise(ValueError("commit_hash specified in configuration was {}, but commit_hash from pr_number {} was {}.  "\
+                                 "These must match.  If you're testing a PR, you probably do NOT want to provide the "\
+                                 "commit_hash in the configuration file and always want to test the head of the PR.  "\
+                                 "This will be done automatically if you do not provide the commit_hash."))
 
+        return v
 
     @validator('datamodel')
     def datamodel_valid(cls, v, values):

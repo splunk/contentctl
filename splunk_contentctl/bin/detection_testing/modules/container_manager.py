@@ -13,7 +13,7 @@ import time
 import timeit
 
 from typing import Union
-from bin.detection_testing.modules import splunk_container, test_driver
+from bin.detection_testing.modules import splunk_container, test_driver, utils
 from bin.detection_testing.modules.test_objects import ResultsManager, Detection
 
 WEB_PORT_STRING = "8000/tcp"
@@ -58,7 +58,7 @@ class ContainerManager:
         
 
         if container_password is None:
-            self.container_password = self.get_random_password()
+            self.container_password = utils.get_random_password()
         else:
             self.container_password = container_password
         
@@ -221,22 +221,7 @@ class ContainerManager:
             read_only=mount["read_only"],
         )
 
-    # taken from attack_range
-    def get_random_password(
-        self, password_min_length: int = 16, password_max_length: int = 26
-    ) -> str:
-        random_source = string.ascii_letters + string.digits
-        password = random.choice(string.ascii_lowercase)
-        password += random.choice(string.ascii_uppercase)
-        password += random.choice(string.digits)
-
-        for i in range(random.randrange(password_min_length, password_max_length)):
-            password += random.choice(random_source)
-
-        password_list = list(password)
-        random.SystemRandom().shuffle(password_list)
-        password = "".join(password_list)
-        return password
+    
 
     def queue_status_thread(self, status_interval:int=60, num_steps:int=10)->None:
 

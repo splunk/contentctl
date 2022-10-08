@@ -48,35 +48,45 @@ class TestConfig(BaseModel):
     pr_number: Union[int,None] = None
     splunk_app_password: Union[str,None] = None
     mock:bool = False
-    splunkbase_username:Union[str,None]
-    splunkbase_password:Union[str,None]
+    splunkbase_username:Union[str,None] = None
+    splunkbase_password:Union[str,None] = None
     apps: list[App] = []
     
 
-
-    def validate_git_hash(self, hash:str, branch_name:Union[str,None])->bool:
+    @staticmethod
+    def validate_git_hash(repo_path:str, repo_url:str, commit_hash:str,  branch_name:Union[str,None])->bool:
+        
         #Get a list of all branches
-        repo = git.Repo(self.path)
+        repo = git.Repo(repo_path)
+        if commit_hash is None:
+            #No need to validate the hash, it was not supplied
+            return True
+                
 
         try:
-            all_branches_containing_hash = repo.get.branch("--contains", hash).split('\n')
+            all_branches_containing_hash = repo.git.branch("--contains", commit_hash).split('\n')
             #this is a list of all branches that contain the hash.  They are in the format:
             #* <some number of spaces> branchname (if the branch contains the hash)
             #<some number of spaces>   branchname (if the branch does not contain the hash)
             #Note, of course, that a hash can be in 0, 1, more branches!
             for branch_string in all_branches_containing_hash:
+                print(branch_string.split(' '))
                 if branch_string.split(' ')[0] == "*" and (branch_string.split(' ')[-1] == branch_name or branch_name==None):
-                    #Yes, the hash exists in the branch!
+                    #Yes, the hash exists in the branch (or branch_name was None and it existed in at least one branch)!
                     return True
             #If we get here, it does not exist in the given branch
             raise(Exception("Does not exist in branch"))
 
         except Exception as e:
+            if branch_name is None:
+                branch_name = "ANY_BRANCH"
             if ALWAYS_PULL:
-                raise(ValueError(f"hash '{hash} not found in branch '{branch_name}' for repo located at {self.path}/{self.repo_url}"))
+                raise(ValueError(f"hash '{commit_hash}' not found in '{branch_name}' for repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"))
             else:
-                raise(ValueError(f"hash '{hash} not found in branch '{branch_name}' for repo located at {self.path}/{self.repo_url}\n"\
+                raise(ValueError(f"hash '{commit_hash}' not found in '{branch_name}' for repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"\
                                   "If the hash is new, try pulling the repo."))
+
+
 
     @staticmethod
     def validate_git_branch_name(repo_path:str, repo_url:str, name:str)->bool:
@@ -97,6 +107,9 @@ class TestConfig(BaseModel):
             else:
                 raise(ValueError(f"branch '{name}' not found in repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"\
                     "If the branch is new, try pulling the repo."))
+        
+        
+        
     
     @staticmethod
     def validate_git_pull_request(repo_path:str, pr_number:int)->str:
@@ -167,24 +180,26 @@ class TestConfig(BaseModel):
         try:
             cls.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
         except Exception as e:
-            raise ValueError(f"Error validating main git branch name: {str(e)}")
+            raise ValueError(f"Error validating main_branch: {str(e)}")
         return v
 
     @validator('test_branch', always=True)
     def validate_test_branch(cls, v, values):
+        if v is None:
+            return v
         try:
             cls.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
         except:
-            raise ValueError(f"Error validating main git branch name: {v}")
+            raise ValueError(f"Error validating test_branch: {v}")
         return v
 
     @validator('commit_hash', always=True)
-    def validate_hash(cls, v, values):
+    def validate_commit_hash(cls, v, values):
         try:
             #We can a hash with this function too
-            cls.validate_git_hash(v, values['test_branch'])
-        except:
-            raise ValueError(f"Error validating main git branch name: {v}")
+            cls.validate_git_hash(values['repo_path'],values['repo_url'], v, values['test_branch'])
+        except Exception as e:
+            raise ValueError(f"Error validating commit_hash '{v}': {str(e)}")
         return v
     
     @validator('full_image_path', always=True)
@@ -216,9 +231,12 @@ class TestConfig(BaseModel):
                 #We intentionally raise an error even if the list is an empty list
                 raise(ValueError(f"For Detection Testing Mode {DetectionTestingMode.selected}, "\
                     f"'detections_list' MUST be none.  Instead, it was a list containing {len(v)} detections."))
+            return v
         
         #Mode is DetectionTestingMode.selected - verify the paths of all the detections
         all_errors = []
+        if v == None:
+            raise(ValueError(f"mode is '{DetectionTestingMode.selected}', but detections_list was not provided."))
         for detection in v:
             try:
                 full_path = os.path.join(values['repo_path'], detection)
@@ -228,8 +246,8 @@ class TestConfig(BaseModel):
                 all_errors.append(f"Could not validate path '{detection}'")
         if len(all_errors):
             joined_errors = '\n\t'.join(all_errors)
-            raise(Exception(ValueError(f"Paths to the following detections in 'detections_list' "\
-                                        "were invalid: \n\t{joined_errors}")))
+            raise(ValueError(f"Paths to the following detections in 'detections_list' "\
+                             f"were invalid: \n\t{joined_errors}"))
 
 
         return v
@@ -275,10 +293,10 @@ class TestConfig(BaseModel):
     
     @validator('splunkbase_password', always=True)
     def validate_splunkbase_password(cls,v,values):
-        if v == None and values['splunkbase_password'] == None:
+        if v == None and values['splunkbase_username'] == None:
             return v
-        elif (v == None and values['splunkbase_password'] != None) or \
-             (v != None and values['splunkbase_password'] == None):
+        elif (v == None and values['splunkbase_username'] != None) or \
+             (v != None and values['splunkbase_username'] == None):
             raise(ValueError("splunkbase_username OR splunkbase_password "\
                              "was provided, but not both.  You must provide"\
                              " neither of these value or both, but not just "\

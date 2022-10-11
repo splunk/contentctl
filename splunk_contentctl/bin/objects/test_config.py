@@ -129,14 +129,23 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         repo = git.Repo(repo_path)
         #List of all remotes that match this format.  If the PR exists, we
         #should find exactly one in the format SHA_HASH\tpull/pr_number/head
-        pr_and_hash = repo.git.ls_remote("origin", f"pull/{pr_number}/head").split('\n')
+        pr_and_hash = repo.git.ls_remote("origin", f"pull/{pr_number}/head")
+
         
         if len(pr_and_hash) == 0:
-            raise(ValueError(f"pr_number {pr_number} not found in Remote {repo.remote().url}"))
-        elif len(pr_and_hash) > 1:
+            raise(ValueError(f"pr_number {pr_number} not found in Remote '{repo.remote().url}'"))
+
+        pr_and_hash_lines = pr_and_hash.split('\n')
+        if len(pr_and_hash_lines) > 1:
             raise(ValueError(f"Somehow, more than 1 PR was found with pr_number {pr_number}:\n{pr_and_hash}\nThis should not happen."))
-        
-        hash, _ = pr_and_hash[0].split('\t')
+
+                
+        if pr_and_hash_lines[0].count('\t')==1:
+            hash, _ = pr_and_hash_lines[0].split('\t') 
+            return hash
+        else:
+            raise(ValueError(f"Expected PR Format:\nCOMMIT_HASH\tpull/{pr_number}/head\nbut got\n{pr_and_hash_lines[0]}"))
+            
         return hash
 
     @staticmethod
@@ -293,6 +302,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
             return v
         
         hash = cls.validate_git_pull_request(values['repo_path'], v)
+        
         #Ensure that the hash is equal to the one in the config file, if it exists.
         if values['commit_hash'] is None:
             values['commit_hash'] = hash

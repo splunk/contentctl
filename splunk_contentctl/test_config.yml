@@ -1,3 +1,17 @@
-repo_path: ../
-repo_url: http://github.com/splunk/security_content
-
+repo_path: .
+main_branch: main
+test_branch: add_test_functionality
+#commit_hash: 2c2cd8ac883eb06b03763232ffbfa54eaaaebf66
+#pr_number: 2
+splunk_app_password: hellodsc
+#splunkbase_username: fake_user
+#splunkbase_password: fake_user
+apps: 
+  - name: Some Fake Name
+    uid: 3449
+    appid: thisIsMyApp
+    #local_path: test_config.yml
+    http_path: http://localhost:8000/wow.tgz
+    title: this is my app's title
+    description: human readable, don't really need it
+    release: 3.50.0

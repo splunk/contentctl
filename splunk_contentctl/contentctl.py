@@ -1,6 +1,7 @@
 
 DEFAULT_CONFIGURE_TEMPLATE_FILE = "app_initialization_template.json"
 DEFAULT_CONFIGURE_OUTPUT_FILE =   "app_initialization_configured.json"
+from ast import arg
 from codecs import ignore_errors
 from io import TextIOWrapper
 import shutil
@@ -22,6 +23,7 @@ from bin.input.director import DirectorInputDto
 from bin.objects.enums import SecurityContentType, SecurityContentProduct
 from bin.enrichments.attack_enrichment import AttackEnrichment
 from bin.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
+from bin.objects.test_config import TestConfig
 
 
 def init():
@@ -201,6 +203,37 @@ def build(args):
     
 
 def Test(args):
+
+    
+    #Fetch the command line parameters that were passed
+    fields_to_update = {}
+    for name,value in args.__dict__.items():
+        if value is not None and name in TestConfig.__fields__:
+            #Command line parameter received an argument. This will override
+            #both the default for that arg AND whatever is defined in the
+            #config file, if it is passed
+            fields_to_update[name] = value
+    
+        
+    if args.config_file is not None:
+        try:
+            import yaml
+            cfg = yaml.safe_load(args.config_file)
+            cfg.update(fields_to_update)
+            updated = TestConfig.parse_obj(cfg)
+        except Exception as e:
+            print(f"Error parsing config file {args.config_file.name}: {str(e)}")
+            sys.exit(1)
+    else:
+        #Parse from the defaults (defined in TestConfig) and the
+        #command line parameters
+        try:
+            TestConfig.parse_obj(fields_to_update)
+        except Exception as e:
+            print(f"Error creating config file: {str(e)}")
+            sys.exit(1)
+    
+
     print("we start the test :)")
 
 def validate(args) -> None:
@@ -373,11 +406,15 @@ def main(args):
     cloud_deploy_parser.add_argument("--server", required=False, default="https://admin.splunk.com", type=str, help="Override server URL (default 'https://admin.splunk.com')")
     cloud_deploy_parser.set_defaults(func=cloud_deploy)
     
-    test_parser.set_defaults(func=test)
+    
+    TestConfig.create_argparse_parser_from_model(test_parser)
+    test_parser.set_defaults(func=Test)
 
     # # parse them
     args = parser.parse_args()
+    return args.func(args)
 
+    '''
     #Parse the template so that functions don't need to do it individually
     try:
         if 'template' in args and args.template:
@@ -405,6 +442,7 @@ def main(args):
         import traceback
         print(traceback.format_exc())
 
+    '''
 
 if __name__ == "__main__":
     main(sys.argv[1:])

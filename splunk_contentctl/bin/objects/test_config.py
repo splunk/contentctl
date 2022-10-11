@@ -3,7 +3,7 @@ import pathlib
 import git
 import yaml
 import os 
-from pydantic import BaseModel, validator, Extra, Field
+from pydantic import BaseModel, validator, root_validator, Extra, Field
 from dataclasses import dataclass
 from typing import Union
 import docker
@@ -41,8 +41,8 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     commit_hash: Union[str,None] = Field(default=None, title="Commit hash of the repo state to be tested, if applicable")
     full_image_path: str = Field(default="registry.hub.docker.com/splunk/splunk:latest", title="Full path to the container image to be used")
     container_name: str = Field(default="splunk_detection_testing_%d", title="Template to be used for naming the Splunk Test Containers which will be created")
-    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, title=f"What to do after a test has completed.  Choose one of {[PostTestBehavior.pause_on_failure.value, PostTestBehavior.always_pause.value, PostTestBehavior.never_pause.value]}")
-    mode: DetectionTestingMode = Field(default=DetectionTestingMode.changes, title=f"Control which detections should be tested.  Choose one of {[DetectionTestingMode.changes.value,DetectionTestingMode.all.value,DetectionTestingMode.selected.value]}")
+    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, title=f"What to do after a test has completed.  Choose one of {PostTestBehavior._member_names_}")
+    mode: DetectionTestingMode = Field(default=DetectionTestingMode.changes, title=f"Control which detections should be tested.  Choose one of {DetectionTestingMode._member_names_}")
     detections_list: Union[list[str], None] = Field(default=None, title="List of paths to detections which should be tested")
     num_containers: int = Field(default=1, title="Number of testing containers to start in parallel.")
     pr_number: Union[int,None] = Field(default=None, title="The number of the PR to test")
@@ -152,6 +152,15 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     def check_required_fields(thisField:str, definedFields:dict, requiredFields:list[str]):
         if not all([thisField in definedFields for thisField in requiredFields]):
             raise(ValueError("Could not validate - please resolve other errors"))
+
+    #Ensure that at least 1 of test_branch, commit_hash, and/or pr_number were passed. 
+    #Otherwise, what are we testing??
+    @root_validator(pre=True)
+    def ensure_there_is_something_to_test(cls, values):
+        print(values)
+        if 'test_branch' not in values and 'commit_hash' not in values and'pr_number' not in values:
+            raise(ValueError(f"At least one of 'test_branch', 'commit_hash', and/or 'pr_number' must be defined so that we know what to test."))
+        return values
 
     @validator('repo_path', always=True)
     def validate_repo_path(cls,v):

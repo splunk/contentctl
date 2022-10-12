@@ -1,6 +1,8 @@
 #Needed for a staticmethod to be able to return an instance of the class it belongs to
 from __future__ import annotations
 
+
+
 import validators
 import pathlib
 import git
@@ -340,8 +342,13 @@ class TestConfig(BaseModel, extra=Extra.forbid):
 
     @validator('num_containers', always=True)
     def validate_num_containers(cls, v):
+        MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING = 2
         if v < 1:
             raise(ValueError(f"Error validating num_containers. Test must be run with at least 1 container, not {v}"))
+        if v > MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING:
+            print(f"You requested to run with [{v}] containers which may use a very large amount of resources "
+              "as they all run in parallel.  The maximum suggested number of parallel containers is "
+              f"[{MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING}].  We will do what you asked, but be warned!")
         return v
 
     @validator('pr_number', always=True)

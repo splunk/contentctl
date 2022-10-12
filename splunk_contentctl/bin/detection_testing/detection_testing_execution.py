@@ -21,6 +21,7 @@ import requests
 
 from bin.detection_testing.modules import container_manager, new_arguments2, test_driver, validate_args, utils, github_service, constants
 from bin.objects.test_config import TestConfig
+from splunk_contentctl.bin.detection_testing.modules.github_service import GithubService
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
 index_file_local_path = "bin/detection_testing/indexes.conf.tar"
@@ -119,40 +120,7 @@ def copy_local_apps_to_directory(apps: dict[str, dict], splunkbase_username:tupl
     return target_directory
 
 
-def ensure_security_content(settings:dict) -> github_service.GithubService:
-    repo_folder = github_service.GithubService.get_folder_name_from_repo_url(settings['repo_url'])
-    if settings['persist_security_content'] is True and os.path.exists(repo_folder):
-        print("****** You chose --persist_security_content and the security_content directory exists. "
-              "We will not check out the repo again. Please be aware, this could cause issues if your "
-              "repo is out of date or if a previous build failed to download all required tools and "\
-              "libraries.  If this occurs, it is suggested to change the "\
-              "persist_security_content setting to false. ******")
-              
-        repo = github_service.GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'], persist_security_content=True)
-        
 
-    else:
-        if settings['persist_security_content'] is True and not os.path.exists(repo_folder):
-            print("Error - you chose --persist_security_content but the security_content directory does not exist!"
-                  "  We will check it out for you.")
-            settings['persist_security_content'] = False
-
-        elif os.path.exists(repo_folder):
-            print("Deleting the security_content directory")
-            try:
-                shutil.rmtree(repo_folder, ignore_errors=True)
-                print("Successfully removed security_content directory")
-            except Exception as e:
-                print(
-                    f"Error - could not remove the {repo_folder} directory: {str(e)}.\n\tQuitting...")
-                sys.exit(1)
-
-        if settings['pr_number']:
-            repo = github_service.GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'], PR_number=settings['pr_number'])
-        else:
-            repo = github_service.GithubService(settings['repo_url'], settings['main_branch'], settings['branch'], settings['commit_hash'])
-
-    return repo
 
 
 def finish_mock(settings: dict, detections: list[test_driver.Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
@@ -215,106 +183,38 @@ def finish_mock(settings: dict, detections: list[test_driver.Detection], output_
     return True
 
 
+
+def ensure_docker_is_avaliable(config: TestConfig):
+    #If this is a mock, then docker doesn't need to be running so we will
+    #not check for it
+    if config.mock == True:
+        return
+
+    #This is a real test run, so ensure that docker is running on this machine
+    try:
+        docker.client.from_env()
+    except Exception as e:
+        raise(Exception(f"Error, failed to get docker client.  Is Docker Installed and Running? Error:\n\t{str(e)}"))
+
+    
+
+
 def main(config: TestConfig):
     #Disable insecure warnings.  We make a number of HTTPS requests to Splunk
     #docker containers that we've set up.  Without this line, we get an 
     #insecure warning every time due to invalid cert.
     requests.packages.urllib3.disable_warnings()
 
-    start_datetime = datetime.now()
-    
-    action, settings = new_arguments2.parse(args)
-    if action == "configure":
-        # Done, nothing else to do
-        print("Configuration complete!")
-        sys.exit(0)
-    elif action != "run":
-        print("Unsupported action: [%s]" % (action), file=sys.stderr)
-        sys.exit(1)
 
-    if settings['mock'] is False:
-        # If this is a real run, then make sure Docker is installed and running and usable
-        # If this is a mock, then that is not required.  By only checking on a non-mock
-        # run, we save ourselves the need to install docker in the CI for the manifest
-        # generation step.
-        try:
-            docker.client.from_env()
-        except Exception as e:
-            print("Error, failed to get docker client.  Is Docker Installed and Running?\n\t%s" % (str(e)))
-            sys.exit(1)
-        
-        credentials_needed = False
-        credential_error = False
-        
-        
-        
-        if settings['splunkbase_username'] == None or settings['splunkbase_password'] == None:
-
-            missing_credentials = []
-            if settings['splunkbase_username'] == None:
-                missing_credentials.append("--splunkbase_username")
-            if settings['splunkbase_password'] == None:
-                missing_credentials.append("--splunkbase_password")
-            
-            missing_credentials_string = '\n\t'.join(missing_credentials)
-            
-            splunkbase_only_apps = []
-            for app,content in settings['apps'].items():
-                if 'local_path' not in content and 'http_path' not in content:
-                    splunkbase_only_apps.append(app)
-            if len(splunkbase_only_apps) != 0:
-                print(f"Error - you have attempted to install the following apps: {splunkbase_only_apps}, "
-                     "but you have not provided a local_path or an http_path in the config file.  Normally, "
-                     "we would download these from Splunkbase, but the following credentials are "
-                     f"missing:\n\t{missing_credentials_string}\n  Please provide them on the command line "
-                     "or in the config file.\n\tQuitting...")
-                sys.exit(1)
-
-            print(f"You have listed apps to install but have "\
-                  f"not provided\n\t{missing_credentials_string} \nvia the command line or config file. "
-                  f"We will download these files from S3 rather than Splunkbase.")
-        else:
-
-            print(f"You have listed apps to install and provided Splunkbase credentials. "\
-                  f"These apps will be downloaded and installed from Splunkbase!")
-
-        
-
-    
-    FULL_DOCKER_HUB_CONTAINER_NAME = "splunk/splunk:%s" % settings['container_tag']
-
-    if settings['num_containers'] > MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING:
-        print("You requested to run with [%d] containers which may use a very large amount of resources "
-              "as they all run in parallel.  The maximum suggested number of parallel containers is "
-              "[%d].  We will do what you asked, but be warned!" % (settings['num_containers'], MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING))
-
-    # Check out security content if required
-    try:
-        #Make sure we fix up the persist_securiy_content argument if it is passed in error (we say it exists but it doesn't)
-        github_service = ensure_security_content(settings)
-        settings['commit_hash'] = github_service.commit_hash
-    except Exception as e:
-        print("\nFailure checking out git repository: [%s]"\
-              "\n\tCommit Hash: [%s]"\
-              "\n\tBranch     : [%s]"\
-              "\n\tPR         : [%s]\n\tQuitting..."%
-              (str(e),settings['commit_hash'],settings['branch'],settings['pr_number']),file=sys.stderr)
-        sys.exit(1)
+    ensure_docker_is_avaliable(config)
     
     
+    #Get a handle to the git repo
+    github_service = GithubService(config.repo_path)
+
+
+    detections_to_test = github_service.get_detections_to_test(config.mode, config.detections_list)
     
-
-    #passes = [{'search_string': '| tstats `security_content_summariesonly` count min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes where (Processes.process_name ="7z.exe" OR Processes.process_name = "7za.exe" OR Processes.original_file_name = "7z.exe" OR Processes.original_file_name =  "7za.exe") AND (Processes.process="*\\\\C$\\\\*" OR Processes.process="*\\\\Admin$\\\\*" OR Processes.process="*\\\\IPC$\\\\*") by Processes.original_file_name Processes.parent_process_name Processes.parent_process Processes.process_name Processes.process Processes.parent_process_id Processes.process_id  Processes.dest Processes.user | `drop_dm_object_name(Processes)` | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)` | `7zip_commandline_to_smb_share_path_filter` | stats count | where count > 0', 'detection_name': '7zip CommandLine To SMB Share Path', 'detection_file': 'endpoint/7zip_commandline_to_smb_share_path.yml', 'success': True, 'error': False, 'diskUsage': '286720', 'runDuration': '0.922', 'scanCount': '4897'}]
-    #github_service.update_and_commit_passed_tests(passes)
-    #sys.exit(0)
-    # Make a backup of this config containing the hash and stripped credentials.
-    # This makes the test perfectly reproducible.
-    reproduce_test_config = validate_args.validate_and_write(settings, output_file=None)
-    if reproduce_test_config == None:
-        print("Error - there was an error writing out the file to reproduce the test.  This should not happen, as all "\
-              "settings should have been validated by this point.\n\tQuitting...",file=sys.stderr)
-        sys.exit(1)
-
     try:
         all_detections = github_service.detections_to_test(settings['mode'], detections_list=settings['detections_list'])
         #all_test_files = github_service.get_test_files(settings['mode'],

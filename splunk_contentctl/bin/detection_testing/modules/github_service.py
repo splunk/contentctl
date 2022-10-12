@@ -13,8 +13,11 @@ import yaml
 from git.objects import base
 from bin.detection_testing.modules.test_objects import Detection
 from bin.detection_testing.modules import testing_service
+from bin.objects.enums import DetectionTestingMode
 
 import pathlib
+
+from splunk_contentctl.bin.objects.test_config import TestConfig
 
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -27,77 +30,10 @@ DETECTION_FILE_EXTENSION = ".yml"
 TEST_FILE_EXTENSION      = ".test.yml"
 SSA_PREFIX = "ssa___"
 class GithubService:
-    @staticmethod
-    def get_folder_name_from_repo_url(repo_url:str)->str:
-        # The name of the last fragment of the url.  
-        # For example, https://github.com/splunk/security_content would be security_content
-        try:
-            return repo_url.split('/')[-1] 
-        except Exception as e:
-            raise(Exception(f"Error deriving the folder name from the repo_url in settings '{repo_url}' : {str(e)}"))
-    def __init__(self, repo_url:str, main_branch:str, security_content_branch: str, commit_hash: Union[str,None], PR_number: Union[int,None] = None, persist_security_content: bool = False):
-        self.repo_url = repo_url
-        self.repo_folder = GithubService.get_folder_name_from_repo_url(repo_url)
-        self.main_branch = main_branch
-        self.feature_branch = security_content_branch
-        if persist_security_content:
-            print(f"Getting handle on existing {self.repo_folder} repo!")
-            self.security_content_repo_obj = git.Repo(self.repo_folder)
-        else:
-            print("Checking out security_content repo!")            
-            self.security_content_repo_obj = self.clone_project(
-                self.repo_url, self.repo_folder, self.main_branch)
+    def __init__(self, path:str):
+        self.repo = git.Repo(path)
 
-        #Ensure that the branch name is valid   
-        #Get all the branch names, prefixed with "origin/"
-        branch_names = [branch.name for branch in self.security_content_repo_obj.remote().refs]
-
-        if "origin/%s"%(security_content_branch) not in branch_names:
-            raise(Exception("Branch name [%s] not found in valid branches.  Try running \n"\
-                           "'git branch -a' to examine [%d] branches"%(security_content_branch, len(branch_names))))
-
-
-        if commit_hash is not None and PR_number is not None: 
-            print(f"\n************\nWARNING - both the PR_number {PR_number} and the commit_hash {commit_hash} were provided. "
-                  f"You should only pass neither or one of these.  We will ASSUME you want to use the PR_number, not the commit_hash. " 
-                  f"Removing the commit_hash...\n************\n")
-            commit_hash = None
-            
-            
-
-        if PR_number:
-            ret = subprocess.run(["git", "-C", self.repo_folder, "fetch", "origin",
-                            "refs/pull/%d/head:%s" % (PR_number, security_content_branch)], capture_output=True)
-            #ret = subprocess.call(["git", "-C", "security_content/", "fetch", "origin",
-            #                "refs/pull/%d/head:%s" % (PR_number, security_content_branch)])
-            
-            
-            if ret.returncode != 0:
-                raise(Exception("Error checking out repository: [%s]"%(ret.stdout.decode("utf-8") + "\n" + ret.stderr.decode("utf-8"))))
-            
-
-        # No checking to see if the hash is to a commit inside of the branch - the user
-        # has to do that by hand.
-        
-        # -- ensures that we check out the appropriate branch or commit hash.
-        # Without --, there can be ambiguity if a file/folder exists with the
-        # same name as the branch, causing the checkout to fail with error
-        if commit_hash is not None:
-            print("Checking out commit hash: [%s]" % (commit_hash))
-            self.security_content_repo_obj.git.checkout(commit_hash, '--')
-        else:
-            #Even if we have fetched a PR, we still MUST check out the branch to
-            # be able to do anything with it. Otherwise we won't have the files
-            print("Checking out branch: [%s]..." %
-                  (security_content_branch), end='')
-            sys.stdout.flush()
-            self.security_content_repo_obj.git.checkout(
-                security_content_branch, '--')
-            commit_hash = self.security_content_repo_obj.head.object.hexsha
-            print("commit_hash %s" % (commit_hash))
-
-        self.commit_hash = commit_hash
-
+    '''
     def update_and_commit_passed_tests(self, results:list[dict])->bool:
         
         changed_file_paths = []
@@ -148,16 +84,25 @@ class GithubService:
 
         
         return True
+    '''
+    
 
     def clone_project(self, url, project, branch):
         LOGGER.info(f"Clone Security Content Project")
         repo_obj = git.Repo.clone_from(url, project, branch=branch)
         return repo_obj
 
-    def detections_to_test(self, mode:str, ignore_experimental:bool = True, ignore_deprecated:bool = True, ignore_ssa:bool = True, allowed_types:list[str] = ["Anomaly", "Hunting", "TTP"], detections_list:list[str]=[])->list[Detection]:
+    def get_detections_to_test(self, config:TestConfig,  detections_list:list[str]=[], 
+                               ignore_experimental:bool = True, 
+                               ignore_deprecated:bool = True, 
+                               ignore_ssa:bool = True, 
+                               allowed_types:list[str] = ["Anomaly", "Hunting", "TTP"],)->list[Detection]:
         
-        detections = list(pathlib.Path(os.path.join(self.repo_folder, "detections")).rglob("*.yml"))
-        print(f"Total detections loaded from the directory: {len(detections)}")
+        detections_path = pathlib.Path(os.path.join(self.repo.working_dir, "detections"))
+        detections = list(detections_path.rglob("*.yml"))
+        print(f"Total detections found in {detections_path} from the directory: {len(detections)}")
+        
+
         if ignore_experimental:
             detections = [d for d in detections if 'detections/experimental' not in str(d)]
         if ignore_deprecated:
@@ -166,8 +111,7 @@ class GithubService:
             detections = [d for d in detections if not d.name.startswith("ssa___")]
         
         print(f"Total detections loaded after removal of experimental, deprecated, and ssa: {len(detections)}")
-        #We are down to just the detections we care about
-        #Parse and load each of them, which will ensure that they pass their validations
+        
         
         detection_objects:list[Detection] = []
         errors = []
@@ -191,20 +135,21 @@ class GithubService:
         print(f"Detection objects after downselecting to {allowed_types}: {len(detection_objects)}")
 
         
-        if mode=="changes":
-            print("begin diff")
+        if config.mode==DetectionTestingMode.changes:
             untracked_files, changed_files = self.get_all_modified_content()
             modified_content = untracked_files + changed_files
-            
             detection_objects = [o for o in detection_objects if pathlib.Path(os.path.join(*o.detectionFile.path.parts[1:])) in modified_content or pathlib.Path(os.path.join(*o.testFile.path.parts[1:])) in modified_content]
-            print("end diff")
-        elif mode=="all":
+            
+        elif config.mode==DetectionTestingMode.all:
+            #Don't need to do anything, we don't need to remove it from the list
             pass
-        elif mode=="selected":
+        elif config.mode==DetectionTestingMode.selected:
             detection_objects = [o for o in detection_objects if os.path.join(*o.detectionFile.path.parts) in detections_list]
         else:
-            raise(Exception(f"Unsupported mode {mode}.  Supported modes are {['changes', 'all', 'selected']}"))
+            raise(Exception(f"Unsupported mode {config.mode}.  Supported modes are {DetectionTestingMode._member_names_}"))
+
         print(f"Finally the number is: {len(detection_objects)}")
+
         
         return detection_objects
         

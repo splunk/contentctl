@@ -16,6 +16,7 @@ import json
 
 from bin.actions.validate import ValidateInputDto, Validate
 from bin.actions.generate import GenerateInputDto, Generate
+from bin.actions.test import Test
 from bin.actions.reporting import ReportingInputDto, Reporting
 from bin.actions.new_content import NewContentInputDto, NewContent
 from bin.actions.doc_gen import DocGenInputDto, DocGen
@@ -24,6 +25,7 @@ from bin.objects.enums import SecurityContentType, SecurityContentProduct
 from bin.enrichments.attack_enrichment import AttackEnrichment
 from bin.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
 from bin.objects.test_config import TestConfig
+
 
 
 def init():
@@ -148,7 +150,7 @@ def inspect(args) -> None:
 def cloud_deploy(args) -> None:
     Deploy(args)
 
-
+'''
 # By design, runs validate/generate/build/inspect(optional) before kicking off test
 # This way, we can move all of the package generation code out of detection testing,
 # Saving us a huge amount of work.
@@ -156,7 +158,7 @@ def test(args, force_local_appinspect=False) -> None:
     args.skip_enrichment = True
     args.product = "SPLUNK_ENTERPRISE_APP"
     args.output = os.path.join(args.path, "dist/my_app")
-    '''
+    
     try:
         validate(args)
     except Exception as e:
@@ -169,7 +171,7 @@ def test(args, force_local_appinspect=False) -> None:
         print("Test Failed - Error during App Content Generation")
         sys.exit(1)
     
-    '''
+    
     try:
         build(args)
     except Exception as e:
@@ -187,7 +189,7 @@ def test(args, force_local_appinspect=False) -> None:
     import bin.detection_testing.detection_testing_execution
     new_argv = ["run", "--mode", "all"]
     bin.detection_testing.detection_testing_execution.main(new_argv)
-    
+'''    
 
 def build(args):
     import tarfile
@@ -202,39 +204,19 @@ def build(args):
         app.add(sourceDir, arcname="my_app")
     
 
-def Test(args):
+def test(args):
+    
+    #Parse everything from the command line
+    test_object = TestConfig.get_configuration_from_command_line(args)
+
+    #Run the test
+    Test().execute(test_object)
 
     
-    #Fetch the command line parameters that were passed
-    fields_to_update = {}
-    for name,value in args.__dict__.items():
-        if value is not None and name in TestConfig.__fields__:
-            #Command line parameter received an argument. This will override
-            #both the default for that arg AND whatever is defined in the
-            #config file, if it is passed
-            fields_to_update[name] = value
     
-        
-    if args.config_file is not None:
-        try:
-            import yaml
-            cfg = yaml.safe_load(args.config_file)
-            cfg.update(fields_to_update)
-            updated = TestConfig.parse_obj(cfg)
-        except Exception as e:
-            print(f"Error parsing config file {args.config_file.name}: {str(e)}")
-            sys.exit(1)
-    else:
-        #Parse from the defaults (defined in TestConfig) and the
-        #command line parameters
-        try:
-            TestConfig.parse_obj(fields_to_update)
-        except Exception as e:
-            print(f"Error creating config file: {str(e)}")
-            sys.exit(1)
     
 
-    print("we start the test :)")
+    
 
 def validate(args) -> None:
 
@@ -408,11 +390,17 @@ def main(args):
     
     
     TestConfig.create_argparse_parser_from_model(test_parser)
-    test_parser.set_defaults(func=Test)
+    test_parser.set_defaults(func=test)
 
     # # parse them
     args = parser.parse_args()
-    return args.func(args)
+    try:
+        return args.func(args)
+    except Exception as e:
+        print(f"Error for function [{args.func.__name__}]: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        sys.exit(1)
 
     '''
     #Parse the template so that functions don't need to do it individually

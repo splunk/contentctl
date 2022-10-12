@@ -10,34 +10,82 @@ from datetime import datetime
 from typing import Union
 import validators
 from bin.objects.security_content_object import SecurityContentObject
+from bin.objects.enums import SecurityContentProduct
+from bin.objects.app import App
 from bin.objects.enums import DataModel
+from semantic_version import Version
+import argparse 
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{release}/download"
 
-class App(BaseModel, extra=Extra.forbid):
-    
+class Manifest(BaseModel, extra=Extra.forbid):
+    #Note that many of these fields are mirrored from App
+
+    #Some information about the developer of the app 
+    author_name: str = Field(default=None, title="Enter the name of the app author")
+    author_email: str = Field(default=None, title="Enter a contact email for the develop(s) of the app")
+    author_company: str = Field(default=None, title="Enter the company who is developing the app")
 
     #uid is a numeric identifier assigned by splunkbase, so
     #homemade applications will not have this
-    uid: Union[int, None] 
+    uid: Union[int, None] = Field(default=None, title="Unique numeric identifier assigned by Splunkbase to identify your app. You can find it in the URL of your app's landing page.  If you do not have one, leave this blank.")
 
     #appid is basically the internal name of you app
-    appid: str
+    appid: str = Field(default=None, title="Internal name of your app.  Note that it MUST be alphanumeric with underscores, but no spaces or other special characters")
     
     #Title is the human readable name for your application
-    title: str
+    title: str = Field(default=None, title="Human-Readable name for your app. This can include any characters you want")
 
     #Self explanatory
-    description: Union[str,None]
-    release: str
+    description: Union[str,None] = Field(default=None, title="Provide a helpful description of the app.")
+    release: str = Field(default=None, title="Provide a name for the current release of the app.  This MUST follow semantic version format MAJOR.MINOR.PATCH[-tag]")
 
-
-    local_path: Union[str,None]
-    http_path: Union[str,None]
-    #Splunkbase path is made of the combination of uid and release fields
-    splunkbase_path: Union[str,None]
+    @validator('author_email', always=True)
+    def validate_author_email(cls, v):
+        if bool(validators.email.email(v)) == False:
+            raise(ValueError(f"Email address {v} is invalid"))
+        return v
     
-    must_download_from_splunkbase: bool = False
+    @validator('release', always=True)
+    def validate_release(cls, v):
+        try:    
+            Version(v)
+        except Exception as e:
+            raise(ValueError(f"The string '{v}' is not a valid Semantic Version.  For more information on Semantic Versioning, please refer to https://semver.org/"))
+        
+        return v
+
+
+class AppBuilder(BaseModel, extra=Extra.forbid):
+
+    #Needs a manifest to be able to properly generate the app
+    manifest:Manifest
+
+    
+    
+    type: SecurityContentProduct = Field(default=SecurityContentProduct.SPLUNK_ENTERPRISE_APP, title=f"What type of product would you like to build.  Choose one of {SecurityContentProduct._member_names_}")
+    skip_enrichment: bool = Field(default=True, title="Whether or not to skip the enrichment processes when validating the app.  Enrichment increases the amount of time it takes to build an app significantly because it must hit a number of Web APIs.")
+
+    input_path: str = Field(default='.', title="Path to the root of your app")
+    output_path: str = Field(default='./dist', title="Path where 'generate' will write out your raw app")
+    output_path: str = Field(default='./build', title="Path where 'build' will write out your custom app")
+    
+
+    @staticmethod
+    def create_argparse_parser_from_model(parser: argparse.ArgumentParser):
+        #Add all the fields defined in the model as arguments to the parser
+        parser.add_argument("-c", "--config_file", type=argparse.FileType('r'), default=None, help="Name of the config file to run the test")
+        
+        #Expose the appBuilder Fields
+        for fieldName, fieldItem in AppBuilder.__fields__.items():
+            parser.add_argument(f"--{fieldName}", type=fieldItem.type_, default=None, help=fieldItem.field_info.title)
+
+        #Expose the Manifest Fields
+        for fieldName, fieldItem in Manifest.__fields__.items():
+            parser.add_argument(f"--{fieldName}", type=fieldItem.type_, default=None, help=fieldItem.field_info.title)
+        
+        
+
 
     @staticmethod
     def validate_string_alphanumeric_with_underscores(input:str)->bool:

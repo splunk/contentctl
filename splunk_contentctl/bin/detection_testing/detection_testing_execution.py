@@ -20,6 +20,7 @@ import requests
 
 
 from bin.detection_testing.modules import container_manager, new_arguments2, test_driver, validate_args, utils, github_service, constants
+from bin.objects.test_config import TestConfig
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
 index_file_local_path = "bin/detection_testing/indexes.conf.tar"
@@ -214,7 +215,7 @@ def finish_mock(settings: dict, detections: list[test_driver.Detection], output_
     return True
 
 
-def main(args: list[str]):
+def main(config: TestConfig):
     #Disable insecure warnings.  We make a number of HTTPS requests to Splunk
     #docker containers that we've set up.  Without this line, we get an 
     #insecure warning every time due to invalid cert.

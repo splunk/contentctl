@@ -17,7 +17,7 @@ from bin.objects.enums import DetectionTestingMode
 
 import pathlib
 
-from splunk_contentctl.bin.objects.test_config import TestConfig
+from bin.objects.test_config import TestConfig
 
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -92,7 +92,7 @@ class GithubService:
         repo_obj = git.Repo.clone_from(url, project, branch=branch)
         return repo_obj
 
-    def get_detections_to_test(self, config:TestConfig,  detections_list:list[str]=[], 
+    def get_detections_to_test(self, config:TestConfig, 
                                ignore_experimental:bool = True, 
                                ignore_deprecated:bool = True, 
                                ignore_ssa:bool = True, 
@@ -125,6 +125,7 @@ class GithubService:
             all_errors_string = '\n\t'.join(errors)
             #raise Exception(f"The following errors were encountered while parsing detections:\n\t{all_errors_string}")
             print(f"The following errors were encountered while parsing detections:\n\t{all_errors_string}")
+            errors = []
 
 
         print(f"Detection objects that were parsed: {len(detection_objects)}")
@@ -144,9 +145,39 @@ class GithubService:
             #Don't need to do anything, we don't need to remove it from the list
             pass
         elif config.mode==DetectionTestingMode.selected:
-            detection_objects = [o for o in detection_objects if os.path.join(*o.detectionFile.path.parts) in detections_list]
+            if config.detections_list is None:
+                #We should never get here because validation should catch it.  Adding this test to avoid
+                #type warning
+                raise(Exception(f"Detection Testing mode is {config.mode}. but Detections List was {config.detections_list}"))
+
+            
+            #Grab all the detection objects associated with the selected detections
+            #We might be able to move this to test config object creation time to avoid
+            #all of this checking here
+            errors = []
+            found_detections = []
+            for detection_file in config.detections_list:
+                full_detection_file_path = pathlib.Path(os.path.join(self.repo.working_dir,detection_file))
+                found = False
+                for detection_object in detection_objects:
+                    if detection_object.detectionFile.path == full_detection_file_path:
+                        found=True
+                        found_detections.append(detection_object)
+                        break
+                if found == False:
+                    errors.append(f"Failed to find detection {detection_file} in the {self.repo.working_dir}")
+                
+                
+            if len(errors) > 0:
+                error_string = "\n\t".join(errors)
+                raise(Exception(f"Failed to get detections:\n\t{error_string}"))
+            detection_objects = found_detections
+
         else:
             raise(Exception(f"Unsupported mode {config.mode}.  Supported modes are {DetectionTestingMode._member_names_}"))
+
+
+        
 
         print(f"Finally the number is: {len(detection_objects)}")
 

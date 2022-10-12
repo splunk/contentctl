@@ -21,7 +21,7 @@ import requests
 
 from bin.detection_testing.modules import container_manager, new_arguments2, test_driver, validate_args, utils, github_service, constants
 from bin.objects.test_config import TestConfig
-from splunk_contentctl.bin.detection_testing.modules.github_service import GithubService
+from bin.detection_testing.modules.github_service import GithubService
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
 index_file_local_path = "bin/detection_testing/indexes.conf.tar"
@@ -213,7 +213,9 @@ def main(config: TestConfig):
     github_service = GithubService(config.repo_path)
 
 
-    detections_to_test = github_service.get_detections_to_test(config.mode, config.detections_list)
+    detections_to_test = github_service.get_detections_to_test(config)
+    print(len(detections_to_test))
+    sys.exit(0)
     
     try:
         all_detections = github_service.detections_to_test(settings['mode'], detections_list=settings['detections_list'])

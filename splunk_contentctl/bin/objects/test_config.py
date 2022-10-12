@@ -86,6 +86,10 @@ class TestConfig(BaseModel, extra=Extra.forbid):
                 fields_to_update[name] = value
         
         
+        #A hack that allow a user to provide a comma-separated list of detections on the command line
+        if type(fields_to_update.get('detections_list',[])) == str:
+            fields_to_update['detections_list'] = [d.strip() for d in fields_to_update['detections_list'].split(",")]
+
         #If a user has passed a config file, use that as the starting point
         #of the configuration
         if args.config_file is not None:
@@ -309,6 +313,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     
     @validator('detections_list', always=True)
     def validate_detections_list(cls, v, values):
+        
         cls.check_required_fields('detections_list', values, ['mode', 'repo_path'])
         #A detections list can only be provided if the mode is selected
         #otherwise, we must throw an error

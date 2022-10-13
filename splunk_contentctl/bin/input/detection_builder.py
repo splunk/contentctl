@@ -11,7 +11,7 @@ from bin.objects.macro import Macro
 from bin.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from bin.enrichments.cve_enrichment import CveEnrichment
 from bin.enrichments.splunk_app_enrichment import SplunkAppEnrichment
-
+from bin.objects.common import ATTACK_TACTICS_KILLCHAIN_MAPPING
 
 class DetectionBuilder():
     security_content_obj : SecurityContentObject
@@ -92,6 +92,7 @@ class DetectionBuilder():
 
             self.security_content_obj.risk = risk_objects
 
+
     def addProvidingTechnologies(self) -> None:
         if self.security_content_obj:
             # if self.security_content_obj.tags.supported_tas:
@@ -165,14 +166,6 @@ class DetectionBuilder():
                         matched_baselines.append(baseline)
 
             self.security_content_obj.baselines = matched_baselines
-
-
-    def addUnitTest(self, tests: list) -> None:
-        if self.security_content_obj:
-            for test in tests:
-                if test.tests[0].name == self.security_content_obj.name:
-                    self.security_content_obj.test = test
-                    return
 
 
     def addMitreAttackEnrichment(self, attack_enrichment: dict) -> None:
@@ -250,6 +243,33 @@ class DetectionBuilder():
             if self.security_content_obj.tags.supported_tas:
                 for splunk_app in self.security_content_obj.tags.supported_tas:
                     self.security_content_obj.splunk_app_enrichment.append(SplunkAppEnrichment.enrich_splunk_app(splunk_app))
+
+
+    def addCIS(self) -> None:
+        if self.security_content_obj:
+            if self.security_content_obj.tags.security_domain == "network":
+                self.security_content_obj.tags.cis20 = ["CIS 13"]
+            else:
+                self.security_content_obj.tags.cis20 = ["CIS 10"]
+
+
+    def addKillChainPhase(self) -> None:
+        if self.security_content_obj:
+            kill_chain_phases = list()
+            if self.security_content_obj.tags.mitre_attack_enrichments:
+                for mitre_attack_enrichment in self.security_content_obj.tags.mitre_attack_enrichments:
+                    for mitre_attack_tactic in mitre_attack_enrichment.mitre_attack_tactics:
+                        kill_chain_phases.append(ATTACK_TACTICS_KILLCHAIN_MAPPING[mitre_attack_tactic])
+            self.security_content_obj.tags.kill_chain_phases = list(dict.fromkeys(kill_chain_phases))
+
+
+    def addNist(self) -> None:
+        if self.security_content_obj:
+            if self.security_content_obj.type == "TTP":
+                self.security_content_obj.tags.nist = ["DE.CM"]
+            else:
+                self.security_content_obj.tags.nist = ["DE.AE"]
+
 
     def reset(self) -> None:
         self.security_content_obj = None

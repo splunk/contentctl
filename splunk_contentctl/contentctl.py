@@ -15,8 +15,10 @@ from bin.actions.generate import GenerateInputDto, Generate
 from bin.actions.reporting import ReportingInputDto, Reporting
 from bin.actions.new_content import NewContentInputDto, NewContent
 from bin.actions.doc_gen import DocGenInputDto, DocGen
+from bin.actions.convert import ConvertInputDto, Convert
+from bin.input.sigma_converter import SigmaConverterInputDto
 from bin.input.director import DirectorInputDto
-from bin.objects.enums import SecurityContentType, SecurityContentProduct
+from bin.objects.enums import SecurityContentType, SecurityContentProduct, SigmaConverterTarget
 from bin.enrichments.attack_enrichment import AttackEnrichment
 from bin.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
 
@@ -222,6 +224,34 @@ def reporting(args) -> None:
     reporting.execute(reporting_input_dto)
 
 
+def convert(args) -> None:
+    if args.data_model == 'cim':
+        data_model = SigmaConverterTarget.CIM
+    elif args.data_model == 'raw':
+        data_model = SigmaConverterTarget.RAW
+    elif args.data_model == 'ocsf':
+        data_model = SigmaConverterTarget.OCSF
+    elif args.data_model == 'all':
+        data_model = SigmaConverterTarget.ALL
+    else:
+        print("ERROR: data model " + args.data_model + " not supported")
+        sys.exit(1)
+
+    sigma_converter_input_dto = SigmaConverterInputDto(
+        data_model = data_model,
+        detection_path = args.detection_path,
+        input_path = args.path,
+        log_source = args.log_source
+    )
+
+    convert_input_dto = ConvertInputDto(
+        sigma_converter_input_dto = sigma_converter_input_dto,
+        output_path = os.path.abspath(args.output)
+    )
+    convert = Convert()
+    convert.execute(convert_input_dto)
+
+
 def main(args):
 
     init()
@@ -249,6 +279,7 @@ def main(args):
     docgen_parser = actions_parser.add_parser("docgen", help="Generates documentation")
     new_content_parser = actions_parser.add_parser("new_content", help="Create new security content object")
     reporting_parser = actions_parser.add_parser("reporting", help="Create security content reporting")
+    convert_parser = actions_parser.add_parser("convert", help="Convert Sigma detection")
 
     build_parser = actions_parser.add_parser("build", help="Build an application suitable for deployment to a search head")
     inspect_parser = actions_parser.add_parser("inspect", help="Run appinspect to ensure that an app meets minimum requirements for deployment.")
@@ -313,7 +344,11 @@ def main(args):
     cloud_deploy_parser.add_argument("--server", required=False, default="https://admin.splunk.com", type=str, help="Override server URL (default 'https://admin.splunk.com')")
     cloud_deploy_parser.set_defaults(func=cloud_deploy)
     
-    
+    convert_parser.add_argument("-dm", "--data_model", required=False, type=str, default="cim", help="converter target, choose between cim, raw, ba")
+    convert_parser.add_argument("-lo", "--log_source", required=False, type=str, help="converter log source")
+    convert_parser.add_argument("-dp", "--detection_path", required=True, type=str, help="path to the detection")
+    convert_parser.add_argument("-o", "--output", required=True, type=str, help="output path to store the detections")
+    convert_parser.set_defaults(func=convert)
 
     # # parse them
     args = parser.parse_args()

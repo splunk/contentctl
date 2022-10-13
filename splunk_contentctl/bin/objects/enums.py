@@ -43,3 +43,9 @@ class SecurityContentProduct(enum.Enum):
     SPLUNK_ENTERPRISE_APP = 1
     SSA = 2
     API = 3
+
+class SigmaConverterTarget(enum.Enum):
+    CIM = 1
+    RAW = 2
+    OCSF = 3
+    ALL = 4

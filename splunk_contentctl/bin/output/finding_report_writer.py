@@ -3,7 +3,7 @@ import re
 from jinja2 import Environment, FileSystemLoader
 
 from bin.objects.detection import Detection
-from bin.objects.constants import *
+from bin.objects.common import *
 
 class FindingReportObject():
 

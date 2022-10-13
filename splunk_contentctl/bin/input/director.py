@@ -66,7 +66,6 @@ class Director():
         self.detection_builder = DetectionBuilder(self.input_dto.skip_enrichment)
 
         if self.input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP or self.input_dto.product == SecurityContentProduct.API:
-            self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
             self.createSecurityContent(SecurityContentType.deployments)
@@ -77,7 +76,6 @@ class Director():
             self.createSecurityContent(SecurityContentType.stories)
         
         elif self.input_dto.product == SecurityContentProduct.SSA:
-            self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.detections)
             
 
@@ -193,6 +191,8 @@ class Director():
         builder.reset()
         builder.setObject(path)
         builder.addDeployment(deployments)
+        builder.addCIS()
+        builder.addNist()
         builder.addRBA()
         builder.addProvidingTechnologies()
         builder.addNesFields()
@@ -200,12 +200,12 @@ class Director():
         builder.addMappings()
         builder.addBaseline(baselines)
         builder.addPlaybook(playbooks)
-        builder.addUnitTest(tests)
         builder.addMacros(macros)
         builder.addLookups(lookups)
         
         if not skip_enrichment:
             builder.addMitreAttackEnrichment(self.attack_enrichment)
+            builder.addKillChainPhase()
             builder.addCve()
             builder.addSplunkApp()
 

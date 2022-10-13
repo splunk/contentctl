@@ -1,11 +1,13 @@
 
-
 from pydantic import BaseModel, validator, ValidationError
 
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.unit_test_test import UnitTestTest
+from bin.objects.unit_test_attack_data import UnitTestAttackData
+from bin.objects.unit_test_baseline import UnitTestBaseline
 
-class UnitTest(BaseModel, SecurityContentObject):
+class UnitTest(BaseModel):
     name: str
-    tests: list[UnitTestTest]
+    data_model: str
+    data_source: str
+    baselines: list[UnitTestBaseline] = None
+    attack_data: list[UnitTestAttackData]
     

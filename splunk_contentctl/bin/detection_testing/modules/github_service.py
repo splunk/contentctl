@@ -14,7 +14,7 @@ from git.objects import base
 from bin.detection_testing.modules.test_objects import Detection
 from bin.detection_testing.modules import testing_service
 from bin.objects.enums import DetectionTestingMode
-
+import random
 import pathlib
 
 from bin.objects.test_config import TestConfig
@@ -181,6 +181,14 @@ class GithubService:
 
         print(f"Finally the number is: {len(detection_objects)}")
 
+        if config.mode != DetectionTestingMode.selected:
+            #If the user has selected specific detectiosn to run, then
+            #run those in that specific order.  Otherwise, shuffle the order.
+            #This is particulary important when doing a mock because, for example,
+            #we don't want one container to get a group of cloud detections which may,
+            #on average, run for longer than the group of endpoint detections on
+            #another container
+            random.shuffle(detection_objects)
         
         return detection_objects
         

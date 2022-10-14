@@ -68,7 +68,7 @@ class AppBuilder(BaseModel, extra=Extra.forbid):
 
     input_path: str = Field(default='.', title="Path to the root of your app")
     output_path: str = Field(default='./dist', title="Path where 'generate' will write out your raw app")
-    output_path: str = Field(default='./build', title="Path where 'build' will write out your custom app")
+    #output_path: str = Field(default='./build', title="Path where 'build' will write out your custom app")
     
 
     @staticmethod

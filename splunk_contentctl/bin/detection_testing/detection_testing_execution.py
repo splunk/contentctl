@@ -37,87 +37,43 @@ authorizations_file_local_path = "bin/detection_testing/authorize.conf.tar"
 authorizations_file_container_path = "/opt/splunk/etc/system/local"
 
 CONTAINER_APP_DIRECTORY = "apps"
-
+MOCK_DIRECTORY = "mock_directory"
 MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING = 2
 
 
 
 
 
-def copy_local_apps_to_directory(apps: dict[str, dict], splunkbase_username:tuple[str,None] = None, splunkbase_password:tuple[str,None] = None, mock:bool = False, target_directory:str = "apps") -> str:
-    if mock is True:
-        target_directory = os.path.join("prior_config", target_directory)
-        
-        # Remove the apps directory or the prior config directory.  If it's just an apps directory, then we don't want
-        #to remove that.
-        shutil.rmtree(target_directory, ignore_errors=True)
+def copy_local_apps_to_directory(config: TestConfig):
+    
+    if config.mock:
+        shutil.rmtree(MOCK_DIRECTORY, ignore_errors=True)
+
     try:
         # Make sure the directory exists.  If it already did, that's okay. Don't delete anything from it
         # We want to re-use previously downloaded apps
-        os.makedirs(target_directory, exist_ok = True)
+        os.makedirs(CONTAINER_APP_DIRECTORY, exist_ok = True)
         
     except Exception as e:
-        raise(Exception(f"Some error occured when trying to make the {target_directory}: [{str(e)}]"))
+        raise(Exception(f"Some error occured when trying to make the {CONTAINER_APP_DIRECTORY}: [{str(e)}]"))
 
     
-    for key, item in apps.items():
-
-        # These apps are URLs that will be passed.  The apps will be downloaded and installed by the container
-        # # Get the file from an http source
-        splunkbase_info = True if ('app_number' in item and item['app_number'] is not None and 
-                                  'app_version' in item and item['app_version'] is not None) else False
-        splunkbase_creds = True if (splunkbase_username is not None and 
-                                   splunkbase_password is not None) else False
-        can_download_from_splunkbase = splunkbase_info and splunkbase_creds
-
+    for app in config.apps:
+    
+        if app.must_download_from_splunkbase == False:
+            if app.local_path is not None:
+                shutil.copy(app.local_path, os.path.join(CONTAINER_APP_DIRECTORY, pathlib.Path(app.local_path).name))
+            elif app.http_path:
+                filename = pathlib.Path(urlparse(app.http_path).path).name #get the filename from the url
+                utils.download_file_from_http(app.http_path, os.path.join(CONTAINER_APP_DIRECTORY, filename), verbose_print=True)
+            else:
+                raise(Exception(f"Could not download {app.title}, not http_path or local_path or Splunkbase Credentials provided"))
         
-
-        #local apps can either have a local_path or an http_path
-        if 'local_path' in item:
-            source_path = os.path.abspath(os.path.expanduser(item['local_path']))
-            base_name = os.path.basename(source_path)
-            dest_path = os.path.join(target_directory, base_name)
-            try:
-                print(f"copying {os.path.relpath(source_path)} to {os.path.relpath(dest_path)}")
-                shutil.copy(source_path, dest_path)
-                item['local_path'] = dest_path
-            except shutil.SameFileError as e:
-                # Same file, not a real error.  The copy just doesn't happen
-                print("err:%s" % (str(e)))
-                pass
-            except Exception as e:
-                print("Error copying ESCU Package [%s] to [%s]: [%s].\n\tQuitting..." % (
-                    source_path, dest_path, str(e)), file=sys.stderr)
-                sys.exit(1)
-
-        
-        elif can_download_from_splunkbase is True:
-            #Don't do anything, this will be downloaded from splunkbase
+        else:
+            #no need to do anything, the containers will download from splunkbase
             pass
-        elif splunkbase_info is True and splunkbase_creds is False and mock is True:
-            #Don't need to do anything, when this actually runs the apps will be downloaded from Splunkbase
-            #There is another opportunity to provide the creds then
-            pass
-        elif 'http_path' in item and can_download_from_splunkbase is False:
-            http_path = item['http_path']
-            try:
-                url_parse_obj = urlparse(http_path)
-                path_after_host = url_parse_obj[2].rstrip('/') #removes / at the end, if applicable
-                base_name = path_after_host.rpartition('/')[-1] #just get the file name
-                dest_path = os.path.join(target_directory, base_name) #write the whole path
-                utils.download_file_from_http(http_path, dest_path, verbose_print=True)
-                #we need to update the local path because this is used to copy it into the container later
-                item['local_path'] = dest_path
-                #Remove the HTTP Path, we will use the local_path instead
-            except Exception as e:
-                print("Error trying to download %s @ %s: [%s].  This app is required.\n\tQuitting..."%(key, http_path, str(e)),file=sys.stderr)
-                sys.exit(1)
 
-        elif splunkbase_info is False:
-            print(f"Error - trying to install an app [{key}] that does not have 'local_path', 'http_path', "
-                   "or 'app_version' and 'app_number' for installing from Splunkbase.\n\tQuitting...")
-            sys.exit(1)
-    return target_directory
+
 
 
 
@@ -214,61 +170,16 @@ def main(config: TestConfig):
 
 
     detections_to_test = github_service.get_detections_to_test(config)
-    print(len(detections_to_test))
-    sys.exit(0)
-    
-    try:
-        all_detections = github_service.detections_to_test(settings['mode'], detections_list=settings['detections_list'])
-        #all_test_files = github_service.get_test_files(settings['mode'],
-        #                                            settings['folders'],
-        #                                            settings['types'],
-        #                                            settings['detections_list'])
-        
-        #We randomly shuffle this because there are likely patterns in searches.  For example,
-        #cloud/endpoint/network likely have different impacts on the system.  By shuffling,
-        #we spread out this load on a single computer, but also spread it in case
-        #we are running on GitHub Actions against multiple machines.  Hopefully, this
-        #will reduce that chnaces the some machines run and complete quickly while
-        #others take a long time.
-        random.shuffle(all_detections)        
-    
     
     
 
-    except Exception as e:
-        print("Error getting test files:\n%s"%(str(e)), file=sys.stderr)
-        print("\tQuitting...", file=sys.stderr)
-        sys.exit(1)
-    
-    
-    print("***This run will test [%d] detections!***"%(len(all_detections)))
+    print("***This run will test [%d] detections!***"%(len(detections_to_test)))
     
 
-
-    
-
-
-    # Check to see if we want to install ESCU and whether it was preeviously generated and we should use that file
-    if constants.ES_APP_NAME in settings['apps'] and settings['apps'][constants.ES_APP_NAME]['local_path'] is not None:
-        # Using a pregenerated ESCU, no need to build it
-        pass
-
-    elif constants.ES_APP_NAME not in settings['apps']:
-        print(f"{constants.ES_APP_NAME} was not found in {settings['apps'].keys()}.  We assume this is an error and shut down.\n\t"
-              "Quitting...", file=sys.stderr)
-        sys.exit(1)
-    else:
-        # Generate the ESCU package from this branch.
-        
-        settings['apps']['SPLUNK_ES_CONTENT_UPDATE']['local_path'] = "build/my_app.tar.gz"
-        
 
     # Copy all the apps, to include ESCU (whether pregenerated or just generated)
     try:
-        relative_app_path = copy_local_apps_to_directory(settings['apps'], 
-                                     splunkbase_username = settings['splunkbase_username'], 
-                                     splunkbase_password = settings['splunkbase_password'], 
-                                     mock=settings['mock'], target_directory = CONTAINER_APP_DIRECTORY)
+        relative_app_path = copy_local_apps_to_directory(config)
         
         mounts = [{"local_path": os.path.abspath(relative_app_path),
                     "container_path": "/tmp/apps", "type": "bind", "read_only": True}]

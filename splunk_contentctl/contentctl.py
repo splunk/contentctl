@@ -11,8 +11,10 @@ import os
 
 import jsonschema
 import hierarchy_schema
-import json
+import json, yaml
 
+from pydantic import BaseModel
+from pydantic.main import ModelMetaclass
 
 from bin.actions.validate import ValidateInputDto, Validate
 from bin.actions.generate import GenerateInputDto, Generate
@@ -25,6 +27,64 @@ from bin.objects.enums import SecurityContentType, SecurityContentProduct
 from bin.enrichments.attack_enrichment import AttackEnrichment
 from bin.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
 from bin.objects.test_config import TestConfig
+from bin.objects.repo_config import RepoConfig
+
+
+
+def create_argparse_parser_from_model(model: BaseModel, parser: argparse.ArgumentParser):
+    #Add all the fields defined in the model as arguments to the parser
+    parser.add_argument("-c", "--config_file", type=argparse.FileType('r'), default=None, help="Name of the config file to run the test")
+    
+    #Expose all of the fields. Recirsively search for nested Models, too
+    for fieldName, fieldItem in model.__fields__.items():            
+        if isinstance(fieldItem.type_, ModelMetaclass) and hasattr(fieldItem.default, "__fields__"):
+            create_argparse_parser_from_model(fieldItem.default,parser)
+        else:
+            parser.add_argument(f"--{fieldName}", type=fieldItem.type_, default=None, help=fieldItem.field_info.title)
+
+        
+  
+def get_configuration_from_command_line(model:BaseModel, args:argparse.Namespace)->TestConfig:
+    #Fetch the command line parameters that were passed
+    fields_to_update = {}
+    for name,value in args.__dict__.items():
+        #Only update parameters that exist in the Model and that 
+        #are not None.  All of these arguments on the commandLine
+        #default to None, making it easy to see whether or not
+        #a user has passed a value
+        if value is not None and name in TestConfig.__fields__:
+            #Command line parameter received an argument. This will override
+            #both the default for that arg AND whatever is defined in the
+            #config file, if it is passed
+            fields_to_update[name] = value
+    
+    
+    
+
+    #If a user has passed a config file, use that as the starting point
+    #of the configuration
+    if args.config_file is not None:
+        try:
+            #Load the config file
+            config = yaml.safe_load(args.config_file)
+            #Update the config file with any command line args
+            config.update(fields_to_update)
+            #build the config object
+            return model.parse_obj(config)
+        except Exception as e:
+            raise(Exception(f"Error parsing config file {args.config_file.name}: {str(e)}"))
+            
+    else:
+        #Parse from the defaults (defined in TestConfig) and the
+        #command line parameters. Command line parameters will
+        #override any defaults that are set in TestConfig
+        try:
+            return model.parse_obj(fields_to_update)
+        except Exception as e:
+            raise(e)
+
+
+
 
 
 
@@ -206,10 +266,20 @@ def build(args):
 
 def test(args):
     
+
+    #A hack that allow a user to provide a comma-separated list of detections on the command line
+    if type(args.detections_list) == str:
+        args.detections_list = [d.strip() for d in args.detections_list.split(",")]
+    print(args.detections_list)
     #Parse everything from the command line
-    test_object = TestConfig.get_configuration_from_command_line(args)
+    #test_object = TestConfig.get_configuration_from_command_line(args)
+    test_object = get_configuration_from_command_line(TestConfig, args)
+    
 
     #Run the test
+    import pprint
+    pprint.pprint(test_object)
+    sys.exit(0)
     Test().execute(test_object)
 
     
@@ -389,7 +459,7 @@ def main(args):
     cloud_deploy_parser.set_defaults(func=cloud_deploy)
     
     
-    TestConfig.create_argparse_parser_from_model(test_parser)
+    create_argparse_parser_from_model(TestConfig, test_parser)
     test_parser.set_defaults(func=test)
 
     # # parse them
@@ -399,7 +469,7 @@ def main(args):
     except Exception as e:
         print(f"Error for function [{args.func.__name__}]: {str(e)}")
         import traceback
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         sys.exit(1)
 
     '''

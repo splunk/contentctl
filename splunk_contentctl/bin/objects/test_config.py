@@ -67,51 +67,6 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         for fieldName, fieldItem in TestConfig.__fields__.items():
             parser.add_argument(f"--{fieldName}", type=fieldItem.type_, default=None, help=fieldItem.field_info.title)
         
-        #Also add the ability to pass a file.  Note that these are NOT mutually exclusive
-
-    
-    @staticmethod
-    def get_configuration_from_command_line(args:argparse.Namespace)->TestConfig:
-        #Fetch the command line parameters that were passed
-        fields_to_update = {}
-        for name,value in args.__dict__.items():
-            #Only update parameters that exist in the Model and that 
-            #are not None.  All of these arguments on the commandLine
-            #default to None, making it easy to see whether or not
-            #a user has passed a value
-            if value is not None and name in TestConfig.__fields__:
-                #Command line parameter received an argument. This will override
-                #both the default for that arg AND whatever is defined in the
-                #config file, if it is passed
-                fields_to_update[name] = value
-        
-        
-        #A hack that allow a user to provide a comma-separated list of detections on the command line
-        if type(fields_to_update.get('detections_list',[])) == str:
-            fields_to_update['detections_list'] = [d.strip() for d in fields_to_update['detections_list'].split(",")]
-
-        #If a user has passed a config file, use that as the starting point
-        #of the configuration
-        if args.config_file is not None:
-            try:
-                #Load the config file
-                config = yaml.safe_load(args.config_file)
-                #Update the config file with any command line args
-                config.update(fields_to_update)
-                #build the config object
-                return TestConfig.parse_obj(config)
-            except Exception as e:
-                raise(Exception(f"Error parsing config file {args.config_file.name}: {str(e)}"))
-                
-        else:
-            #Parse from the defaults (defined in TestConfig) and the
-            #command line parameters. Command line parameters will
-            #override any defaults that are set in TestConfig
-            try:
-                return TestConfig.parse_obj(fields_to_update)
-            except Exception as e:
-                raise(e)
-                
 
 
     @staticmethod
@@ -198,8 +153,9 @@ class TestConfig(BaseModel, extra=Extra.forbid):
 
     @staticmethod
     def check_required_fields(thisField:str, definedFields:dict, requiredFields:list[str]):
-        if not all([thisField in definedFields for thisField in requiredFields]):
-            raise(ValueError("Could not validate - please resolve other errors"))
+        missing_fields = [field for field in requiredFields if field not in definedFields]
+        if len(missing_fields) > 0:
+            raise(ValueError(f"Could not validate - please resolve other errors resulting in missing fields {missing_fields}"))
 
     #Ensure that at least 1 of test_branch, commit_hash, and/or pr_number were passed. 
     #Otherwise, what are we testing??
@@ -207,8 +163,11 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     def ensure_there_is_something_to_test(cls, values):
         if 'test_branch' not in values and 'commit_hash' not in values and'pr_number' not in values:
             raise(ValueError(f"At least one of 'test_branch', 'commit_hash', and/or 'pr_number' must be defined so that we know what to test."))
+        
+
         return values
 
+    
     @validator('repo_path', always=True)
     def validate_repo_path(cls,v):
         
@@ -322,7 +281,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         if values['mode'] != DetectionTestingMode.selected:
             if v is not None:
                 #We intentionally raise an error even if the list is an empty list
-                raise(ValueError(f"For Detection Testing Mode {DetectionTestingMode.selected}, "\
+                raise(ValueError(f"For Detection Testing Mode '{values['mode']}', "\
                     f"'detections_list' MUST be none.  Instead, it was a list containing {len(v)} detections."))
             return v
         

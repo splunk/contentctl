@@ -19,6 +19,7 @@ import argparse
 from bin.objects.enums import PostTestBehavior, DetectionTestingMode
 
 from bin.objects.app import App
+from bin.helper.utils import Utils
 from bin.detection_testing.modules import utils
 
 
@@ -38,10 +39,8 @@ def getTestConfigFromYMLFile(path:pathlib.Path):
 
 
 class TestConfig(BaseModel, extra=Extra.forbid):
-    # detection spec
-    repo_path: str = Field(default='.', title="Path to the root of your app")
-    repo_url: Union[str,None] = Field(default=None, title="HTTP(s) path to the repo for repo_path.  If this field is blank, it will be inferred from the repo")
-    main_branch: str = Field(title="Main branch of the repo.")
+    
+    
     test_branch: Union[str,None] = Field(default=None, title="Branch of the repo to be tested, if applicable.")
     commit_hash: Union[str,None] = Field(default=None, title="Commit hash of the repo state to be tested, if applicable")
     full_image_path: str = Field(default="registry.hub.docker.com/splunk/splunk:latest", title="Full path to the container image to be used")
@@ -58,104 +57,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     apps: list[App] = Field(default=[], title="A list of all the apps to be installed on each container")
     
 
-
-
-    @staticmethod
-    def create_argparse_parser_from_model(parser: argparse.ArgumentParser):
-        #Add all the fields defined in the model as arguments to the parser
-        parser.add_argument("-c", "--config_file", type=argparse.FileType('r'), default=None, help="Name of the config file to run the test")
-        for fieldName, fieldItem in TestConfig.__fields__.items():
-            parser.add_argument(f"--{fieldName}", type=fieldItem.type_, default=None, help=fieldItem.field_info.title)
-        
-
-
-    @staticmethod
-    def validate_git_hash(repo_path:str, repo_url:str, commit_hash:str,  branch_name:Union[str,None])->bool:
-        
-        #Get a list of all branches
-        repo = git.Repo(repo_path)
-        if commit_hash is None:
-            #No need to validate the hash, it was not supplied
-            return True
-                
-
-        try:
-            all_branches_containing_hash = repo.git.branch("--contains", commit_hash).split('\n')
-            #this is a list of all branches that contain the hash.  They are in the format:
-            #* <some number of spaces> branchname (if the branch contains the hash)
-            #<some number of spaces>   branchname (if the branch does not contain the hash)
-            #Note, of course, that a hash can be in 0, 1, more branches!
-            for branch_string in all_branches_containing_hash:
-                if branch_string.split(' ')[0] == "*" and (branch_string.split(' ')[-1] == branch_name or branch_name==None):
-                    #Yes, the hash exists in the branch (or branch_name was None and it existed in at least one branch)!
-                    return True
-            #If we get here, it does not exist in the given branch
-            raise(Exception("Does not exist in branch"))
-
-        except Exception as e:
-            if branch_name is None:
-                branch_name = "ANY_BRANCH"
-            if ALWAYS_PULL:
-                raise(ValueError(f"hash '{commit_hash}' not found in '{branch_name}' for repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"))
-            else:
-                raise(ValueError(f"hash '{commit_hash}' not found in '{branch_name}' for repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"\
-                                  "If the hash is new, try pulling the repo."))
-
-
-
-    @staticmethod
-    def validate_git_branch_name(repo_path:str, repo_url:str, name:str)->bool:
-        #Get a list of all branches
-        repo = git.Repo(repo_path)
-        
-        all_branches = [branch.name for branch in repo.refs]
-        #remove "origin/" from the beginning of each branch name
-        all_branches = [branch.replace("origin/","") for branch in all_branches]
-
-
-        if name in all_branches:
-            return True
-        
-        else:
-            if ALWAYS_PULL:
-                raise(ValueError(f"branch '{name}' not found in repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"))
-            else:
-                raise(ValueError(f"branch '{name}' not found in repo located at:\n  * repo_path: {repo_path}\n  * repo_url: {repo_url}"\
-                    "If the branch is new, try pulling the repo."))
-        
-        
-        
-    
-    @staticmethod
-    def validate_git_pull_request(repo_path:str, pr_number:int)->str:
-        #Get a list of all branches
-        repo = git.Repo(repo_path)
-        #List of all remotes that match this format.  If the PR exists, we
-        #should find exactly one in the format SHA_HASH\tpull/pr_number/head
-        pr_and_hash = repo.git.ls_remote("origin", f"pull/{pr_number}/head")
-
-        
-        if len(pr_and_hash) == 0:
-            raise(ValueError(f"pr_number {pr_number} not found in Remote '{repo.remote().url}'"))
-
-        pr_and_hash_lines = pr_and_hash.split('\n')
-        if len(pr_and_hash_lines) > 1:
-            raise(ValueError(f"Somehow, more than 1 PR was found with pr_number {pr_number}:\n{pr_and_hash}\nThis should not happen."))
-
-                
-        if pr_and_hash_lines[0].count('\t')==1:
-            hash, _ = pr_and_hash_lines[0].split('\t') 
-            return hash
-        else:
-            raise(ValueError(f"Expected PR Format:\nCOMMIT_HASH\tpull/{pr_number}/head\nbut got\n{pr_and_hash_lines[0]}"))
             
-        return hash
-
-    @staticmethod
-    def check_required_fields(thisField:str, definedFields:dict, requiredFields:list[str]):
-        missing_fields = [field for field in requiredFields if field not in definedFields]
-        if len(missing_fields) > 0:
-            raise(ValueError(f"Could not validate - please resolve other errors resulting in missing fields {missing_fields}"))
 
     #Ensure that at least 1 of test_branch, commit_hash, and/or pr_number were passed. 
     #Otherwise, what are we testing??
@@ -168,86 +70,26 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         return values
 
     
-    @validator('repo_path', always=True)
-    def validate_repo_path(cls,v):
-        
-        try:
-            path = pathlib.Path(v)
-        except Exception as e:
-            raise(ValueError(f"Error, the provided path is is not a valid path: '{v}'"))
-        
-        try:    
-            r = git.Repo(path)
-        except Exception as e:
-            raise(ValueError(f"Error, the provided path is not a valid git repo: '{path}'"))
-        
-        try:
-            
-            if ALWAYS_PULL:
-                r.remotes.origin.pull()
-        except Exception as e:
-            raise ValueError(f"Error pulling git repository {v}: {str(e)}")
-        
-        
-        return v
-
-
-    @validator('repo_url', always=True)
-    def validate_repo_url(cls, v, values):
-        cls.check_required_fields('repo_url', values, ['repo_path'])
-
-        #First try to get the value from the repo
-        try:
-            remote_url_from_repo = git.Repo(values['repo_path']).remotes.origin.url
-        except Exception as e:
-            raise(ValueError(f"Error reading remote_url from the repo located at {values['repo_path']}"))
-        
-        if v is not None and remote_url_from_repo != v:
-            raise(ValueError(f"The url of the remote repo supplied in the config file {v} does not "\
-                              f"match the value read from the repository at {values['repo_path']}, {remote_url_from_repo}"))
-        
-        
-        if v is None:    
-            v = remote_url_from_repo
-
-        #Ensure that the url is the proper format
-        try:
-            if bool(validators.url(v)) == False:
-                raise(Exception)
-        except:
-            raise(ValueError(f"Error validating the repo_url. The url is not valid: {v}"))
-        
-
-        return v
-
-    @validator('main_branch', always=True)
-    def valid_main_branch(cls, v, values):
-        cls.check_required_fields('main_branch', values, ['repo_path', 'repo_url'])
-
-        try:
-            cls.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
-        except Exception as e:
-            raise ValueError(f"Error validating main_branch: {str(e)}")
-        return v
+    
 
     @validator('test_branch', always=True)
     def validate_test_branch(cls, v, values):
-        cls.check_required_fields('test_branch', values, ['repo_path', 'repo_url'])
+        Utils.check_required_fields('test_branch', values, ['repo_path', 'repo_url'])
         if v is None:
             return v
         try:
-            cls.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
+            Utils.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
         except Exception as e:
             raise ValueError(f"Error validating test_branch: {str(e)}")
         return v
 
     @validator('commit_hash', always=True)
     def validate_commit_hash(cls, v, values):
-        cls.check_required_fields('commit_hash', values, ['repo_path', 'repo_url', 'test_branch'])
+        Utils.check_required_fields('commit_hash', values, ['repo_path', 'repo_url', 'test_branch'])
 
         try:
             #We can a hash with this function too
-            cls.validate_git_hash(values['repo_path'],values['repo_url'], v, values['test_branch'])
+            Utils.validate_git_hash(values['repo_path'],values['repo_url'], v, values['test_branch'])
         except Exception as e:
             raise ValueError(f"Error validating commit_hash '{v}': {str(e)}")
         return v
@@ -273,7 +115,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     @validator('detections_list', always=True)
     def validate_detections_list(cls, v, values):
         
-        cls.check_required_fields('detections_list', values, ['mode', 'repo_path'])
+        Utils.check_required_fields('detections_list', values, ['mode', 'repo_path'])
         #A detections list can only be provided if the mode is selected
         #otherwise, we must throw an error
 
@@ -317,12 +159,12 @@ class TestConfig(BaseModel, extra=Extra.forbid):
 
     @validator('pr_number', always=True)
     def validate_pr_number(cls, v, values):
-        cls.check_required_fields('pr_number', values, ['repo_path', 'commit_hash'])
+        Utils.check_required_fields('pr_number', values, ['repo_path', 'commit_hash'])
 
         if v == None:
             return v
         
-        hash = cls.validate_git_pull_request(values['repo_path'], v)
+        hash = Utils.validate_git_pull_request(values['repo_path'], v)
         
         #Ensure that the hash is equal to the one in the config file, if it exists.
         if values['commit_hash'] is None:
@@ -354,7 +196,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     
     @validator('splunkbase_password', always=True)
     def validate_splunkbase_password(cls,v,values):
-        cls.check_required_fields('repo_url', values, ['splunkbase_username'])
+        Utils.check_required_fields('repo_url', values, ['splunkbase_username'])
         if values['splunkbase_username'] == None:
             return v
         elif (v == None and values['splunkbase_username'] != None) or \
@@ -369,7 +211,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     
     @validator('apps', always=True)
     def validate_apps(cls, v, values):
-        cls.check_required_fields('repo_url', values, ['splunkbase_username', 'splunkbase_password'])
+        Utils.check_required_fields('repo_url', values, ['splunkbase_username', 'splunkbase_password'])
 
         app_errors = []
         

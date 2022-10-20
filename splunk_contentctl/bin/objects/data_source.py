@@ -18,5 +18,5 @@ class DataSource(BaseModel):
     supported_TA: list
     references: list
     raw_fields: list
-    field_mappings: list
+    field_mappings: list = None
     convert_to_log_source: list = None

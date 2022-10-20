@@ -50,7 +50,6 @@ class SigmaConverter():
 
         sigma_rule = self.get_sigma_rule(detection, data_source)
 
-        # to do: conversion into other data source
 
         if input_dto.data_model == SigmaConverterTarget.RAW:
             if input_dto.log_source and input_dto.log_source != detection.data_source:

@@ -45,8 +45,6 @@ class YmlOutput():
                                 '__all__': 
                                     {
                                         "name": True,
-                                        "data_model": True,
-                                        "data_source": True,
                                         "attack_data": {
                                             '__all__': 
                                             {

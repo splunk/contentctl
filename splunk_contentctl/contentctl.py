@@ -252,6 +252,20 @@ def convert(args) -> None:
     convert.execute(convert_input_dto)
 
 
+def content_changer(args) -> None:
+    filters = args.filters.replace("'", "\"")
+
+    content_changer_input_dto = ContentChangerInputDto(
+        input_path = os.path.abspath(args.path),
+        output_path = os.path.abspath(args.output),
+        converter_function = args.converter_function,
+        filters = json.loads(filters)
+    )
+
+    content_changer = ContentChanger()
+    content_changer.execute(content_changer_input_dto)
+
+
 def main(args):
 
     init()
@@ -280,6 +294,7 @@ def main(args):
     new_content_parser = actions_parser.add_parser("new_content", help="Create new security content object")
     reporting_parser = actions_parser.add_parser("reporting", help="Create security content reporting")
     convert_parser = actions_parser.add_parser("convert", help="Convert Sigma detection")
+    content_changer_parser = actions_parser.add_parser("content_changer", help="Change security content")
 
     build_parser = actions_parser.add_parser("build", help="Build an application suitable for deployment to a search head")
     inspect_parser = actions_parser.add_parser("inspect", help="Run appinspect to ensure that an app meets minimum requirements for deployment.")
@@ -309,8 +324,6 @@ def main(args):
     #content_changer_choices = ContentChanger.enumerate_content_changer_functions()
     #content_changer_parser.add_argument("-cf", "--change_function", required=True, metavar='{ ' + ', '.join(content_changer_choices) +' }' , type=str, choices=content_changer_choices, 
     #                                    help= "Choose from the functions above defined in \nbin/contentctl_core/contentctl/application/use_cases/content_changer.py")
-    
-    content_changer_parser.set_defaults(func=content_changer)
 
     docgen_parser.add_argument("-o", "--output", required=True, type=str,
        help="Path where to store the documentation")

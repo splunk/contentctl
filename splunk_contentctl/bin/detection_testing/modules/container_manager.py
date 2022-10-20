@@ -15,82 +15,79 @@ import timeit
 from typing import Union
 from bin.detection_testing.modules import splunk_container, test_driver, utils
 from bin.detection_testing.modules.test_objects import ResultsManager, Detection
+from bin.objects.test_config import TestConfig
 
 WEB_PORT_STRING = "8000/tcp"
 HEC_PORT_STRING = "8088/tcp"
 MANAGEMENT_PORT_STRING = "8089/tcp"
+
+#Keep track of time, at the very least, and maybe some other things
+class JobStats:
+    def __init__(self):
+        self.startTime = datetime.datetime.now()
+        self.stopTime = None
+        self.totalTime = None
+    def setStopTime(self):
+        self.stopTime = datetime.datetime.now() 
+        self.totalTime  = self.stopTime - self.startTime 
+    def getElapsedTime(self):
+        return  self.roundDurationToWholeSeconds(datetime.datetime.now() - self.startTime)
+    def getTotalTime(self):
+        if self.stopTime == None:
+            return f"CANNOT GET TOTAL TIME - TEST STILL RUNNING FOR {self.getElapsedTime()}"
+        else:
+            return self.roundDurationToWholeSeconds(self.stopTime - self.startTime)
+    def roundDurationToWholeSeconds(self, duration:datetime.timedelta):
+        return str(duration - datetime.timedelta(microseconds=duration.microseconds))
 
 
 class ContainerManager:
     def __init__(
         self,
         test_list: list[Detection],
-        full_docker_hub_name: str,
-        container_name_template: str,
-        num_containers: int,
-        apps: OrderedDict,
-        branch:str,
-        commit_hash:str,
-        summarization_reproduce_failure_config:dict,
+        config: TestConfig,
         files_to_copy_to_container: OrderedDict = OrderedDict(),
         web_port_start: int = 8000,
         management_port_start: int = 8089,
         hec_port_start: int = 8088,
-        mounts: list[dict[str, str]] = [],
-        show_container_password:bool=True,
-        container_password: Union[str, None] = None,
-        splunkbase_username: Union[str, None] = None,
-        splunkbase_password: Union[str, None] = None,
-        reuse_image:bool = True,
-        interactive_failure:bool=False,
-        interactive:bool=False
+        mounts: list[dict[str, str]] = []):
 
-    ):
+
+        self.jobStats = JobStats()
+
+
+        self.config = config
         #Used to determine whether or not we should wait for container threads to finish when summarizing
         self.all_tests_completed = False
 
-        self.synchronization_object = test_driver.TestDriver(
-            test_list, num_containers, summarization_reproduce_failure_config)
-
+        self.synchronization_object = test_driver.TestDriver(test_list, config)
         self.mounts = self.create_mounts(mounts)
-        self.apps = apps
-        
-        
-
-        if container_password is None:
-            self.container_password = utils.get_random_password()
-        else:
-            self.container_password = container_password
+    
         
         print("\n\n***********************")
-        print("Log into your [%d] Splunk Container(s) after they boot at http://127.0.0.1:[%d-%d]"%(num_containers, web_port_start, web_port_start + num_containers - 1))
+        print(f"Log into your [{self.config.num_containers}] Splunk Container(s) after they boot at http://127.0.0.1:[{web_port_start}-{web_port_start + self.config.num_containers - 1}]")
         print("\tSplunk App Username: [%s]"%("admin"))
         print("\tSplunk App Password: ", end='')
-        if show_container_password:
-            print("[%s]"%(self.container_password))
-        else:
-            print(" --show_splunk_app_password set to False - password not printed")
+        
+        print("[%s]"%(self.config.splunk_app_password))
+        
         print("***********************\n\n")
         
 
-        self.containers = self.create_containers(
-            full_docker_hub_name,
-            container_name_template,
-            num_containers,
-            web_port_start,
-            management_port_start,
-            hec_port_start,
-            splunkbase_username,
-            splunkbase_password,
-            files_to_copy_to_container,
-            reuse_image,
-            interactive_failure,
-            interactive
-        )
+        self.containers = self.create_containers(web_port_start,
+                                                 management_port_start,
+                                                 hec_port_start,
+                                                 files_to_copy_to_container)
+
         self.summary_thread = threading.Thread(target=self.queue_status_thread,args=())
 
+
+        print("CODE TO GENERATE YOUR BASELINE INFORMATION HERE")
+        
+        
         #Construct the baseline from the splunk version and the apps to be installed
         self.baseline = OrderedDict()
+        '''
         #Get a datetime and add it as the first entry in the baseline
         self.start_time = datetime.datetime.now()
         self.baseline['SPLUNK_VERSION'] = full_docker_hub_name
@@ -101,10 +98,10 @@ class ContainerManager:
         self.baseline['TEST_FINISH_TIME'] = "TO BE UPDATED"
         self.baseline['TEST_DURATION'] = "TO BE UPDATED"
 
-        for key in self.apps:
+        for key in self.config.apps:
             self.baseline[key] = self.apps[key]
 
-        
+        '''
 
 
     def run_test(self)->bool:
@@ -127,14 +124,14 @@ class ContainerManager:
         print("All containers completed testing!")
         
         
-        stop_time = datetime.datetime.now()
-        x = stop_time - self.start_time
-
-        self.baseline['TEST_START_TIME'] = str(self.start_time)
-        self.baseline['TEST_FINISH_TIME'] =  str(stop_time)
         
-        duration = stop_time - self.start_time
-        self.baseline['TEST_DURATION'] = str(duration - datetime.timedelta(microseconds=duration.microseconds))
+        
+        self.jobStats.setStopTime()
+        self.baseline['TEST_START_TIME'] = self.jobStats.startTime
+        self.baseline['TEST_FINISH_TIME'] =  self.jobStats.stopTime
+        
+        
+        self.baseline['TEST_DURATION'] = self.jobStats.getTotalTime()
 
         return self.synchronization_object.finish(self.baseline)
 
@@ -159,47 +156,29 @@ class ContainerManager:
 
     def create_containers(
         self,
-        full_docker_hub_name: str,
-        container_name_template: str,
-        num_containers: int,
         web_port_start: int,
         management_port_start: int,
         hec_port_start: int,
-        splunkbase_username: Union[str, None] = None,
-        splunkbase_password: Union[str, None] = None,
         files_to_copy_to_container: OrderedDict = OrderedDict(),
-        reuse_image:bool = True,
-        interactive_failure:bool = False,
-        interactive:bool = False
     ) -> list[splunk_container.SplunkContainer]:
-        #First make sure that the image exists and has been downloaded.
-        #Note that this is intentionally not part of the time to start
-        #since it can take a long time on a slow connection!
-        self.setup_image(reuse_image, full_docker_hub_name)
 
         new_containers = []
-        for index in range(num_containers):
-            container_name = container_name_template % index
+        for index in range(self.config.num_containers):
+            container_name = self.config.container_name % index
             web_port_tuple = (WEB_PORT_STRING, web_port_start + index)
             management_port_tuple = (MANAGEMENT_PORT_STRING, management_port_start + 2*index)
             hec_port_tuple = (HEC_PORT_STRING, hec_port_start + 2*index)
             
             new_containers.append(
                 splunk_container.SplunkContainer(
+                    self.config,
                     self.synchronization_object,
-                    full_docker_hub_name,
                     container_name,
-                    self.apps,
                     web_port_tuple,
                     management_port_tuple,
                     hec_port_tuple,
-                    self.container_password,
                     files_to_copy_to_container,
-                    self.mounts,
-                    splunkbase_username,
-                    splunkbase_password,
-                    interactive_failure=interactive_failure,
-                    interactive=interactive
+                    self.mounts
                 )
             )
 
@@ -247,49 +226,3 @@ class ContainerManager:
                 self.all_tests_completed = True
                 return None
             
-
-    def setup_image(self, reuse_images: bool, container_name: str) -> None:
-        client = docker.client.from_env()
-        if not reuse_images:
-            #Check to see if the image exists.  If it does, then remove it.  If it does not, then do nothing
-            docker_image = None
-            try:
-                docker_image = client.images.get(container_name)
-            except Exception as e:
-                #We don't need to do anything, the image did not exist on our system
-                #print("Image named [%s] did not exist, so we don't need to try and remove it."%(container_name))
-                pass
-            if docker_image != None:
-                #We found the image.  Let's try to delete it
-                print("Found docker image named [%s] and you have requested that we forcefully remove it"%(container_name))
-                try:
-                    client.images.remove(image=container_name, force=True, noprune=False)
-                    print("Docker image named [%s] forcefully removed"%(container_name))
-                except Exception as e:
-                    print("Error forcefully removing [%s]"%(container_name))
-                    raise(e)
-        
-        #See if the image exists.  If it doesn't, then pull it from Docker Hub
-        try:
-            docker_image = client.images.get(container_name)
-            print("Docker image [%s] found, no need to download it."%(container_name))
-        except Exception as e:
-            #Image did not exist on the system
-            docker_image = None
-
-        if docker_image is None:
-            #We did not find the image, so pull it
-            try:
-                print("Downloading image [%s].  Please note "
-                    "that this could take a long time depending on your "
-                    "connection. It's around 2GB."%(container_name))
-                pull_start_time = timeit.default_timer()
-                client.images.pull(container_name)
-                pull_finish_time = timeit.default_timer()
-                print("Successfully pulled the docker image [%s] in %ss"%
-                    (container_name,
-                    datetime.timedelta(seconds=pull_finish_time - pull_start_time, microseconds=0) ))
-
-            except Exception as e:
-                print("There was an error trying to pull the image [%s]: [%s]"%(container_name,str(e)))
-                raise(e)

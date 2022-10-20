@@ -22,6 +22,8 @@ import requests
 from bin.detection_testing.modules import container_manager, new_arguments2, test_driver, validate_args, utils, github_service, constants
 from bin.objects.test_config import TestConfig
 from bin.detection_testing.modules.github_service import GithubService
+from bin.objects.enums import PostTestBehavior, DetectionTestingMode
+import yaml
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
 index_file_local_path = "bin/detection_testing/indexes.conf.tar"
@@ -79,8 +81,8 @@ def copy_local_apps_to_directory(config: TestConfig):
 
 
 
-def finish_mock(settings: dict, detections: list[test_driver.Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
-    num_containers = settings['num_containers']
+def finish_mock(config: TestConfig, detections: list[test_driver.Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
+    num_containers = config.num_containers
 
     #convert the list of Detection objects into a list of filename strings
     detection_filesnames = [str(d.detectionFile.path) for d in detections]
@@ -96,40 +98,33 @@ def finish_mock(settings: dict, detections: list[test_driver.Detection], output_
         for d in detection_tests:
             filename = os.path.basename(d)
             filename = filename.replace(".test.yml", ".yml")
-            #leading = os.path.split(d)[0]
-            #leading = leading.replace()
-            #new_name = os.path.join(
-            #    "security_content", leading, filename)
-            #normalized_detection_names.append(new_name)
+
             normalized_detection_names.append(d.replace(".test.yml", ".yml").replace("tests/", "detections/"))
 
         # Generate an appropriate config file for this test
-        mock_settings = copy.deepcopy(settings)
+        mock_settings = copy.deepcopy(config)
         # This may be able to support as many as 2 for GitHub Actions...
         # we will have to determine in testing.
-        mock_settings['num_containers'] = 1
+        mock_settings.num_containers = 1
 
         # Must be selected since we are passing in a list of detections
-        mock_settings['mode'] = 'selected'
-
+        mock_settings.mode = DetectionTestingMode.selected
         # Pass in the list of detections to run
-        mock_settings['detections_list'] = normalized_detection_names
+        mock_settings.detections_list = normalized_detection_names
 
+        
         # We want to persist security content and run with the escu package that we created.
         #Note that if we haven't checked this out yet, we will check it out for you.
-        mock_settings['persist_security_content'] = True
+        #mock_settings['persist_security_content'] = True
 
-        mock_settings['mock'] = False
+        mock_settings.mock = False
 
         # Make sure that it still validates after all of the changes
 
         try:
             with open(fname, 'w') as outfile:
-                validated_settings, b = validate_args.validate_and_write(configuration=mock_settings, output_file = outfile, strip_credentials=True)
-                if validated_settings is None:
-                    print(
-                        "There was an error validating the updated mock settings.\n\tQuitting...", file=sys.stderr)
-                    return False
+                yamlData = yaml.dump(mock_settings.__dict__)
+                outfile.write(yaml.dump(yamlData))
 
         except Exception as e:
             print("Error writing config file %s: [%s]\n\tQuitting..." % (
@@ -181,7 +176,7 @@ def main(config: TestConfig):
     try:
         relative_app_path = copy_local_apps_to_directory(config)
         
-        mounts = [{"local_path": os.path.abspath(relative_app_path),
+        mounts = [{"local_path": os.path.abspath(CONTAINER_APP_DIRECTORY),
                     "container_path": "/tmp/apps", "type": "bind", "read_only": True}]
     except Exception as e:
         print(f"Error occurred when copying apps to app folder: [{str(e)}]\n\tQuitting...", file=sys.stderr)
@@ -189,9 +184,9 @@ def main(config: TestConfig):
 
 
     # If this is a mock run, finish it now
-    if settings['mock']:
+    if config.mock:
         #The function below 
-        if finish_mock(settings, all_detections):
+        if finish_mock(config, detections_to_test):
             # mock was successful!
             print("Mock successful!  Manifests generated!")
             sys.exit(0)
@@ -214,11 +209,11 @@ def main(config: TestConfig):
     
     def shutdown_signal_handler_setup(sig, frame):
         
-        print(f"Signal {sig} received... stopping all [{settings['num_containers']}] containers and shutting down...")
+        print(f"Signal {sig} received... stopping all [{config.num_containers}] containers and shutting down...")
         shutdown_client = docker.client.from_env()
         errorCount = 0
-        for container_number in range(settings['num_containers']):
-            container_name = settings['local_base_container_name']%container_number
+        for container_number in range(config.num_containers):
+            container_name = config.container_name%container_number
             print(f"Shutting down {container_name}...", file=sys.stderr, end='')
             sys.stdout.flush()
             try:
@@ -246,26 +241,13 @@ def main(config: TestConfig):
     signal.signal(signal.SIGINT, shutdown_signal_handler_setup)
 
     try:
-        cm = container_manager.ContainerManager(all_detections,
-                                                FULL_DOCKER_HUB_CONTAINER_NAME,
-                                                settings['local_base_container_name'],
-                                                settings['num_containers'],
-                                                settings['apps'],
-                                                settings['branch'],
-                                                settings['commit_hash'],
-                                                reproduce_test_config,
+        cm = container_manager.ContainerManager(detections_to_test,
+                                                config,
                                                 files_to_copy_to_container=files_to_copy_to_container,
                                                 web_port_start=8000,
                                                 management_port_start=8089,
                                                 hec_port_start=8088,
-                                                mounts=mounts,
-                                                show_container_password=settings['show_splunk_app_password'],
-                                                container_password=settings['splunk_app_password'],
-                                                splunkbase_username=settings['splunkbase_username'],
-                                                splunkbase_password=settings['splunkbase_password'],
-                                                reuse_image=settings['reuse_image'],
-                                                interactive_failure=not settings['no_interactive_failure'],
-                                                interactive=settings['interactive'])
+                                                mounts=mounts)
     except Exception as e:
         print("Error - unrecoverable error trying to set up the containers: [%s].\n\tQuitting..."%(str(e)),file=sys.stderr)
         sys.exit(1)

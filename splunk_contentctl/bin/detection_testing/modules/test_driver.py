@@ -20,7 +20,7 @@ import pathlib
 import yaml
 
 from bin.detection_testing.modules.test_objects import Detection, ResultsManager
-
+from bin.objects.test_config import TestConfig
 
 
 
@@ -29,7 +29,7 @@ from bin.detection_testing.modules.test_objects import Detection, ResultsManager
 
 
 class TestDriver:
-    def __init__(self, tests:list[Detection], num_containers:int, summarization_reproduce_failure_config:dict):
+    def __init__(self, tests:list[Detection], config: TestConfig):
         #Create the queue and enque all of the tests
         self.testing_queue = queue.Queue()
         for test in tests:
@@ -50,10 +50,10 @@ class TestDriver:
         print("Attack data for this run will be stored at: [%s]"%(self.attack_data_root_folder))
         
         #Not used right now, but we will keep it around for a bit in case we want to use it again
-        self.start_barrier = threading.Barrier(num_containers)
+        self.start_barrier = threading.Barrier(config.num_containers)
 
         #The config that will be used for writing out the error config reproduction fiel
-        self.summarization_reproduce_failure_config = copy.deepcopy(summarization_reproduce_failure_config)
+        self.summarization_reproduce_failure_config = copy.deepcopy(config)
 
 
         #According to the docs:

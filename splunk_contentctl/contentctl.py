@@ -32,9 +32,6 @@ from bin.objects.repo_config import RepoConfig
 
 
 def create_argparse_parser_from_model(model: BaseModel, parser: argparse.ArgumentParser):
-    #Add all the fields defined in the model as arguments to the parser
-    parser.add_argument("-c", "--config_file", type=argparse.FileType('r'), default=None, help="Name of the config file to run the test")
-    
     #Expose all of the fields. Recirsively search for nested Models, too
     for fieldName, fieldItem in model.__fields__.items():            
         if isinstance(fieldItem.type_, ModelMetaclass) and hasattr(fieldItem.default, "__fields__"):
@@ -44,7 +41,7 @@ def create_argparse_parser_from_model(model: BaseModel, parser: argparse.Argumen
 
         
   
-def get_configuration_from_command_line(model:BaseModel, args:argparse.Namespace)->TestConfig:
+def get_configuration_from_command_line(model:BaseModel, args:argparse.Namespace)->BaseModel:
     #Fetch the command line parameters that were passed
     fields_to_update = {}
     for name,value in args.__dict__.items():
@@ -52,15 +49,19 @@ def get_configuration_from_command_line(model:BaseModel, args:argparse.Namespace
         #are not None.  All of these arguments on the commandLine
         #default to None, making it easy to see whether or not
         #a user has passed a value
-        if value is not None and name in TestConfig.__fields__:
+        '''
+        if value is not None and name in model.__fields__:
             #Command line parameter received an argument. This will override
             #both the default for that arg AND whatever is defined in the
             #config file, if it is passed
             fields_to_update[name] = value
+        '''
+        if value is not None and name not in ["func", "config_file"]:
+            fields_to_update[name] = value
     
     
     
-
+    
     #If a user has passed a config file, use that as the starting point
     #of the configuration
     if args.config_file is not None:
@@ -266,21 +267,43 @@ def build(args):
 
 def test(args):
     
-
+    '''
     #A hack that allow a user to provide a comma-separated list of detections on the command line
-    if type(args.detections_list) == str:
+    if type(getattr(args, "detections_list", None)) == str:
         args.detections_list = [d.strip() for d in args.detections_list.split(",")]
-    print(args.detections_list)
+    
     #Parse everything from the command line
     #test_object = TestConfig.get_configuration_from_command_line(args)
-    test_object = get_configuration_from_command_line(TestConfig, args)
+    print(args)
+    test_object = get_configuration_from_command_line(RepoConfig, args)
     
-
     #Run the test
     import pprint
-    pprint.pprint(test_object)
-    sys.exit(0)
+    print("*******")
+    print(test_object.dict())
+    with open("Res.yml","w") as res:
+        
+        yaml.dump(test_object.dict(), res)
+    '''
+    with open("Res.yml","r") as res:
+        try:
+            data = yaml.safe_load(res)
+            if data is None:
+                data = {}
+        except Exception as e:
+            #raise(Exception(f"Error parsing test config: {str(e)}"))
+            data = {"test_branch": "doesNotExist"}
+
+    print(data)    
+    test_object = TestConfig.parse_obj(data)
+    import pprint
+    pprint.pprint(test_object.__dict__)
+    
     Test().execute(test_object)
+        
+
+
+    
 
     
     
@@ -459,8 +482,16 @@ def main(args):
     cloud_deploy_parser.set_defaults(func=cloud_deploy)
     
     
-    create_argparse_parser_from_model(TestConfig, test_parser)
+
+
+
+
+    test_parser.add_argument("-c", "--config_file", type=argparse.FileType('r'), default=None, help="Name of the config file to run the test")
+    create_argparse_parser_from_model(RepoConfig, test_parser)
     test_parser.set_defaults(func=test)
+
+
+
 
     # # parse them
     args = parser.parse_args()

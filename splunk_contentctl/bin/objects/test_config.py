@@ -39,14 +39,15 @@ def getTestConfigFromYMLFile(path:pathlib.Path):
 
 
 class TestConfig(BaseModel, extra=Extra.forbid):
-    
-    
+    repo_path: str = Field(default='.', title="Path to the root of your app")
+    repo_url: Union[str,None] = Field(default=None, title="HTTP(s) path to the repo for repo_path.  If this field is blank, it will be inferred from the repo")
+    main_branch: Union[str,None] = Field(default=None, title="Main branch of the repo, if applicable.")
     test_branch: Union[str,None] = Field(default=None, title="Branch of the repo to be tested, if applicable.")
     commit_hash: Union[str,None] = Field(default=None, title="Commit hash of the repo state to be tested, if applicable")
     full_image_path: str = Field(default="registry.hub.docker.com/splunk/splunk:latest", title="Full path to the container image to be used")
     container_name: str = Field(default="splunk_detection_testing_%d", title="Template to be used for naming the Splunk Test Containers which will be created")
     post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, title=f"What to do after a test has completed.  Choose one of {PostTestBehavior._member_names_}")
-    mode: DetectionTestingMode = Field(default=DetectionTestingMode.changes, title=f"Control which detections should be tested.  Choose one of {DetectionTestingMode._member_names_}")
+    mode: DetectionTestingMode = Field(default=DetectionTestingMode.all, title=f"Control which detections should be tested.  Choose one of {DetectionTestingMode._member_names_}")
     detections_list: Union[list[str], None] = Field(default=None, title="List of paths to detections which should be tested")
     num_containers: int = Field(default=1, title="Number of testing containers to start in parallel.")
     pr_number: Union[int,None] = Field(default=None, title="The number of the PR to test")
@@ -70,7 +71,67 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         return values
 
     
-    
+    @validator('repo_path', always=True)
+    def validate_repo_path(cls,v):
+        
+        try:
+            path = pathlib.Path(v)
+        except Exception as e:
+            raise(ValueError(f"Error, the provided path is is not a valid path: '{v}'"))
+        
+        try:    
+            r = git.Repo(path)
+        except Exception as e:
+            raise(ValueError(f"Error, the provided path is not a valid git repo: '{path}'"))
+        
+        try:
+            
+            if ALWAYS_PULL:
+                r.remotes.origin.pull()
+        except Exception as e:
+            raise ValueError(f"Error pulling git repository {v}: {str(e)}")
+        
+        
+        return v
+
+
+    @validator('repo_url', always=True)
+    def validate_repo_url(cls, v, values):
+        Utils.check_required_fields('repo_url', values, ['repo_path'])
+
+        #First try to get the value from the repo
+        try:
+            remote_url_from_repo = git.Repo(values['repo_path']).remotes.origin.url
+        except Exception as e:
+            raise(ValueError(f"Error reading remote_url from the repo located at {values['repo_path']}"))
+        
+        if v is not None and remote_url_from_repo != v:
+            raise(ValueError(f"The url of the remote repo supplied in the config file {v} does not "\
+                              f"match the value read from the repository at {values['repo_path']}, {remote_url_from_repo}"))
+        
+        
+        if v is None:    
+            v = remote_url_from_repo
+
+        #Ensure that the url is the proper format
+        try:
+            if bool(validators.url(v)) == False:
+                raise(Exception)
+        except:
+            raise(ValueError(f"Error validating the repo_url. The url is not valid: {v}"))
+        
+
+        return v
+
+    @validator('main_branch', always=True)
+    def valid_main_branch(cls, v, values):
+        Utils.check_required_fields('main_branch', values, ['repo_path', 'repo_url'])
+
+        try:
+            Utils.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
+        except Exception as e:
+            raise ValueError(f"Error validating main_branch: {str(e)}")
+        return v
 
     @validator('test_branch', always=True)
     def validate_test_branch(cls, v, values):
@@ -104,7 +165,9 @@ class TestConfig(BaseModel, extra=Extra.forbid):
             #Check to make sure we have the latest version of the image
             try:
                 client = docker.from_env()
+                print(f"Getting the latest version of the container image: {v}...", end='', flush=True)
                 client.images.pull(v)
+                print("done")
             except Exception as e:
                 raise(ValueError(f"Error checking for the latest version of the image {v}: {str(e)}"))
         return v

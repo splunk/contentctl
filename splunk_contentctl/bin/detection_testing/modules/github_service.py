@@ -143,6 +143,8 @@ class GithubService:
             
         elif config.mode==DetectionTestingMode.all:
             #Don't need to do anything, we don't need to remove it from the list
+            print("of course we are here")
+            print(len(detection_objects))
             pass
         elif config.mode==DetectionTestingMode.selected:
             if config.detections_list is None:

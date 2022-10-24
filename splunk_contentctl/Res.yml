@@ -1,3 +1,13 @@
 repo_path: /tmp/demoPath/security_content
 main_branch: "develop"
 test_branch: "develop"
+apps:
+  - uid: 6176
+    appid: ADD_ON_FOR_LINUX_SYSMON
+    title: LINUX SYSMON
+    description: This is the linux sysmon addon
+    release: 1.0.4
+    #http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/add-on-for-linux-sysmon_104.tgz
+    local_path: /tmp/add-on-for-linux-sysmon_104.tgz
+#splunkbase_username: notARealUser
+#splunkbase_password: notARealPassword

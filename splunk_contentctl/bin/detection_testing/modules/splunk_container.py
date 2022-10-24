@@ -54,6 +54,7 @@ class SplunkContainer:
         self.web_port = web_port_tuple[1]
         self.management_port = management_port_tuple[1]
         self.hec_port = hec_port_tuple[1]
+        print(self)
         self.container = self.make_container()
 
         self.thread = threading.Thread(target=self.run_container, )
@@ -94,7 +95,6 @@ class SplunkContainer:
             env["SPLUNKBASE_PASSWORD"] = self.config.splunkbase_password
         env["SPLUNK_APPS_URL"] = splunk_apps_url
         
-        
         return env
 
     def make_ports(self, *ports: tuple[str, int]) -> dict[str, int]:
@@ -105,18 +105,11 @@ class SplunkContainer:
 
     def __str__(self) -> str:
         container_string = (
-            "Container Name: %s\n\t"
-            "Docker Hub Path: %s\n\t"
-            "Apps: %s\n\t"
-            "Ports: %s\n\t"
-            "Mounts: %s\n\t"
-            % (
-                self.container_name,
-                self.config.full_image_path,
-                self.environment["SPLUNK_APPS_URL"],
-                self.ports,
-            )
-        )
+            f"Container Name: '{self.container_name}'\n\t"
+            f"Docker Hub Path: '{self.config.full_image_path}'\n\t"
+            f"Apps: '{self.environment['SPLUNK_APPS_URL']}'\n\t"
+            f"Ports: {self.ports}\n\t"
+            f"Mounts: {self.mounts}\n\t")
 
         return container_string
 

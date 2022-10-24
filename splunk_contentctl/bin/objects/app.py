@@ -11,6 +11,7 @@ from typing import Union
 import validators
 from bin.objects.security_content_object import SecurityContentObject
 from bin.objects.enums import DataModel
+from bin.helper.utils import Utils
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{release}/download"
 
@@ -82,6 +83,9 @@ class App(BaseModel, extra=Extra.forbid):
             p = pathlib.Path(v)
             if not p.exists():
                 raise(ValueError(f"The path local_path {p} does not exist"))
+            elif not p.is_file():
+                raise(ValueError(f"The path local_path {p} exists, but is not a file"))
+            
         
         #release can be any string
         return v
@@ -91,7 +95,7 @@ class App(BaseModel, extra=Extra.forbid):
         if v is not None:
             try:
                 if bool(validators.url(v)) == False:
-                    raise Exception(f"URL '{v}' is not a valid URL")
+                    raise ValueError(f"URL '{v}' is not a valid URL")
             except Exception as e:
                 raise(ValueError(f"Error validating the http_path: {str(e)}"))
         return v
@@ -99,6 +103,8 @@ class App(BaseModel, extra=Extra.forbid):
 
     @validator('must_download_from_splunkbase', always=True)
     def validate_must_download_from_splunkbase(cls, v, values):
+        Utils.check_required_fields('must_download_from_splunkbase', values, ['local_path', 'http_path'])
+
         if values['local_path'] is None and values['http_path'] is None:
             return True
         else:
@@ -108,7 +114,8 @@ class App(BaseModel, extra=Extra.forbid):
 
     @validator('splunkbase_path', always=True)
     def validate_splunkbase_path(cls, v, values):
-        
+        Utils.check_required_fields('splunkbase_path', values, ['local_path', 'http_path', 'uid', 'title'])
+
         if v is not None:
             try:
                 res = bool(validator.url(v))
@@ -132,7 +139,7 @@ class App(BaseModel, extra=Extra.forbid):
         if values['uid'] is None:
             if must_download:
                 raise(ValueError(f"Error building splunkbase_url. Attempting to"\
-                                    f" build the url for '{values['name']}', but no "\
+                                    f" build the url for '{values['title']}', but no "\
                                     f"uid was supplied."))
             else:
                 return None
@@ -140,7 +147,7 @@ class App(BaseModel, extra=Extra.forbid):
         if values['release'] is None:
             if must_download:
                 raise(ValueError(f"Error building splunkbase_url. Attempting to"\
-                                    f" build the url for '{values['name']}', but no "\
+                                    f" build the url for '{values['title']}', but no "\
                                     f"release was supplied."))
             else:
                 return None

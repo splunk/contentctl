@@ -287,7 +287,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         for app in v:
             if app.must_download_from_splunkbase and not splunkbase_credentials:
                 #We must fetch this app from splunkbase, but don't have credentials to do so
-                error_string = f"Unable to download '{app.name}' from Splunkbase and no http_path or local_path provided - missing splunkbase_username and/or splunkbase_password"
+                error_string = f"Unable to download '{app.title}' from Splunkbase and no http_path or local_path provided - missing splunkbase_username and/or splunkbase_password"
                 app_errors.append(error_string)
         if len(app_errors) != 0:
             error_string = '\n\t'.join(app_errors)

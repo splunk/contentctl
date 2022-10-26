@@ -15,7 +15,8 @@ from tempfile import mkdtemp, mkstemp
 
 import splunklib.client as client
 from bin.detection_testing.modules.test_objects import Detection, Test, Baseline, TestResult, AttackData
-
+#from bin.detection_testing.modules.splunk_container import SplunkContainer
+from bin.objects.enums import PostTestBehavior
 
 from typing import Union
 import urllib.parse
@@ -24,28 +25,29 @@ import requests
 import pathlib
 
 import os
+SplunkContainer = "CIRCULAR IMPORT PLEASE RESOLVE"
 
-def get_service(splunk_ip:str, splunk_port:int, splunk_password:str):
+def get_service(container:SplunkContainer):
 
     try:
         service = client.connect(
-            host=splunk_ip,
-            port=splunk_port,
+            host=container.splunk_ip,
+            port=container.management_port,
             username='admin',
-            password=splunk_password
+            password=container.config.splunk_app_password
         )
     except Exception as e:
         raise(Exception("Unable to connect to Splunk instance: " + str(e)))
     return service
 
 
-def execute_tests(splunk_ip:str, splunk_port:int, splunk_password:str, tests:list[Test], attack_data_folder:str, wait_on_failure:bool, wait_on_completion:bool, container)->bool:
+def execute_tests(container:SplunkContainer, tests:list[Test], attack_data_folder:str)->bool:
     
     success = True
     for test in tests:
         try:
             #Run all the tests, even if the test fails.  We still want to get the results of failed tests
-            result = execute_test(splunk_ip, splunk_port, splunk_password, test, attack_data_folder, wait_on_failure, wait_on_completion,container)
+            result = execute_test(container, test, attack_data_folder)
             #And together the result of the test so that if any one test fails, it causes this function to return False                
             success &= result
         except Exception as e:
@@ -87,25 +89,25 @@ def format_test_result(job_result:dict, testName:str, fileName:str, logic:bool=F
     
     return testResult
 
-def execute_baselines(splunk_ip:str, splunk_port:int, splunk_password:str, baselines:list[Baseline]):
+def execute_baselines(container:SplunkContainer, baselines:list[Baseline]):
     for baseline in baselines:
-        execute_baseline(splunk_ip, splunk_port, splunk_password, baseline)
+        execute_baseline(container, baseline)
     
     
 
-def execute_baseline(splunk_ip:str, splunk_port:int, splunk_password:str, baseline:Baseline):
+def execute_baseline(container:SplunkContainer, baseline:Baseline):
     
-    baseline.result = splunk_sdk.test_detection_search(splunk_ip, splunk_port, splunk_password, 
+    baseline.result = splunk_sdk.test_detection_search(container, 
                                               baseline.baseline.search, baseline.pass_condition, 
                                               baseline.name, baseline.earliest_time, baseline.latest_time)
     
     
 
-def execute_test(splunk_ip:str, splunk_port:int, splunk_password:str, test:Test, attack_data_folder:str, wait_on_failure:bool, wait_on_completion:bool,container)->bool:
+def execute_test(container:SplunkContainer, test:Test, attack_data_folder:str)->bool:
     
     print(f"\tExecuting test {test.name}")
     #replay all of the attack data
-    test_indices = replay_attack_data_files(splunk_ip, splunk_port, splunk_password, test.attack_data, attack_data_folder,container)
+    test_indices = replay_attack_data_files(container, test.attack_data, attack_data_folder)
 
     import timeit, time
     start = timeit.default_timer()
@@ -118,7 +120,7 @@ def execute_test(splunk_ip:str, splunk_port:int, splunk_password:str, test:Test,
         #print(f"Sleep for {sleeptime} for ingest") 
         time.sleep(sleeptime)
         #Run the baseline(s) if they exist for this test
-        execute_baselines(splunk_ip, splunk_port, splunk_password, test.baselines)
+        execute_baselines(container, test.baselines)
         if test.error_in_baselines() is True:
             #One of the baselines failed. No sense in running the real test
             #Note that a baselines which fail is different than a baselines which didn't return some results!
@@ -134,7 +136,7 @@ def execute_test(splunk_ip:str, splunk_port:int, splunk_password:str, test:Test,
             
         else:
             #baselines all worked (if they exist) so run the search
-            test.result = splunk_sdk.test_detection_search(splunk_ip, splunk_port, splunk_password, test.detectionFile.search, test.pass_condition, test.name, test.earliest_time, test.latest_time)
+            test.result = splunk_sdk.test_detection_search(container, test.detectionFile.search, test.pass_condition, test.name, test.earliest_time, test.latest_time)
         
         if test.result.success:
             #We were successful, no need to run again.
@@ -145,8 +147,9 @@ def execute_test(splunk_ip:str, splunk_port:int, splunk_password:str, test:Test,
         elif timeit.default_timer() - start > MAX_TIME:
             break
         
- 
-    if wait_on_completion or (wait_on_failure and (test.result.success == False)):
+    if container.config.post_test_behavior == PostTestBehavior.always_pause or \
+      (test.result.success == False and container.config.post_test_behavior == PostTestBehavior.pause_on_failure):
+    
         # The user wants to debug the test
         message_template = "\n\n\n****SEARCH {status} : Allowing time to debug search/data****\nPress ENTER to continue..."
         if test.result.success == False:
@@ -162,7 +165,7 @@ def execute_test(splunk_ip:str, splunk_port:int, splunk_password:str, test:Test,
         print(f"DETECTION SEARCH: {test.result.search}")
         _ = input(formatted_message)
 
-    splunk_sdk.delete_attack_data(splunk_ip, splunk_password, splunk_port, indices = test_indices)
+    splunk_sdk.delete_attack_data(container, indices = test_indices)
     
     #Return whether the test passed or failed
     return test.result.success
@@ -273,7 +276,7 @@ def hec_raw_replay(base_url:str, token:str, filePath:pathlib.Path, index:str,
 
 
 
-def replay_attack_data_file(splunk_ip:str, splunk_port:int, splunk_password:str, attackData:AttackData, attack_data_folder:str,container)->str:
+def replay_attack_data_file(container:SplunkContainer, attackData:AttackData, attack_data_folder:str)->str:
     """Function to replay a single attack data file. Any exceptions generated during executing
     are intentionally not caught so that they can be caught by the caller.
 
@@ -316,7 +319,7 @@ def replay_attack_data_file(splunk_ip:str, splunk_port:int, splunk_password:str,
         data_manipulation.manipulate_timestamp(relpath, attackData.sourcetype,attackData.source)    
 
     #Get an session from the API
-    service = get_service(splunk_ip, splunk_port, splunk_password)
+    service = get_service(container)
     #Get the index we will be uploading to
     upload_index = service.indexes[attackData.index]
         
@@ -338,7 +341,7 @@ def replay_attack_data_file(splunk_ip:str, splunk_port:int, splunk_password:str,
 
     
 
-def replay_attack_data_files(splunk_ip:str, splunk_port:int, splunk_password:str, attackDataObjects:list[AttackData], attack_data_folder:str,container)->set[str]:
+def replay_attack_data_files(container:SplunkContainer, attackDataObjects:list[AttackData], attack_data_folder:str)->set[str]:
     """Replay all attack data files into a splunk server as part of testing a detection. Note that this does not catch
     any exceptions, they should be handled by the caller
 
@@ -352,17 +355,17 @@ def replay_attack_data_files(splunk_ip:str, splunk_port:int, splunk_password:str
     test_indices = set()
     for attack_data_file in attackDataObjects:
         try:
-            test_indices.add(replay_attack_data_file(splunk_ip, splunk_port, splunk_password, attack_data_file, attack_data_folder,container))
+            test_indices.add(replay_attack_data_file(container, attack_data_file, attack_data_folder))
         except Exception as e:
             raise(Exception(f"Error replaying attack data file {attack_data_file.data}: {str(e)}"))
     return test_indices
 
 
-def test_detection(splunk_ip:str, splunk_port:int, splunk_password:str, detection:Detection, attack_data_root_folder, wait_on_failure:bool, wait_on_completion:bool,container)->bool:
+def test_detection(container:SplunkContainer, detection:Detection, attack_data_root_folder)->bool:
     
 
     abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
-    success = execute_tests(splunk_ip, splunk_port, splunk_password, detection.testFile.tests, abs_folder_path, wait_on_failure, wait_on_completion, container)
+    success = execute_tests(container, detection.testFile.tests, abs_folder_path)
     shutil.rmtree(abs_folder_path)
     detection.get_detection_result()
     #Delete the folder and all of the data inside of it

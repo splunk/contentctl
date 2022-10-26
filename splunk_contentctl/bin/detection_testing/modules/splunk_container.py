@@ -313,7 +313,7 @@ class SplunkContainer:
     def configure_hec(self):
         try:
 
-            auth = ('admin', self.container_password)
+            auth = ('admin', self.config.splunk_app_password)
             address = f"https://{self.splunk_ip}:{self.management_port}/services/data/inputs/http"
             data = {
                 "name": "DOCKER_TEST_TESTING_HEC",
@@ -408,15 +408,7 @@ class SplunkContainer:
             print(f"Container [{self.container_name}]--->[{str(detection_to_test.detectionFile.path)}]")
             try:
                 
-                result = testing_service.test_detection(
-                    self.splunk_ip,
-                    self.management_port,
-                    self.config.splunk_app_password,
-                    detection_to_test,
-                    self.synchronization_object.attack_data_root_folder,
-                    self.config.post_test_behavior,
-                    container=self
-                )
+                result = testing_service.test_detection(self, detection_to_test, self.synchronization_object.attack_data_root_folder)
                 
 
                 self.synchronization_object.addResult(detection_to_test)

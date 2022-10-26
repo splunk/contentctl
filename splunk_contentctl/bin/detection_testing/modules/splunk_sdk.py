@@ -9,20 +9,18 @@ import timeit
 import datetime
 from typing import Union
 from bin.detection_testing.modules.test_objects import TestResult
+#from bin.detection_testing.modules.splunk_container import SplunkContainer
+from bin.detection_testing.modules.testing_service import get_service
 DEFAULT_EVENT_HOST = "ATTACK_DATA_HOST"
 DEFAULT_DATA_INDEX = set(["main"])
 FAILURE_SLEEP_INTERVAL_SECONDS = 60
 
+SplunkContainer = "CIRCULAR IMPORT PLEASE RESOLVE"
 
-def get_number_of_indexed_events(splunk_host, splunk_port, splunk_password, index:str, event_host:str=DEFAULT_EVENT_HOST, sourcetype:Union[str,None]=None )->int:
+def get_number_of_indexed_events(container:SplunkContainer, index:str, event_host:str=DEFAULT_EVENT_HOST, sourcetype:Union[str,None]=None )->int:
 
     try:
-        service = client.connect(
-            host=splunk_host,
-            port=splunk_port,
-            username='admin',
-            password=splunk_password
-        )
+        service = get_service(container)
     except Exception as e:
         raise(Exception("Unable to connect to Splunk instance: " + str(e)))
 
@@ -54,12 +52,12 @@ def get_number_of_indexed_events(splunk_host, splunk_port, splunk_password, inde
     
 
 
-def wait_for_indexing_to_complete(splunk_host, splunk_port, splunk_password, sourcetype:str, index:str, check_interval_seconds:int=5)->bool:
+def wait_for_indexing_to_complete(container:SplunkContainer, sourcetype:str, index:str, check_interval_seconds:int=5)->bool:
     startTime = timeit.default_timer()
     previous_count = -1
     time.sleep(check_interval_seconds)
     while True:
-        new_count = get_number_of_indexed_events(splunk_host, splunk_port, splunk_password, index=index, sourcetype=sourcetype)
+        new_count = get_number_of_indexed_events(container, index=index, sourcetype=sourcetype)
         #print(f"Previous Count [{previous_count}] New Count [{new_count}]")
         if previous_count == -1:
             previous_count = new_count
@@ -81,7 +79,7 @@ def wait_for_indexing_to_complete(splunk_host, splunk_port, splunk_password, sou
 
 
 
-def test_detection_search(splunk_host:str, splunk_port:int, splunk_password:str, search:str, pass_condition:str, 
+def test_detection_search(container:SplunkContainer, search:str, pass_condition:str, 
                           detection_name:str, earliest_time:str, latest_time:str, attempts_remaining:int=4, 
                           failure_sleep_interval_seconds:int=FAILURE_SLEEP_INTERVAL_SECONDS, FORCE_ALL_TIME=True)->TestResult:
     #Since this is an attempt, decrement the number of remaining attempts
@@ -111,13 +109,7 @@ def test_detection_search(splunk_host:str, splunk_port:int, splunk_password:str,
     splunk_search = f"{updated_search} {pass_condition}"
 
     try:
-        service = client.connect(
-            host=splunk_host,
-            port=splunk_port,
-
-            username='admin',
-            password=splunk_password
-        )
+        service = get_service(container)
     except Exception as e:
         error_message = "Unable to connect to Splunk instance: %s"%(str(e))
         print(error_message,file=sys.stderr)
@@ -138,17 +130,11 @@ def test_detection_search(splunk_host:str, splunk_port:int, splunk_password:str,
     
 
 
-def delete_attack_data(splunk_host:str, splunk_password:str, splunk_port:int, indices:set[str], host:str=DEFAULT_EVENT_HOST)->bool:
+def delete_attack_data(container:SplunkContainer, indices:set[str], host:str=DEFAULT_EVENT_HOST)->bool:
     
     
     try:
-        service = client.connect(
-            host=splunk_host,
-            port=splunk_port,
-
-            username='admin',
-            password=splunk_password
-        )
+        service = get_service(container)
     except Exception as e:
 
         raise(Exception("Unable to connect to Splunk instance: " + str(e)))
@@ -156,7 +142,7 @@ def delete_attack_data(splunk_host:str, splunk_password:str, splunk_port:int, in
 
     #print(f"Deleting data for {detection_filename}: {indices}")
     for index in indices:
-        while (get_number_of_indexed_events(splunk_host, splunk_port, splunk_password, index=index, event_host=host) != 0) :
+        while (get_number_of_indexed_events(container, index=index, event_host=host) != 0) :
             splunk_search = f'search index="{index}" host="{host}" | delete'
             kwargs = {
                     "exec_mode": "blocking"}

@@ -46,8 +46,8 @@ class App(BaseModel, extra=Extra.forbid):
             raise(ValueError(f"String was length 0"))
 
         for letter in input:
-            if not (letter.isalnum() or letter =='_'):
-                raise(ValueError("String can only contain alphanumeric characters and underscores"))
+            if not (letter.isalnum() or letter in '_-' ):
+                raise(ValueError(f"String '{input}' can only contain alphanumeric characters, underscores, and hyphens."))
         return True
 
     @validator('uid', always=True)

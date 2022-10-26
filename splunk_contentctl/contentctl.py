@@ -495,15 +495,9 @@ def main(args):
 
     # # parse them
     args = parser.parse_args()
-    try:
-        return args.func(args)
-    except Exception as e:
-        print(f"Error for function [{args.func.__name__}]: {str(e)}")
-        import traceback
-        #print(traceback.format_exc())
-        sys.exit(1)
+    
 
-    '''
+    
     #Parse the template so that functions don't need to do it individually
     try:
         if 'template' in args and args.template:
@@ -528,10 +522,10 @@ def main(args):
         return args.func(args)
     except Exception as e:
         print(f"Error for function [{args.func.__name__}]: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
+        #import traceback
+        #print(traceback.format_exc())
 
-    '''
+        sys.exit(1)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -4,8 +4,8 @@ import sys
 
 from pathlib import Path
 
-from bin.objects.enums import SecurityContentType
-from bin.output.jinja_writer import JinjaWriter
+from objects.enums import SecurityContentType
+from output.jinja_writer import JinjaWriter
 
 
 class DocMdOutput():

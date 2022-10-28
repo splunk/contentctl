@@ -4,8 +4,8 @@ import string
 
 from pydantic import BaseModel, validator, ValidationError
 
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.playbook_tags import PlaybookTag
+from objects.security_content_object import SecurityContentObject
+from objects.playbook_tags import PlaybookTag
 
 
 

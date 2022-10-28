@@ -1,8 +1,8 @@
 import os
 
 
-from bin.objects.enums import SecurityContentType
-from bin.output.attack_nav_writer import AttackNavWriter
+from objects.enums import SecurityContentType
+from output.attack_nav_writer import AttackNavWriter
 
 
 class AttackNavOutput():

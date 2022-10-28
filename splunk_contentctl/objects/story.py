@@ -5,8 +5,8 @@ import requests
 from pydantic import BaseModel, validator, ValidationError
 from datetime import datetime
 
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.story_tags import StoryTags
+from objects.security_content_object import SecurityContentObject
+from objects.story_tags import StoryTags
 
 class Story(BaseModel, SecurityContentObject):
     # story spec

@@ -5,8 +5,8 @@ import os
 from pydantic import ValidationError
 from pathlib import Path
 
-from bin.objects.playbook import Playbook
-from bin.input.yml_reader import YmlReader
+from objects.playbook import Playbook
+from input.yml_reader import YmlReader
 
 
 class PlaybookBuilder():

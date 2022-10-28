@@ -1,8 +1,8 @@
 import os
 
 
-from bin.output.json_writer import JsonWriter
-from bin.objects.enums import SecurityContentType
+from output.json_writer import JsonWriter
+from objects.enums import SecurityContentType
 
 
 class ApiJsonOutput():

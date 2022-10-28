@@ -2,8 +2,8 @@ import os
 import re
 from jinja2 import Environment, FileSystemLoader
 
-from bin.objects.detection import Detection
-from bin.objects.constants import *
+from objects.detection import Detection
+from objects.constants import *
 
 class FindingReportObject():
 

@@ -2,8 +2,8 @@
 
 from pydantic import BaseModel, validator, ValidationError
 
-from bin.objects.unit_test_attack_data import UnitTestAttackData
-from bin.objects.unit_test_baseline import UnitTestBaseline
+from objects.unit_test_attack_data import UnitTestAttackData
+from objects.unit_test_baseline import UnitTestBaseline
 
 class UnitTestTest(BaseModel):
     name: str

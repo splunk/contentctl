@@ -2,10 +2,10 @@ import sys
 
 from pydantic import ValidationError
 
-from bin.input.yml_reader import YmlReader
-from bin.objects.baseline import Baseline
-from bin.objects.enums import SecurityContentType
-from bin.objects.enums import SecurityContentProduct
+from input.yml_reader import YmlReader
+from objects.baseline import Baseline
+from objects.enums import SecurityContentType
+from objects.enums import SecurityContentProduct
 
 
 class BaselineBuilder():

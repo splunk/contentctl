@@ -11,17 +11,17 @@ from datetime import datetime
 
 
 
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.enums import AnalyticsType
-from bin.objects.enums import DataModel
-from bin.objects.detection_tags import DetectionTags
-from bin.objects.deployment import Deployment
-from bin.objects.unit_test import UnitTest
-from bin.objects.macro import Macro
-from bin.objects.lookup import Lookup
-from bin.objects.baseline import Baseline
-from bin.objects.playbook import Playbook
-from bin.helper.link_validator import LinkValidator
+from objects.security_content_object import SecurityContentObject
+from objects.enums import AnalyticsType
+from objects.enums import DataModel
+from objects.detection_tags import DetectionTags
+from objects.deployment import Deployment
+from objects.unit_test import UnitTest
+from objects.macro import Macro
+from objects.lookup import Lookup
+from objects.baseline import Baseline
+from objects.playbook import Playbook
+from helper.link_validator import LinkValidator
 
 
 

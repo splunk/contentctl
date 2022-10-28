@@ -3,9 +3,9 @@ import sys
 
 from pydantic import ValidationError
 
-from bin.objects.investigation import Investigation
-from bin.input.yml_reader import YmlReader
-from bin.objects.enums import SecurityContentType
+from objects.investigation import Investigation
+from input.yml_reader import YmlReader
+from objects.enums import SecurityContentType
 
 
 class InvestigationBuilder():

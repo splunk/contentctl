@@ -190,7 +190,7 @@ def reporting(args) -> None:
     reporting.execute(reporting_input_dto)
 
 
-def run(args):
+def main(args):
     """
     main function parses the arguments passed to the script and calls the respctive method.
     :param args: Arguments passed by the user on command line while calling the script.
@@ -247,19 +247,16 @@ def run(args):
         help="output path to store the detection or story")
     reporting_parser.set_defaults(func=reporting)
 
-    inspect_parser.add_argument("-p", "--package_path", required=False, type=str, default=None, help="Path to the package to be inspected")
+    inspect_parser.add_argument("-p", "--app_path", required=False, type=str, default=None, help="path to the splunk app to be inspected")
     inspect_parser.set_defaults(func=inspect)
-    inspect_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
 
 
-    deploy_parser.add_argument("--app-package", required=True, type=str, help="Path to the package you wish to deploy")
-    deploy_parser.add_argument("--acs-legal-ack", required=True, type=str, help="specify '--acs-legal-ack=Y' to acknowledge your acceptance of any risks (required)")
+    deploy_parser.add_argument("-p", "--app_path", required=True, type=str, help="path to the splunk app you wish to deploy")
+    deploy_parser.add_argument("--acs-legal-ack", required=False, type=str, default='Y', help="specify '--acs-legal-ack=Y' to acknowledge your acceptance of any risks")
     deploy_parser.add_argument("--username", required=True, type=str, help="splunk.com username")
     deploy_parser.add_argument("--password", required=True, type=str, help="splunk.com password")
-    deploy_parser.add_argument("--server", required=False, default="https://admin.splunk.com", type=str, help="Override server URL (default 'https://admin.splunk.com')")
+    deploy_parser.add_argument("--server", required=False, default="https://admin.splunk.com", type=str, help="override server URL, defaults to: https://admin.splunk.com")
     deploy_parser.set_defaults(func=deploy)
-    
-    
 
     # parse them
     args = parser.parse_args()
@@ -290,3 +287,7 @@ def run(args):
         print(f"Error for function [{args.func.__name__}]: {str(e)}")
         import traceback
         print(traceback.format_exc())
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
+

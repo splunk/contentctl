@@ -6,10 +6,10 @@ from pydantic import BaseModel, validator, ValidationError
 from dataclasses import dataclass
 from datetime import datetime
 
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.enums import DataModel
-from bin.objects.baseline_tags import BaselineTags
-from bin.objects.deployment import Deployment
+from objects.security_content_object import SecurityContentObject
+from objects.enums import DataModel
+from objects.baseline_tags import BaselineTags
+from objects.deployment import Deployment
 
 
 class Baseline(BaseModel, SecurityContentObject):

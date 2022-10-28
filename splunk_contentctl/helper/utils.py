@@ -1,6 +1,6 @@
 import os
 
-from bin.objects.security_content_object import SecurityContentObject
+from objects.security_content_object import SecurityContentObject
 
 class Utils:
 

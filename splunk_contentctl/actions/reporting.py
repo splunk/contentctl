@@ -2,9 +2,9 @@ import os
 
 from dataclasses import dataclass
 
-from bin.input.director import DirectorInputDto, Director, DirectorOutputDto
-from bin.output.svg_output import SvgOutput
-from bin.output.attack_nav_output import AttackNavOutput
+from input.director import DirectorInputDto, Director, DirectorOutputDto
+from output.svg_output import SvgOutput
+from output.attack_nav_output import AttackNavOutput
 
 
 @dataclass(frozen=True)

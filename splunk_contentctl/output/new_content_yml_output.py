@@ -1,7 +1,7 @@
 import os
 
-from bin.objects.enums import SecurityContentType
-from bin.output.yml_writer import YmlWriter
+from objects.enums import SecurityContentType
+from output.yml_writer import YmlWriter
 
 
 class NewContentYmlOutput():

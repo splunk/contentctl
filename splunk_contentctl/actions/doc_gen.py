@@ -2,8 +2,8 @@ import os
 
 from dataclasses import dataclass
 
-from bin.input.director import DirectorInputDto, Director, DirectorOutputDto
-from bin.output.doc_md_output import DocMdOutput
+from input.director import DirectorInputDto, Director, DirectorOutputDto
+from output.doc_md_output import DocMdOutput
 
 
 @dataclass(frozen=True)

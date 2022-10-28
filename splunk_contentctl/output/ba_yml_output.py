@@ -1,9 +1,9 @@
 import os
 import re
 
-from bin.output.yml_writer import YmlWriter
-from bin.objects.enums import SecurityContentType
-from bin.output.finding_report_writer import FindingReportObject
+from output.yml_writer import YmlWriter
+from objects.enums import SecurityContentType
+from output.finding_report_writer import FindingReportObject
 
 
 class BAYmlOutput():

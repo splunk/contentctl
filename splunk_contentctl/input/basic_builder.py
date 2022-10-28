@@ -2,14 +2,14 @@ import sys
 
 from pydantic import ValidationError
 
-from bin.objects.security_content_object import SecurityContentObject
-from bin.input.yml_reader import YmlReader
-from bin.objects.enums import SecurityContentType
-from bin.objects.deployment import Deployment
-from bin.objects.macro import Macro
-from bin.objects.lookup import Lookup
-from bin.objects.playbook import Playbook
-from bin.objects.unit_test import UnitTest
+from objects.security_content_object import SecurityContentObject
+from input.yml_reader import YmlReader
+from objects.enums import SecurityContentType
+from objects.deployment import Deployment
+from objects.macro import Macro
+from objects.lookup import Lookup
+from objects.playbook import Playbook
+from objects.unit_test import UnitTest
 
 
 class BasicBuilder():

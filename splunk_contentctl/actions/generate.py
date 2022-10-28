@@ -4,11 +4,11 @@ import os
 
 from dataclasses import dataclass
 
-from bin.objects.enums import SecurityContentProduct, SecurityContentType
-from bin.input.director import Director, DirectorInputDto, DirectorOutputDto
-from bin.output.conf_output import ConfOutput
-from bin.output.ba_yml_output import BAYmlOutput
-from bin.output.api_json_output import ApiJsonOutput
+from objects.enums import SecurityContentProduct, SecurityContentType
+from input.director import Director, DirectorInputDto, DirectorOutputDto
+from output.conf_output import ConfOutput
+from output.ba_yml_output import BAYmlOutput
+from output.api_json_output import ApiJsonOutput
 
 
 @dataclass(frozen=True)

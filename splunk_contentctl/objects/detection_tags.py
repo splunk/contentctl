@@ -1,8 +1,8 @@
 import re
 
 from pydantic import BaseModel, validator, ValidationError
-from bin.objects.mitre_attack_enrichment import MitreAttackEnrichment
-from bin.objects.constants import *
+from objects.mitre_attack_enrichment import MitreAttackEnrichment
+from objects.constants import *
 
 class DetectionTags(BaseModel):
     # detection spec

@@ -3,9 +3,9 @@ import sys
 
 from pydantic import ValidationError
 
-from bin.objects.story import Story
-from bin.objects.enums import SecurityContentType
-from bin.input.yml_reader import YmlReader
+from objects.story import Story
+from objects.enums import SecurityContentType
+from input.yml_reader import YmlReader
 
 
 class StoryBuilder():

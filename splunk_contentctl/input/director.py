@@ -4,16 +4,16 @@ import sys
 from dataclasses import dataclass
 from pydantic import ValidationError
 
-from bin.input.basic_builder import BasicBuilder
-from bin.input.detection_builder import DetectionBuilder
-from bin.input.playbook_builder import PlaybookBuilder
-from bin.input.baseline_builder import BaselineBuilder
-from bin.input.investigation_builder import InvestigationBuilder
-from bin.input.story_builder import StoryBuilder
-from bin.objects.enums import SecurityContentType
-from bin.objects.enums import SecurityContentProduct
-from bin.helper.utils import Utils
-from bin.enrichments.attack_enrichment import AttackEnrichment
+from input.basic_builder import BasicBuilder
+from input.detection_builder import DetectionBuilder
+from input.playbook_builder import PlaybookBuilder
+from input.baseline_builder import BaselineBuilder
+from input.investigation_builder import InvestigationBuilder
+from input.story_builder import StoryBuilder
+from objects.enums import SecurityContentType
+from objects.enums import SecurityContentProduct
+from helper.utils import Utils
+from enrichments.attack_enrichment import AttackEnrichment
 
 
 @dataclass(frozen=True)

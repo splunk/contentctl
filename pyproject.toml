@@ -7,10 +7,18 @@ license = "Apache 2.0"
 readme = "README.md"
 
 [tool.poetry.scripts]
-contentctl = 'splunk_contentctl.main:run'
+contentctl = 'splunk_contentctl.contentctl:main'
 
 [tool.poetry.dependencies]
 python = "^3.10"
+pydantic = "^1.10.2"
+PyYAML = "^6.0"
+requests = "^2.28.1"
+pycvesearch = "^1.2"
+xmltodict = "^0.13.0"
+attackcti = "^0.3.7"
+Jinja2 = "^3.1.2"
+questionary = "^1.10.0"
 
 [tool.poetry.dev-dependencies]
 

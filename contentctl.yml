@@ -2,7 +2,7 @@
 [global]
 log_path
 log_level
- [content]
+[content]
 detections = uuid1, uuid2, uuid3,
 
 [scheduling]
@@ -35,5 +35,7 @@ name = IT
 
 [enrichments]
 mitre_enrichment = True
-splunk_app = False  [custom_validators]
+splunk_app = False
+
+[custom_validators]
 dsafasf = regex(xxx)

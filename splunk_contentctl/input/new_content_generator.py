@@ -4,8 +4,8 @@ import questionary
 from dataclasses import dataclass
 from datetime import datetime
 
-from bin.objects.enums import SecurityContentType
-from bin.input.new_content_questions import NewContentQuestions
+from objects.enums import SecurityContentType
+from input.new_content_questions import NewContentQuestions
 
 
 @dataclass(frozen=True)

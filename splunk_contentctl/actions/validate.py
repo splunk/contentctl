@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 from typing import Union
 
-from bin.objects.enums import SecurityContentProduct
-from bin.input.director import Director, DirectorInputDto, DirectorOutputDto
+from objects.enums import SecurityContentProduct
+from input.director import Director, DirectorInputDto, DirectorOutputDto
 
 
 @dataclass(frozen=True)

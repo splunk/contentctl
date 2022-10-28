@@ -4,8 +4,8 @@ import glob
 import shutil
 from typing import Union
 
-from bin.output.conf_writer import ConfWriter
-from bin.objects.enums import SecurityContentType
+from output.conf_writer import ConfWriter
+from objects.enums import SecurityContentType
 
 
 class ConfOutput:

@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass
 
-from bin.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto, NewContentGeneratorOutputDto
-from bin.output.new_content_yml_output import NewContentYmlOutput
+from input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto, NewContentGeneratorOutputDto
+from output.new_content_yml_output import NewContentYmlOutput
 
 
 @dataclass(frozen=True)

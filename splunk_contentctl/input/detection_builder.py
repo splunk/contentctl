@@ -4,13 +4,13 @@ import os
 
 from pydantic import ValidationError
 
-from bin.input.yml_reader import YmlReader
-from bin.objects.detection import Detection
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.macro import Macro
-from bin.objects.mitre_attack_enrichment import MitreAttackEnrichment
-from bin.enrichments.cve_enrichment import CveEnrichment
-from bin.enrichments.splunk_app_enrichment import SplunkAppEnrichment
+from input.yml_reader import YmlReader
+from objects.detection import Detection
+from objects.security_content_object import SecurityContentObject
+from objects.macro import Macro
+from objects.mitre_attack_enrichment import MitreAttackEnrichment
+from enrichments.cve_enrichment import CveEnrichment
+from enrichments.splunk_app_enrichment import SplunkAppEnrichment
 
 
 class DetectionBuilder():

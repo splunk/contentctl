@@ -3,9 +3,9 @@ import sys
 
 from pydantic import ValidationError
 
-from objects.investigation import Investigation
-from input.yml_reader import YmlReader
-from objects.enums import SecurityContentType
+from splunk_contentctl.objects.investigation import Investigation
+from splunk_contentctl.input.yml_reader import YmlReader
+from splunk_contentctl.objects.enums import SecurityContentType
 
 
 class InvestigationBuilder():

@@ -5,8 +5,8 @@ import os
 from pydantic import ValidationError
 from pathlib import Path
 
-from objects.playbook import Playbook
-from input.yml_reader import YmlReader
+from splunk_contentctl.objects.playbook import Playbook
+from splunk_contentctl.input.yml_reader import YmlReader
 
 
 class PlaybookBuilder():

@@ -8,10 +8,10 @@ from pydantic import BaseModel, validator, ValidationError
 from dataclasses import dataclass
 from datetime import datetime
 
-from objects.security_content_object import SecurityContentObject
-from objects.enums import AnalyticsType
-from objects.enums import DataModel
-from objects.investigation_tags import InvestigationTags
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
+from splunk_contentctl.objects.enums import AnalyticsType
+from splunk_contentctl.objects.enums import DataModel
+from splunk_contentctl.objects.investigation_tags import InvestigationTags
 
 
 class Investigation(BaseModel, SecurityContentObject):

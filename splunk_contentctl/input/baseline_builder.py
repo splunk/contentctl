@@ -2,10 +2,10 @@ import sys
 
 from pydantic import ValidationError
 
-from input.yml_reader import YmlReader
-from objects.baseline import Baseline
-from objects.enums import SecurityContentType
-from objects.enums import SecurityContentProduct
+from splunk_contentctl.input.yml_reader import YmlReader
+from splunk_contentctl.objects.baseline import Baseline
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.objects.enums import SecurityContentProduct
 
 
 class BaselineBuilder():

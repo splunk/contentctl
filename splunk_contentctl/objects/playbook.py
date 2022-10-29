@@ -4,8 +4,8 @@ import string
 
 from pydantic import BaseModel, validator, ValidationError
 
-from objects.security_content_object import SecurityContentObject
-from objects.playbook_tags import PlaybookTag
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
+from splunk_contentctl.objects.playbook_tags import PlaybookTag
 
 
 

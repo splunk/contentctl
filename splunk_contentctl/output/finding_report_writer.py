@@ -2,8 +2,8 @@ import os
 import re
 from jinja2 import Environment, FileSystemLoader
 
-from objects.detection import Detection
-from objects.constants import *
+from splunk_contentctl.objects.detection import Detection
+from splunk_contentctl.objects.constants import *
 
 class FindingReportObject():
 

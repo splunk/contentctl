@@ -2,14 +2,14 @@ import sys
 
 from pydantic import ValidationError
 
-from objects.security_content_object import SecurityContentObject
-from input.yml_reader import YmlReader
-from objects.enums import SecurityContentType
-from objects.deployment import Deployment
-from objects.macro import Macro
-from objects.lookup import Lookup
-from objects.playbook import Playbook
-from objects.unit_test import UnitTest
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
+from splunk_contentctl.input.yml_reader import YmlReader
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.objects.deployment import Deployment
+from splunk_contentctl.objects.macro import Macro
+from splunk_contentctl.objects.lookup import Lookup
+from splunk_contentctl.objects.playbook import Playbook
+from splunk_contentctl.objects.unit_test import UnitTest
 
 
 class BasicBuilder():

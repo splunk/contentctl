@@ -4,8 +4,8 @@ import glob
 import shutil
 from typing import Union
 
-from output.conf_writer import ConfWriter
-from objects.enums import SecurityContentType
+from splunk_contentctl.output.conf_writer import ConfWriter
+from splunk_contentctl.objects.enums import SecurityContentType
 
 
 class ConfOutput:

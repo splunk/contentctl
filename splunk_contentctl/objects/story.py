@@ -5,8 +5,8 @@ import requests
 from pydantic import BaseModel, validator, ValidationError
 from datetime import datetime
 
-from objects.security_content_object import SecurityContentObject
-from objects.story_tags import StoryTags
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
+from splunk_contentctl.objects.story_tags import StoryTags
 
 class Story(BaseModel, SecurityContentObject):
     # story spec

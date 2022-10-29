@@ -3,9 +3,9 @@ import sys
 
 from pydantic import ValidationError
 
-from objects.story import Story
-from objects.enums import SecurityContentType
-from input.yml_reader import YmlReader
+from splunk_contentctl.objects.story import Story
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.input.yml_reader import YmlReader
 
 
 class StoryBuilder():

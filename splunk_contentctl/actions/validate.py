@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 from typing import Union
 
-from objects.enums import SecurityContentProduct
-from input.director import Director, DirectorInputDto, DirectorOutputDto
+from splunk_contentctl.objects.enums import SecurityContentProduct
+from splunk_contentctl.input.director import Director, DirectorInputDto, DirectorOutputDto
 
 
 @dataclass(frozen=True)

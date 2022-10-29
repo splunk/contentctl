@@ -4,16 +4,16 @@ import sys
 from dataclasses import dataclass
 from pydantic import ValidationError
 
-from input.basic_builder import BasicBuilder
-from input.detection_builder import DetectionBuilder
-from input.playbook_builder import PlaybookBuilder
-from input.baseline_builder import BaselineBuilder
-from input.investigation_builder import InvestigationBuilder
-from input.story_builder import StoryBuilder
-from objects.enums import SecurityContentType
-from objects.enums import SecurityContentProduct
-from helper.utils import Utils
-from enrichments.attack_enrichment import AttackEnrichment
+from splunk_contentctl.input.basic_builder import BasicBuilder
+from splunk_contentctl.input.detection_builder import DetectionBuilder
+from splunk_contentctl.input.playbook_builder import PlaybookBuilder
+from splunk_contentctl.input.baseline_builder import BaselineBuilder
+from splunk_contentctl.input.investigation_builder import InvestigationBuilder
+from splunk_contentctl.input.story_builder import StoryBuilder
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.objects.enums import SecurityContentProduct
+from splunk_contentctl.helper.utils import Utils
+from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
 
 
 @dataclass(frozen=True)

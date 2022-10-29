@@ -1,7 +1,7 @@
 import os
 
-from objects.enums import SecurityContentType
-from output.yml_writer import YmlWriter
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.output.yml_writer import YmlWriter
 
 
 class NewContentYmlOutput():

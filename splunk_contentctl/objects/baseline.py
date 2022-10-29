@@ -6,10 +6,10 @@ from pydantic import BaseModel, validator, ValidationError
 from dataclasses import dataclass
 from datetime import datetime
 
-from objects.security_content_object import SecurityContentObject
-from objects.enums import DataModel
-from objects.baseline_tags import BaselineTags
-from objects.deployment import Deployment
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
+from splunk_contentctl.objects.enums import DataModel
+from splunk_contentctl.objects.baseline_tags import BaselineTags
+from splunk_contentctl.objects.deployment import Deployment
 
 
 class Baseline(BaseModel, SecurityContentObject):

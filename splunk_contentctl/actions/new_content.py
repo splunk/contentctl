@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass
 
-from input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto, NewContentGeneratorOutputDto
-from output.new_content_yml_output import NewContentYmlOutput
+from splunk_contentctl.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto, NewContentGeneratorOutputDto
+from splunk_contentctl.output.new_content_yml_output import NewContentYmlOutput
 
 
 @dataclass(frozen=True)

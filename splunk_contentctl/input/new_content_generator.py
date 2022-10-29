@@ -4,8 +4,8 @@ import questionary
 from dataclasses import dataclass
 from datetime import datetime
 
-from objects.enums import SecurityContentType
-from input.new_content_questions import NewContentQuestions
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.input.new_content_questions import NewContentQuestions
 
 
 @dataclass(frozen=True)

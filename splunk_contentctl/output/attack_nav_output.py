@@ -1,8 +1,8 @@
 import os
 
 
-from objects.enums import SecurityContentType
-from output.attack_nav_writer import AttackNavWriter
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.output.attack_nav_writer import AttackNavWriter
 
 
 class AttackNavOutput():

@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, validator, ValidationError
 
-from objects.security_content_object import SecurityContentObject
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
 
 
 

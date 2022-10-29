@@ -1,9 +1,9 @@
 import os
 import re
 
-from output.yml_writer import YmlWriter
-from objects.enums import SecurityContentType
-from output.finding_report_writer import FindingReportObject
+from splunk_contentctl.output.yml_writer import YmlWriter
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.output.finding_report_writer import FindingReportObject
 
 
 class BAYmlOutput():

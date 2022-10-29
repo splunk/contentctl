@@ -1,8 +1,8 @@
 import os
 
 
-from output.json_writer import JsonWriter
-from objects.enums import SecurityContentType
+from splunk_contentctl.output.json_writer import JsonWriter
+from splunk_contentctl.objects.enums import SecurityContentType
 
 
 class ApiJsonOutput():

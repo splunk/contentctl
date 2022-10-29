@@ -4,11 +4,11 @@ import os
 
 from dataclasses import dataclass
 
-from objects.enums import SecurityContentProduct, SecurityContentType
-from input.director import Director, DirectorInputDto, DirectorOutputDto
-from output.conf_output import ConfOutput
-from output.ba_yml_output import BAYmlOutput
-from output.api_json_output import ApiJsonOutput
+from splunk_contentctl.objects.enums import SecurityContentProduct, SecurityContentType
+from splunk_contentctl.input.director import Director, DirectorInputDto, DirectorOutputDto
+from splunk_contentctl.output.conf_output import ConfOutput
+from splunk_contentctl.output.ba_yml_output import BAYmlOutput
+from splunk_contentctl.output.api_json_output import ApiJsonOutput
 
 
 @dataclass(frozen=True)

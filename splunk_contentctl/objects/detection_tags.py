@@ -1,8 +1,8 @@
 import re
 
 from pydantic import BaseModel, validator, ValidationError
-from objects.mitre_attack_enrichment import MitreAttackEnrichment
-from objects.constants import *
+from splunk_contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
+from splunk_contentctl.objects.constants import *
 
 class DetectionTags(BaseModel):
     # detection spec

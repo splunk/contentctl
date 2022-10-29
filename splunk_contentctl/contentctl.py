@@ -3,15 +3,15 @@ import argparse
 import os
 
 
-from actions.validate import ValidateInputDto, Validate
-from actions.generate import GenerateInputDto, Generate
-from actions.reporting import ReportingInputDto, Reporting
-from actions.new_content import NewContentInputDto, NewContent
-from actions.doc_gen import DocGenInputDto, DocGen
-from input.director import DirectorInputDto
-from objects.enums import SecurityContentType, SecurityContentProduct
-from enrichments.attack_enrichment import AttackEnrichment
-from input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
+from splunk_contentctl.actions.validate import ValidateInputDto, Validate
+from splunk_contentctl.actions.generate import GenerateInputDto, Generate
+from splunk_contentctl.actions.reporting import ReportingInputDto, Reporting
+from splunk_contentctl.actions.new_content import NewContentInputDto, NewContent
+from splunk_contentctl.actions.doc_gen import DocGenInputDto, DocGen
+from splunk_contentctl.input.director import DirectorInputDto
+from splunk_contentctl.objects.enums import SecurityContentType, SecurityContentProduct
+from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
+from splunk_contentctl.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
 
 
 def start(args):

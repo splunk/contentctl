@@ -3,7 +3,7 @@ import os
 from xmlrpc.client import APPLICATION_ERROR
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from objects.security_content_object import SecurityContentObject
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
 
 class ConfWriter():
 

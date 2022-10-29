@@ -4,8 +4,8 @@ import sys
 
 from pathlib import Path
 
-from objects.enums import SecurityContentType
-from output.jinja_writer import JinjaWriter
+from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.output.jinja_writer import JinjaWriter
 
 
 class DocMdOutput():

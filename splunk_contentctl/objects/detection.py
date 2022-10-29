@@ -11,17 +11,17 @@ from datetime import datetime
 
 
 
-from objects.security_content_object import SecurityContentObject
-from objects.enums import AnalyticsType
-from objects.enums import DataModel
-from objects.detection_tags import DetectionTags
-from objects.deployment import Deployment
-from objects.unit_test import UnitTest
-from objects.macro import Macro
-from objects.lookup import Lookup
-from objects.baseline import Baseline
-from objects.playbook import Playbook
-from helper.link_validator import LinkValidator
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
+from splunk_contentctl.objects.enums import AnalyticsType
+from splunk_contentctl.objects.enums import DataModel
+from splunk_contentctl.objects.detection_tags import DetectionTags
+from splunk_contentctl.objects.deployment import Deployment
+from splunk_contentctl.objects.unit_test import UnitTest
+from splunk_contentctl.objects.macro import Macro
+from splunk_contentctl.objects.lookup import Lookup
+from splunk_contentctl.objects.baseline import Baseline
+from splunk_contentctl.objects.playbook import Playbook
+from splunk_contentctl.helper.link_validator import LinkValidator
 
 
 

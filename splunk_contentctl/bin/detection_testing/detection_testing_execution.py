@@ -19,7 +19,7 @@ import requests
 
 
 
-from bin.detection_testing.modules import container_manager, new_arguments2, test_driver, validate_args, utils, github_service, constants
+from bin.detection_testing.modules import container_manager, test_driver, utils, github_service
 from bin.objects.test_config import TestConfig
 from bin.detection_testing.modules.github_service import GithubService
 from bin.objects.enums import PostTestBehavior, DetectionTestingMode

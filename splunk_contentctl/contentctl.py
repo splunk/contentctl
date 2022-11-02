@@ -294,10 +294,9 @@ def test(args):
             #raise(Exception(f"Error parsing test config: {str(e)}"))
             data = {"test_branch": "doesNotExist"}
 
-    print(data)    
+        
     test_object = TestConfig.parse_obj(data)
-    import pprint
-    pprint.pprint(test_object.__dict__)
+    
     
     Test().execute(test_object)
         

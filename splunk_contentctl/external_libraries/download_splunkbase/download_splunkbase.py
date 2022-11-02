@@ -6,7 +6,10 @@ from bs4 import BeautifulSoup
 import os
 import pathlib
 
+from bin.objects.app import App
 
+
+#Modified from: https://github.com/tfrederick74656/splunkbase-download/issues/1#issuecomment-986336193
 def get_form_details(form):
     """Returns the HTML details of a form,
     including action, method and list of form controls (inputs, etc)"""
@@ -34,23 +37,17 @@ def submit_form(session, form):
     elif method == 'get':
         session.get(action, data=form_data)
 
-def download_all_apps(username, password, apps:list[dict], target_directory:pathlib.Path=pathlib.Path('.')):
+def download_all_apps(username, password, apps:list[App], target_directory:pathlib.Path):
     session = login_and_get_splunkbase_session(username, password)
     for app in apps[0:1]:
-        appid = app['appid']
-        release = app['release']
-        uid = app['uid']
-        download_app_with_session(session, appid,uid,release,target_directory)
+        download_app_with_session(session, app,target_directory)
     for app in apps[1:]:
-        appid = app['appid']
-        release = app['release']
-        uid = app['uid']
-        download_app_with_session(session, appid,uid,release,target_directory)
+        download_app_with_session(session, app,target_directory)
 
-def download_app_with_session(session:requests.Session, appid:str, uid:int,release:str,target_directory:pathlib.Path=pathlib.Path('.')):
-    print(f'Downloading app {appid} version {release}...',end='',flush=True)
+def download_app_with_session(session:requests.Session, app:App,target_directory:pathlib.Path):
+    print(f'Downloading app {app.appid} version {app.release}...',end='',flush=True)
 
-    url = f'https://splunkbase.splunk.com/app/{uid}/release/{release}/download'
+    url = f'https://splunkbase.splunk.com/app/{app.uid}/release/{app.release}/download'
     '''
     # Try requesting the download url for the release. The first request actually returns a okta intersitual page that needs to be resolved and submitted
     if first:    
@@ -63,12 +60,15 @@ def download_app_with_session(session:requests.Session, appid:str, uid:int,relea
     # The second request returns the package
     response = session.get(url)
     
-    _, params = cgi.parse_header(response.headers.get('Content-Disposition'))
+    content_disp = response.headers.get('Content-Disposition')
+    if content_disp is None:
+        raise(Exception("Failure getting session on Splunkbase: Content Disposition Header missing."))
+    _, params = cgi.parse_header(content_disp)
     
     if not os.path.exists(target_directory):
         os.makedirs(target_directory)
     
-    filename = f"{appid}_{uid}_{release}.tar.gz"
+    filename = f"{app.appid}_{app.uid}_{app.release}.tar.gz"
     full_path = os.path.join(target_directory, filename)
     
     with open(full_path, 'wb') as f:
@@ -98,12 +98,11 @@ def login_and_get_splunkbase_session(username, password)->requests.Session:
     # Scrape out the intersitual page and submit it
     submit_form(session, soup.find('form'))
 
-    print("done")
     return session
 
-def download(username, password, app_id, version, title=None, target_directory=pathlib.Path('.')):
-    print(f'Downloading app with id {app_id} version {version}...')
-    url = f'https://splunkbase.splunk.com/app/{app_id}/release/{version}/download'
+def download(username, password, app:App, target_directory:pathlib.Path):
+    print(f'Downloading app with id {app.appid} version {app.release}...')
+    url = f'https://splunkbase.splunk.com/app/{app.appid}/release/{app.release}/download'
     urlauth = 'https://account.splunk.com/api/v1/okta/auth'
     session = requests.session()
     # Base auth with okta, store cookies
@@ -119,10 +118,11 @@ def download(username, password, app_id, version, title=None, target_directory=p
     # The second request returns the package
     response = session.get(url)
     _, params = cgi.parse_header(response.headers.get('Content-Disposition'))
-    if not os.path.exists(target_directory):
-        os.makedirs(target_directory)
-    raise(Exception("implement proper file name"))
-    full_path = os.path.join(target_directory, params['filename'])
+    if not target_directory.is_dir():
+        target_directory.mkdir(parents=True)
+    
+    output_filename = f"{app.appid}_{app.uid}_{app.release}.tar.gz" #always save as .tar.gz, regardless of the filename
+    full_path = os.path.join(target_directory, output_filename)
     
     with open(full_path, 'wb') as f:
         print(f"Writing {params['filename']} to {target_directory}")
@@ -130,6 +130,7 @@ def download(username, password, app_id, version, title=None, target_directory=p
     print(f'Successfully downloaded package {full_path}')
 
 
+'''
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('username', help='Splunkbase username')
@@ -139,4 +140,5 @@ if __name__ == '__main__':
     app_def = args.app.split('-')
     if len(app_def) != 2:
         raise ValueError(f'{args.app} - definition for the app to download must be in the format {{app_id}}-{{version}}')
-    download(args.username, args.password, app_id=app_def[0], version=app_def[1])
+    download(args.username, args.password, app_id=app_def[0], release=app_def[1])
+'''

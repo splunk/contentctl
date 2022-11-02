@@ -54,7 +54,7 @@ class SplunkContainer:
         self.web_port = web_port_tuple[1]
         self.management_port = management_port_tuple[1]
         self.hec_port = hec_port_tuple[1]
-        print(self)
+        
         self.container = self.make_container()
 
         self.thread = threading.Thread(target=self.run_container, )

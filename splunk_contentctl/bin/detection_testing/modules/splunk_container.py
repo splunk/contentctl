@@ -11,7 +11,7 @@ import requests
 
 from bin.detection_testing.modules import splunk_sdk, testing_service, test_driver
 from bin.objects.test_config import TestConfig
-
+import pathlib
 import time
 import timeit
 from typing import Union
@@ -63,8 +63,8 @@ class SplunkContainer:
         self.container_start_time = -1
         self.test_start_time = -1
         self.num_tests_completed = 0
+        print(self)
 
-        
 
 
 
@@ -73,7 +73,9 @@ class SplunkContainer:
         require_credentials=False
         for app in self.config.apps:
             if app.local_path is not None:
-                apps_to_install.append(app.local_path)
+                filepath = pathlib.Path(app.local_path)
+                #path to the mount in the docker container
+                apps_to_install.append(os.path.join("/tmp/apps", filepath.name))
             elif app.http_path is not None:
                 apps_to_install.append(app.http_path)
             elif app.splunkbase_path is not None:

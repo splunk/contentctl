@@ -106,7 +106,7 @@ class Director():
 
         for index,file in enumerate(security_content_files):
         
-            print(file)
+            
             #Index + 1 because we are zero indexed, not 1 indexed.  This ensures
             # that printouts end at 100%, not some other number 
             progress_percent = ((index+1)/len(security_content_files)) * 100

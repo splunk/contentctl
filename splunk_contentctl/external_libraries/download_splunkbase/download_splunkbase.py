@@ -39,9 +39,7 @@ def submit_form(session, form):
 
 def download_all_apps(username, password, apps:list[App], target_directory:pathlib.Path):
     session = login_and_get_splunkbase_session(username, password)
-    for app in apps[0:1]:
-        download_app_with_session(session, app,target_directory)
-    for app in apps[1:]:
+    for app in apps:
         download_app_with_session(session, app,target_directory)
 
 def download_app_with_session(session:requests.Session, app:App,target_directory:pathlib.Path):
@@ -73,6 +71,7 @@ def download_app_with_session(session:requests.Session, app:App,target_directory
     
     with open(full_path, 'wb') as f:
         f.write(response.content)
+    app.local_path = full_path
     print(f'done')
 
 
@@ -83,10 +82,14 @@ def login_and_get_splunkbase_session(username, password)->requests.Session:
     session = requests.session()
     # Base auth with okta, store cookies
     auth_req = session.post(
-        urlauth, json={'username': username, 'password': password}).json()
-    if 'status_code' in auth_req and auth_req['status_code'] != 200:
+        urlauth, json={'username': username, 'password': password})
+    print(auth_req)
+    print(auth_req.content)
+    print(auth_req.text)
+    auth_req_json = auth_req.json()
+    if 'status_code' in auth_req and auth_req_json['status_code'] != 200:
         raise ValueError('Error authenticating, response: ',
-                         auth_req['message'])
+                         auth_req_json['message'])
     
     #First request has to get past in interstitial. This doesn't even need to be a real app!
     #We can just use the placeholder uid=0 and release="0.0.0"

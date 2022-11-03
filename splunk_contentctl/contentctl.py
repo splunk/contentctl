@@ -203,6 +203,8 @@ def generate(args) -> None:
 
 
 def build(args) -> None:
+    
+
     Build(args)
 
 def inspect(args) -> None:
@@ -251,19 +253,22 @@ def test(args, force_local_appinspect=False) -> None:
     new_argv = ["run", "--mode", "all"]
     bin.detection_testing.detection_testing_execution.main(new_argv)
 '''    
-
-def build(args):
+import pathlib
+def build(args)->pathlib.Path:
     import tarfile
-    shutil.rmtree("build", ignore_errors=True)
-    os.mkdir("build")
-
-    import pathlib
-    sourceDir = pathlib.Path("build/my_app/my_app")
-    shutil.copytree(args.output, sourceDir, dirs_exist_ok=True)
-
-    with tarfile.open("build/my_app.tar.gz", "w:gz") as app:
-        app.add(sourceDir, arcname="my_app")
+    #shutil.rmtree("build", ignore_errors=True)
     
+    if not pathlib.Path("apps").exists():
+        pathlib.Path("apps").mkdir()
+
+    app_path = pathlib.Path(os.path.join("apps", "my_app.tar.gz"))
+    #import pathlib
+    #sourceDir = pathlib.Path("build/my_app/my_app")
+    #shutil.copytree(args.output, sourceDir, dirs_exist_ok=True)
+
+    with tarfile.open(app_path, "w:gz") as app:
+        app.add(args.output, arcname="my_app")
+    return app_path
 
 def test(args):
     
@@ -297,7 +302,19 @@ def test(args):
         
     test_object = TestConfig.parse_obj(data)
     
-    
+    args.path = test_object.repo_path
+    args.product = "SPLUNK_ENTERPRISE_APP"
+    args.output = os.path.join(test_object.repo_path, "dist","escu")
+    args.skip_enrichment = True
+    generate(args)
+    app = build(args)
+    from bin.objects.app import App
+    a = App(uid=9999, appid="my_custom_app", title="my_custom_app",
+            release="1.0.0",local_path=str(app), description="lame description", http_path=None, splunkbase_path=None)
+
+    test_object.apps.append(a)
+    print(f"generate complete. written to {args.output}")
+    #sys.exit(0)
     Test().execute(test_object)
         
 

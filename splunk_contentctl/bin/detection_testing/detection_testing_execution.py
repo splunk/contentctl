@@ -64,16 +64,34 @@ def copy_local_apps_to_directory(config: TestConfig):
     
         if app.must_download_from_splunkbase == False:
             if app.local_path is not None:
-                shutil.copy(app.local_path, os.path.join(CONTAINER_APP_DIRECTORY, pathlib.Path(app.local_path).name))
+                if app.local_path == os.path.join(CONTAINER_APP_DIRECTORY, pathlib.Path(app.local_path).name):
+                    print(f"same file {app.local_path}, skip...")
+                else:
+                    shutil.copy(app.local_path, os.path.join(CONTAINER_APP_DIRECTORY, pathlib.Path(app.local_path).name))
             elif app.http_path:
                 filename = pathlib.Path(urlparse(app.http_path).path).name #get the filename from the url
-                utils.download_file_from_http(app.http_path, os.path.join(CONTAINER_APP_DIRECTORY, filename), verbose_print=True)
+                download_path = os.path.join(CONTAINER_APP_DIRECTORY, filename)
+                utils.download_file_from_http(app.http_path, download_path, verbose_print=True)
+                app.local_path = download_path
             else:
                 raise(Exception(f"Could not download {app.title}, not http_path or local_path or Splunkbase Credentials provided"))
         
         else:
             #no need to do anything, the containers will download from splunkbase
             pass
+    '''
+    apps_to_download = [app for app in config.apps if app.must_download_from_splunkbase == True]
+    if len(apps_to_download) > 0:
+        print(f"Found {len(apps_to_download)} apps that we must download from Splunkbase....")
+        from external_libraries.download_splunkbase.download_splunkbase import download_all_apps
+        try:
+            download_all_apps(config.splunkbase_username, config.splunkbase_password, apps_to_download, pathlib.Path(CONTAINER_APP_DIRECTORY))
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            sys.exit(1)
+        print("done")
+    '''
 
 
 

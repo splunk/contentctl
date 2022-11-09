@@ -6,6 +6,7 @@ import json
 import timeit
 from datetime import timedelta
 
+
 def load_file(file_path):
     try:
 
@@ -37,6 +38,7 @@ class TestResult:
         self.message = None
         self.exception = False
         self.success = False
+        self.missing_observables = []
 
         if generated_exception is not None:
             self.message = generated_exception['message']
@@ -121,6 +123,16 @@ class DetectionFile:
             self.id = detection_file.get("id")
             self.type = detection_file.get("type")
             self.search = detection_file.get("search")
+
+
+            #JUST FOR TESTING
+            tags = detection_file.get("tags",{})
+            self.observables = tags.get("observable",[])
+            
+
+            
+
+
             
         except Exception as e:
             raise(Exception(f"Failed to find a required key in the detection file {self.path}: {str(e)}"))
@@ -167,15 +179,21 @@ class Test:
         self.pass_condition = test['pass_condition']
         self.earliest_time = test['earliest_time']
         self.latest_time = test['latest_time']
-        self.attack_data = self.get_attack_data(test['attack_data'])
+        self.attack_data = self.get_attack_data(test.get('attack_data',[]))
         self.baselines = self.getBaselines(test.get("baselines",[]))
         self.result:Union[None, TestResult] = None
     def get_attack_data(self, attack_datas: list[dict]):
         return [AttackData(d) for d in attack_datas]
     
     def getBaselines(self, baselines: list[dict]):
+        #Baselines can be modeled easily as a test
         app_root = self.detectionFile.path.resolve().parent.parent.parent
-        return [Baseline(b,app_root) for b in baselines]
+        constructed_baselines = []
+        for baseline in baselines:
+            detectionFile = DetectionFile(pathlib.Path(os.path.join(app_root,baseline['file'])))
+            constructed_baselines.append(Test(baseline, detectionFile))
+        return constructed_baselines
+        #return [Baseline(b,app_root) for b in baselines]
     
     def error_in_baselines(self)->bool:
         for b in self.baselines:
@@ -191,6 +209,7 @@ class Test:
         return True
     
 
+'''
 class Baseline:
     def __init__(self, baseline:dict, app_root:pathlib.Path):
         self.name = baseline['name']
@@ -200,7 +219,7 @@ class Baseline:
         self.latest_time = baseline['latest_time']
         self.baseline = DetectionFile(pathlib.Path(os.path.join(app_root,self.file)))
         self.result:Union[None,TestResult] = None
-        
+'''        
 
 class AttackData:
     def __init__(self, attack_data:dict, rewrite_path:Union[None,pathlib.Path]=None):
@@ -335,6 +354,7 @@ class ResultsManager:
                     #"performance": test.result.performance,
                     "resultCount": test.result.resultCount,
                     "runDuration": test.result.runDuration,
+                    "missing_observables": test.result.missing_observables
                 }
                 thisDetection['tests'].append(testResult)
                 success = success and test.result.success

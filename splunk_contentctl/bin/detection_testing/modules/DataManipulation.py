@@ -12,7 +12,7 @@ class DataManipulation:
 
 
         #print('Updating timestamps in attack_data before replaying')
-
+        print(f"manipulate timestamp for file [{file_path}]")
         if sourcetype == 'aws:cloudtrail':
             self.manipulate_timestamp_cloudtrail(file_path)
 
@@ -23,10 +23,7 @@ class DataManipulation:
             self.manipulate_timestamp_exchange_logs(file_path)
 
 
-    def manipulate_timestamp_exchange_logs(self, file_path):
-        path =  os.path.join(os.path.dirname(__file__), '../' + file_path)
-        path =  path.replace('modules/../','')
-
+    def manipulate_timestamp_exchange_logs(self, path):
         f = io.open(path, "r", encoding="utf-8")
 
         first_line = f.readline()
@@ -61,9 +58,7 @@ class DataManipulation:
 
         os.remove(original_backup_file)
 
-    def manipulate_timestamp_windows_event_log_raw(self, file_path):
-        path =  os.path.join(os.path.dirname(__file__), '../' + file_path)
-        path =  path.replace('modules/../','')
+    def manipulate_timestamp_windows_event_log_raw(self, path):
 
         f = io.open(path, "r", encoding="utf-8")
         self.now = datetime.now()
@@ -98,9 +93,8 @@ class DataManipulation:
             return match.group()
 
 
-    def manipulate_timestamp_cloudtrail(self, file_path):
-        path =  os.path.join(os.path.dirname(__file__), '../' + file_path)
-        path =  path.replace('modules/../','')
+    def manipulate_timestamp_cloudtrail(self, path):
+        
 
         f = io.open(path, "r", encoding="utf-8")
 

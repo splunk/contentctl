@@ -63,7 +63,7 @@ class SplunkContainer:
         self.container_start_time = -1
         self.test_start_time = -1
         self.num_tests_completed = 0
-        print(self)
+        
 
 
 
@@ -422,6 +422,8 @@ class SplunkContainer:
                     "Warning - uncaught error in detection test for [%s] - this should not happen: [%s]"
                     % (detection_to_test.testFile.path, str(e))
                 )
+                import traceback
+                traceback.print_exc()
                 try:
                     self.synchronization_object.addResult(detection_to_test)
                 except Exception as e:

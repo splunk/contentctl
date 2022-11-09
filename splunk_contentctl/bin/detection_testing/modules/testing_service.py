@@ -14,7 +14,7 @@ from os.path import relpath
 from tempfile import mkdtemp, mkstemp
 
 import splunklib.client as client
-from bin.detection_testing.modules.test_objects import Detection, Test, Baseline, TestResult, AttackData
+from bin.detection_testing.modules.test_objects import Detection, Test, TestResult, AttackData
 #from bin.detection_testing.modules.splunk_container import SplunkContainer
 from bin.objects.enums import PostTestBehavior
 
@@ -89,17 +89,16 @@ def format_test_result(job_result:dict, testName:str, fileName:str, logic:bool=F
     
     return testResult
 
-def execute_baselines(container:SplunkContainer, baselines:list[Baseline]):
+def execute_baselines(container:SplunkContainer, baselines:list[Test]):
     for baseline in baselines:
         execute_baseline(container, baseline)
     
     
 
-def execute_baseline(container:SplunkContainer, baseline:Baseline):
+def execute_baseline(container:SplunkContainer, baseline:Test):
     
-    baseline.result = splunk_sdk.test_detection_search(container, 
-                                              baseline.baseline.search, baseline.pass_condition, 
-                                              baseline.name, baseline.earliest_time, baseline.latest_time)
+    
+    baseline.result = splunk_sdk.test_detection_search(container, baseline)
     
     
 
@@ -136,7 +135,7 @@ def execute_test(container:SplunkContainer, test:Test, attack_data_folder:str)->
             
         else:
             #baselines all worked (if they exist) so run the search
-            test.result = splunk_sdk.test_detection_search(container, test.detectionFile.search, test.pass_condition, test.name, test.earliest_time, test.latest_time)
+            test.result = splunk_sdk.test_detection_search(container, test)
         
         if test.result.success:
             #We were successful, no need to run again.
@@ -164,6 +163,7 @@ def execute_test(container:SplunkContainer, test:Test, attack_data_folder:str)->
         print(f"DETECTION FILE: {test.detectionFile.path}")
         print(f"DETECTION SEARCH: {test.result.search}")
         _ = input(formatted_message)
+        
 
     splunk_sdk.delete_attack_data(container, indices = test_indices)
     
@@ -315,13 +315,11 @@ def replay_attack_data_file(container:SplunkContainer, attackData:AttackData, at
     # Update timestamps before replay
     if attackData.update_timestamp:
         data_manipulation = DataManipulation()
-        relpath = os.path.relpath(data_file)
-        data_manipulation.manipulate_timestamp(relpath, attackData.sourcetype,attackData.source)    
+        data_manipulation.manipulate_timestamp(data_file, attackData.sourcetype,attackData.source)    
 
     #Get an session from the API
     service = get_service(container)
-    #Get the index we will be uploading to
-    upload_index = service.indexes[attackData.index]
+
         
     #Upload the data
     hec_raw_replay(container.splunk_ip, container.tokenString, pathlib.Path(data_file), attackData.index, attackData.source, attackData.sourcetype, splunk_sdk.DEFAULT_EVENT_HOST, channel=container.channel, port=container.hec_port)

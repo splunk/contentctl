@@ -210,21 +210,21 @@ def main(args):
 
     # available actions
     #new_parser = actions_parser.add_parser("new", help="Create new content (detection, story, baseline)")
-    init_parser = actions_parser.add_parser("init", help="initialize a splunk content project using and customizes a configuration under contentctl.yml")
-    validate_parser = actions_parser.add_parser("validate", help="validates a splunk content project")
-    build_parser = actions_parser.add_parser("build", help="builds a splunk content project package to be distributed")
+    init_parser = actions_parser.add_parser("init", help="initialize a splunk content pack using and customizes a configuration under contentctl.yml")
+    validate_parser = actions_parser.add_parser("validate", help="validates a splunk content pack")
+    build_parser = actions_parser.add_parser("build", help="builds a splunk content pack package to be distributed")
     new_content_parser = actions_parser.add_parser("new", help="create new splunk content object, defaults to")
-    reporting_parser = actions_parser.add_parser("report", help="create splunk content report of the current project")
+    reporting_parser = actions_parser.add_parser("report", help="create splunk content report of the current pack")
     inspect_parser = actions_parser.add_parser("inspect", help="runs splunk appinspect on a build splunk app to ensure that an app meets splunkbase requirements.")
     deploy_parser = actions_parser.add_parser("deploy", help="install an application on a target splunk instance.")    
 
 
     # init actions
-    init_parser.add_argument("-s", "--skip_configuration", required=False, type=argparse.FileType("r"), default=False, help="skips configuration of the project and generates a default configuration, defaults to False")
+    init_parser.add_argument("-s", "--skip_configuration", required=False, type=argparse.FileType("r"), default=False, help="skips configuration of the pack and generates a default configuration, defaults to False")
     init_parser.add_argument("-o", "--output", required=False, type=argparse.FileType("w"), default='contentctl.yml' )
     init_parser.set_defaults(func=initialize)
 
-    validate_parser.add_argument("-p", "--project", required=False, type=str, default='SPLUNK_ENTERPRISE_APP', 
+    validate_parser.add_argument("-p", "--pack", required=False, type=str, default='SPLUNK_ENTERPRISE_APP', 
                                  help="Type of package to create, choose between all, `SPLUNK_ENTERPRISE_APP` or `SSA`.")
     #validate_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
     validate_parser.set_defaults(func=validate)

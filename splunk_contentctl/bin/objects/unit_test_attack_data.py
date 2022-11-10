@@ -7,5 +7,5 @@ class UnitTestAttackData(BaseModel):
     file_name: str
     data: str
     source: str
-    sourcetype: str = None
-    update_timestamp: bool = None
+    sourcetype: str
+    update_timestamp: bool = False

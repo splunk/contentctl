@@ -20,7 +20,7 @@ class GenerateInputDto:
 
 class Generate:
 
-    def execute(self, input_dto: GenerateInputDto) -> None:
+    def execute(self, input_dto: GenerateInputDto) -> DirectorOutputDto:
         director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)
@@ -54,3 +54,4 @@ class Generate:
             api_json_output.writeObjects(director_output_dto.deployments, input_dto.output_path, SecurityContentType.deployments)
 
         print('Generate of security content successful.')
+        return director_output_dto

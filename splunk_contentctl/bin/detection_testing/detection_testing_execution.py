@@ -23,6 +23,7 @@ from bin.detection_testing.modules import container_manager, test_driver, utils,
 from bin.objects.test_config import TestConfig
 from bin.detection_testing.modules.github_service import GithubService
 from bin.objects.enums import PostTestBehavior, DetectionTestingMode
+from bin.input.director import DirectorOutputDto
 import yaml
 
 SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
@@ -168,7 +169,7 @@ def ensure_docker_is_avaliable(config: TestConfig):
     
 
 
-def main(config: TestConfig):
+def main(config: TestConfig, director:DirectorOutputDto):
     #Disable insecure warnings.  We make a number of HTTPS requests to Splunk
     #docker containers that we've set up.  Without this line, we get an 
     #insecure warning every time due to invalid cert.
@@ -179,10 +180,10 @@ def main(config: TestConfig):
     
     
     #Get a handle to the git repo
-    github_service = GithubService(config.repo_path)
+    github_service = GithubService(config)
 
 
-    detections_to_test = github_service.get_detections_to_test(config)
+    detections_to_test = github_service.get_detections_to_test(config, director)
     
     
 

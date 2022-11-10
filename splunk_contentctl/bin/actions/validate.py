@@ -17,7 +17,7 @@ class ValidateInputDto:
 
 class Validate:
 
-    def execute(self, input_dto: ValidateInputDto) -> None:
+    def execute(self, input_dto: ValidateInputDto) -> DirectorOutputDto:
         director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)      
@@ -36,6 +36,7 @@ class Validate:
         
         print('Validation of security content successful.')
 
+        return director_output_dto
 
 
     def validate_duplicate_uuids(self, security_content_objects):

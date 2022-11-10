@@ -14,6 +14,7 @@ from bin.objects.enums import SecurityContentType
 from bin.objects.enums import SecurityContentProduct
 from bin.helper.utils import Utils
 from bin.enrichments.attack_enrichment import AttackEnrichment
+from bin.objects import detection,story,baseline,investigation,playbook,deployment,macro,lookup,unit_test
 
 
 @dataclass(frozen=True)
@@ -25,15 +26,15 @@ class DirectorInputDto:
 
 @dataclass()
 class DirectorOutputDto:
-     detections: list
-     stories: list
-     baselines: list
-     investigations: list
-     playbooks: list
-     deployments: list
-     macros: list
-     lookups: list
-     tests: list
+     detections: list[detection.Detection]
+     stories: list[story.Story]
+     baselines: list[baseline.Baseline]
+     investigations: list[investigation.Investigation]
+     playbooks: list[playbook.Playbook]
+     deployments: list[deployment.Deployment]
+     macros: list[macro.Macro]
+     lookups: list[lookup.Lookup]
+     tests: list[unit_test.UnitTest]
 
 class Director():
     input_dto: DirectorInputDto

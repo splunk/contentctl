@@ -11,14 +11,14 @@ import datetime
 import git
 import yaml
 from git.objects import base
-from bin.detection_testing.modules.test_objects import Detection
+from bin.objects.detection import Detection
 from bin.detection_testing.modules import testing_service
 from bin.objects.enums import DetectionTestingMode
 import random
 import pathlib
 
 from bin.objects.test_config import TestConfig
-
+from bin.input.director import DirectorOutputDto
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)
@@ -30,8 +30,18 @@ DETECTION_FILE_EXTENSION = ".yml"
 TEST_FILE_EXTENSION      = ".test.yml"
 SSA_PREFIX = "ssa___"
 class GithubService:
-    def __init__(self, path:str):
-        self.repo = git.Repo(path)
+    def __init__(self, config:TestConfig):
+        
+        self.repo = git.Repo(config.repo_path)
+        
+        if self.repo.active_branch.name != config.test_branch:
+            print(f"Error - test_branch is '{config.test_branch}', but the current active branch in '{config.repo_path}' is '{self.repo.active_branch}'. Checking out the branch you specified...")
+            self.repo.git.checkout(config.test_branch)
+            
+
+        sys.exit(0)
+        self.config = config
+
 
     '''
     def update_and_commit_passed_tests(self, results:list[dict])->bool:
@@ -92,58 +102,41 @@ class GithubService:
         repo_obj = git.Repo.clone_from(url, project, branch=branch)
         return repo_obj
 
-    def get_detections_to_test(self, config:TestConfig, 
+    def get_detections_to_test(self, config:TestConfig, director: DirectorOutputDto,
                                ignore_experimental:bool = True, 
                                ignore_deprecated:bool = True, 
                                ignore_ssa:bool = True, 
                                allowed_types:list[str] = ["Anomaly", "Hunting", "TTP"],)->list[Detection]:
         
-        detections_path = pathlib.Path(os.path.join(self.repo.working_dir, "detections"))
-        detections = list(detections_path.rglob("*.yml"))
-        print(f"Total detections found in {detections_path} from the directory: {len(detections)}")
         
-
+        
+        print(f"Total detections found: {len(director.detections)}")
+        
+    
         if ignore_experimental:
-            detections = [d for d in detections if 'detections/experimental' not in str(d)]
+            director.detections = [d for d in director.detections if not (d.experimental == True) ]
         if ignore_deprecated:
-            detections = [d for d in detections if 'detections/deprecated' not in str(d)]
+            director.detections = [d for d in director.detections if not (d.deprecated == True) ]
         if ignore_ssa:
-            detections = [d for d in detections if not d.name.startswith("ssa___")]
+            director.detections = [d for d in director.detections if not pathlib.Path(d.file_path).name.startswith(SSA_PREFIX)]
         
-        print(f"Total detections loaded after removal of experimental, deprecated, and ssa: {len(detections)}")
+
         
+        print(f"Total detections loaded after removal of experimental, deprecated, and ssa: {len(director.detections)}")
         
-        detection_objects:list[Detection] = []
-        errors = []
-        for detection in detections:
-            try:
-                detection_objects.append(Detection(detection))
-            except Exception as e:
-                errors.append(f"Error parsing detection {detection}: {str(e)}")
+        #Downselect to only the types we want to test. For example, this will by default remove the Correlation type
+        director.detections = [d for d in director.detections if d.type in allowed_types]
 
-        if len(errors) != 0:
-            all_errors_string = '\n\t'.join(errors)
-            #raise Exception(f"The following errors were encountered while parsing detections:\n\t{all_errors_string}")
-            print(f"The following errors were encountered while parsing detections:\n\t{all_errors_string}")
-            errors = []
-
-
-        print(f"Detection objects that were parsed: {len(detection_objects)}")
-
-
-        detection_objects = [d for d in detection_objects if d.detectionFile.type in allowed_types]
-
-        print(f"Detection objects after downselecting to {allowed_types}: {len(detection_objects)}")
+        
 
         
         if config.mode==DetectionTestingMode.changes:
-            untracked_files, changed_files = self.get_all_modified_content()
-            modified_content = untracked_files + changed_files
-            detection_objects = [o for o in detection_objects if pathlib.Path(os.path.join(*o.detectionFile.path.parts[1:])) in modified_content or pathlib.Path(os.path.join(*o.testFile.path.parts[1:])) in modified_content]
+
+            untracked_files, changed_files = self.get_all_modified_content(director.detections)
+            director.detections = untracked_files + changed_files
             
         elif config.mode==DetectionTestingMode.all:
             #Don't need to do anything, we don't need to remove it from the list
-            print(len(detection_objects))
             pass
         elif config.mode==DetectionTestingMode.selected:
             if config.detections_list is None:
@@ -183,7 +176,7 @@ class GithubService:
         print(f"Finally the number is: {len(detection_objects)}")
 
         if config.mode != DetectionTestingMode.selected:
-            #If the user has selected specific detectiosn to run, then
+            #If the user has selected specific detections to run, then
             #run those in that specific order.  Otherwise, shuffle the order.
             #This is particulary important when doing a mock because, for example,
             #we don't want one container to get a group of cloud detections which may,
@@ -194,12 +187,17 @@ class GithubService:
         return detection_objects
         
 
-    def get_all_modified_content(self, paths:list[pathlib.Path]=[pathlib.Path('detections/'),pathlib.Path('tests/') ])->Tuple[list[pathlib.Path], list[pathlib.Path]]:
+    def get_all_modified_content(self, detections:list[Detection], paths:list[pathlib.Path]=[pathlib.Path('detections/'),pathlib.Path('tests/')])->Tuple[list[Detection], list[Detection]]:
         
-        all_changes = self.security_content_repo_obj.head.commit.diff(self.main_branch, paths=[str(path) for path in paths])
+        all_changes = self.repo.head.commit.diff(self.config.main_branch, paths=[str(path) for path in paths])
         
-        untracked_files = [pathlib.Path(p) for p in self.security_content_repo_obj.untracked_files]
-        changed_files = [pathlib.Path(p.a_path) for p in all_changes]
+        #We could do this for other types of content, too!
+        #untracked_files = [pathlib.Path(p) for p in self.security_content_repo_obj.untracked_files]
+        #changed_files = [pathlib.Path(p.a_path) for p in all_changes]
+
+        untracked_files = [detection for detection in detections if detection.file_path in self.repo.untracked_files]
+        changed_files = [detection for detection in detections if detection.file_path in all_changes]
+
         return untracked_files, changed_files
 
 

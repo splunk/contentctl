@@ -22,7 +22,7 @@ from bin.actions.test import Test
 from bin.actions.reporting import ReportingInputDto, Reporting
 from bin.actions.new_content import NewContentInputDto, NewContent
 from bin.actions.doc_gen import DocGenInputDto, DocGen
-from bin.input.director import DirectorInputDto
+from bin.input.director import DirectorInputDto, DirectorOutputDto
 from bin.objects.enums import SecurityContentType, SecurityContentProduct
 from bin.enrichments.attack_enrichment import AttackEnrichment
 from bin.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
@@ -173,7 +173,7 @@ def content_changer(args) -> None:
     pass
 
 
-def generate(args) -> None:
+def generate(args) -> DirectorOutputDto:
 
     if args.product == 'SPLUNK_ENTERPRISE_APP':
         product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
@@ -199,7 +199,7 @@ def generate(args) -> None:
     )
 
     generate = Generate()
-    generate.execute(generate_input_dto)
+    return generate.execute(generate_input_dto)
 
 
 def build(args) -> None:
@@ -290,23 +290,29 @@ def test(args):
         
         yaml.dump(test_object.dict(), res)
     '''
+
     with open("Res.yml","r") as res:
         try:
             data = yaml.safe_load(res)
-            if data is None:
-                data = {}
+            test_object = TestConfig.parse_obj(data)
         except Exception as e:
-            #raise(Exception(f"Error parsing test config: {str(e)}"))
-            data = {"test_branch": "doesNotExist"}
-
+            raise(Exception(f"Error parsing test config: {str(e)}"))
+            
+    print("Not checking out the specified branch yet.  What should we do? Default to the one in the config? Overwrite the one in the config with the current?")
         
-    test_object = TestConfig.parse_obj(data)
+    
     
     args.path = test_object.repo_path
     args.product = "SPLUNK_ENTERPRISE_APP"
     args.output = os.path.join(test_object.repo_path, "dist","escu")
     args.skip_enrichment = True
-    generate(args)
+    
+    
+    director = generate(args)
+    import pprint
+    
+    
+
     app = build(args)
     from bin.objects.app import App
     a = App(uid=9999, appid="my_custom_app", title="my_custom_app",
@@ -314,8 +320,8 @@ def test(args):
 
     test_object.apps.append(a)
     print(f"generate complete. written to {args.output}")
-    #sys.exit(0)
-    Test().execute(test_object)
+    
+    Test().execute(test_object, director)
         
 
 
@@ -327,7 +333,7 @@ def test(args):
 
     
 
-def validate(args) -> None:
+def validate(args) -> DirectorOutputDto:
 
     if args.product == 'SPLUNK_ENTERPRISE_APP':
         product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
@@ -350,7 +356,9 @@ def validate(args) -> None:
     )
 
     validate = Validate()
-    validate.execute(validate_input_dto)
+    return validate.execute(validate_input_dto)
+    
+    
 
 
 

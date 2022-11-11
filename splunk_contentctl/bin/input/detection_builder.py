@@ -170,9 +170,16 @@ class DetectionBuilder():
     def addUnitTest(self, tests: list) -> None:
         if self.security_content_obj:
             for test in tests:
-                if test.tests[0].name == self.security_content_obj.name:
+                if test.name == f"{self.security_content_obj.name} Unit Test":
                     self.security_content_obj.test = test
                     return
+            if self.security_content_obj.type not in ["Correlation"] and \
+               self.security_content_obj.deprecated == False and \
+               self.security_content_obj.experimental == False:
+                #raise(Exception(f"No tests found found {self.security_content_obj.file_path}"))
+                print(f"No tests found found {self.security_content_obj.file_path}")
+            return None
+
 
 
     def addMitreAttackEnrichment(self, attack_enrichment: dict) -> None:

@@ -194,7 +194,7 @@ class GithubService:
             #another container
             random.shuffle(director.detections)
         
-        sys.exit(0)
+        
         return director.detections
         
 
@@ -226,6 +226,7 @@ class GithubService:
             #we must do this call BEFORE the list comprehension because otherwise untracked files are enumerated on each 
             #iteration through the list and it is EXTREMELY slow
             repo_untracked_files = self.repo.untracked_files 
+
 
             untracked_files = [detection for detection in detections if detection.file_path in repo_untracked_files or detection.test.file_path in repo_untracked_files]
             changed_files = [detection for detection in detections if detection.file_path in all_changes_paths or detection.test.file_path in all_changes_paths]
@@ -484,7 +485,7 @@ class GithubService:
             print("Ignoring modified test [%s] not in set of selected folders: %s"%(missing,folders)) 
         
         for missing in set(changed_detection_files).symmetric_difference(all_changed_detection_files):
-            print("Ignoring modified detecton [%s] not in set of selected folders: %s"%(missing,folders))
+            print("Ignoring modified detection [%s] not in set of selected folders: %s"%(missing,folders))
                 
         # Convert the test files to the detection file equivalent. 
         # Note that some of these tests may be baselines and their associated 

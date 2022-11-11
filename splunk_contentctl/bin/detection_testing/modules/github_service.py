@@ -133,6 +133,10 @@ class GithubService:
         if config.mode==DetectionTestingMode.changes:
 
             untracked_files, changed_files = self.get_all_modified_content(director.detections)
+            newline_tab = '\n\t'
+            print(f"Found the following untracked files:\n\t{newline_tab.join([f.file_path for f in untracked_files])}")
+            print(f"Found the following modified  files:\n\t{newline_tab.join([f.file_path for f in changed_files])}")
+            
             director.detections = untracked_files + changed_files
             
         elif config.mode==DetectionTestingMode.all:
@@ -195,8 +199,11 @@ class GithubService:
         
 
     def get_all_modified_content(self, detections:list[Detection], paths:list[pathlib.Path]=[pathlib.Path('detections/'),pathlib.Path('tests/')])->Tuple[list[Detection], list[Detection]]:
+        # Note that at present, we only search in the 'detections' and 'tests' folders.  In the future, we could search in all 
+        # folders, for example to evaluate any content affected by a macro or playbook change.
         
         try:
+            
             # Because we have not passed -all as a kwarg, we will have a MAX of one commit returned:
             # https://gitpython.readthedocs.io/en/stable/reference.html?highlight=merge_base#git.repo.base.Repo.merge_base
             base_commits = self.repo.merge_base(self.config.main_branch, self.config.test_branch)
@@ -208,21 +215,26 @@ class GithubService:
             
 
             all_changes = base_commit.diff(self.config.test_branch, paths=[str(path) for path in paths])
-            #all_changes = self.repo.git.diff(f"{self.config.main_branch}...{self.config.test_branch}", paths=[str(path) for path in paths])
-            #all_changes = self.repo.git.diff(f"{self.config.main_branch}...{self.config.test_branch}", "--name-only", ignore_blank_lines=True, ignore_space_at_eol=True)
-            import code
-            code.interact(local=locals())
             
-            #We could do this for other types of content, too!
-            #untracked_files = [pathlib.Path(p) for p in self.security_content_repo_obj.untracked_files]
-            #changed_files = [pathlib.Path(p.a_path) for p in all_changes]
+            #distill changed files down to the paths of added or modified files
+            all_changes_paths = [os.path.join(self.config.repo_path,change.b_path) for change in all_changes if change.change_type in ["M", "A"]]
+            
 
-            untracked_files = [detection for detection in detections if detection.file_path in self.repo.untracked_files]
-            changed_files = [detection for detection in detections if detection.file_path in all_changes]
+            #untracked_files = [detection for detection in detections if detection.file_path in self.repo.untracked_files or detection.test.file_path in self.repo.untracked_files]
+            #changed_files = [detection for detection in detections if detection.file_path in all_changes or detection.test.file_path in all_changes]
+            
+            #we must do this call BEFORE the list comprehension because otherwise untracked files are enumerated on each 
+            #iteration through the list and it is EXTREMELY slow
+            repo_untracked_files = self.repo.untracked_files 
+
+            untracked_files = [detection for detection in detections if detection.file_path in repo_untracked_files or detection.test.file_path in repo_untracked_files]
+            changed_files = [detection for detection in detections if detection.file_path in all_changes_paths or detection.test.file_path in all_changes_paths]
         except Exception as e:
-            print("error getting modified content")
+            print(f"Error enumerating modified content: {str(e)}")
             import traceback
             traceback.print_exc()
+            import code
+            code.interact(local=locals())
             sys.exit(1)
 
         return untracked_files, changed_files

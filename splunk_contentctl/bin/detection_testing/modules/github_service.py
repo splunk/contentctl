@@ -39,7 +39,7 @@ class GithubService:
             self.repo.git.checkout(config.test_branch)
             
 
-        sys.exit(0)
+        
         self.config = config
 
 
@@ -151,9 +151,15 @@ class GithubService:
             errors = []
             found_detections = []
             for detection_file in config.detections_list:
-                full_detection_file_path = pathlib.Path(os.path.join(self.repo.working_dir,detection_file))
-                found = False
-                for detection_object in detection_objects:
+                
+                #full_detection_file_path = pathlib.Path(os.path.join(self.repo.working_dir,detection_file))
+                #found = False
+                for detection in director.detections:
+                
+                    print(f"Detection file path: {detection.file_path}")
+                    print(f"Repo working dir: {self.repo.working_dir}")
+                    
+                    sys.exit(1)
                     if detection_object.detectionFile.path == full_detection_file_path:
                         found=True
                         found_detections.append(detection_object)
@@ -173,7 +179,7 @@ class GithubService:
 
         
 
-        print(f"Finally the number is: {len(detection_objects)}")
+        print(f"Finally the number is: {len(director.detections)}")
 
         if config.mode != DetectionTestingMode.selected:
             #If the user has selected specific detections to run, then
@@ -182,21 +188,42 @@ class GithubService:
             #we don't want one container to get a group of cloud detections which may,
             #on average, run for longer than the group of endpoint detections on
             #another container
-            random.shuffle(detection_objects)
+            random.shuffle(director.detections)
         
-        return detection_objects
+        sys.exit(0)
+        return director.detections
         
 
     def get_all_modified_content(self, detections:list[Detection], paths:list[pathlib.Path]=[pathlib.Path('detections/'),pathlib.Path('tests/')])->Tuple[list[Detection], list[Detection]]:
         
-        all_changes = self.repo.head.commit.diff(self.config.main_branch, paths=[str(path) for path in paths])
-        
-        #We could do this for other types of content, too!
-        #untracked_files = [pathlib.Path(p) for p in self.security_content_repo_obj.untracked_files]
-        #changed_files = [pathlib.Path(p.a_path) for p in all_changes]
+        try:
+            # Because we have not passed -all as a kwarg, we will have a MAX of one commit returned:
+            # https://gitpython.readthedocs.io/en/stable/reference.html?highlight=merge_base#git.repo.base.Repo.merge_base
+            base_commits = self.repo.merge_base(self.config.main_branch, self.config.test_branch)
+            if len(base_commits) == 0:
+                raise(Exception(f"Error, main branch '{self.config.main_branch}' and test branch '{self.config.test_branch}' do not share a common ancestor"))
+            base_commit = base_commits[0]
+            if base_commit is None:
+                raise(Exception(f"Error, main branch '{self.config.main_branch}' and test branch '{self.config.test_branch}' common ancestor commit was 'None'"))
+            
 
-        untracked_files = [detection for detection in detections if detection.file_path in self.repo.untracked_files]
-        changed_files = [detection for detection in detections if detection.file_path in all_changes]
+            all_changes = base_commit.diff(self.config.test_branch, paths=[str(path) for path in paths])
+            #all_changes = self.repo.git.diff(f"{self.config.main_branch}...{self.config.test_branch}", paths=[str(path) for path in paths])
+            #all_changes = self.repo.git.diff(f"{self.config.main_branch}...{self.config.test_branch}", "--name-only", ignore_blank_lines=True, ignore_space_at_eol=True)
+            import code
+            code.interact(local=locals())
+            
+            #We could do this for other types of content, too!
+            #untracked_files = [pathlib.Path(p) for p in self.security_content_repo_obj.untracked_files]
+            #changed_files = [pathlib.Path(p.a_path) for p in all_changes]
+
+            untracked_files = [detection for detection in detections if detection.file_path in self.repo.untracked_files]
+            changed_files = [detection for detection in detections if detection.file_path in all_changes]
+        except Exception as e:
+            print("error getting modified content")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
 
         return untracked_files, changed_files
 

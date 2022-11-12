@@ -149,34 +149,16 @@ class GithubService:
                 raise(Exception(f"Detection Testing mode is {config.mode}. but Detections List was {config.detections_list}"))
 
             
-            #Grab all the detection objects associated with the selected detections
-            #We might be able to move this to test config object creation time to avoid
-            #all of this checking here
-            errors = []
-            found_detections = []
-            for detection_file in config.detections_list:
-                
-                #full_detection_file_path = pathlib.Path(os.path.join(self.repo.working_dir,detection_file))
-                #found = False
-                for detection in director.detections:
-                
-                    print(f"Detection file path: {detection.file_path}")
-                    print(f"Repo working dir: {self.repo.working_dir}")
-                    
-                    sys.exit(1)
-                    if detection_object.detectionFile.path == full_detection_file_path:
-                        found=True
-                        found_detections.append(detection_object)
-                        break
-                if found == False:
-                    errors.append(f"Failed to find detection {detection_file} in the {self.repo.working_dir}")
-                
-                
-            if len(errors) > 0:
-                error_string = "\n\t".join(errors)
-                raise(Exception(f"Failed to get detections:\n\t{error_string}"))
-            detection_objects = found_detections
-
+            selected_set = set(os.path.join(config.repo_path, d) for d in config.detections_list)
+            all_detections_set = set([d.file_path for d in director.detections])
+            difference = selected_set - all_detections_set
+            if len(difference) > 0:
+                newline = "\n * "
+                print(list(all_detections_set)[:10])
+                raise(Exception(f"The detections in the detections_list do not exist:{newline}{newline.join(difference)}"))
+            
+            #All the detections exist, so find them an update the objects to reflect them
+            director.detections = [d for d in director.detections if d.file_path in selected_set]
         else:
             raise(Exception(f"Unsupported mode {config.mode}.  Supported modes are {DetectionTestingMode._member_names_}"))
 

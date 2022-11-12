@@ -8,6 +8,7 @@ from splunk_contentctl.actions.generate import GenerateInputDto, Generate
 from splunk_contentctl.actions.reporting import ReportingInputDto, Reporting
 from splunk_contentctl.actions.new_content import NewContentInputDto, NewContent
 from splunk_contentctl.actions.doc_gen import DocGenInputDto, DocGen
+from splunk_contentctl.actions.initialize import NewContentPack
 from splunk_contentctl.input.director import DirectorInputDto
 from splunk_contentctl.objects.enums import SecurityContentType, SecurityContentProduct
 from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
@@ -49,10 +50,9 @@ starting program loaded for TIE Fighter...
 
     """)
 
-   # parse config
+    # parse config
     config = ConfigHandler.read_config(config_path)
     ConfigHandler.validate_config(config)
-
     return config 
 
 def configure(args)->None:
@@ -61,20 +61,16 @@ def configure(args)->None:
     # build_skeleton.configure(args)
 
 def initialize(args)->None:
-    if args.skip_configuration:
-        print("writing default configuration to:  {0}".format(args.output))
-
-        
-    pass    
-    # import build_skeleton
-    # build_skeleton.init(args)
+    # start app
+    config = start(args)
+    NewContentPack(args, config)
 
 def content_changer(args) -> None:
     pass
 
 
-def generate(args) -> None:
 
+def build(args) -> None:
     if args.product == 'SPLUNK_ENTERPRISE_APP':
         product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
     elif args.product == 'SSA':
@@ -102,14 +98,14 @@ def generate(args) -> None:
     generate.execute(generate_input_dto)
 
 
-def build(args) -> None:
-    Build(args)
-
 def inspect(args) -> None:
     Inspect(args)
 
 def deploy(args) -> None:
     Deploy(args)
+
+def test(args) -> None:
+    Test(args)
 
 
 def validate(args) -> None:
@@ -200,28 +196,29 @@ def main(args):
 
     # grab arguments
     parser = argparse.ArgumentParser(
-        description="Use `contentctl action -h` to get help with any splunk content action")
+        description="Use `contentctl action -h` to get help with any Splunk content action")
     parser.add_argument("-c", "--config", required=False, default="contentctl.yml",
-                        help="path to the configuration file of your splunk content, defaults to: contentctl.yml")
+                        help="path to the configuration file of your Splunk content, defaults to: contentctl.yml")
 
     parser.set_defaults(func=lambda _: parser.print_help())
-    actions_parser = parser.add_subparsers(title="splunk content actions", dest="action")
+    actions_parser = parser.add_subparsers(title="Splunk content actions", dest="action")
 
 
     # available actions
     #new_parser = actions_parser.add_parser("new", help="Create new content (detection, story, baseline)")
-    init_parser = actions_parser.add_parser("init", help="initialize a splunk content pack using and customizes a configuration under contentctl.yml")
-    validate_parser = actions_parser.add_parser("validate", help="validates a splunk content pack")
-    build_parser = actions_parser.add_parser("build", help="builds a splunk content pack package to be distributed")
-    new_content_parser = actions_parser.add_parser("new", help="create new splunk content object, defaults to")
-    reporting_parser = actions_parser.add_parser("report", help="create splunk content report of the current pack")
-    inspect_parser = actions_parser.add_parser("inspect", help="runs splunk appinspect on a build splunk app to ensure that an app meets splunkbase requirements.")
-    deploy_parser = actions_parser.add_parser("deploy", help="install an application on a target splunk instance.")    
+    init_parser = actions_parser.add_parser("init", help="initialize a Splunk content pack using and customizes a configuration under contentctl.yml")
+    validate_parser = actions_parser.add_parser("validate", help="validates a Splunk content pack")
+    build_parser = actions_parser.add_parser("build", help="builds a Splunk content pack package to be distributed")
+    new_content_parser = actions_parser.add_parser("new", help="create new Splunk content object, defaults to")
+    reporting_parser = actions_parser.add_parser("report", help="create Splunk content report of the current pack")
+    inspect_parser = actions_parser.add_parser("inspect", help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.")
+    deploy_parser = actions_parser.add_parser("deploy", help="install an application on a target Splunk instance.")  
+    test_parser = actions_parser.add_parser("test", help="test Splunk content detections inside a docker instance.")    
 
 
     # init actions
-    init_parser.add_argument("-s", "--skip_configuration", required=False, type=argparse.FileType("r"), default=False, help="skips configuration of the pack and generates a default configuration, defaults to False")
-    init_parser.add_argument("-o", "--output", required=False, type=argparse.FileType("w"), default='contentctl.yml' )
+    init_parser.add_argument("-s", "--skip_configuration", action=argparse.BooleanOptionalAction, required=False, default=False, help="skips configuration of the pack and generates a default configuration, defaults to False")
+    init_parser.add_argument("-o", "--output", required=False, type=str, default='.' )
     init_parser.set_defaults(func=initialize)
 
     validate_parser.add_argument("-p", "--pack", required=False, type=str, default='SPLUNK_ENTERPRISE_APP', 
@@ -233,7 +230,7 @@ def main(args):
        help="Path where to store the deployment package")
     build_parser.add_argument("-pr", "--product", required=False, type=str, default="SPLUNK_ENTERPRISE_APP",
        help="Type of package to create, choose between `SPLUNK_ENTERPRISE_APP`, `SSA` or `API`.")
-    build_parser.set_defaults(func=generate)
+    build_parser.set_defaults(func=build)
  
     new_content_parser.add_argument("-t", "--type", required=True, type=str,
         help="Type of security content object, choose between `detection`, `story`")
@@ -245,15 +242,17 @@ def main(args):
         help="output path to store the detection or story")
     reporting_parser.set_defaults(func=reporting)
 
-    inspect_parser.add_argument("-p", "--app_path", required=False, type=str, default=None, help="path to the splunk app to be inspected")
+    inspect_parser.add_argument("-p", "--app_path", required=False, type=str, default=None, help="path to the Splunk app to be inspected")
     inspect_parser.set_defaults(func=inspect)
 
 
-    deploy_parser.add_argument("-p", "--app_path", required=True, type=str, help="path to the splunk app you wish to deploy")
+    deploy_parser.add_argument("-p", "--app_path", required=True, type=str, help="path to the Splunk app you wish to deploy")
     deploy_parser.add_argument("--username", required=True, type=str, help="splunk.com username")
     deploy_parser.add_argument("--password", required=True, type=str, help="splunk.com password")
     deploy_parser.add_argument("--server", required=False, default="https://admin.splunk.com", type=str, help="override server URL, defaults to: https://admin.splunk.com")
     deploy_parser.set_defaults(func=deploy)
+
+    test_parser.set_defaults(func=test)
 
     # parse them
     args = parser.parse_args()

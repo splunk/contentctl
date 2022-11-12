@@ -5,7 +5,7 @@ global:
   log_level: INFO
 
 content:
-  detections: ""
+  detections: 
   stories: ""
   playbooks: ""
 
@@ -40,8 +40,8 @@ deploy:
 build:
   format: app
   # supported API (see details here), BA (see deployment here)
-  path: dest/my_splunk_content_app
-  name: "My Splunk Content App"
+  path: dist/my_splunk_content_pack
+  name: "My Splunk Content Pack"
   prefix: "MSCA"
 
 

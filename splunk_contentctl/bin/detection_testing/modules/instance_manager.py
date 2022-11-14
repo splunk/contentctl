@@ -13,13 +13,15 @@ import time
 import timeit
 
 from typing import Union
-from bin.detection_testing.modules import splunk_container, test_driver, utils
+from bin.detection_testing.modules import splunk_instance, test_driver, utils
 
+from bin.objects.detection import Detection
 from bin.objects.test_config import TestConfig
 
-WEB_PORT_STRING = "8000/tcp"
-HEC_PORT_STRING = "8088/tcp"
-MANAGEMENT_PORT_STRING = "8089/tcp"
+
+WEB_PORT_START = 8000
+MANAGEMENT_PORT_START = 8088
+HEC_PORT_START = 8089
 
 #Keep track of time, at the very least, and maybe some other things
 class JobStats:
@@ -41,15 +43,13 @@ class JobStats:
         return str(duration - datetime.timedelta(microseconds=duration.microseconds))
 
 
-class ContainerManager:
+class InstanceManager:
     def __init__(
         self,
-        test_list: list[Detection],
         config: TestConfig,
+        detection_list: list[Detection],
+        
         files_to_copy_to_container: OrderedDict = OrderedDict(),
-        web_port_start: int = 8000,
-        management_port_start: int = 8089,
-        hec_port_start: int = 8088,
         mounts: list[dict[str, str]] = []):
 
 
@@ -60,8 +60,9 @@ class ContainerManager:
         #Used to determine whether or not we should wait for container threads to finish when summarizing
         self.all_tests_completed = False
 
-        self.synchronization_object = test_driver.TestDriver(test_list, config)
-        self.mounts = self.create_mounts(mounts)
+        self.synchronization_object = test_driver.TestDriver(detection_list, config)
+        
+        
     
         
         print("\n\n***********************")
@@ -74,10 +75,7 @@ class ContainerManager:
         print("***********************\n\n")
         
 
-        self.containers = self.create_containers(web_port_start,
-                                                 management_port_start,
-                                                 hec_port_start,
-                                                 files_to_copy_to_container)
+        self.containers = self.create_containers(files_to_copy_to_container)
 
         self.summary_thread = threading.Thread(target=self.queue_status_thread,args=())
 
@@ -184,21 +182,6 @@ class ContainerManager:
 
         return new_containers
 
-    def create_mounts(
-        self, mounts: list[dict[str, str]]
-    ) -> list[docker.types.Mount]:
-        new_mounts = []
-        for mount in mounts:
-            new_mounts.append(self.create_mount(mount))
-        return new_mounts
-
-    def create_mount(self, mount: dict[str, str]) -> docker.types.Mount:
-        return docker.types.Mount(
-            source=os.path.abspath(mount["local_path"]),
-            target=mount["container_path"],
-            type=mount["type"],
-            read_only=mount["read_only"],
-        )
 
     
 

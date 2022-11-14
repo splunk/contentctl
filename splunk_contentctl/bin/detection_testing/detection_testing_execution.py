@@ -19,29 +19,18 @@ import requests
 
 
 
-from bin.detection_testing.modules import container_manager, test_driver, utils, github_service
+from bin.detection_testing.modules import instance_manager, test_driver, utils, github_service
 from bin.objects.test_config import TestConfig
 from bin.detection_testing.modules.github_service import GithubService
 from bin.objects.enums import PostTestBehavior, DetectionTestingMode
 from bin.input.director import DirectorOutputDto
 import yaml
 
-SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
-index_file_local_path = "bin/detection_testing/indexes.conf.tar"
-index_file_container_path = os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")
 
-# Should be the last one we copy.
-datamodel_file_local_path = "bin/detection_testing/datamodels.conf.tar"
-datamodel_file_container_path = os.path.join(
-    SPLUNK_CONTAINER_APPS_DIR, "Splunk_SA_CIM")
-
-
-authorizations_file_local_path = "bin/detection_testing/authorize.conf.tar"
-authorizations_file_container_path = "/opt/splunk/etc/system/local"
 
 CONTAINER_APP_DIRECTORY = "apps"
 MOCK_DIRECTORY = "mock_directory"
-MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING = 2
+
 
 
 
@@ -191,15 +180,8 @@ def main(config: TestConfig, director:DirectorOutputDto):
     
 
 
-    # Copy all the apps, to include ESCU (whether pregenerated or just generated)
-    try:
-        relative_app_path = copy_local_apps_to_directory(config)
-        
-        mounts = [{"local_path": os.path.abspath(CONTAINER_APP_DIRECTORY),
-                    "container_path": "/tmp/apps", "type": "bind", "read_only": True}]
-    except Exception as e:
-        print(f"Error occurred when copying apps to app folder: [{str(e)}]\n\tQuitting...", file=sys.stderr)
-        sys.exit(1)
+    
+    
 
 
     # If this is a mock run, finish it now
@@ -215,14 +197,8 @@ def main(config: TestConfig, director:DirectorOutputDto):
 
 
 
-    #Add some files that always need to be copied to to container to set up indexes and datamodels.
-    files_to_copy_to_container = OrderedDict()
-    files_to_copy_to_container["INDEXES"] = {
-        "local_file_path": index_file_local_path, "container_file_path": index_file_container_path}
-    files_to_copy_to_container["DATAMODELS"] = {
-        "local_file_path": datamodel_file_local_path, "container_file_path": datamodel_file_container_path}
-    files_to_copy_to_container["AUTHORIZATIONS"] = {
-        "local_file_path": authorizations_file_local_path, "container_file_path": authorizations_file_container_path}
+    
+    
     
 
     
@@ -260,13 +236,10 @@ def main(config: TestConfig, director:DirectorOutputDto):
     signal.signal(signal.SIGINT, shutdown_signal_handler_setup)
 
     try:
-        cm = container_manager.ContainerManager(detections_to_test,
-                                                config,
-                                                files_to_copy_to_container=files_to_copy_to_container,
-                                                web_port_start=8000,
-                                                management_port_start=8089,
-                                                hec_port_start=8088,
-                                                mounts=mounts)
+        cm = instance_manager.InstanceManager(config,
+                                              detections_to_test,
+                                              files_to_copy_to_container=files_to_copy_to_container,
+                                              mounts=mounts)
     except Exception as e:
         print("Error - unrecoverable error trying to set up the containers: [%s].\n\tQuitting..."%(str(e)),file=sys.stderr)
         sys.exit(1)

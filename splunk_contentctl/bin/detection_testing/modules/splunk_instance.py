@@ -317,12 +317,22 @@ class SplunkContainer(SplunkInstance):
     def __init__(self, config: TestConfig, synchronization_object: test_driver.TestDriver, web_port: int = 8000, management_port: int = 8089, hec_port: int = 8088, files_to_copy_to_instance=[]):
         super().__init__(config, synchronization_object, web_port, management_port, hec_port, files_to_copy_to_instance)
 
+        SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
+        files_to_copy_to_container = OrderedDict()
+        files_to_copy_to_container["INDEXES"] = {
+            "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/indexes.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")}
+        files_to_copy_to_container["DATAMODELS"] = {
+            "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/datamodels.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "SPLUNK_SA_CIM")}
+        files_to_copy_to_container["AUTHORIZATIONS"] = {
+            "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/authorizations.conf.tar"), "container_file_path": "/opt/splunk/etc/system/local"}
+        
 
+        self.mounts = [docker.types.Mount(os.path.abspath(os.path.join(self.config.repo_path,"apps")),
+                                          "/tmp/apps",
+                                          "bind",
+                                          True)]
+        
 
-
-
-    def prepare_mounts(self)->dict:
-        return {}
 
     def prepare_apps_path(self) -> tuple[str, bool]:
         apps_to_install = []

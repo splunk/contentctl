@@ -9,7 +9,7 @@ import timeit
 import json
 import datetime
 from typing import Union
-from bin.detection_testing.modules.test_objects import TestResult, Test
+
 #from bin.detection_testing.modules.splunk_container import SplunkContainer
 from bin.detection_testing.modules.testing_service import get_service
 DEFAULT_EVENT_HOST = "ATTACK_DATA_HOST"

@@ -157,10 +157,6 @@ class GithubService:
             changed_files = [detection for detection in detections if detection.file_path in all_changes_paths or detection.test.file_path in all_changes_paths]
         except Exception as e:
             print(f"Error enumerating modified content: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            import code
-            code.interact(local=locals())
             sys.exit(1)
 
         return untracked_files, changed_files

@@ -19,9 +19,9 @@ from bin.detection_testing import summarize_json
 import pathlib
 import yaml
 
-from bin.detection_testing.modules.test_objects import Detection, ResultsManager
-from bin.objects.test_config import TestConfig
 
+from bin.objects.test_config import TestConfig
+from bin.objects.detection import Detection
 
 
 

@@ -53,3 +53,7 @@ class DetectionTestingMode(str, enum.Enum):
     selected = "selected"
     changes = "changes"
     all = "all"
+
+class DetectionTestingTargetInfrstructure(str, enum.Enum):
+    container = "container"
+    server = "server"

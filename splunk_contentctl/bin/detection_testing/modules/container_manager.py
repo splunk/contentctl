@@ -14,7 +14,7 @@ import timeit
 
 from typing import Union
 from bin.detection_testing.modules import splunk_container, test_driver, utils
-from bin.detection_testing.modules.test_objects import ResultsManager, Detection
+
 from bin.objects.test_config import TestConfig
 
 WEB_PORT_STRING = "8000/tcp"

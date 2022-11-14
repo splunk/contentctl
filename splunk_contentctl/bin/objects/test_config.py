@@ -16,7 +16,7 @@ import argparse
 
 
 
-from bin.objects.enums import PostTestBehavior, DetectionTestingMode
+from bin.objects.enums import PostTestBehavior, DetectionTestingMode, DetectionTestingTargetInfrstructure
 
 from bin.objects.app import App
 from bin.helper.utils import Utils
@@ -51,11 +51,15 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     detections_list: Union[list[str], None] = Field(default=None, title="List of paths to detections which should be tested")
     num_containers: int = Field(default=1, title="Number of testing containers to start in parallel.")
     pr_number: Union[int,None] = Field(default=None, title="The number of the PR to test")
-    splunk_app_password: Union[str,None] = None
+    splunk_app_username: Union[str,None] = Field(default="admin", title="The name of the user for testing")
+    splunk_app_password: Union[str,None] = Field(default=utils.get_random_password(), title="Password for logging into Splunk Server")
     mock:bool = Field(default=False, title="Whether or not to actually run the test, or just generate the app and test configuration files")
     splunkbase_username:Union[str,None] = Field(default=None, title="The username for logging into Splunkbase in case apps must be downloaded")
     splunkbase_password:Union[str,None] = Field(default=None, title="The password for logging into Splunkbase in case apps must be downloaded")
     apps: list[App] = Field(default=[], title="A list of all the apps to be installed on each container")
+    
+    ip:str = Field(default="http://127.0.0.1", title="target splunk ip")
+    target_infrastructure: DetectionTestingTargetInfrstructure = Field(default=DetectionTestingTargetInfrstructure.container, title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrstructure._member_names_}")
     
 
             

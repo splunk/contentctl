@@ -9,12 +9,14 @@ from bin.detection_testing.modules.DataManipulation import DataManipulation
 from bin.detection_testing.modules import utils
 from bin.detection_testing.modules import splunk_sdk
 
+from bin.objects.detection import Detection
+from bin.objects.unit_test import UnitTest
 
 from os.path import relpath
 from tempfile import mkdtemp, mkstemp
 
 import splunklib.client as client
-from bin.detection_testing.modules.test_objects import Detection, Test, TestResult, AttackData
+
 #from bin.detection_testing.modules.splunk_container import SplunkContainer
 from bin.objects.enums import PostTestBehavior
 

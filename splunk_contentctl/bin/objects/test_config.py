@@ -16,7 +16,7 @@ import argparse
 
 
 
-from bin.objects.enums import PostTestBehavior, DetectionTestingMode, DetectionTestingTargetInfrstructure
+from bin.objects.enums import PostTestBehavior, DetectionTestingMode, DetectionTestingTargetInfrastructure
 
 from bin.objects.app import App
 from bin.helper.utils import Utils
@@ -59,7 +59,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     apps: list[App] = Field(default=[], title="A list of all the apps to be installed on each container")
     
     ip:str = Field(default="http://127.0.0.1", title="target splunk ip")
-    target_infrastructure: DetectionTestingTargetInfrstructure = Field(default=DetectionTestingTargetInfrstructure.container, title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrstructure._member_names_}")
+    target_infrastructure: DetectionTestingTargetInfrastructure = Field(default=DetectionTestingTargetInfrastructure.container, title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}")
     
 
             
@@ -299,3 +299,16 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         
         return v
     
+    @validator('target_infrastructure', always=True)
+    def validate_target_infrastructure(cls, v, values):
+        if v == DetectionTestingTargetInfrastructure.server:
+            #No need to validate that the docker client is available
+            return v
+        elif v == DetectionTestingTargetInfrastructure.container:
+            if values["mock"] is False:
+                #we need to make sure we can actually get the docker client from the environment
+                try:
+                    docker.client.from_env()
+                except Exception as e:
+                    raise(Exception(f"Error, failed to get docker client.  Is Docker Installed and Running? Error:\n\t{str(e)}"))            
+        return v

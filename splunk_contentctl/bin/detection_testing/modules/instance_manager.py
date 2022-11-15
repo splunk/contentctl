@@ -14,7 +14,7 @@ import timeit
 
 from typing import Union
 from bin.detection_testing.modules import splunk_instance, test_driver, utils
-
+from bin.objects.enums import DetectionTestingTargetInfrastructure
 from bin.objects.detection import Detection
 from bin.objects.test_config import TestConfig
 
@@ -51,11 +51,7 @@ class InstanceManager:
         
         files_to_copy_to_container: OrderedDict = OrderedDict(),
         mounts: list[dict[str, str]] = []):
-
-
         self.jobStats = JobStats()
-
-
         self.config = config
         #Used to determine whether or not we should wait for container threads to finish when summarizing
         self.all_tests_completed = False
@@ -75,7 +71,12 @@ class InstanceManager:
         print("***********************\n\n")
         
 
-        self.containers = self.create_containers(files_to_copy_to_container)
+        if self.config.target_infrastructure == DetectionTestingTargetInfrastructure.container:
+            print("start and set up some containers")
+        else:
+            print("it's just a server that is already set up")
+        
+        #self.containers = self.create_containers(files_to_copy_to_container)
 
         self.summary_thread = threading.Thread(target=self.queue_status_thread,args=())
 

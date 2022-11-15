@@ -61,13 +61,6 @@ class SplunkInstance:
         
 
         
-        
-
-
-
-
-    
-
     def get_container_summary(self) -> str:
         current_time = timeit.default_timer()
 

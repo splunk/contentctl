@@ -10,7 +10,7 @@ import json
 import datetime
 from typing import Union
 
-#from bin.detection_testing.modules.splunk_container import SplunkContainer
+from bin.detection_testing.modules.splunk_instance import SplunkInstance
 from bin.detection_testing.modules.testing_service import get_service
 DEFAULT_EVENT_HOST = "ATTACK_DATA_HOST"
 DEFAULT_DATA_INDEX = set(["main"])
@@ -18,7 +18,7 @@ FAILURE_SLEEP_INTERVAL_SECONDS = 60
 
 SplunkContainer = "CIRCULAR IMPORT PLEASE RESOLVE"
 
-def get_number_of_indexed_events(container:SplunkContainer, index:str, event_host:str=DEFAULT_EVENT_HOST, sourcetype:Union[str,None]=None )->int:
+def get_number_of_indexed_events(container:SplunkInstance, index:str, event_host:str=DEFAULT_EVENT_HOST, sourcetype:Union[str,None]=None )->int:
 
     try:
         service = get_service(container)
@@ -53,7 +53,7 @@ def get_number_of_indexed_events(container:SplunkContainer, index:str, event_hos
     
 
 
-def wait_for_indexing_to_complete(container:SplunkContainer, sourcetype:str, index:str, check_interval_seconds:int=5)->bool:
+def wait_for_indexing_to_complete(container:SplunkInstance, sourcetype:str, index:str, check_interval_seconds:int=5)->bool:
     startTime = timeit.default_timer()
     previous_count = -1
     time.sleep(check_interval_seconds)
@@ -80,7 +80,7 @@ def wait_for_indexing_to_complete(container:SplunkContainer, sourcetype:str, ind
 
 
 
-def test_detection_search(container:SplunkContainer, test:Test, attempts_remaining:int=4, 
+def test_detection_search(container:SplunkInstance, test:Test, attempts_remaining:int=4, 
                           failure_sleep_interval_seconds:int=FAILURE_SLEEP_INTERVAL_SECONDS, FORCE_ALL_TIME=True)->TestResult:
     
     #Since this is an attempt, decrement the number of remaining attempts
@@ -188,7 +188,7 @@ def test_detection_search(container:SplunkContainer, test:Test, attempts_remaini
     
 
 
-def delete_attack_data(container:SplunkContainer, indices:set[str], host:str=DEFAULT_EVENT_HOST)->bool:
+def delete_attack_data(container:SplunkInstance, indices:set[str], host:str=DEFAULT_EVENT_HOST)->bool:
     
     
     try:

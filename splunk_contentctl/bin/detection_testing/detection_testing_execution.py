@@ -90,6 +90,8 @@ def copy_local_apps_to_directory(config: TestConfig):
 
 
 def finish_mock(config: TestConfig, detections: list[test_driver.Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
+    print("THIS IS A MOCK RUN AND MOCK IS NOT YET SUPPORTED")
+    sys.exit(1)
     num_containers = config.num_containers
 
     #convert the list of Detection objects into a list of filename strings
@@ -143,17 +145,6 @@ def finish_mock(config: TestConfig, detections: list[test_driver.Detection], out
 
 
 
-def ensure_docker_is_avaliable(config: TestConfig):
-    #If this is a mock, then docker doesn't need to be running so we will
-    #not check for it
-    if config.mock == True:
-        return
-
-    #This is a real test run, so ensure that docker is running on this machine
-    try:
-        docker.client.from_env()
-    except Exception as e:
-        raise(Exception(f"Error, failed to get docker client.  Is Docker Installed and Running? Error:\n\t{str(e)}"))
 
     
 
@@ -165,17 +156,12 @@ def main(config: TestConfig, director:DirectorOutputDto):
     requests.packages.urllib3.disable_warnings()
 
 
-    ensure_docker_is_avaliable(config)
-    
-    
     #Get a handle to the git repo
     github_service = GithubService(config)
 
-
+    #Get all of the detections that we will test in this run
     detections_to_test = github_service.get_detections_to_test(config, director)
     
-    
-
     print("***This run will test [%d] detections!***"%(len(detections_to_test)))
     
 
@@ -195,7 +181,7 @@ def main(config: TestConfig, director:DirectorOutputDto):
             print("There was an unrecoverage error during the mock.\n\tQuitting...",file=sys.stderr)
             sys.exit(1)
 
-
+    sys.exit(0)
 
     
     

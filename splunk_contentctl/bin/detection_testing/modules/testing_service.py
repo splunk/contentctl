@@ -17,7 +17,7 @@ from tempfile import mkdtemp, mkstemp
 
 import splunklib.client as client
 
-#from bin.detection_testing.modules.splunk_container import SplunkContainer
+from bin.detection_testing.modules.splunk_instance import SplunkInstance
 from bin.objects.enums import PostTestBehavior
 
 from typing import Union
@@ -29,27 +29,27 @@ import pathlib
 import os
 SplunkContainer = "CIRCULAR IMPORT PLEASE RESOLVE"
 
-def get_service(container:SplunkContainer):
+def get_service(instance:SplunkInstance):
 
     try:
         service = client.connect(
-            host=container.splunk_ip,
-            port=container.management_port,
-            username='admin',
-            password=container.config.splunk_app_password
+            host=instance.config.ip,
+            port=instance.management_port,
+            username=instance.config.splunk_app_username,
+            password=instance.config.splunk_app_password
         )
     except Exception as e:
         raise(Exception("Unable to connect to Splunk instance: " + str(e)))
     return service
 
 
-def execute_tests(container:SplunkContainer, tests:list[Test], attack_data_folder:str)->bool:
+def execute_tests(instance:SplunkInstance, tests:list[Test], attack_data_folder:str)->bool:
     
     success = True
     for test in tests:
         try:
             #Run all the tests, even if the test fails.  We still want to get the results of failed tests
-            result = execute_test(container, test, attack_data_folder)
+            result = execute_test(instance, test, attack_data_folder)
             #And together the result of the test so that if any one test fails, it causes this function to return False                
             success &= result
         except Exception as e:
@@ -91,24 +91,24 @@ def format_test_result(job_result:dict, testName:str, fileName:str, logic:bool=F
     
     return testResult
 
-def execute_baselines(container:SplunkContainer, baselines:list[Test]):
+def execute_baselines(instance:SplunkInstance, baselines:list[Test]):
     for baseline in baselines:
-        execute_baseline(container, baseline)
+        execute_baseline(instance, baseline)
     
     
 
-def execute_baseline(container:SplunkContainer, baseline:Test):
+def execute_baseline(instance:SplunkInstance, baseline:Test):
     
     
-    baseline.result = splunk_sdk.test_detection_search(container, baseline)
+    baseline.result = splunk_sdk.test_detection_search(instance, baseline)
     
     
 
-def execute_test(container:SplunkContainer, test:Test, attack_data_folder:str)->bool:
+def execute_test(instance:SplunkInstance, test:Test, attack_data_folder:str)->bool:
     
     print(f"\tExecuting test {test.name}")
     #replay all of the attack data
-    test_indices = replay_attack_data_files(container, test.attack_data, attack_data_folder)
+    test_indices = replay_attack_data_files(instance, test.attack_data, attack_data_folder)
 
     import timeit, time
     start = timeit.default_timer()
@@ -121,7 +121,7 @@ def execute_test(container:SplunkContainer, test:Test, attack_data_folder:str)->
         #print(f"Sleep for {sleeptime} for ingest") 
         time.sleep(sleeptime)
         #Run the baseline(s) if they exist for this test
-        execute_baselines(container, test.baselines)
+        execute_baselines(instance, test.baselines)
         if test.error_in_baselines() is True:
             #One of the baselines failed. No sense in running the real test
             #Note that a baselines which fail is different than a baselines which didn't return some results!
@@ -137,7 +137,7 @@ def execute_test(container:SplunkContainer, test:Test, attack_data_folder:str)->
             
         else:
             #baselines all worked (if they exist) so run the search
-            test.result = splunk_sdk.test_detection_search(container, test)
+            test.result = splunk_sdk.test_detection_search(instance, test)
         
         if test.result.success:
             #We were successful, no need to run again.
@@ -148,8 +148,8 @@ def execute_test(container:SplunkContainer, test:Test, attack_data_folder:str)->
         elif timeit.default_timer() - start > MAX_TIME:
             break
         
-    if container.config.post_test_behavior == PostTestBehavior.always_pause or \
-      (test.result.success == False and container.config.post_test_behavior == PostTestBehavior.pause_on_failure):
+    if instance.config.post_test_behavior == PostTestBehavior.always_pause or \
+      (test.result.success == False and instance.config.post_test_behavior == PostTestBehavior.pause_on_failure):
     
         # The user wants to debug the test
         message_template = "\n\n\n****SEARCH {status} : Allowing time to debug search/data****\nPress ENTER to continue..."
@@ -167,7 +167,7 @@ def execute_test(container:SplunkContainer, test:Test, attack_data_folder:str)->
         _ = input(formatted_message)
         
 
-    splunk_sdk.delete_attack_data(container, indices = test_indices)
+    splunk_sdk.delete_attack_data(instance, indices = test_indices)
     
     #Return whether the test passed or failed
     return test.result.success
@@ -278,7 +278,7 @@ def hec_raw_replay(base_url:str, token:str, filePath:pathlib.Path, index:str,
 
 
 
-def replay_attack_data_file(container:SplunkContainer, attackData:AttackData, attack_data_folder:str)->str:
+def replay_attack_data_file(instance:SplunkInstance, attackData:AttackData, attack_data_folder:str)->str:
     """Function to replay a single attack data file. Any exceptions generated during executing
     are intentionally not caught so that they can be caught by the caller.
 
@@ -320,11 +320,11 @@ def replay_attack_data_file(container:SplunkContainer, attackData:AttackData, at
         data_manipulation.manipulate_timestamp(data_file, attackData.sourcetype,attackData.source)    
 
     #Get an session from the API
-    service = get_service(container)
+    service = get_service(instance)
 
         
     #Upload the data
-    hec_raw_replay(container.splunk_ip, container.tokenString, pathlib.Path(data_file), attackData.index, attackData.source, attackData.sourcetype, splunk_sdk.DEFAULT_EVENT_HOST, channel=container.channel, port=container.hec_port)
+    hec_raw_replay(instance.config.ip, instance.tokenString, pathlib.Path(data_file), attackData.index, attackData.source, attackData.sourcetype, splunk_sdk.DEFAULT_EVENT_HOST, channel=instance.channel, port=instance.hec_port)
     
 
     #Wait for the indexing to finish
@@ -341,7 +341,7 @@ def replay_attack_data_file(container:SplunkContainer, attackData:AttackData, at
 
     
 
-def replay_attack_data_files(container:SplunkContainer, attackDataObjects:list[AttackData], attack_data_folder:str)->set[str]:
+def replay_attack_data_files(instance:SplunkInstance, attackDataObjects:list[AttackData], attack_data_folder:str)->set[str]:
     """Replay all attack data files into a splunk server as part of testing a detection. Note that this does not catch
     any exceptions, they should be handled by the caller
 
@@ -355,17 +355,17 @@ def replay_attack_data_files(container:SplunkContainer, attackDataObjects:list[A
     test_indices = set()
     for attack_data_file in attackDataObjects:
         try:
-            test_indices.add(replay_attack_data_file(container, attack_data_file, attack_data_folder))
+            test_indices.add(replay_attack_data_file(instance, attack_data_file, attack_data_folder))
         except Exception as e:
             raise(Exception(f"Error replaying attack data file {attack_data_file.data}: {str(e)}"))
     return test_indices
 
 
-def test_detection(container:SplunkContainer, detection:Detection, attack_data_root_folder)->bool:
+def test_detection(instance:SplunkInstance, detection:Detection, attack_data_root_folder)->bool:
     
 
     abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
-    success = execute_tests(container, detection.testFile.tests, abs_folder_path)
+    success = execute_tests(instance, detection.testFile.tests, abs_folder_path)
     shutil.rmtree(abs_folder_path)
     detection.get_detection_result()
     #Delete the folder and all of the data inside of it

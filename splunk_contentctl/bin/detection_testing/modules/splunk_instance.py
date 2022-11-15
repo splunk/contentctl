@@ -22,13 +22,21 @@ import threading
 import wrapt_timeout_decorator
 import sys
 import traceback
+from bin.objects.enums import PostTestBehavior
 import json
 import uuid
 import requests
 import splunklib.client as client
+import splunklib.results as results
 from urllib3 import disable_warnings
 import urllib.parse
 from bin.helper.utils import Utils
+from bin.detection_testing.modules.DataManipulation import DataManipulation
+
+from bin.objects.detection import Detection
+from bin.objects.unit_test import UnitTest
+from bin.objects.unit_test_test import UnitTestTest
+
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/%d/release/%s/download"
 SPLUNK_START_ARGS = "--accept-license"
 
@@ -83,17 +91,17 @@ class SplunkInstance:
     def test_detection(self, detection:Detection, attack_data_root_folder)->bool:
         
         abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
-        success = self.execute_tests(detection.testFile.tests, abs_folder_path)
+        success = self.execute_tests(detection.test, abs_folder_path)
         rmtree(abs_folder_path)
         detection.get_detection_result()
         #Delete the folder and all of the data inside of it
         #shutil.rmtree(abs_folder_path)
         return success
     
-    def execute_tests(self, tests:list[Test], attack_data_folder:str)->bool:
+    def execute_tests(self, unit_test:UnitTest, attack_data_folder:str)->bool:
     
         success = True
-        for test in tests:
+        for test in unit_test.tests:
             try:
                 #Run all the tests, even if the test fails.  We still want to get the results of failed tests
                 result = self.execute_test(test, attack_data_folder)
@@ -349,7 +357,7 @@ class SplunkInstance:
         splunk_search = f"{updated_search} {test.pass_condition}"
 
         try:
-            service = get_service(container)
+            service = self.get_service()
         except Exception as e:
             error_message = "Unable to connect to Splunk instance: %s"%(str(e))
             print(error_message,file=sys.stderr)
@@ -425,11 +433,11 @@ class SplunkInstance:
         
 
 
-    def delete_attack_data(container:SplunkInstance, indices:set[str], host:str=DEFAULT_EVENT_HOST)->bool:
+    def delete_attack_data(self, indices:set[str], host:str=DEFAULT_EVENT_HOST)->bool:
         
         
         try:
-            service = get_service(container)
+            service = self.get_service()
         except Exception as e:
 
             raise(Exception("Unable to connect to Splunk instance: " + str(e)))
@@ -437,7 +445,7 @@ class SplunkInstance:
 
         #print(f"Deleting data for {detection_filename}: {indices}")
         for index in indices:
-            while (get_number_of_indexed_events(container, index=index, event_host=host) != 0) :
+            while (self.get_number_of_indexed_events(index=index) != 0) :
                 splunk_search = f'search index="{index}" host="{host}" | delete'
                 kwargs = {
                         "exec_mode": "blocking"}
@@ -453,13 +461,13 @@ class SplunkInstance:
             
         
         return True
-    def execute_test(instance:SplunkInstance, test:Test, attack_data_folder:str)->bool:
+    def execute_test(self, test:UnitTestTest, attack_data_folder:str)->bool:
         
         print(f"\tExecuting test {test.name}")
         #replay all of the attack data
-        test_indices = replay_attack_data_files(instance, test.attack_data, attack_data_folder)
+        test_indices = self.replay_attack_data_files(test.attack_data, attack_data_folder)
 
-        import timeit, time
+        
         start = timeit.default_timer()
         MAX_TIME = 120
         sleep_base = 2
@@ -470,23 +478,26 @@ class SplunkInstance:
             #print(f"Sleep for {sleeptime} for ingest") 
             time.sleep(sleeptime)
             #Run the baseline(s) if they exist for this test
-            execute_baselines(instance, test.baselines)
-            if test.error_in_baselines() is True:
-                #One of the baselines failed. No sense in running the real test
-                #Note that a baselines which fail is different than a baselines which didn't return some results!
-                test.result = TestResult(generated_exception={'message':"Baseline(s) failed"})
-            elif test.all_baselines_successful() is False:
-                #go back and run the loop again - no sense in running the detection search if the baseline didn't work successfully
-                test.result = TestResult(generated_exception={'message':"Detection search did not run - baselines(s) failed"})
-                #we set this as exception false because we don't know for sure there is an issue - we could just
-                #be waiting for data to be ingested for the baseline to fully run. However, we don't have the info
-                #to fill in the rest of the fields, so we populate it like we populate the fields when there is a real exception
-                test.result.exception = False 
-                
+            try:
+                if not self.execute_baselines(test.baselines):
+                    #One or more of the baselines failed. No sense in running the real test
+                    #Note that a baselines which fail is different than a baselines which didn't return some results!
+                    
+                elif test.all_baselines_successful() is False:
+                    #go back and run the loop again - no sense in running the detection search if the baseline didn't work successfully
+                    test.result = TestResult(generated_exception={'message':"Detection search did not run - baselines(s) failed"})
+                    #we set this as exception false because we don't know for sure there is an issue - we could just
+                    #be waiting for data to be ingested for the baseline to fully run. However, we don't have the info
+                    #to fill in the rest of the fields, so we populate it like we populate the fields when there is a real exception
+                    test.result.exception = False 
+            except Exception as e:
+                #There was an error when running a baseline
+                #We cannot run the test when there is an error with a baseline
+                result = TestResult(generated_exception={'message':"Baseline(s) failed"})
                 
             else:
                 #baselines all worked (if they exist) so run the search
-                test.result = splunk_sdk.test_detection_search(instance, test)
+                test.result = self.test_detection_search(test)
             
             if test.result.success:
                 #We were successful, no need to run again.
@@ -497,8 +508,8 @@ class SplunkInstance:
             elif timeit.default_timer() - start > MAX_TIME:
                 break
             
-        if instance.config.post_test_behavior == PostTestBehavior.always_pause or \
-        (test.result.success == False and instance.config.post_test_behavior == PostTestBehavior.pause_on_failure):
+        if self.config.post_test_behavior == PostTestBehavior.always_pause or \
+        (test.result.success == False and self.config.post_test_behavior == PostTestBehavior.pause_on_failure):
         
             # The user wants to debug the test
             message_template = "\n\n\n****SEARCH {status} : Allowing time to debug search/data****\nPress ENTER to continue..."
@@ -516,23 +527,23 @@ class SplunkInstance:
             _ = input(formatted_message)
             
 
-        splunk_sdk.delete_attack_data(instance, indices = test_indices)
+        self.delete_attack_data(indices = test_indices)
         
         #Return whether the test passed or failed
         return test.result.success
 
 
 
-    def execute_baselines(instance:SplunkInstance, baselines:list[Test]):
+    def execute_baselines(self, baselines:list[Test]):
         for baseline in baselines:
-            execute_baseline(instance, baseline)
+            self.execute_baseline(baseline)
     
     
 
-    def execute_baseline(instance:SplunkInstance, baseline:Test):
+    def execute_baseline(self, baseline:Test):
     
     
-        baseline.result = splunk_sdk.test_detection_search(instance, baseline)
+        baseline.result = self.test_detection_search(baseline)
 
 
     def get_container_summary(self) -> str:
@@ -586,7 +597,7 @@ class SplunkInstance:
                 
         while True:
             try:
-                service = splunk_sdk.client.connect(host=self.config.ip, port=self.management_port, username=self.config.splunk_app_username, password=self.config.splunk_app_password)
+                service = self.get_service()
                 if service.restart_required:
                     #The sleep below will wait
                     pass
@@ -782,10 +793,10 @@ class SplunkInstance:
 
 
 
-    def get_number_of_indexed_events(container:SplunkInstance, index:str, event_host:str=DEFAULT_EVENT_HOST, sourcetype:Union[str,None]=None )->int:
+    def get_number_of_indexed_events(self, index:str, event_host:str=DEFAULT_EVENT_HOST, sourcetype:Union[str,None]=None )->int:
 
         try:
-            service = get_service(container)
+            service = self.get_service()
         except Exception as e:
             raise(Exception("Unable to connect to Splunk instance: " + str(e)))
 

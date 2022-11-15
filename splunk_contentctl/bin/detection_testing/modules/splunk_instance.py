@@ -10,8 +10,9 @@ import random
 import requests
 import xmltodict
 from requests.auth import HTTPBasicAuth
-
-from bin.detection_testing.modules import splunk_sdk, testing_service, test_driver
+from tempfile import mkdtemp, mkstemp
+from shutil import rmtree, copyfile
+from bin.detection_testing.modules import test_driver
 from bin.objects.test_config import TestConfig
 import pathlib
 import time
@@ -21,9 +22,13 @@ import threading
 import wrapt_timeout_decorator
 import sys
 import traceback
+import json
 import uuid
 import requests
 import splunklib.client as client
+from urllib3 import disable_warnings
+import urllib.parse
+from bin.helper.utils import Utils
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/%d/release/%s/download"
 SPLUNK_START_ARGS = "--accept-license"
 
@@ -75,22 +80,23 @@ class SplunkInstance:
             raise(Exception("Unable to connect to Splunk instance: " + str(e)))
         return service
     
-    def test_detection(instance:SplunkInstance, detection:Detection, attack_data_root_folder)->bool:
+    def test_detection(self, detection:Detection, attack_data_root_folder)->bool:
+        
         abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
-        success = execute_tests(instance, detection.testFile.tests, abs_folder_path)
-        shutil.rmtree(abs_folder_path)
+        success = self.execute_tests(detection.testFile.tests, abs_folder_path)
+        rmtree(abs_folder_path)
         detection.get_detection_result()
         #Delete the folder and all of the data inside of it
         #shutil.rmtree(abs_folder_path)
         return success
     
-    def execute_tests(instance:SplunkInstance, tests:list[Test], attack_data_folder:str)->bool:
+    def execute_tests(self, tests:list[Test], attack_data_folder:str)->bool:
     
         success = True
         for test in tests:
             try:
                 #Run all the tests, even if the test fails.  We still want to get the results of failed tests
-                result = execute_test(instance, test, attack_data_folder)
+                result = self.execute_test(test, attack_data_folder)
                 #And together the result of the test so that if any one test fails, it causes this function to return False                
                 success &= result
             except Exception as e:
@@ -99,7 +105,7 @@ class SplunkInstance:
 
 
 
-    def format_test_result(job_result:dict, testName:str, fileName:str, logic:bool=False, noise:bool=False)->dict:
+    def format_test_result(self, job_result:dict, testName:str, fileName:str, logic:bool=False, noise:bool=False)->dict:
         testResult = {
             "name": testName,
             "file": fileName,
@@ -130,26 +136,26 @@ class SplunkInstance:
         
         return testResult
 
-    def hec_raw_replay(base_url:str, token:str, filePath:pathlib.Path, index:str, 
+    def hec_raw_replay(self, filePath:pathlib.Path, index:str, 
                     source:Union[str,None]=None, sourcetype:Union[str,None]=None, 
-                    host:Union[str,None]=None, channel:Union[str,None]=None, 
-                    use_https:bool=True, port:int=8088, verify=False, 
+                    host:Union[str,None]=DEFAULT_EVENT_HOST, use_https:bool=True, verify_ssl=False, 
                     path:str="services/collector/raw", wait_for_ack:bool=True):
         
-        if verify is False:
+        if verify_ssl is False:
             #need this, otherwise every request made with the requests module
             #and verify=False will print an error to the command line
             disable_warnings()
 
 
         #build the headers
-        if token.startswith('Splunk '):
-            headers = {"Authorization": token} 
+
+        if self.tokenString.startswith('Splunk '):
+            headers = {"Authorization": self.tokenString} 
         else:
-            headers = {"Authorization": f"Splunk {token}"} #token must begin with 'Splunk 
+            headers = {"Authorization": f"Splunk {self.tokenString}"} #token must begin with 'Splunk 
         
-        if channel is not None:
-            headers['X-Splunk-Request-Channel'] = channel
+        if self.channel is not None:
+            headers['X-Splunk-Request-Channel'] = self.channel
         
         
         #Now build the URL parameters
@@ -162,77 +168,75 @@ class SplunkInstance:
             url_params_dict['host'] = host 
         
         
-        if base_url.lower().startswith('http://') and use_https is True:
-            raise(Exception(f"URL {base_url} begins with http://, but use_http is {use_https}. "\
+        if self.config.ip.lower().startswith('http://') and use_https is True:
+            raise(Exception(f"URL {self.config.ip} begins with http://, but use_http is {use_https}. "\
                             "Unless you have modified the HTTP Event Collector Configuration, it is probably enabled for https only."))
-        if base_url.lower().startswith('https://') and use_https is False:
-            raise(Exception(f"URL {base_url} begins with https://, but use_http is {use_https}. "\
+        if self.config.ip.lower().startswith('https://') and use_https is False:
+            raise(Exception(f"URL {self.config.ip} begins with https://, but use_http is {use_https}. "\
                             "Unless you have modified the HTTP Event Collector Configuration, it is probably enabled for https only."))
         
-        if not (base_url.lower().startswith("http://") or base_url.lower().startswith('https://')):
+        if not (self.config.ip.lower().startswith("http://") or self.config.ip.lower().startswith('https://')):
             if use_https:
                 prepend = "https://"
             else:
                 prepend = "http://"
-            old_url = base_url
-            base_url = f"{prepend}{old_url}"
-            #print(f"Warning, the URL you provided {old_url} does not start with http:// or https://.  We have added {prepend} to convert it into {base_url}")
+            
+            base_url = f"{prepend}{self.config.ip}"
+        else:
+            base_url = self.config.ip
+            
         
 
         #Generate the full URL, including the host, the path, and the params.
         #We can be a lot smarter about this (and pulling the port from the url, checking 
         # for trailing /, etc, but we leave that for the future)
-        url_with_path = urllib.parse.urljoin(f"{base_url}:{port}", path)
+        url_with_path = urllib.parse.urljoin(f"{base_url}:{self.hec_port}", path)
         with open(filePath,"rb") as datafile:
             rawData = datafile.read()
 
         try:
-            res = requests.post(url_with_path,params=url_params_dict, data=rawData, allow_redirects = True, headers=headers, verify=verify)
-            #print(f"POST Sent with return code: {res.status_code}")
+            res = requests.post(url_with_path,params=url_params_dict, data=rawData, allow_redirects = True, headers=headers, verify=verify_ssl)
             jsonResponse = json.loads(res.text)
-            #print(res.status_code)
-            #print(res.text)
+            
+            
             
         except Exception as e:
-            raise(Exception(f"There was an exception in the post: {str(e)}"))
+            raise(Exception(f"There was an exception sending attack_data to HEC: {str(e)}"))
         
 
         if wait_for_ack:
-            if channel is None:
+            if self.channel is None:
                 raise(Exception("HEC replay WAIT_FOR_ACK is enabled but CHANNEL is None. Channel must be supplied to wait on ack"))
             
             if "ackId" not in jsonResponse:
                 raise(Exception(f"key 'ackID' not present in response from HEC server: {jsonResponse}"))
             ackId = jsonResponse['ackId']
-            url_with_path = urllib.parse.urljoin(f"{base_url}:{port}", "services/collector/ack")
-            import timeit, time
+            url_with_path = urllib.parse.urljoin(f"{base_url}:{self.hec_port}", "services/collector/ack")
+            
             start = timeit.default_timer()
-            j = {"acks":[jsonResponse['ackId']]}
+            requested_acks = {"acks":[jsonResponse['ackId']]}
             while True:            
                 try:
                     
-                    res = requests.post(url_with_path, json=j, allow_redirects = True, headers=headers, verify=verify)
-                    #print(f"ACKID POST Sent with return code: {res.status_code}")
+                    res = requests.post(url_with_path, json=requested_acks, allow_redirects = True, headers=headers, verify=verify_ssl)
+                    
                     jsonResponse = json.loads(res.text)
-                    #print(f"the type of ackid is {type(ackId)}")
+                    
                     if 'acks' in jsonResponse and str(ackId) in jsonResponse['acks']:
                         if jsonResponse['acks'][str(ackId)] is True:
-                            break
+                            #ackID has been found for our request, we can return as the data has been replayed
+                            return
                         else:
-                            #print("Waiting for ackId")
-
+                            #ackID is not yet true, we will wait some more
                             time.sleep(2)
 
                     else:
-                        print(url_with_path)
-                        print(j)
-                        print(headers)
                         raise(Exception(f"Proper ackID structure not found for ackID {ackId} in {jsonResponse}"))
                 except Exception as e:
                     raise(Exception(f"There was an exception in the post: {str(e)}"))
                 
 
-    def replay_attack_data_files(instance:SplunkInstance, attackDataObjects:list[AttackData], attack_data_folder:str)->set[str]:
+    def replay_attack_data_files(self, attackDataObjects:list[AttackData], attack_data_folder:str)->set[str]:
         """Replay all attack data files into a splunk server as part of testing a detection. Note that this does not catch
         any exceptions, they should be handled by the caller
 
@@ -246,14 +250,14 @@ class SplunkInstance:
         test_indices = set()
         for attack_data_file in attackDataObjects:
             try:
-                test_indices.add(replay_attack_data_file(instance, attack_data_file, attack_data_folder))
+                test_indices.add(self.replay_attack_data_file(attack_data_file, attack_data_folder))
             except Exception as e:
                 raise(Exception(f"Error replaying attack data file {attack_data_file.data}: {str(e)}"))
         return test_indices
 
 
 
-    def replay_attack_data_file(instance:SplunkInstance, attackData:AttackData, attack_data_folder:str)->str:
+    def replay_attack_data_file(self, attackData:AttackData, attack_data_folder:str)->str:
         """Function to replay a single attack data file. Any exceptions generated during executing
         are intentionally not caught so that they can be caught by the caller.
 
@@ -278,7 +282,7 @@ class SplunkInstance:
             #We need to do this because if we are working from a file, we can't overwrite/modify the original during a test. We must keep it intact.
             try:
                 print(f"copy from {attackData.data}-->{data_file}")
-                shutil.copyfile(attackData.data, data_file)
+                copyfile(attackData.data, data_file)
             except Exception as e:
                 raise(Exception(f"Unable to copy local attack data file {attackData.data} - {str(e)}"))
             
@@ -287,19 +291,17 @@ class SplunkInstance:
             #Download the file
             #We need to overwrite the file - mkstemp will create an empty file with the 
             #given name
-            utils.download_file_from_http(attackData.data, data_file, overwrite_file=True) 
+            Utils.download_file_from_http(attackData.data, data_file, overwrite_file=True) 
         
         # Update timestamps before replay
         if attackData.update_timestamp:
             data_manipulation = DataManipulation()
             data_manipulation.manipulate_timestamp(data_file, attackData.sourcetype,attackData.source)    
 
-        #Get an session from the API
-        service = get_service(instance)
-
-            
+        
+    
         #Upload the data
-        hec_raw_replay(instance.config.ip, instance.tokenString, pathlib.Path(data_file), attackData.index, attackData.source, attackData.sourcetype, splunk_sdk.DEFAULT_EVENT_HOST, channel=instance.channel, port=instance.hec_port)
+        self.hec_raw_replay(pathlib.Path(data_file), attackData.index, attackData.source, attackData.sourcetype)
         
 
         #Wait for the indexing to finish
@@ -315,7 +317,7 @@ class SplunkInstance:
 
 
 
-    def test_detection_search(container:SplunkInstance, test:Test, attempts_remaining:int=4, 
+    def test_detection_search(self, test:Test, attempts_remaining:int=4, 
                             failure_sleep_interval_seconds:int=FAILURE_SLEEP_INTERVAL_SECONDS, FORCE_ALL_TIME=True)->TestResult:
         
         #Since this is an attempt, decrement the number of remaining attempts

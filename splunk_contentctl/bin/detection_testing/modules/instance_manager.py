@@ -60,7 +60,7 @@ class InstanceManager:
     
         
         print("\n\n***********************")
-        print(f"Log into your [{self.config.num_containers}] Splunk Container(s) after they boot at http://127.0.0.1:[{web_port_start}-{web_port_start + self.config.num_containers - 1}]")
+        print(f"Log into your [{self.config.num_containers}] Splunk Instance(s) after they boot at http://127.0.0.1:[{WEB_PORT_START}-{WEB_PORT_START + self.config.num_containers - 1}]")
         print("\tSplunk App Username: [%s]"%("admin"))
         print("\tSplunk App Password: ", end='')
         
@@ -74,7 +74,7 @@ class InstanceManager:
         else:
             print("it's just a server that is already set up")
         
-        #self.containers = self.create_containers(files_to_copy_to_container)
+        
 
         self.summary_thread = threading.Thread(target=self.queue_status_thread,args=())
 
@@ -111,15 +111,17 @@ class InstanceManager:
         
 
             
-        for container in self.instances:
+        for instance in self.instances:
             if self.all_tests_completed == True:
-                container.thread.join()
+                instance.thread.join()
             elif self.all_tests_completed == False:
                 #For some reason, we stopped early.  So don't wait on the child threads to finish. Don't join,
                 #these threads may be stuck in their setup loops. Continue on.
                 pass
             
-            print(container.get_container_summary())
+            print("Output the summary at the end")
+            #print(instance.get_container_summary())
+            
         print("All containers completed testing!")
         
         
@@ -146,7 +148,7 @@ class InstanceManager:
                                                   HEC_PORT_START)
             self.instances.append(server)
         elif self.config.target_infrastructure == DetectionTestingTargetInfrastructure.container:
-            for containerNumber in range(self.config.num_containers):
+            for container_number in range(self.config.num_containers):
                 #MANAGEMENT_PORT and HEC_PORT are number*2 since they are right next
                 #to each other and we don't want them to collide
                 container = splunk_instance.SplunkContainer(self.config, 
@@ -169,35 +171,7 @@ class InstanceManager:
         
 
 
-    def create_containers(
-        self,
-        web_port_start: int,
-        management_port_start: int,
-        hec_port_start: int,
-        files_to_copy_to_container: OrderedDict = OrderedDict(),
-    ) -> list[splunk_container.SplunkContainer]:
 
-        new_containers = []
-        for index in range(self.config.num_containers):
-            container_name = self.config.container_name % index
-            web_port_tuple = (WEB_PORT_STRING, web_port_start + index)
-            management_port_tuple = (MANAGEMENT_PORT_STRING, management_port_start + 2*index)
-            hec_port_tuple = (HEC_PORT_STRING, hec_port_start + 2*index)
-            
-            new_containers.append(
-                splunk_container.SplunkContainer(
-                    self.config,
-                    self.synchronization_object,
-                    container_name,
-                    web_port_tuple,
-                    management_port_tuple,
-                    hec_port_tuple,
-                    files_to_copy_to_container,
-                    self.mounts
-                )
-            )
-
-        return new_containers
 
 
     

@@ -12,7 +12,7 @@ import git
 import yaml
 from git.objects import base
 from bin.objects.detection import Detection
-from bin.detection_testing.modules import testing_service
+
 from bin.objects.enums import DetectionTestingMode
 import random
 import pathlib
@@ -162,56 +162,4 @@ class GithubService:
         return untracked_files, changed_files
 
 
-    #Note: does not work, but the idea is here and some of the code is too
-    '''
-    def update_and_commit_passed_tests(self, results:list[dict])->bool:
-        
-        changed_file_paths = []
-        for result in results:
-            detection_obj_path = os.path.join(self.repo_folder,"detections",result['detection_file'])
-            
-            test_obj_path = detection_obj_path.replace("detections", "tests", 1)
-            test_obj_path = test_obj_path.replace(".yml",".test.yml")
-
-            detection_obj = testing_service.load_file(detection_obj_path)
-            test_obj = testing_service.load_file(test_obj_path)
-            detection_obj['tags']['automated_detection_testing'] = 'passed'
-            #detection_obj['tags']['automated_detection_testing_date'] = datetime.datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
-            
-            for o in test_obj['tests']:
-                if 'attack_data' in o:
-                    datasets = []
-                    for dataset in o['attack_data']:
-                        datasets.append(dataset['data'])
-                    detection_obj['tags']['dataset'] = datasets
-            with open(detection_obj_path, "w") as f:
-                yaml.dump(detection_obj, f, sort_keys=False, allow_unicode=True)
-            
-            changed_file_paths.append(detection_obj_path)
-        
-        relpaths = [pathlib.Path(*pathlib.Path(p).parts[1:]).as_posix() for p in changed_file_paths]
-        newpath = relpaths[0]+'.wow'
-        relpaths.append(newpath)
-        with open(os.path.join(self.repo_folder, newpath),'w') as d:
-                d.write("fake file")
-        print("status results:")
-        print(self.security_content_repo_obj.index.diff(self.security_content_repo_obj.head.commit))
-        
-        if len(relpaths) > 0:
-            print('there is at least one changed file')
-            print(relpaths)            
-            self.security_content_repo_obj.index.add(relpaths)
-            print("status results after add:")
-            print(self.security_content_repo_obj.index.diff(self.security_content_repo_obj.head.commit))
-
-            commit_message = "The following detections passed detection testing.  Their YAMLs have been updated and their datasets linked:\n - %s"%("\n - ".join(relpaths))
-            self.security_content_repo_obj.index.commit(commit_message)
-            return True
-        else:
-            return False
-                
-        
-
-        
-        return True
-        '''
+    

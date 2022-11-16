@@ -19,7 +19,8 @@ import requests
 
 
 
-from bin.detection_testing.modules import instance_manager, test_driver, utils, github_service
+from bin.detection_testing.modules import instance_manager, test_driver
+from bin.helper.utils import Utils
 from bin.objects.test_config import TestConfig
 from bin.detection_testing.modules.github_service import GithubService
 from bin.objects.enums import PostTestBehavior, DetectionTestingMode
@@ -61,7 +62,7 @@ def copy_local_apps_to_directory(config: TestConfig):
             elif app.http_path:
                 filename = pathlib.Path(urlparse(app.http_path).path).name #get the filename from the url
                 download_path = os.path.join(CONTAINER_APP_DIRECTORY, filename)
-                utils.download_file_from_http(app.http_path, download_path, verbose_print=True)
+                Utils.download_file_from_http(app.http_path, download_path, verbose_print=True)
                 app.local_path = download_path
             else:
                 raise(Exception(f"Could not download {app.title}, not http_path or local_path or Splunkbase Credentials provided"))
@@ -264,6 +265,5 @@ def main(config: TestConfig, director:DirectorOutputDto):
         os._exit(1)
 
 
-if __name__ == "__main__":
-    main(sys.argv[1:])
+
 

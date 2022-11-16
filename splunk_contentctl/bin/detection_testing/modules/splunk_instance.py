@@ -806,6 +806,11 @@ class SplunkContainer(SplunkInstance):
         web_port = web_port + container_number
         management_port = management_port + 2*container_number
         hec_port = management_port + 2*container_number
+        self.ports={
+            "tcp/8000":web_port,
+            "tcp/8088":hec_port,
+            "tcp/8089":management_port,
+        }
         self.container_name = config.container_name % container_number
         super().__init__(config, synchronization_object, web_port, management_port, hec_port)
 
@@ -823,6 +828,7 @@ class SplunkContainer(SplunkInstance):
                                           "/tmp/apps",
                                           "bind",
                                           True)]
+        
         self.environment = self.make_environment()
         self.container = self.make_container()
         
@@ -862,11 +868,7 @@ class SplunkContainer(SplunkInstance):
         
         return env
 
-    def make_ports(self, ports: list[int]) -> dict[str, int]:
-        port_dict = {}
-        for port in ports:
-            port_dict[f"tcp/{port}"] = port
-        return port_dict
+    
 
     def __str__(self) -> str:
         container_string = (
@@ -884,7 +886,7 @@ class SplunkContainer(SplunkInstance):
 
         container = self.get_client().containers.create(
             self.config.full_image_path,
-            ports=self.make_ports(self.ports),
+            ports=self.ports,
             environment=self.make_environment(),
             name=self.config.container_name,
             mounts=self.mounts,

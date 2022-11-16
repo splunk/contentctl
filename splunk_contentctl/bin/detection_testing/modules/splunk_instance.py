@@ -38,7 +38,7 @@ from bin.objects.unit_test import UnitTest
 from bin.objects.unit_test_test import UnitTestTest
 from bin.objects.unit_test_baseline import UnitTestBaseline
 from bin.objects.unit_test_attack_data import UnitTestAttackData
-
+from bin.objects.unit_test_result import UnitTestResult
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/%d/release/%s/download"
 SPLUNK_START_ARGS = "--accept-license"
@@ -95,10 +95,8 @@ class SplunkInstance:
         
         abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
         success = self.execute_tests(detection.test, abs_folder_path)
+        #Delete the temp folder and data inside of it
         rmtree(abs_folder_path)
-        detection.get_detection_result()
-        #Delete the folder and all of the data inside of it
-        #shutil.rmtree(abs_folder_path)
         return success
     
     def execute_tests(self, unit_test:UnitTest, attack_data_folder:str)->bool:
@@ -247,7 +245,7 @@ class SplunkInstance:
                     raise(Exception(f"There was an exception in the post: {str(e)}"))
                 
 
-    def replay_attack_data_files(self, attackDataObjects:list[AttackData], attack_data_folder:str)->set[str]:
+    def replay_attack_data_files(self, attackDataObjects:list[UnitTestAttackData], attack_data_folder:str)->set[str]:
         """Replay all attack data files into a splunk server as part of testing a detection. Note that this does not catch
         any exceptions, they should be handled by the caller
 
@@ -268,7 +266,7 @@ class SplunkInstance:
 
 
 
-    def replay_attack_data_file(self, attackData:AttackData, attack_data_folder:str)->str:
+    def replay_attack_data_file(self, attackData:UnitTestAttackData, attack_data_folder:str)->str:
         """Function to replay a single attack data file. Any exceptions generated during executing
         are intentionally not caught so that they can be caught by the caller.
 
@@ -312,7 +310,7 @@ class SplunkInstance:
         
     
         #Upload the data
-        self.hec_raw_replay(pathlib.Path(data_file), attackData.index, attackData.source, attackData.sourcetype)
+        self.hec_raw_replay(pathlib.Path(data_file), attackData.custom_index, attackData.source, attackData.sourcetype)
         
 
         #Wait for the indexing to finish
@@ -322,14 +320,14 @@ class SplunkInstance:
         
         #print('done waiting')
         #Return the name of the index that we uploaded to
-        return attackData.index
+        return attackData.custom_index
 
 
 
 
 
-    def test_detection_search(self, test:Test, attempts_remaining:int=4, 
-                            failure_sleep_interval_seconds:int=FAILURE_SLEEP_INTERVAL_SECONDS, FORCE_ALL_TIME=True)->TestResult:
+    def test_detection_search(self, detection:Detection, test:UnitTestTest, attempts_remaining:int=4, 
+                            failure_sleep_interval_seconds:int=FAILURE_SLEEP_INTERVAL_SECONDS, FORCE_ALL_TIME=True)->UnitTestResult:
         
         #Since this is an attempt, decrement the number of remaining attempts
         attempts_remaining -= 1
@@ -338,11 +336,11 @@ class SplunkInstance:
         #If we don't do this with leading whitespace, this can cause
         #an issue with the logic below - mainly prepending "|" in front
         # of searches that look like " | tstats <something>"
-        detectionFile = test.detectionFile
-        search = detectionFile.search
-        if search != detectionFile.search.strip():
-            print(f"The detection contained in {detectionFile.name} contains leading or trailing whitespace.  Please update this search to remove that whitespace.")
-            search = detectionFile.search.strip()
+        
+        search = detection.search
+        if search != detection.search.strip():
+            print(f"The detection contained in {detection.file_path} contains leading or trailing whitespace.  Please update this search to remove that whitespace.")
+            search = detection.search.strip()
         
         if search.startswith('|'):
             updated_search = search
@@ -353,8 +351,11 @@ class SplunkInstance:
         #Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
         if not FORCE_ALL_TIME:
-            kwargs.update({"earliest_time": test.earliest_time,
-                        "latest_time": test.latest_time})
+            if test.earliest_time is not None:  
+                kwargs.update({"earliest_time": test.earliest_time})
+            if test.latest_time is not None:
+                kwargs.update({"latest_time": test.latest_time})
+        
 
         #Append the pass condition to the search
         splunk_search = f"{updated_search} {test.pass_condition}"
@@ -364,26 +365,27 @@ class SplunkInstance:
         except Exception as e:
             error_message = "Unable to connect to Splunk instance: %s"%(str(e))
             print(error_message,file=sys.stderr)
-            return TestResult(generated_exception={"message":error_message})
+            return UnitTestResult(job_content=None, missing_observables=[], message=error_message)
 
 
         try:
             job = service.jobs.create(splunk_search, **kwargs)
-            results_stream = job.results(output_mode='json')
+            _ = job.results(output_mode='json')
+            result = UnitTestResult(job_content=job.content)
             
-            result =  TestResult(no_exception=job.content)
 
 
             if result.success == False:
-                #The test did not work, so just return the failure
+                #The test did not work, so just return the failure.  We may try to run
+                #this search again because we might just not be done ingesting and
+                #processing the initial data
                 return result
             
             #The test was successful, so check the observables, if applicable
-
             observables_to_check = set()
             #Should we include the extra notable observables here?
-
-            for observable in test.detectionFile.observables:
+            
+            for observable in detection.tags.observable:
                 name = observable.get("name",None)
                 if name is None:
                     raise(Exception(f"Error checking observable {observable} - Name was None"))
@@ -403,7 +405,6 @@ class SplunkInstance:
                 for res in observable_results_stream:
                     resJson = json.loads(res)
                     
-                    
                     for jsonResult in resJson.get("results",[]):
                         #Check that all of the fields exist and have non-null/non-empty string values
                         found_observables = set([observable for observable in observables_to_check if ( observable in jsonResult and jsonResult[observable] != None and jsonResult[observable] != "") ])
@@ -419,7 +420,7 @@ class SplunkInstance:
                 #If we get here, then we have not found a single result with all of the observables.  We will
                 #return as part of the error all the fields which did not appear in ALL the results.
                 
-                result.missing_observables = list(observables_to_check - observables_always_found)
+                result.update_missing_observables(observables_to_check - observables_always_found)
                 print(f"Missing observable(s) for detection: {result.missing_observables}")
                 
                 return result
@@ -430,7 +431,7 @@ class SplunkInstance:
         except Exception as e:
             error_message = "Unable to execute detection: %s"%(str(e))
             print(error_message,file=sys.stderr)
-            return TestResult(generated_exception={"message":error_message})
+            return UnitTestResult(job_content=None, missing_observables=[], message=error_message)
 
 
         

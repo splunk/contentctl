@@ -114,7 +114,7 @@ class ResultsManager:
                     #This test was not run for some reason
                     message = "Test Result was None"
                     test_result['message'] = message
-                elif test.result.job is None:
+                elif test.result.job_content is None:
                     message = "Test Result Job was None"
                     test_result['message'] = message
                 elif test.result.exception:
@@ -131,8 +131,8 @@ class ResultsManager:
                     test_result["success"] = test.result.success,
                     test_result["logic"] = test.result.logic,
                     test_result["noise"] = test.result.noise,
-                    test_result["resultCount"] = float(test.result.job['resultCount']),
-                    test_result["runDuration"] = float(test.result.job['runDuration']),
+                    test_result["resultCount"] = float(test.result.job_content['resultCount']),
+                    test_result["runDuration"] = float(test.result.job_content['runDuration']),
                     test_result["missing_observables"] = test.result.missing_observables
                     test_success = test.result.success
 

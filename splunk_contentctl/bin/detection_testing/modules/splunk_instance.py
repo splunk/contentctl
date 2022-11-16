@@ -36,6 +36,9 @@ from bin.detection_testing.modules.DataManipulation import DataManipulation
 from bin.objects.detection import Detection
 from bin.objects.unit_test import UnitTest
 from bin.objects.unit_test_test import UnitTestTest
+from bin.objects.unit_test_baseline import UnitTestBaseline
+from bin.objects.unit_test_attack_data import UnitTestAttackData
+
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/%d/release/%s/download"
 SPLUNK_START_ARGS = "--accept-license"

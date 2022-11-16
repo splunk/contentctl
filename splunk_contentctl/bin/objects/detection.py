@@ -6,7 +6,7 @@ import sys
 
 from pydantic import BaseModel, validator, root_validator
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 
@@ -25,6 +25,10 @@ from bin.helper.link_validator import LinkValidator
 
 
 
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from bin.objects.unit_test_result import UnitTestResult
 
 
 class Detection(BaseModel, SecurityContentObject):
@@ -145,3 +149,39 @@ class Detection(BaseModel, SecurityContentObject):
         return v
 
  
+
+
+ 
+    def get_all_unit_test_results(self)->list[Union[None, UnitTestResult]]:
+        
+        if self.test is None:
+            return []
+        
+        all_results = []
+        for test in self.test.tests:
+            all_results.append(test.result)
+        return all_results
+    
+
+    def get_total_time(self)->timedelta:
+        runtimes = [result for result in self.get_all_unit_test_results() if result is not None]
+        total_time = timedelta(0)
+        for res in runtimes:
+            total_time += res.get_time()
+        return total_time
+    
+    def get_success(self)->bool:
+        if self.get_num_tests() > 0 and (self.get_num_tests() == self.get_num_successful_tests()):
+            #If there have been no successful tests, then we cannot say anything was successful
+            return True
+        #Returns false if there are any failures AND if there were no tests for the detection!
+        return False
+
+    def get_num_tests(self)->int:
+        return len(self.get_all_unit_test_results())
+
+    def get_num_failed_tests(self)->int:
+        return len([result for result in self.get_all_unit_test_results() if result is None or result.success == False])
+
+    def get_num_successful_tests(self)->int:
+        return len([result for result in self.get_all_unit_test_results() if result is not None and result.success == True])

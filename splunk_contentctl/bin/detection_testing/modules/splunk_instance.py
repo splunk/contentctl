@@ -34,6 +34,7 @@ from bin.helper.utils import Utils
 from bin.detection_testing.modules.DataManipulation import DataManipulation
 
 from bin.objects.detection import Detection
+from bin.objects.baseline import Baseline
 from bin.objects.unit_test import UnitTest
 from bin.objects.unit_test_test import UnitTestTest
 from bin.objects.unit_test_baseline import UnitTestBaseline
@@ -326,7 +327,7 @@ class SplunkInstance:
 
 
 
-    def test_detection_search(self, detection:Detection, test:UnitTestTest, attempts_remaining:int=4, 
+    def test_detection_search(self, detection:Detection, test:Union[UnitTestTest,UnitTestBaseline], attempts_remaining:int=4, 
                             failure_sleep_interval_seconds:int=FAILURE_SLEEP_INTERVAL_SECONDS, FORCE_ALL_TIME=True)->UnitTestResult:
         
         #Since this is an attempt, decrement the number of remaining attempts
@@ -423,7 +424,7 @@ class SplunkInstance:
                 result.update_missing_observables(observables_to_check - observables_always_found)
                 print(f"Missing observable(s) for detection: {result.missing_observables}")
                 
-                return result
+            return result
 
                         
 
@@ -465,7 +466,7 @@ class SplunkInstance:
             
         
         return True
-    def execute_test(self, test:UnitTestTest, attack_data_folder:str)->bool:
+    def execute_test(self, detection:Detection, test:UnitTestTest, attack_data_folder:str)->bool:
         
         print(f"\tExecuting test {test.name}")
         #replay all of the attack data
@@ -483,34 +484,45 @@ class SplunkInstance:
             time.sleep(sleeptime)
             #Run the baseline(s) if they exist for this test
             try:
-                if not self.execute_baselines(test.baselines):
-                    #One or more of the baselines failed. No sense in running the real test
-                    #Note that a baselines which fail is different than a baselines which didn't return some results!
-                    
-                elif test.all_baselines_successful() is False:
+                result = self.execute_baselines(detection, test)
+                if result is None:
+                    #There were no baselines, do nothing
+                    pass
+                elif result.success:
+                    #great, all of the baselines ran and were successful.
+                    pass
+
+                else:
                     #go back and run the loop again - no sense in running the detection search if the baseline didn't work successfully
-                    test.result = TestResult(generated_exception={'message':"Detection search did not run - baselines(s) failed"})
+                    test.result = result
                     #we set this as exception false because we don't know for sure there is an issue - we could just
                     #be waiting for data to be ingested for the baseline to fully run. However, we don't have the info
                     #to fill in the rest of the fields, so we populate it like we populate the fields when there is a real exception
-                    test.result.exception = False 
+                    continue
             except Exception as e:
-                #There was an error when running a baseline
-                #We cannot run the test when there is an error with a baseline
-                result = TestResult(generated_exception={'message':"Baseline(s) failed"})
+                error_message = f"Unhandled error while executing baseline(s) for [{detection.file_path}] - {str(e)}"
+                test.result = UnitTestResult(job_content=None, message=error_message)
+                self.delete_attack_data(indices = test_indices)
+                return False
                 
-            else:
-                #baselines all worked (if they exist) so run the search
-                test.result = self.test_detection_search(test)
+                
+                
             
-            if test.result.success:
-                #We were successful, no need to run again.
+            #If we get here, baselines all worked (if they exist) so run the search
+            test.result = self.test_detection_search(detection, test)
+            
+            if test.result.determine_success():
+                #We were successful, no need to run again. 
                 break
             elif test.result.exception:
                 #There was an exception, not just a failure to find what we're looking for. break 
                 break
             elif timeit.default_timer() - start > MAX_TIME:
+                #We ran out of time
                 break
+            else:
+                #We still have some time left, we will just run through the loop again
+                continue
             
         if self.config.post_test_behavior == PostTestBehavior.always_pause or \
         (test.result.success == False and self.config.post_test_behavior == PostTestBehavior.pause_on_failure):
@@ -526,8 +538,8 @@ class SplunkInstance:
                 formatted_message = message_template.format(status="SUCCESS")
 
             #Just use this to pause on input, we don't do anything with the response
-            print(f"DETECTION FILE: {test.detectionFile.path}")
-            print(f"DETECTION SEARCH: {test.result.search}")
+            print(f"DETECTION FILE: {detection.file_path}")
+            print(f"DETECTION SEARCH: {test.result.get_job_field('search')}")
             _ = input(formatted_message)
             
 
@@ -538,16 +550,30 @@ class SplunkInstance:
 
 
 
-    def execute_baselines(self, baselines:list[Test]):
-        for baseline in baselines:
-            self.execute_baseline(baseline)
+    def execute_baselines(self, detection:Detection, unit_test:UnitTestTest)->Union[UnitTestResult,None]:
+        result = None
+                
+        for baseline in unit_test.baselines:
+            result = self.execute_baseline(detection, baseline)
+            if not result.success:
+                #Return the first baseline that failed
+                return result
+
+        #If we got here, then there were no failures! Just return the last result
+        return result
     
     
 
-    def execute_baseline(self, baseline:Test):
+    def execute_baseline(self, detection:Detection, baseline:UnitTestBaseline)->UnitTestResult:
     
-    
-        baseline.result = self.test_detection_search(baseline)
+        #Treat a baseline just like a UnitTestTest - that's basically what it is!
+        result = self.test_detection_search(detection, baseline)
+        if result.exception:
+            result.message = f"There was an exception running the baseline [{baseline.file}]"
+        else:
+            result.message = f"Not successful running the baseline [{baseline.file}]"
+        return result
+
 
 
     def get_container_summary(self) -> str:

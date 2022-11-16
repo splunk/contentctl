@@ -17,35 +17,43 @@ class UnitTestResult(BaseModel):
     exception:bool = False
     success:bool = False
 
-    def __init__(self, job_content:Union[dict,None], missing_observables:list[str]=[],  message:str="" ):
+    def __init__(self, job_content:Union[dict,None], missing_observables:list[str]=[],  message:str=""):
         self.job_content = job_content
         self.message = message
         self.missing_observables = missing_observables
         self.logic = False
         self.noise = False
         self.exception = False
-        self.success = self.determine_success()
+        self.determine_success()
 
     def update_missing_observables(self, missing_observables:set[str]):
         self.missing_observables = list(missing_observables)
         self.success = self.determine_success()
 
-    def determine_success(self):
+    def get_job_field(self, fieldName:str):
+        if self.job_content is None:
+            return f"FIELD NAME {fieldName} does not exist in Job Content because Job Content is NONE"
+        return self.job_content.get(fieldName, f"FIELD NAME {fieldName} does not exist in Job Content")
+        
+    def determine_success(self)->bool:
         if self.job_content is None:
             self.exception = True
-            return False
+            self.success = False
+            
         
-        if 'resultCount' in self.job_content and self.job_content['resultCount'] == 1:
+        elif 'resultCount' in self.job_content and self.job_content['resultCount'] == 1:
             #in the future we probably want other metrics, about noise or others, here
-            return True
+            self.success = True
+            
         elif 'resultCount' in self.job_content and self.job_content['resultCount'] != 1:
-            return False
+            self.success = False
+            
 
         else:
             raise(Exception("Result created with indeterminate success."))
-    
-    def get_success(self)->bool:
         return self.success
+    
+    
     
     def get_time(self)->timedelta:
         if self.job_content is None:

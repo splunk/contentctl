@@ -134,7 +134,7 @@ class SplunkInstance:
         self.ports = [web_port, hec_port, management_port]
         
         self.testingStats = TestingStats()
-        self.thread = threading.Thread(target=self.run_instance, )
+        self.thread = threading.Thread(target=self.run, )
 
 
         
@@ -680,6 +680,8 @@ class SplunkInstance:
 
 
     def setup(self)->None:
+        self.wait_for_splunk_ready()
+        self.configure_hec()
         self.testingStats.begin()
         return None        
     def teardown(self)->None:
@@ -710,6 +712,29 @@ class SplunkInstance:
             detection_to_test = self.synchronization_object.getDetection()
 
         self.teardown()
+    
+    def wait_for_splunk_ready(
+        self,
+        seconds_between_attempts: int = 10,
+    ) -> bool:
+                
+        while True:
+            try:
+                service = self.get_service()
+                if service.restart_required:
+                    #The sleep below will wait
+                    pass
+                else:
+                    return True
+              
+            except Exception as e:
+                # There is a good chance the server is restarting, so the SDK connection failed.
+                # Or, we tried to check restart_required while the server was restarting.  In the
+                # calling function, we have a timeout, so it's okay if this function could get 
+                # stuck in an infinite loop (the caller will generate a timeout error)
+                pass
+                    
+            time.sleep(seconds_between_attempts)
         
             
 
@@ -777,7 +802,11 @@ class SplunkInstance:
                 time.sleep(check_interval_seconds)
 
 class SplunkContainer(SplunkInstance):
-    def __init__(self, config: TestConfig, synchronization_object: test_driver.TestDriver, web_port: int = 8000, management_port: int = 8089, hec_port: int = 8088, files_to_copy_to_instance=[]):
+    def __init__(self, config: TestConfig, synchronization_object: test_driver.TestDriver, web_port: int = 8000, management_port: int = 8089, hec_port: int = 8088, files_to_copy_to_instance=[],container_number:int=0):
+        web_port = web_port + container_number
+        management_port = management_port + 2*container_number
+        hec_port = management_port + 2*container_number
+        self.container_name = config.container_name % container_number
         super().__init__(config, synchronization_object, web_port, management_port, hec_port)
 
         SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
@@ -794,8 +823,13 @@ class SplunkContainer(SplunkInstance):
                                           "/tmp/apps",
                                           "bind",
                                           True)]
+        self.environment = self.make_environment()
+        self.container = self.make_container()
         
 
+
+    def get_name(self)->str:
+        return self.container_name
 
     def prepare_apps_path(self) -> tuple[str, bool]:
         apps_to_install = []
@@ -848,7 +882,7 @@ class SplunkContainer(SplunkInstance):
         # First, make sure that the container has been removed if it already existed
         self.removeContainer()
 
-        container = self.client.containers.create(
+        container = self.get_client().containers.create(
             self.config.full_image_path,
             ports=self.make_ports(self.ports),
             environment=self.make_environment(),
@@ -940,10 +974,11 @@ class SplunkContainer(SplunkInstance):
 
 
     #@wrapt_timeout_decorator.timeout(MAX_CONTAINER_START_TIME_SECONDS, timeout_exception=RuntimeError)
-    def setup_container(self):
+    def setup(self):
         
         self.container.start()
-
+        
+        
 
         # def shutdown_signal_handler(sig, frame):
         #     shutdown_client = docker.client.from_env()
@@ -976,32 +1011,10 @@ class SplunkContainer(SplunkInstance):
                 file_dict["local_file_path"], file_dict["container_file_path"]
             )
 
-        print("Finished copying files to [%s]" % (self.container_name))
-        self.wait_for_splunk_ready()
-        self.configure_hec()
+        print("Finished copying files to [%s]" % (self.get_name()))
+        
+        #call the superclass setup
+        super().setup()        
     
-    def wait_for_splunk_ready(
-        self,
-        seconds_between_attempts: int = 10,
-    ) -> bool:
-                
-        while True:
-            try:
-                service = self.get_service()
-                if service.restart_required:
-                    #The sleep below will wait
-                    pass
-                else:
-                    return True
-              
-            except Exception as e:
-                # There is a good chance the server is restarting, so the SDK connection failed.
-                # Or, we tried to check restart_required while the server was restarting.  In the
-                # calling function, we have a timeout, so it's okay if this function could get 
-                # stuck in an infinite loop (the caller will generate a timeout error)
-                pass
-                    
-            time.sleep(seconds_between_attempts)
-
 class SplunkServer(SplunkInstance):
     pass            

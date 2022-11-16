@@ -13,7 +13,7 @@ import time
 import timeit
 
 from typing import Union
-from bin.detection_testing.modules import splunk_instance, test_driver, utils
+from bin.detection_testing.modules import splunk_instance, test_driver
 from bin.objects.enums import DetectionTestingTargetInfrastructure
 from bin.objects.detection import Detection
 from bin.objects.test_config import TestConfig
@@ -44,20 +44,18 @@ class JobStats:
 
 
 class InstanceManager:
-    def __init__(
-        self,
-        config: TestConfig,
-        detection_list: list[Detection],
-        
-        files_to_copy_to_container: OrderedDict = OrderedDict(),
-        mounts: list[dict[str, str]] = []):
+    def __init__(self,
+                config: TestConfig,
+                detection_list: list[Detection],
+                files_to_copy_to_container: OrderedDict = OrderedDict()):
+
         self.jobStats = JobStats()
         self.config = config
         #Used to determine whether or not we should wait for container threads to finish when summarizing
         self.all_tests_completed = False
 
         self.synchronization_object = test_driver.TestDriver(detection_list, config)
-        
+        self.files_to_copy_to_container = files_to_copy_to_container
         
     
         
@@ -101,17 +99,19 @@ class InstanceManager:
             self.baseline[key] = self.apps[key]
 
         '''
-
+        
+        self.instances:list[splunk_instance.SplunkInstance] = []
 
     def run_test(self)->bool:
         self.run_status_thread()
-        self.run_containers()
+        self.run_instances()
         self.summary_thread.join()
         
         
+        
+
             
-            
-        for container in self.containers:
+        for container in self.instances:
             if self.all_tests_completed == True:
                 container.thread.join()
             elif self.all_tests_completed == False:
@@ -137,15 +137,31 @@ class InstanceManager:
 
 
 
-    def run_containers(self) -> None:
-         for container_number, container in enumerate(self.containers):
-            #give a little time between container startup if there is more than one container.
-            #Never wait on the first container. This gets us to testing as fast as possible
-            #for the most common case (one container) and gives us some extra time and
-            #reduces load when we are launching more than one container
-            if (container_number != 0):
-                time.sleep(10)
-            container.thread.start()
+    def run_instances(self) -> None:
+        if self.config.target_infrastructure == DetectionTestingTargetInfrastructure.server:
+            server = splunk_instance.SplunkServer(self.config, 
+                                                  self.synchronization_object, 
+                                                  WEB_PORT_START, 
+                                                  MANAGEMENT_PORT_START, 
+                                                  HEC_PORT_START)
+            self.instances.append(server)
+        elif self.config.target_infrastructure == DetectionTestingTargetInfrastructure.container:
+            for containerNumber in range(self.config.num_containers):
+                #MANAGEMENT_PORT and HEC_PORT are number*2 since they are right next
+                #to each other and we don't want them to collide
+                container = splunk_instance.SplunkContainer(self.config, 
+                                                            self.synchronization_object, 
+                                                            WEB_PORT_START, 
+                                                            MANAGEMENT_PORT_START, 
+                                                            HEC_PORT_START,
+                                                            self.files_to_copy_to_container,
+                                                            container_number=container_number)
+                self.instances.append(container)
+        
+        for instance in self.instances:
+            instance.thread.start()
+
+
         
     
     def run_status_thread(self) -> None:

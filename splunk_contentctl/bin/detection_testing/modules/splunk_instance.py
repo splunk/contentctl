@@ -40,6 +40,7 @@ from bin.objects.unit_test_test import UnitTestTest
 from bin.objects.unit_test_baseline import UnitTestBaseline
 from bin.objects.unit_test_attack_data import UnitTestAttackData
 from bin.objects.unit_test_result import UnitTestResult
+from bin.objects.enums import InstanceState
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/%d/release/%s/download"
 SPLUNK_START_ARGS = "--accept-license"
@@ -50,6 +51,65 @@ MAX_CONTAINER_START_TIME_SECONDS = 60*20
 DEFAULT_EVENT_HOST = "ATTACK_DATA_HOST"
 DEFAULT_DATA_INDEX = set(["main"])
 FAILURE_SLEEP_INTERVAL_SECONDS = 60
+
+
+
+class TestingStats:
+    num_detections_tested:int = 0
+    instance_start_time:datetime.datetime = datetime.datetime.now()
+    instance_stop_time:Union[datetime.datetime,None] = None
+    testing_start_time:Union[datetime.datetime,None] = None
+    testing_stop_time:Union[datetime.datetime,None] = None
+    instance_state: InstanceState = InstanceState.starting
+    
+    instance_state:InstanceState
+    def __init__(self):
+        self.num_detections_tested = 0
+        self.instance_start_time = datetime.datetime.now()
+        self.testing_start_time = datetime.datetime.now()
+    def begin(self):
+        self.__init__()
+    def getAvgTimePerDetection(self)->str:
+        delta = self.getElapsedTestingTime()
+        if self.num_detections_tested == 0:
+            return "No Detections Completed Yet..."
+        time_per_test = delta / self.num_detections_tested
+        time_per_test_rounded = time_per_test - datetime.timedelta(microseconds=time_per_test.microseconds)
+        return str(time_per_test_rounded)
+    def getElapsedTime(self)->datetime.timedelta:
+        if self.instance_stop_time is None:
+            #Still running so use current time
+            delta = datetime.datetime.now() - self.instance_start_time
+        else:
+            delta = self.instance_stop_time - self.instance_start_time
+        return delta
+    def getElapsedTestingTime(self)->datetime.timedelta:
+        if self.testing_start_time is None:
+            raise(Exception("Cannot get elapsed time for testing - testing has not begun yet"))
+        if self.testing_stop_time is None:
+            #Still running so use current time
+            delta = datetime.datetime.now() - self.testing_start_time
+        else:
+            delta = self.testing_stop_time - self.testing_start_time
+        return delta    
+    def addTest(self):
+        self.num_detections_tested += 1
+    def setInstanceState(self, instanceState:InstanceState):
+        #In the cases below, we will want to update some timers
+        if self.instance_state == InstanceState.starting and instanceState == InstanceState.running:
+            self.testing_start_time = datetime.datetime.now()
+        elif self.instance_state == InstanceState.running and instanceState in [InstanceState.error, InstanceState.stopped, InstanceState.stopping]:
+            self.testing_stop_time = datetime.datetime.now()
+        
+        if self.instance_state != InstanceState.stopped and instanceState == InstanceState.stopped:
+            self.instance_stop_time = datetime.datetime.now()
+
+
+        self.instance_state = instanceState
+        
+
+
+
 
 
 
@@ -78,6 +138,8 @@ class SplunkInstance:
         
         self.files_to_copy_to_instance = files_to_copy_to_instance
         self.thread = threading.Thread(target=self.run_instance, )
+
+        
         
 
     def get_service(self):
@@ -95,18 +157,18 @@ class SplunkInstance:
     def test_detection(self, detection:Detection, attack_data_root_folder)->bool:
         
         abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
-        success = self.execute_tests(detection.test, abs_folder_path)
+        success = self.execute_tests(detection, abs_folder_path)
         #Delete the temp folder and data inside of it
         rmtree(abs_folder_path)
         return success
     
-    def execute_tests(self, unit_test:UnitTest, attack_data_folder:str)->bool:
+    def execute_tests(self, detection:Detection, attack_data_folder:str)->bool:
     
         success = True
-        for test in unit_test.tests:
+        for test in detection.test.tests:
             try:
                 #Run all the tests, even if the test fails.  We still want to get the results of failed tests
-                result = self.execute_test(test, attack_data_folder)
+                result = self.execute_test(detection, test, attack_data_folder)
                 #And together the result of the test so that if any one test fails, it causes this function to return False                
                 success &= result
             except Exception as e:
@@ -576,7 +638,7 @@ class SplunkInstance:
 
 
 
-    def get_container_summary(self) -> str:
+    def print_instance_status(self) -> str:
         current_time = timeit.default_timer()
 
         # Total time the container has been running

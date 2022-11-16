@@ -57,3 +57,10 @@ class DetectionTestingMode(str, enum.Enum):
 class DetectionTestingTargetInfrastructure(str, enum.Enum):
     container = "container"
     server = "server"
+
+class InstanceState(str, enum.Enum):
+    starting = "starting"
+    running = "running"
+    error = "error"
+    stopping = "stopping"
+    stopped = "stopped"

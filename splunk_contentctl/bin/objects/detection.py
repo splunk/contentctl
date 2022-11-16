@@ -25,10 +25,10 @@ from bin.helper.link_validator import LinkValidator
 
 
 
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
-if TYPE_CHECKING:
-    from bin.objects.unit_test_result import UnitTestResult
+
+from bin.objects.unit_test_result import UnitTestResult
 
 
 class Detection(BaseModel, SecurityContentObject):

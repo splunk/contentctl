@@ -22,6 +22,7 @@ import yaml
 
 from bin.objects.test_config import TestConfig
 from bin.objects.detection import Detection
+from bin.detection_testing.modules.test_objects import ResultsManager
 
 
 
@@ -29,10 +30,10 @@ from bin.objects.detection import Detection
 
 
 class TestDriver:
-    def __init__(self, tests:list[Detection], config: TestConfig):
+    def __init__(self, detections:list[Detection], config: TestConfig):
         #Create the queue and enque all of the tests
         self.testing_queue = queue.Queue()
-        for test in tests:
+        for test in detections:
             self.testing_queue.put(test)
         
         self.total_number_of_tests = self.testing_queue.qsize()
@@ -100,7 +101,7 @@ class TestDriver:
             return True
         
 
-    def getTest(self)-> Union[Detection,None]:
+    def getDetection(self)-> Union[Detection,None]:
         
         failure = self.checkContainerFailure()
         

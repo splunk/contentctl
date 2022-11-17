@@ -121,21 +121,18 @@ class SplunkInstance:
         web_port: int = 8000,
         management_port: int = 8089,
         hec_port: int = 8088,
-        
-        #files_to_copy_to_container: OrderedDict = OrderedDict(),
-        #mounts: list[docker.types.Mount] = [],
-    ):
+        files_to_copy_to_instance: OrderedDict = OrderedDict()):
         
         self.config = config
         self.synchronization_object = synchronization_object
         self.web_port = web_port
         self.management_port = management_port
         self.hec_port = hec_port
-        self.ports = [web_port, hec_port, management_port]
+
         
         self.testingStats = TestingStats()
         self.thread = threading.Thread(target=self.run, )
-
+        self.files_to_copy_to_instance = files_to_copy_to_instance
 
         
         
@@ -802,7 +799,15 @@ class SplunkInstance:
                 time.sleep(check_interval_seconds)
 
 class SplunkContainer(SplunkInstance):
-    def __init__(self, config: TestConfig, synchronization_object: test_driver.TestDriver, web_port: int = 8000, management_port: int = 8089, hec_port: int = 8088, files_to_copy_to_instance=[],container_number:int=0):
+        
+    def __init__(self, config: TestConfig,
+                 synchronization_object: test_driver.TestDriver,
+                 web_port: int = 8000,
+                 management_port: int = 8089,
+                 hec_port: int = 8088,
+                 files_to_copy_to_instance: OrderedDict = OrderedDict(), container_number:int=0):
+
+        super().__init__(config, synchronization_object, web_port, management_port, hec_port)
         web_port = web_port + container_number
         management_port = management_port + 2*container_number
         hec_port = management_port + 2*container_number
@@ -812,15 +817,15 @@ class SplunkContainer(SplunkInstance):
             "tcp/8089":management_port,
         }
         self.container_name = config.container_name % container_number
-        super().__init__(config, synchronization_object, web_port, management_port, hec_port)
+        
 
         SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
-        self.files_to_copy_to_container = OrderedDict()
-        self.files_to_copy_to_container["INDEXES"] = {
+
+        self.files_to_copy_to_instance["INDEXES"] = {
             "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/indexes.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")}
-        self.files_to_copy_to_container["DATAMODELS"] = {
+        self.files_to_copy_to_instance["DATAMODELS"] = {
             "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/datamodels.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "SPLUNK_SA_CIM")}
-        self.files_to_copy_to_container["AUTHORIZATIONS"] = {
+        self.files_to_copy_to_instance["AUTHORIZATIONS"] = {
             "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/authorizations.conf.tar"), "container_file_path": "/opt/splunk/etc/system/local"}
         
 
@@ -884,6 +889,7 @@ class SplunkContainer(SplunkInstance):
         # First, make sure that the container has been removed if it already existed
         self.removeContainer()
 
+        print(self.ports)
         container = self.get_client().containers.create(
             self.config.full_image_path,
             ports=self.ports,
@@ -1008,7 +1014,7 @@ class SplunkContainer(SplunkInstance):
 
         # By default, first copy the index file then the datamodel file
         
-        for file_description, file_dict in self.files_to_copy_to_container.items():
+        for file_description, file_dict in self.files_to_copy_to_instance.items():
             self.extract_tar_file_to_container(
                 file_dict["local_file_path"], file_dict["container_file_path"]
             )

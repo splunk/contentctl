@@ -177,7 +177,9 @@ class InstanceManager:
     
 
     def queue_status_thread(self, status_interval:int=60, num_steps:int=10)->None:
-
+        print("queue status thread, just exit")
+        import sys
+        sys.exit(1)
         while True:
             #This for loop lets us run the summarize print less often, but check for failure more often
             for chunk in range(0, status_interval, int(status_interval/num_steps)):

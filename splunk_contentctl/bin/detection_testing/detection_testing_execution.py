@@ -182,13 +182,14 @@ def main(config: TestConfig, director:DirectorOutputDto):
             print("There was an unrecoverage error during the mock.\n\tQuitting...",file=sys.stderr)
             sys.exit(1)
 
-    sys.exit(0)
-
-    
-    
     
 
     
+    
+    
+    #This functionality shouldn't be in
+    #detection_testing_execution.  We will move it elsewhere
+    '''
     def shutdown_signal_handler_setup(sig, frame):
         
         print(f"Signal {sig} received... stopping all [{config.num_containers}] containers and shutting down...")
@@ -221,12 +222,12 @@ def main(config: TestConfig, director:DirectorOutputDto):
 
     #Setup requires a different teardown handler than during execution
     signal.signal(signal.SIGINT, shutdown_signal_handler_setup)
+    '''
+
 
     try:
         cm = instance_manager.InstanceManager(config,
-                                              detections_to_test,
-                                              files_to_copy_to_container=files_to_copy_to_container,
-                                              mounts=mounts)
+                                              detections_to_test)
     except Exception as e:
         print("Error - unrecoverable error trying to set up the containers: [%s].\n\tQuitting..."%(str(e)),file=sys.stderr)
         sys.exit(1)
@@ -244,6 +245,8 @@ def main(config: TestConfig, director:DirectorOutputDto):
         result = cm.run_test()
     except Exception as e:
         print("Error - there was an error running the tests: [%s]\n\tQuitting..."%(str(e)),file=sys.stderr)
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 

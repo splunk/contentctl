@@ -58,7 +58,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     splunkbase_password:Union[str,None] = Field(default=None, title="The password for logging into Splunkbase in case apps must be downloaded")
     apps: list[App] = Field(default=[], title="A list of all the apps to be installed on each container")
     
-    ip:str = Field(default="http://127.0.0.1", title="target splunk ip")
+    test_instance_address:str = Field(default="127.0.0.1", title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'")
     target_infrastructure: DetectionTestingTargetInfrastructure = Field(default=DetectionTestingTargetInfrastructure.container, title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}")
     
 
@@ -312,3 +312,24 @@ class TestConfig(BaseModel, extra=Extra.forbid):
                 except Exception as e:
                     raise(Exception(f"Error, failed to get docker client.  Is Docker Installed and Running? Error:\n\t{str(e)}"))            
         return v
+    
+    @validator('test_instance_address', always=True)
+    def validate_test_instance_address(cls, v, values):
+        try: 
+            if v.startswith("http"):
+                raise(Exception("should not begin with http"))
+            is_ipv4 = validators.ipv4(v)
+            if bool(is_ipv4):
+                return v
+            is_domain_name = validators.domain(v)
+            if bool(is_domain_name):
+                import socket
+                try:
+                    socket.gethostbyname(v)
+                    return v
+                except Exception as e:
+                    pass
+                raise(Exception("DNS Lookup failed"))
+            raise(Exception(f"not an IPV4 address or a domain name"))
+        except Exception as e:
+            raise(Exception(f"Error, failed to validate test_instance_address '{v}': {str(e)}"))

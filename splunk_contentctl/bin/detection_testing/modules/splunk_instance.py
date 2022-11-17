@@ -137,18 +137,18 @@ class SplunkInstance:
         
         
     def get_name(self)->str:
-        return self.config.ip
+        return self.config.test_instance_address
         
     def get_service(self):
         try:
             service = client.connect(
-                host=self.config.ip,
+                host=self.config.test_instance_address,
                 port=self.management_port,
                 username=self.config.splunk_app_username,
                 password=self.config.splunk_app_password
             )
         except Exception as e:
-            raise(Exception("Unable to connect to Splunk instance: " + str(e)))
+            raise(Exception(f"Unable to connect to Splunk instance at [{self.config.test_instance_address}]: {str(e)}"))
         return service
     
     def test_detection(self, detection:Detection, attack_data_root_folder)->bool:
@@ -237,22 +237,22 @@ class SplunkInstance:
             url_params_dict['host'] = host 
         
         
-        if self.config.ip.lower().startswith('http://') and use_https is True:
-            raise(Exception(f"URL {self.config.ip} begins with http://, but use_http is {use_https}. "\
+        if self.config.test_instance_address.lower().startswith('http://') and use_https is True:
+            raise(Exception(f"URL {self.config.test_instance_address} begins with http://, but use_http is {use_https}. "\
                             "Unless you have modified the HTTP Event Collector Configuration, it is probably enabled for https only."))
-        if self.config.ip.lower().startswith('https://') and use_https is False:
-            raise(Exception(f"URL {self.config.ip} begins with https://, but use_http is {use_https}. "\
+        if self.config.test_instance_address.lower().startswith('https://') and use_https is False:
+            raise(Exception(f"URL {self.config.test_instance_address} begins with https://, but use_http is {use_https}. "\
                             "Unless you have modified the HTTP Event Collector Configuration, it is probably enabled for https only."))
         
-        if not (self.config.ip.lower().startswith("http://") or self.config.ip.lower().startswith('https://')):
+        if not (self.config.test_instance_address.lower().startswith("http://") or self.config.test_instance_address.lower().startswith('https://')):
             if use_https:
                 prepend = "https://"
             else:
                 prepend = "http://"
             
-            base_url = f"{prepend}{self.config.ip}"
+            base_url = f"{prepend}{self.config.test_instance_address}"
         else:
-            base_url = self.config.ip
+            base_url = self.config.test_instance_address
             
         
 
@@ -638,24 +638,33 @@ class SplunkInstance:
     def configure_hec(self):
         try:
 
-            auth = HTTPBasicAuth(self.config.splunkbase_username, self.config.splunk_app_password)
-            address = f"https://{self.config.ip}:{self.management_port}/services/data/inputs/http"
+            auth = HTTPBasicAuth(self.config.splunk_app_username, self.config.splunk_app_password)
+            address = f"https://{self.config.test_instance_address}:{self.management_port}/services/data/inputs/http"
+            print(address)
             data = {
                 "name": "DETECTION_TESTING_HEC",
                 "index": "main",
-                "indexes": "main,_internal,_audit", #this needs to support all the indexes in test files
+                #"indexes": "main,_internal,_audit", #this needs to support all the indexes in test files
+                "indexes": "main", #this needs to support all the indexes in test files
                 "useACK": True
             }
             import urllib3
             urllib3.disable_warnings()
             r = requests.get(address, data=data, auth=auth, verify=False)
-            if r.status_code == 200:
-                #Yes, this endpoint exists!
-                asDict = xmltodict.parse(r.text)
-                #Long, messy way to get the token we need. This could use more error checking for sure.
-                self.tokenString = [m['#text'] for m in asDict['feed']['entry']['content']['s:dict']['s:key'] if '@name' in m and m['@name']=='token'][0]
-                self.channel = str(uuid.uuid4())
-                return
+            try:
+                if r.status_code == 200:
+                    #Yes, this endpoint exists!
+                    asDict = xmltodict.parse(r.text)
+                    #Long, messy way to get the token we need. This could use more error checking for sure.
+                    self.tokenString = [m['#text'] for m in asDict['feed']['entry']['content']['s:dict']['s:key'] if '@name' in m and m['@name']=='token'][0]
+                    self.channel = str(uuid.uuid4())
+                    print(f"HEC Endpoint for [{self.get_name()}] already exists with token [{self.tokenString}].  Using channel [{self.channel}]")    
+                    return
+            except Exception as e:
+                #Exception was generated, probably on the giant list comprehension becasue the HEC endpoint
+                #was probably not found. Just ignore it and fall through to where we actually create the
+                #endpoint
+                pass
             
             #Otherwise no, the endpoint does not exist. Create it
             r = requests.post(address, data=data, auth=auth, verify=False)
@@ -664,12 +673,15 @@ class SplunkInstance:
                 #Long, messy way to get the token we need. This could use more error checking for sure.
                 self.tokenString = [m['#text'] for m in asDict['feed']['entry']['content']['s:dict']['s:key'] if '@name' in m and m['@name']=='token'][0]
                 self.channel = str(uuid.uuid4())
+                print(f"Successfully configured HEC Endpoint for [{self.get_name()}] with channel [{self.channel}] and token [{self.tokenString}]")
                 return
                 
             else:
                 raise(Exception(f"Error setting up hec.  Response code from {address} was [{r.status_code}]: {r.text} "))
             
         except Exception as e:
+            import code
+            code.interact(local=locals())
             raise(Exception(f"There was an issue setting up HEC....{str(e)}"))
             
     
@@ -714,7 +726,7 @@ class SplunkInstance:
         self,
         seconds_between_attempts: int = 10,
     ) -> bool:
-                
+        print("Waiting for Splunk Instance interface to come up...")
         while True:
             try:
                 service = self.get_service()
@@ -722,6 +734,7 @@ class SplunkInstance:
                     #The sleep below will wait
                     pass
                 else:
+                    print(f"Splunk Interface is ready")
                     return True
               
             except Exception as e:
@@ -807,26 +820,28 @@ class SplunkContainer(SplunkInstance):
                  management_port: int = 8089,
                  files_to_copy_to_instance: OrderedDict = OrderedDict(), container_number:int=0):
 
-        super().__init__(config, synchronization_object, web_port, management_port, hec_port)
+        
         web_port = web_port + container_number
-        management_port = management_port + 2*container_number
         hec_port = hec_port + 2*container_number
+        management_port = management_port + 2*container_number
+        super().__init__(config, synchronization_object, web_port, hec_port, management_port)
         self.ports={
             "8000/tcp":web_port,
             "8088/tcp":hec_port,
             "8089/tcp":management_port,
         }
+        
         self.container_name = config.container_name % container_number
         
 
         SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
 
         self.files_to_copy_to_instance["INDEXES"] = {
-            "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/indexes.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")}
+            "local_file_path": os.path.join(self.config.repo_path,"bin/docker_detection_tester/indexes.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")}
         self.files_to_copy_to_instance["DATAMODELS"] = {
-            "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/datamodels.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "SPLUNK_SA_CIM")}
+            "local_file_path": os.path.join(self.config.repo_path,"bin/docker_detection_tester/datamodels.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "Splunk_SA_CIM")}
         self.files_to_copy_to_instance["AUTHORIZATIONS"] = {
-            "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/authorizations.conf.tar"), "container_file_path": "/opt/splunk/etc/system/local"}
+            "local_file_path": os.path.join(self.config.repo_path,"bin/docker_detection_tester/authorize.conf.tar"), "container_file_path": "/opt/splunk/etc/system/local"}
         
 
         self.mounts = [docker.types.Mount(source=os.path.abspath(os.path.join(pathlib.Path('.'),"apps")),
@@ -889,8 +904,8 @@ class SplunkContainer(SplunkInstance):
         # First, make sure that the container has been removed if it already existed
         self.removeContainer()
 
-        print(self.ports)
-        sys.exit(0)
+        
+        
         container = self.get_client().containers.create(
             self.config.full_image_path,
             ports=self.ports,
@@ -985,9 +1000,9 @@ class SplunkContainer(SplunkInstance):
     #@wrapt_timeout_decorator.timeout(MAX_CONTAINER_START_TIME_SECONDS, timeout_exception=RuntimeError)
     def setup(self):
         
-        print("startinga container...")
+        
         self.container.start()
-        print("container has started!")
+        print(f"Starting container '{self.get_name()}' and installing [{len(self.config.apps)}] apps/TAs...")
         
         
 

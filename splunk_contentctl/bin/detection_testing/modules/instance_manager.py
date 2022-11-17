@@ -20,8 +20,8 @@ from bin.objects.test_config import TestConfig
 
 
 WEB_PORT_START = 8000
-MANAGEMENT_PORT_START = 8088
-HEC_PORT_START = 8089
+HEC_PORT_START = 8088
+MANAGEMENT_PORT_START = 8089
 
 #Keep track of time, at the very least, and maybe some other things
 class JobStats:
@@ -144,8 +144,8 @@ class InstanceManager:
             server = splunk_instance.SplunkServer(self.config, 
                                                   self.synchronization_object, 
                                                   WEB_PORT_START, 
-                                                  MANAGEMENT_PORT_START, 
-                                                  HEC_PORT_START)
+                                                  HEC_PORT_START,
+                                                  MANAGEMENT_PORT_START)
             self.instances.append(server)
         elif self.config.target_infrastructure == DetectionTestingTargetInfrastructure.container:
             for container_number in range(self.config.num_containers):
@@ -154,8 +154,8 @@ class InstanceManager:
                 container = splunk_instance.SplunkContainer(self.config, 
                                                             self.synchronization_object, 
                                                             WEB_PORT_START, 
-                                                            MANAGEMENT_PORT_START, 
                                                             HEC_PORT_START,
+                                                            MANAGEMENT_PORT_START, 
                                                             self.files_to_copy_to_container,
                                                             container_number=container_number)
                 self.instances.append(container)

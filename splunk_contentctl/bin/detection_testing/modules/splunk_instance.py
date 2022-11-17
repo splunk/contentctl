@@ -119,8 +119,8 @@ class SplunkInstance:
         config: TestConfig,
         synchronization_object: test_driver.TestDriver,
         web_port: int = 8000,
-        management_port: int = 8089,
         hec_port: int = 8088,
+        management_port: int = 8089,
         files_to_copy_to_instance: OrderedDict = OrderedDict()):
         
         self.config = config
@@ -803,18 +803,18 @@ class SplunkContainer(SplunkInstance):
     def __init__(self, config: TestConfig,
                  synchronization_object: test_driver.TestDriver,
                  web_port: int = 8000,
-                 management_port: int = 8089,
                  hec_port: int = 8088,
+                 management_port: int = 8089,
                  files_to_copy_to_instance: OrderedDict = OrderedDict(), container_number:int=0):
 
         super().__init__(config, synchronization_object, web_port, management_port, hec_port)
         web_port = web_port + container_number
         management_port = management_port + 2*container_number
-        hec_port = management_port + 2*container_number
+        hec_port = hec_port + 2*container_number
         self.ports={
-            "tcp/8000":web_port,
-            "tcp/8088":hec_port,
-            "tcp/8089":management_port,
+            "8000/tcp":web_port,
+            "8088/tcp":hec_port,
+            "8089/tcp":management_port,
         }
         self.container_name = config.container_name % container_number
         
@@ -829,10 +829,10 @@ class SplunkContainer(SplunkInstance):
             "local_file_path": os.path.join(self.config.repo_path,"bin/detection_testing/authorizations.conf.tar"), "container_file_path": "/opt/splunk/etc/system/local"}
         
 
-        self.mounts = [docker.types.Mount(os.path.abspath(os.path.join(self.config.repo_path,"apps")),
-                                          "/tmp/apps",
-                                          "bind",
-                                          True)]
+        self.mounts = [docker.types.Mount(source=os.path.abspath(os.path.join(pathlib.Path('.'),"apps")),
+                                          target="/tmp/apps",
+                                          type="bind",
+                                          read_only=True)]
         
         self.environment = self.make_environment()
         self.container = self.make_container()
@@ -890,11 +890,12 @@ class SplunkContainer(SplunkInstance):
         self.removeContainer()
 
         print(self.ports)
+        sys.exit(0)
         container = self.get_client().containers.create(
             self.config.full_image_path,
             ports=self.ports,
             environment=self.make_environment(),
-            name=self.config.container_name,
+            name=self.get_name(),
             mounts=self.mounts,
             detach=True,
         )
@@ -984,7 +985,9 @@ class SplunkContainer(SplunkInstance):
     #@wrapt_timeout_decorator.timeout(MAX_CONTAINER_START_TIME_SECONDS, timeout_exception=RuntimeError)
     def setup(self):
         
+        print("startinga container...")
         self.container.start()
+        print("container has started!")
         
         
 

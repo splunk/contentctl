@@ -63,8 +63,7 @@ class ResultsManager:
             return False
     
     def generate_summary_section(self)->dict:
-        if self.endTime is None:
-            self.endTime = timeit.default_timer()
+        
         
         background = {}
         background['detections'] = len(self.detections)

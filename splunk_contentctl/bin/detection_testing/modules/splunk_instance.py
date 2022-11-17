@@ -152,7 +152,6 @@ class SplunkInstance:
         return service
     
     def test_detection(self, detection:Detection, attack_data_root_folder)->bool:
-        
         abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
         success = self.execute_tests(detection, abs_folder_path)
         #Delete the temp folder and data inside of it
@@ -166,6 +165,10 @@ class SplunkInstance:
             try:
                 #Run all the tests, even if the test fails.  We still want to get the results of failed tests
                 result = self.execute_test(detection, test, attack_data_folder)
+                if result:
+                    print(f"{detection.name} --> PASS")
+                else:
+                    print(f"{detection.name} --> FAIL")
                 #And together the result of the test so that if any one test fails, it causes this function to return False                
                 success &= result
             except Exception as e:
@@ -325,7 +328,7 @@ class SplunkInstance:
         return test_indices
 
 
-
+    
     def replay_attack_data_file(self, attackData:UnitTestAttackData, attack_data_folder:str)->str:
         """Function to replay a single attack data file. Any exceptions generated during executing
         are intentionally not caught so that they can be caught by the caller.
@@ -386,11 +389,9 @@ class SplunkInstance:
 
 
 
-    def test_detection_search(self, detection:Detection, test:Union[UnitTestTest,UnitTestBaseline], attempts_remaining:int=4, 
-                            failure_sleep_interval_seconds:int=FAILURE_SLEEP_INTERVAL_SECONDS, FORCE_ALL_TIME=True)->UnitTestResult:
+    def test_detection_search(self, detection:Detection, test:Union[UnitTestTest,UnitTestBaseline], FORCE_ALL_TIME=True)->UnitTestResult:
         
-        #Since this is an attempt, decrement the number of remaining attempts
-        attempts_remaining -= 1
+        
         
         #remove leading and trailing whitespace from the detection.
         #If we don't do this with leading whitespace, this can cause
@@ -432,6 +433,7 @@ class SplunkInstance:
             job = service.jobs.create(splunk_search, **kwargs)
             _ = job.results(output_mode='json')
             result = UnitTestResult(job_content=job.content)
+            
             
 
 
@@ -570,6 +572,8 @@ class SplunkInstance:
             #If we get here, baselines all worked (if they exist) so run the search
             test.result = self.test_detection_search(detection, test)
             
+            import code
+            code.interact(local=locals())
             if test.result.determine_success():
                 #We were successful, no need to run again. 
                 break
@@ -644,12 +648,13 @@ class SplunkInstance:
             data = {
                 "name": "DETECTION_TESTING_HEC",
                 "index": "main",
-                #"indexes": "main,_internal,_audit", #this needs to support all the indexes in test files
-                "indexes": "main", #this needs to support all the indexes in test files
+                "indexes": "main,_internal,_audit", #this needs to support all the indexes in test files
                 "useACK": True
             }
             import urllib3
             urllib3.disable_warnings()
+            print("fix logic to detect if endpoint already exists")
+            '''
             r = requests.get(address, data=data, auth=auth, verify=False)
             try:
                 if r.status_code == 200:
@@ -665,7 +670,7 @@ class SplunkInstance:
                 #was probably not found. Just ignore it and fall through to where we actually create the
                 #endpoint
                 pass
-            
+            '''
             #Otherwise no, the endpoint does not exist. Create it
             r = requests.post(address, data=data, auth=auth, verify=False)
             if r.status_code == 201:
@@ -680,8 +685,6 @@ class SplunkInstance:
                 raise(Exception(f"Error setting up hec.  Response code from {address} was [{r.status_code}]: {r.text} "))
             
         except Exception as e:
-            import code
-            code.interact(local=locals())
             raise(Exception(f"There was an issue setting up HEC....{str(e)}"))
             
     
@@ -712,6 +715,8 @@ class SplunkInstance:
                 success = self.test_detection(detection_to_test, self.synchronization_object.attack_data_root_folder)
             except Exception as e:
                 print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 success = False
             
             self.testingStats.addTest()
@@ -951,6 +956,7 @@ class SplunkContainer(SplunkInstance):
     def get_client(self):
         try:
             c = docker.client.from_env()
+            
             
             return c
         except Exception as e:

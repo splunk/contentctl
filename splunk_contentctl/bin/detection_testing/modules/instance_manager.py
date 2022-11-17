@@ -108,8 +108,8 @@ class InstanceManager:
         self.summary_thread.join()
         
         
-        
-
+        print("sleep to prevent the cleanup...")
+        time.sleep(1600)
             
         for instance in self.instances:
             if self.all_tests_completed == True:
@@ -177,7 +177,8 @@ class InstanceManager:
     
 
     def queue_status_thread(self, status_interval:int=60, num_steps:int=10)->None:
-        print("queue status thread, just exit")
+        print("queue status thread, just sleep 6000 then exit")
+        time.sleep(0)
         import sys
         sys.exit(1)
         while True:

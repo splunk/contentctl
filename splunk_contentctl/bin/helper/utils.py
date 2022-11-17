@@ -138,7 +138,7 @@ class Utils:
     
 
     @staticmethod
-    def download_file_from_http(file_path:str, destination_file:str, overwrite_file:bool=False, chunk_size:int=1024*1024, verbose_print:bool=False)->None:
+    def download_file_from_http(file_path:str, destination_file:str, overwrite_file:bool=False, chunk_size:int=1024*1024, verbose_print:bool=True)->None:
         global TOTAL_BYTES, TOTAL_DOWNLOAD_TIME
         
         try:

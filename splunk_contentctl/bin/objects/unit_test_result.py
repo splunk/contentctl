@@ -1,64 +1,62 @@
 
 
-from pydantic import BaseModel
+from pydantic import BaseModel, root_validator
 
 
 from typing import Union
 from datetime import timedelta
-
+from splunklib.data import Record
 FORCE_TEST_FAILURE_FOR_MISSING_OBSERVABLE = False
 
 class UnitTestResult(BaseModel):
-    job_content:Union[dict,None]
-    missing_observables:Union[None, list[str]]
-    message:Union[None,str] 
+    job_content:Union [Record,None] = None
+    missing_observables:Union[list[str],None] = None
+    message:Union[None,str] = None
     logic: bool = False
     noise: bool = False
     exception:bool = False
     success:bool = False
 
-    def __init__(self, job_content:Union[dict,None], missing_observables:list[str]=[],  message:str=""):
-        self.job_content = job_content
-        self.message = message
-        self.missing_observables = missing_observables
-        self.logic = False
-        self.noise = False
-        self.exception = False
-        self.determine_success()
-
+    @root_validator(pre=False)
+    def update_success(cls, values):
+        print("Root validator is determining success...")
+        if values['job_content'] is None:
+            values['exception'] = True
+            values['success'] = False
+            return values    
+        
+        elif 'resultCount' in values['job_content'] and values['job_content']['resultCount'] == int(1):
+            #in the future we probably want other metrics, about noise or others, here
+            values['success'] = True
+            
+        elif 'resultCount' in values['job_content'] and values['job_content']['resultCount'] != int(1):
+            values['success'] = False
+            
+        else:
+            raise(Exception("Result created with indeterminate success."))
+        return values
+        
     def update_missing_observables(self, missing_observables:set[str]):
         self.missing_observables = list(missing_observables)
         self.success = self.determine_success()
+    
+    def determine_success(self)->bool:
+        values_dict = self.update_success(self.__dict__)
+        self.exception = values_dict['exception']
+        self.success = values_dict['success']
+        return self.success
+    
 
     def get_job_field(self, fieldName:str):
         if self.job_content is None:
             return f"FIELD NAME {fieldName} does not exist in Job Content because Job Content is NONE"
         return self.job_content.get(fieldName, f"FIELD NAME {fieldName} does not exist in Job Content")
-        
-    def determine_success(self)->bool:
-        if self.job_content is None:
-            self.exception = True
-            self.success = False
             
-        
-        elif 'resultCount' in self.job_content and self.job_content['resultCount'] == 1:
-            #in the future we probably want other metrics, about noise or others, here
-            self.success = True
-            
-        elif 'resultCount' in self.job_content and self.job_content['resultCount'] != 1:
-            self.success = False
-            
-
-        else:
-            raise(Exception("Result created with indeterminate success."))
-        return self.success
-    
-    
-    
     def get_time(self)->timedelta:
         if self.job_content is None:
             return timedelta(0)
         elif 'runDuration' in self.job_content:
-            return timedelta(float(self.job_content['runDuration']))
+            duration = str(self.job_content['runDuration'])
+            return timedelta(float(duration))
         else:
            raise(Exception("runDuration missing from job."))

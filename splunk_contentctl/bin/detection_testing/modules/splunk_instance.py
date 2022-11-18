@@ -134,8 +134,13 @@ class SplunkInstance:
         self.thread = threading.Thread(target=self.run, )
         self.files_to_copy_to_instance = files_to_copy_to_instance
 
-        
-        
+        #use print at the default output....for now
+        self.custom_print = print
+        self.print_verbosity = 0
+
+    def print(self, content:str):
+        self.custom_print(f"{self.get_name()}: {content}")
+
     def get_name(self)->str:
         return self.config.test_instance_address
         
@@ -166,9 +171,9 @@ class SplunkInstance:
                 #Run all the tests, even if the test fails.  We still want to get the results of failed tests
                 result = self.execute_test(detection, test, attack_data_folder)
                 if result:
-                    print(f"[{detection.name}] --> PASS")
+                    self.custom_print(f"[{detection.name} --> PASS]")
                 else:
-                    print(f"[{detection.name}] --> FAIL")
+                    self.custom_print(f"[{detection.name} --> FAIL]")
                 #And together the result of the test so that if any one test fails, it causes this function to return False                
                 success &= result
             except Exception as e:
@@ -353,7 +358,6 @@ class SplunkInstance:
             
             #We need to do this because if we are working from a file, we can't overwrite/modify the original during a test. We must keep it intact.
             try:
-                print(f"copy from {attackData.data}-->{data_file}")
                 copyfile(attackData.data, data_file)
             except Exception as e:
                 raise(Exception(f"Unable to copy local attack data file {attackData.data} - {str(e)}"))
@@ -400,7 +404,7 @@ class SplunkInstance:
         
         search = detection.search
         if search != detection.search.strip():
-            print(f"The detection contained in {detection.file_path} contains leading or trailing whitespace.  Please update this search to remove that whitespace.")
+            #self.custom_print(f"The detection contained in {detection.file_path} contains leading or trailing whitespace.  Please update this search to remove that whitespace.")
             search = detection.search.strip()
         
         if search.startswith('|'):
@@ -425,7 +429,7 @@ class SplunkInstance:
             service = self.get_service()
         except Exception as e:
             error_message = "Unable to connect to Splunk instance: %s"%(str(e))
-            print(error_message,file=sys.stderr)
+            self.custom_print(error_message)
             return UnitTestResult(job_content=None, missing_observables=[], message=error_message)
 
 
@@ -472,7 +476,6 @@ class SplunkInstance:
                         found_observables = set([observable for observable in observables_to_check if ( observable in jsonResult and jsonResult[observable] != None and jsonResult[observable] != "") ])
                         if len(observables_to_check.symmetric_difference(found_observables)) == 0:
                             result.missing_observables = []
-                            print("Found all observables :)")
                             return result
                         if len(observables_always_found) == 0:
                             observables_always_found = found_observables
@@ -483,7 +486,9 @@ class SplunkInstance:
                 #return as part of the error all the fields which did not appear in ALL the results.
                 
                 result.update_missing_observables(observables_to_check - observables_always_found)
-                print(f"Missing observable(s) for detection: {result.missing_observables}")
+                if len(result.missing_observables) > 0:
+                    self.custom_print(f"Missing observable(s) for detection: {result.missing_observables}")
+                
                 
             return result
 
@@ -509,7 +514,7 @@ class SplunkInstance:
             raise(Exception("Unable to connect to Splunk instance: " + str(e)))
 
 
-        #print(f"Deleting data for {detection_filename}: {indices}")
+        
         for index in indices:
             while (self.get_number_of_indexed_events(index=index) != 0) :
                 splunk_search = f'search index="{index}" host="{host}" | delete'
@@ -529,7 +534,7 @@ class SplunkInstance:
         return True
     def execute_test(self, detection:Detection, test:UnitTestTest, attack_data_folder:str)->bool:
         
-        print(f"\tExecuting test {test.name}")
+        self.custom_print(f"Executing test {test.name}")
         #replay all of the attack data
         test_indices = self.replay_attack_data_files(test.attack_data, attack_data_folder)
 
@@ -541,7 +546,7 @@ class SplunkInstance:
         while True:
             sleeptime = sleep_base**sleep_exp
             sleep_exp += 1
-            #print(f"Sleep for {sleeptime} for ingest") 
+            
             time.sleep(sleeptime)
             #Run the baseline(s) if they exist for this test
             try:
@@ -600,8 +605,8 @@ class SplunkInstance:
                 formatted_message = message_template.format(status="SUCCESS")
 
             #Just use this to pause on input, we don't do anything with the response
-            print(f"DETECTION FILE: {detection.file_path}")
-            print(f"DETECTION SEARCH: {test.result.get_job_field('search')}")
+            self.custom_print(f"DETECTION FILE: {detection.file_path}")
+            self.custom_print(f"DETECTION SEARCH: {test.result.get_job_field('search')}")
             _ = input(formatted_message)
             
 
@@ -643,7 +648,7 @@ class SplunkInstance:
 
             auth = HTTPBasicAuth(self.config.splunk_app_username, self.config.splunk_app_password)
             address = f"https://{self.config.test_instance_address}:{self.management_port}/services/data/inputs/http"
-            print(address)
+            
             data = {
                 "name": "DETECTION_TESTING_HEC",
                 "index": "main",
@@ -652,7 +657,7 @@ class SplunkInstance:
             }
             import urllib3
             urllib3.disable_warnings()
-            print("fix logic to detect if endpoint already exists")
+            self.custom_print("fix logic to detect if endpoint already exists")
             '''
             r = requests.get(address, data=data, auth=auth, verify=False)
             try:
@@ -677,7 +682,7 @@ class SplunkInstance:
                 #Long, messy way to get the token we need. This could use more error checking for sure.
                 self.tokenString = [m['#text'] for m in asDict['feed']['entry']['content']['s:dict']['s:key'] if '@name' in m and m['@name']=='token'][0]
                 self.channel = str(uuid.uuid4())
-                print(f"Successfully configured HEC Endpoint for [{self.get_name()}] with channel [{self.channel}] and token [{self.tokenString}]")
+                self.custom_print(f"Successfully configured HEC Endpoint for [{self.get_name()}] with channel [{self.channel}] and token [{self.tokenString}]")
                 return
                 
             else:
@@ -697,10 +702,10 @@ class SplunkInstance:
         return None        
     def teardown(self)->None:
         if self.testingStats.num_detections_tested == 0:
-            print(f"Container [{self.get_name()}] did not find any tests and will not start.\n"\
+            self.custom_print(f"Container [{self.get_name()}] did not find any tests and will not start.\n"\
                   "This does not mean there was an error!")
         else:
-            print(f"Instance [{self.get_name()}] has finished running [{self.testingStats.num_detections_tested}] detections.")
+            self.custom_print(f"Instance [{self.get_name()}] has finished running [{self.testingStats.num_detections_tested}] detections.")
         self.testingStats.instance_state = InstanceState.stopped
         return None
 
@@ -713,7 +718,7 @@ class SplunkInstance:
             try:
                 success = self.test_detection(detection_to_test, self.synchronization_object.attack_data_root_folder)
             except Exception as e:
-                print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
+                self.custom_print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
                 import traceback
                 traceback.print_exc()
                 success = False
@@ -730,7 +735,7 @@ class SplunkInstance:
         self,
         seconds_between_attempts: int = 10,
     ) -> bool:
-        print("Waiting for Splunk Instance interface to come up...")
+        self.custom_print("Waiting for Splunk Instance interface to come up...")
         while True:
             try:
                 service = self.get_service()
@@ -738,7 +743,7 @@ class SplunkInstance:
                     #The sleep below will wait
                     pass
                 else:
-                    print(f"Splunk Interface is ready")
+                    self.custom_print(f"Splunk Interface is ready")
                     return True
               
             except Exception as e:
@@ -797,7 +802,7 @@ class SplunkInstance:
         time.sleep(check_interval_seconds)
         while True:
             new_count = self.get_number_of_indexed_events(index=index, sourcetype=sourcetype)
-            #print(f"Previous Count [{previous_count}] New Count [{new_count}]")
+            
             if previous_count == -1:
                 previous_count = new_count
             else:
@@ -974,7 +979,7 @@ class SplunkContainer(SplunkInstance):
 
         except Exception as e:
             # Container does not exist, or we could not get it. Throw and error
-            print("Error stopping docker container [%s]"%(self.get_name()))
+            self.custom_print("Error stopping docker container")
             return False
         
 
@@ -997,8 +1002,8 @@ class SplunkContainer(SplunkInstance):
             # No need to print that the container has been removed, it is expected behavior
             return True
         except Exception as e:
-            print("Could not remove Docker Container [%s]" % (
-                self.get_name()))
+            self.custom_print("Could not remove Docker Container")
+                
             raise (Exception(f"CONTAINER REMOVE ERROR: {str(e)}"))
 
 
@@ -1007,7 +1012,7 @@ class SplunkContainer(SplunkInstance):
         
         
         self.container.start()
-        print(f"Starting container '{self.get_name()}' and installing [{len(self.config.apps)}] apps/TAs...")
+        self.custom_print(f"Starting container and installing [{len(self.config.apps)}] apps/TAs...")
         
         
 
@@ -1042,7 +1047,7 @@ class SplunkContainer(SplunkInstance):
                 file_dict["local_file_path"], file_dict["container_file_path"]
             )
 
-        print("Finished copying files to [%s]" % (self.get_name()))
+        self.custom_print("Finished copying files to container")
         
         #call the superclass setup
         super().setup()        

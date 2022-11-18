@@ -139,7 +139,7 @@ class SplunkInstance:
         self.print_verbosity = 0
 
     def print(self, content:str):
-        self.custom_print(f"{self.get_name()}: {content}")
+        self.custom_print(f"[{self.get_name()}]: {content}")
 
     def get_name(self)->str:
         return self.config.test_instance_address
@@ -171,9 +171,9 @@ class SplunkInstance:
                 #Run all the tests, even if the test fails.  We still want to get the results of failed tests
                 result = self.execute_test(detection, test, attack_data_folder)
                 if result:
-                    self.custom_print(f"[{detection.name} --> PASS]")
+                    self.print(f"[{detection.name} --> PASS]")
                 else:
-                    self.custom_print(f"[{detection.name} --> FAIL]")
+                    self.print(f"[{detection.name} --> FAIL]")
                 #And together the result of the test so that if any one test fails, it causes this function to return False                
                 success &= result
             except Exception as e:
@@ -404,7 +404,7 @@ class SplunkInstance:
         
         search = detection.search
         if search != detection.search.strip():
-            #self.custom_print(f"The detection contained in {detection.file_path} contains leading or trailing whitespace.  Please update this search to remove that whitespace.")
+            #self.print(f"The detection contained in {detection.file_path} contains leading or trailing whitespace.  Please update this search to remove that whitespace.")
             search = detection.search.strip()
         
         if search.startswith('|'):
@@ -429,7 +429,7 @@ class SplunkInstance:
             service = self.get_service()
         except Exception as e:
             error_message = "Unable to connect to Splunk instance: %s"%(str(e))
-            self.custom_print(error_message)
+            self.print(error_message)
             return UnitTestResult(job_content=None, missing_observables=[], message=error_message)
 
 
@@ -487,7 +487,7 @@ class SplunkInstance:
                 
                 result.update_missing_observables(observables_to_check - observables_always_found)
                 if len(result.missing_observables) > 0:
-                    self.custom_print(f"Missing observable(s) for detection: {result.missing_observables}")
+                    self.print(f"Missing observable(s) for detection: {result.missing_observables}")
                 
                 
             return result
@@ -534,7 +534,7 @@ class SplunkInstance:
         return True
     def execute_test(self, detection:Detection, test:UnitTestTest, attack_data_folder:str)->bool:
         
-        self.custom_print(f"Executing test {test.name}")
+        self.print(f"Executing test {test.name}")
         #replay all of the attack data
         test_indices = self.replay_attack_data_files(test.attack_data, attack_data_folder)
 
@@ -605,8 +605,8 @@ class SplunkInstance:
                 formatted_message = message_template.format(status="SUCCESS")
 
             #Just use this to pause on input, we don't do anything with the response
-            self.custom_print(f"DETECTION FILE: {detection.file_path}")
-            self.custom_print(f"DETECTION SEARCH: {test.result.get_job_field('search')}")
+            self.print(f"DETECTION FILE: {detection.file_path}")
+            self.print(f"DETECTION SEARCH: {test.result.get_job_field('search')}")
             _ = input(formatted_message)
             
 
@@ -657,7 +657,7 @@ class SplunkInstance:
             }
             import urllib3
             urllib3.disable_warnings()
-            self.custom_print("fix logic to detect if endpoint already exists")
+            self.print("fix logic to detect if endpoint already exists")
             '''
             r = requests.get(address, data=data, auth=auth, verify=False)
             try:
@@ -682,7 +682,7 @@ class SplunkInstance:
                 #Long, messy way to get the token we need. This could use more error checking for sure.
                 self.tokenString = [m['#text'] for m in asDict['feed']['entry']['content']['s:dict']['s:key'] if '@name' in m and m['@name']=='token'][0]
                 self.channel = str(uuid.uuid4())
-                self.custom_print(f"Successfully configured HEC Endpoint for [{self.get_name()}] with channel [{self.channel}] and token [{self.tokenString}]")
+                self.print(f"Successfully configured HEC Endpoint for [{self.get_name()}] with channel [{self.channel}] and token [{self.tokenString}]")
                 return
                 
             else:
@@ -702,10 +702,10 @@ class SplunkInstance:
         return None        
     def teardown(self)->None:
         if self.testingStats.num_detections_tested == 0:
-            self.custom_print(f"Container [{self.get_name()}] did not find any tests and will not start.\n"\
+            self.print(f"Container [{self.get_name()}] did not find any tests and will not start.\n"\
                   "This does not mean there was an error!")
         else:
-            self.custom_print(f"Instance [{self.get_name()}] has finished running [{self.testingStats.num_detections_tested}] detections.")
+            self.print(f"Instance [{self.get_name()}] has finished running [{self.testingStats.num_detections_tested}] detections.")
         self.testingStats.instance_state = InstanceState.stopped
         return None
 
@@ -718,7 +718,7 @@ class SplunkInstance:
             try:
                 success = self.test_detection(detection_to_test, self.synchronization_object.attack_data_root_folder)
             except Exception as e:
-                self.custom_print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
+                self.print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
                 import traceback
                 traceback.print_exc()
                 success = False
@@ -735,7 +735,7 @@ class SplunkInstance:
         self,
         seconds_between_attempts: int = 10,
     ) -> bool:
-        self.custom_print("Waiting for Splunk Instance interface to come up...")
+        self.print("Waiting for Splunk Instance interface to come up...")
         while True:
             try:
                 service = self.get_service()
@@ -743,7 +743,7 @@ class SplunkInstance:
                     #The sleep below will wait
                     pass
                 else:
-                    self.custom_print(f"Splunk Interface is ready")
+                    self.print(f"Splunk Interface is ready")
                     return True
               
             except Exception as e:
@@ -979,7 +979,7 @@ class SplunkContainer(SplunkInstance):
 
         except Exception as e:
             # Container does not exist, or we could not get it. Throw and error
-            self.custom_print("Error stopping docker container")
+            self.print("Error stopping docker container")
             return False
         
 
@@ -1002,7 +1002,7 @@ class SplunkContainer(SplunkInstance):
             # No need to print that the container has been removed, it is expected behavior
             return True
         except Exception as e:
-            self.custom_print("Could not remove Docker Container")
+            self.print("Could not remove Docker Container")
                 
             raise (Exception(f"CONTAINER REMOVE ERROR: {str(e)}"))
 
@@ -1012,7 +1012,7 @@ class SplunkContainer(SplunkInstance):
         
         
         self.container.start()
-        self.custom_print(f"Starting container and installing [{len(self.config.apps)}] apps/TAs...")
+        self.print(f"Starting container and installing [{len(self.config.apps)}] apps/TAs...")
         
         
 
@@ -1047,7 +1047,7 @@ class SplunkContainer(SplunkInstance):
                 file_dict["local_file_path"], file_dict["container_file_path"]
             )
 
-        self.custom_print("Finished copying files to container")
+        self.print("Finished copying files to container")
         
         #call the superclass setup
         super().setup()        

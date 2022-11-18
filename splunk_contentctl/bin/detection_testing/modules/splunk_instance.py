@@ -166,9 +166,9 @@ class SplunkInstance:
                 #Run all the tests, even if the test fails.  We still want to get the results of failed tests
                 result = self.execute_test(detection, test, attack_data_folder)
                 if result:
-                    print(f"{detection.name} --> PASS")
+                    print(f"[{detection.name}] --> PASS")
                 else:
-                    print(f"{detection.name} --> FAIL")
+                    print(f"[{detection.name}] --> FAIL")
                 #And together the result of the test so that if any one test fails, it causes this function to return False                
                 success &= result
             except Exception as e:
@@ -572,8 +572,7 @@ class SplunkInstance:
             #If we get here, baselines all worked (if they exist) so run the search
             test.result = self.test_detection_search(detection, test)
             
-            import code
-            code.interact(local=locals())
+
             if test.result.determine_success():
                 #We were successful, no need to run again. 
                 break

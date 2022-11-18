@@ -19,17 +19,16 @@ class UnitTestResult(BaseModel):
 
     @root_validator(pre=False)
     def update_success(cls, values):
-        print("Root validator is determining success...")
         if values['job_content'] is None:
             values['exception'] = True
             values['success'] = False
             return values    
         
-        elif 'resultCount' in values['job_content'] and values['job_content']['resultCount'] == int(1):
+        elif 'resultCount' in values['job_content'] and int(values['job_content']['resultCount']) == 1:
             #in the future we probably want other metrics, about noise or others, here
             values['success'] = True
             
-        elif 'resultCount' in values['job_content'] and values['job_content']['resultCount'] != int(1):
+        elif 'resultCount' in values['job_content'] and int(values['job_content']['resultCount']) != 1:
             values['success'] = False
             
         else:

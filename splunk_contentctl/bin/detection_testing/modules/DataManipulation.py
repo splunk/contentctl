@@ -12,7 +12,6 @@ class DataManipulation:
 
 
         #print('Updating timestamps in attack_data before replaying')
-        print(f"manipulate timestamp for file [{file_path}]")
         if sourcetype == 'aws:cloudtrail':
             self.manipulate_timestamp_cloudtrail(file_path)
 

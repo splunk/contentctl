@@ -159,6 +159,32 @@ class SplunkInstance:
     def test_detection(self, detection:Detection, attack_data_root_folder)->bool:
         abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
         success = self.execute_tests(detection, abs_folder_path)
+        
+        if success:
+            #no need to be extremely verbose and print out everything
+            beginning = f"[{detection.name} --> PASS ({len(detection.test.tests)} test(s))]"
+        else:
+            beginning = f"[{detection.name} --> FAIL (FAILURES: {detection.get_num_failed_tests()}, PASSES: {detection.get_num_successful_tests})]"
+
+        
+        summaries = []
+        at_least_one_test_missing_observables = False
+        for test in detection.test.tests:    
+            if test.result is None:
+                summaries.append(f"'{test.name}' - TEST NOT RUN FOR UNKNOWN REASON")
+            else:
+                #print out all the results if at least one of the detections is misisng an observable
+                at_least_one_test_missing_observables |= len(test.result.missing_observables) > 0
+                summaries.append(f"{test.result.get_summary(test.name)}")
+        
+        if success == False or at_least_one_test_missing_observables:
+            total_summary = "\n\t******************".join(summaries)
+            self.print(f"{beginning}\n\t{total_summary}\n")
+        else:
+            self.print(f"{beginning}")
+        
+        
+
         #Delete the temp folder and data inside of it
         rmtree(abs_folder_path)
         return success
@@ -170,10 +196,6 @@ class SplunkInstance:
             try:
                 #Run all the tests, even if the test fails.  We still want to get the results of failed tests
                 result = self.execute_test(detection, test, attack_data_folder)
-                if result:
-                    self.print(f"[{detection.name} --> PASS]")
-                else:
-                    self.print(f"[{detection.name} --> FAIL]")
                 #And together the result of the test so that if any one test fails, it causes this function to return False                
                 success &= result
             except Exception as e:
@@ -486,8 +508,7 @@ class SplunkInstance:
                 #return as part of the error all the fields which did not appear in ALL the results.
                 
                 result.update_missing_observables(observables_to_check - observables_always_found)
-                if len(result.missing_observables) > 0:
-                    self.print(f"Missing observable(s) for detection: {result.missing_observables}")
+                
                 
                 
             return result
@@ -534,7 +555,7 @@ class SplunkInstance:
         return True
     def execute_test(self, detection:Detection, test:UnitTestTest, attack_data_folder:str)->bool:
         
-        self.print(f"Executing test {test.name}")
+        
         #replay all of the attack data
         test_indices = self.replay_attack_data_files(test.attack_data, attack_data_folder)
 

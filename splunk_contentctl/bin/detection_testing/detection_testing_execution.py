@@ -19,7 +19,8 @@ import requests
 
 
 
-from bin.detection_testing.modules import instance_manager, test_driver
+from bin.detection_testing.modules import instance_manager
+from bin.objects.detection import Detection
 from bin.helper.utils import Utils
 from bin.objects.test_config import TestConfig
 from bin.detection_testing.modules.github_service import GithubService
@@ -90,7 +91,7 @@ def copy_local_apps_to_directory(config: TestConfig):
 
 
 
-def finish_mock(config: TestConfig, detections: list[test_driver.Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
+def finish_mock(config: TestConfig, detections: list[Detection], output_file_template: str = "prior_config/config_tests_%d.json")->bool:
     print("THIS IS A MOCK RUN AND MOCK IS NOT YET SUPPORTED")
     sys.exit(1)
     num_containers = config.num_containers
@@ -236,7 +237,8 @@ def main(config: TestConfig, director:DirectorOutputDto):
         #Set that a container has failed which will gracefully stop the other containers.
         #This way we get our full cleanup routine, too!
         print("Got a signal to shut down. Shutting down all containers, please wait...", file=sys.stderr)
-        cm.synchronization_object.containerFailure()
+        
+        cm.checkFailures()
     
     #Update the signal handler
 
@@ -250,7 +252,7 @@ def main(config: TestConfig, director:DirectorOutputDto):
         sys.exit(1)
 
 
-    cm.synchronization_object.resultsManager.generate_results_file(pathlib.Path("summary.json"))
+    cm.shared_test_objects.generate_results_file(pathlib.Path("summary.json"))
 
     #github_service.update_and_commit_passed_tests(cm.synchronization_object.successes)
     

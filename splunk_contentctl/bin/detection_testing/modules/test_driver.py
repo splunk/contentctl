@@ -22,7 +22,7 @@ import yaml
 
 from bin.objects.test_config import TestConfig
 from bin.objects.detection import Detection
-from bin.detection_testing.modules.test_objects import ResultsManager
+
 from bin.objects.enums import DetectionTestingTargetInfrastructure
 
 
@@ -67,7 +67,7 @@ class TestDriver:
         # We call this exactly once here to prime for future calls and throw away the result
         _ = psutil.cpu_times_percent(percpu=False)
         self.config = config
-        self.resultsManager = ResultsManager()
+        
 
 
     def getDetection(self)-> Union[Detection,None]:

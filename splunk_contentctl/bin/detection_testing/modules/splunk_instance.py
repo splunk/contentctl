@@ -13,7 +13,7 @@ import xmltodict
 from requests.auth import HTTPBasicAuth
 from tempfile import mkdtemp, mkstemp
 from shutil import rmtree, copyfile
-from bin.detection_testing.modules import test_driver
+from bin.detection_testing.modules.instance_manager import SharedTestObjects
 from bin.objects.test_config import TestConfig
 import pathlib
 import time
@@ -95,6 +95,7 @@ class TestingStats:
         return delta    
     def addTest(self):
         self.num_detections_tested += 1
+
     def setInstanceState(self, instanceState:InstanceState):
         #In the cases below, we will want to update some timers
         if self.instance_state == InstanceState.starting and instanceState == InstanceState.running:
@@ -117,7 +118,7 @@ class SplunkInstance:
     def __init__(
         self,
         config: TestConfig,
-        synchronization_object: test_driver.TestDriver,
+        shared_test_objects: SharedTestObjects,
         web_port: int = 8000,
         hec_port: int = 8088,
         management_port: int = 8089,
@@ -125,7 +126,7 @@ class SplunkInstance:
         
         
         self.config = config
-        self.synchronization_object = synchronization_object
+        self.shared_test_objects = shared_test_objects
         self.web_port = web_port
         self.management_port = management_port
         self.hec_port = hec_port
@@ -733,12 +734,12 @@ class SplunkInstance:
 
     def run(self):
         self.setup()
-        self.synchronization_object.start_barrier.wait()
+        self.shared_test_objects.start_barrier.wait()
         self.testingStats.instance_state = InstanceState.running
-        detection_to_test = self.synchronization_object.getDetection()
+        detection_to_test = self.shared_test_objects.getDetection()
         while detection_to_test is not None:
             try:
-                success = self.test_detection(detection_to_test, self.synchronization_object.attack_data_root_folder)
+                success = self.test_detection(detection_to_test, self.shared_test_objects.attack_data_root_folder)
             except Exception as e:
                 self.print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
                 import traceback
@@ -746,10 +747,11 @@ class SplunkInstance:
                 success = False
             
             self.testingStats.addTest()
+            self.shared_test_objects.addResult(detection_to_test)
             #Get the next detection to test. If there are no more detections to test,
             #or there is an issue and one of the instance(s) is no longer running,
             #then this will return None
-            detection_to_test = self.synchronization_object.getDetection()
+            detection_to_test = self.shared_test_objects.getDetection()
 
         self.teardown()
     

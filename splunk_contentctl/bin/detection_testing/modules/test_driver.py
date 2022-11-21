@@ -38,8 +38,10 @@ class TestDriver:
         
         self.total_number_of_tests = self.testing_queue.qsize()
         #Creates a lock that will be used to synchronize access to this object
-        self.lock = threading.Lock()
-        self.start_time = timeit.default_timer()
+        
+        self.total_start_time = datetime.datetime.now()
+        self.test_start_time:Union[None, datetime.datetime] = None
+
         self.results = queue.Queue()
         self.container_ready_time = None
         
@@ -60,67 +62,20 @@ class TestDriver:
         #According to the docs:
         # Warning the first time this function is called with interval = 0.0 or None it will return a meaningless 0.0 value which you are supposed to ignore.
         # We call this exactly once here to prime for future calls and throw away the result
-        cpu_info = psutil.cpu_times_percent(percpu=False)
+        _ = psutil.cpu_times_percent(percpu=False)
         
         self.resultsManager = ResultsManager()
 
-    def checkContainerFailure(self)->bool:
-        
-        self.lock.acquire()
-        
-        try:
-            result = self.container_failure
-        finally:
-            self.lock.release()
-        
-        
-        
-        return result
-        
-
-    def containerFailure(self)->None:
-        self.lock.acquire()
-        try:
-            self.container_failure = True
-        finally:
-            self.lock.release()
-        
-    def checkIfTestsRemain(self):
-        failure = self.checkContainerFailure()
-        if failure:
-            #Just return None, don't continue testing if a container crashed
-            #Indicate there are no tests remaining
-            return False
-        
-        try:
-            #This call isn't reliable according to documentation, but can save us some time.
-            #Err on the side of caution
-            return not self.testing_queue.empty()
-        except Exception as e:
-            print("Error determinging if testing queue was empty.  Return False and try to get something.",file=sys.stderr)
-            return True
-        
 
     def getDetection(self)-> Union[Detection,None]:
         
-        failure = self.checkContainerFailure()
-        
-        
-
-        if failure:
-            #Just return None, don't continue testing if a container crashed
-            return None
-
         try:
             return self.testing_queue.get(block=False)
         except Exception as e:
             return None
         
     def outputResultsCSV(self, field_names:list[str], output_filename:str, data:list[dict], baseline:OrderedDict)->bool:
-        success = True
-
         print("Generating %s..."%(output_filename), end='')
-        self.lock.acquire()
         
         try:                        
             with open(output_filename, 'w') as csvfile:
@@ -148,38 +103,37 @@ class TestDriver:
 
         except Exception as e:
             print("Failure writing to CSV file for [%s]:"%(output_filename, str(e)))
-            success = False
+            return False
 
-        finally:
-            self.lock.release()
-
-        return success
+        return True
 
     
 
     def finish(self, baseline:OrderedDict):
         self.cleanup()
-        success = True
+        
         
 
         if self.checkContainerFailure():
             print("One or more containers crashed or the test was HALTED early, so testing did not complete successfully. We wrote out all the results that we could")
             return False
         else:
-            return success
+            return True
 
         
 
     def cleanup(self):
-        self.lock.acquire()
+        
         try:
             print("Removing all attack data that was downloaded during this test at: [%s]"%(self.attack_data_root_folder))
             shutil.rmtree(self.attack_data_root_folder)
             print("Successfully removed all attack data")
         finally:
-            self.lock.release()
+            pass
 
     def get_system_stats(self)->str:
+        # System stats are only useful in some cases (when Splunk is running locally)
+        
         
         bytes_per_GB = 1024 * 1024 * 1024
         cpu_info = psutil.cpu_times_percent(percpu=False)
@@ -196,30 +150,74 @@ class TestDriver:
         return "System Information:\n\t%s\n\t%s\n\t%s"%(cpu_info_string, memory_info_string, disk_usage_info_string)
 
 
+    def getTotalElapsedTime(self)->datetime.timedelta:
+        currentTime = datetime.datetime.now()
+        elapsed = currentTime - self.total_start_time
+
+        return elapsed
+    
+    def getTestElapsedTime(self)->Union[datetime.timedelta,None]:
+        currentTime = datetime.datetime.now()
+        if self.test_start_time is None:
+            return None
+        elapsed = currentTime - self.test_start_time
+        return elapsed
+    
+    def getTimeDeltaRoundedToNearestSecond(self, delta: datetime.timedelta)->str:
+        rounded_delta = datetime.timedelta(seconds = round(delta.total_seconds()))
+        return str(rounded_delta)
+
+
+    def getAverageTimePerTest(self)->Union[str,datetime.timedelta]:
+        elapsed = self.getTestElapsedTime()
+        if elapsed == None:
+            return "Cannot calculate yet - Splunk Instance(s) still being set up." 
+        
+        num_tests_completed = self.resultsManager.result_count
+        if  num_tests_completed == 0:
+            return "Cannot calculate yet - first test has not finished yet"
+        
+        average_time_per_test = elapsed / num_tests_completed
+        rounded_time_string = self.getTimeDeltaRoundedToNearestSecond(average_time_per_test)
+
+        return str(rounded_time_string)
+    
+    def getAverageTimeRemaining(self)->str:
+        avg = self.getAverageTimePerTest()
+        
+        if isinstance(avg,str):
+            #We returned some string, which is a description as to why
+            #we can't calculate the average (yet). Just return that
+            return avg
+
+        #multiply the remaining time by the number of tests
+        total_time_remaining = avg * self.testing_queue.qsize()
+        #return an approximation of the remaining time
+        return self.getTimeDeltaRoundedToNearestSecond(total_time_remaining)
+
+
+        
+
     def summarize(self,testing_currently_active:bool=False)->bool:
-        self.lock.acquire()
+        
         try:
         
             #Get a summary of some system stats
             system_stats=self.get_system_stats()
+            system_stats = ""
             
-            current_time = timeit.default_timer()
             
-            
-
             if not testing_currently_active:
                 #Testing has not started yet. We are setting up containers
                 print("***********PROGRESS UPDATE***********\n"\
-                      "\tWaiting for container setup: %s\n\t%s\n"%(datetime.timedelta(seconds=current_time - self.start_time),system_stats))
+                      f"\tWaiting for container setup: {self.getTimeDeltaRoundedToNearestSecond(self.getTotalElapsedTime())}\n")
             else:
                 
                 if self.container_ready_time is None:
                     #This is the first status update since container setup has completed.  Get the current time.
                     #This makes our remaining time estimates better since that estimate should not involve
                     #the container setup time  
-                    print("SETTING THE CONTAINER READY TIME!")
-                    
-                    self.container_ready_time = current_time
+                    self.test_start_time = datetime.datetime.now()
 
                 numberOfCompletedTests = self.resultsManager.result_count
                 remaining_tests = self.testing_queue.qsize()         

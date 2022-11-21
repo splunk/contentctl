@@ -23,24 +23,6 @@ WEB_PORT_START = 8000
 HEC_PORT_START = 8088
 MANAGEMENT_PORT_START = 8089
 
-#Keep track of time, at the very least, and maybe some other things
-class JobStats:
-    def __init__(self):
-        self.startTime = datetime.datetime.now()
-        self.stopTime = None
-        self.totalTime = None
-    def setStopTime(self):
-        self.stopTime = datetime.datetime.now() 
-        self.totalTime  = self.stopTime - self.startTime 
-    def getElapsedTime(self):
-        return  self.roundDurationToWholeSeconds(datetime.datetime.now() - self.startTime)
-    def getTotalTime(self):
-        if self.stopTime == None:
-            return f"CANNOT GET TOTAL TIME - TEST STILL RUNNING FOR {self.getElapsedTime()}"
-        else:
-            return self.roundDurationToWholeSeconds(self.stopTime - self.startTime)
-    def roundDurationToWholeSeconds(self, duration:datetime.timedelta):
-        return str(duration - datetime.timedelta(microseconds=duration.microseconds))
 
 
 class InstanceManager:
@@ -49,18 +31,17 @@ class InstanceManager:
                 detection_list: list[Detection],
                 files_to_copy_to_container: OrderedDict = OrderedDict()):
 
-        self.jobStats = JobStats()
+        
         self.config = config
-        #Used to determine whether or not we should wait for container threads to finish when summarizing
-        self.all_tests_completed = False
+        self.files_to_copy_to_container = files_to_copy_to_container
 
         self.synchronization_object = test_driver.TestDriver(detection_list, config)
-        self.files_to_copy_to_container = files_to_copy_to_container
+        
         
     
         
         print("\n\n***********************")
-        print(f"Log into your [{self.config.num_containers}] Splunk Instance(s) after they boot at http://127.0.0.1:[{WEB_PORT_START}-{WEB_PORT_START + self.config.num_containers - 1}]")
+        print(f"Log into your [{self.config.num_containers}] Splunk Instance(s) after they are ready at http://127.0.0.1:[{WEB_PORT_START}-{WEB_PORT_START + self.config.num_containers - 1}]")
         print("\tSplunk App Username: [%s]"%("admin"))
         print("\tSplunk App Password: ", end='')
         
@@ -83,7 +64,12 @@ class InstanceManager:
         
         
         #Construct the baseline from the splunk version and the apps to be installed
-        self.baseline = OrderedDict()
+        self.baseline = self.generate_baseline()
+        
+        self.instances:list[splunk_instance.SplunkInstance] = []
+
+    def generate_baseline(self)->OrderedDict:
+        baseline = OrderedDict()
         '''
         #Get a datetime and add it as the first entry in the baseline
         self.start_time = datetime.datetime.now()
@@ -99,8 +85,7 @@ class InstanceManager:
             self.baseline[key] = self.apps[key]
 
         '''
-        
-        self.instances:list[splunk_instance.SplunkInstance] = []
+        return baseline
 
     def run_test(self)->bool:
         self.run_status_thread()
@@ -110,6 +95,9 @@ class InstanceManager:
         
         print("sleep to prevent the cleanup...")
         time.sleep(1600)
+
+
+        
             
         for instance in self.instances:
             if self.all_tests_completed == True:
@@ -125,16 +113,7 @@ class InstanceManager:
         print("All containers completed testing!")
         
         
-        
-        
-        self.jobStats.setStopTime()
-        self.baseline['TEST_START_TIME'] = self.jobStats.startTime
-        self.baseline['TEST_FINISH_TIME'] =  self.jobStats.stopTime
-        
-        
-        self.baseline['TEST_DURATION'] = self.jobStats.getTotalTime()
-
-        return self.synchronization_object.finish(self.baseline)
+        return self.synchronization_object.finish()
 
 
 

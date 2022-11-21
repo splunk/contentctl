@@ -123,6 +123,7 @@ class SplunkInstance:
         management_port: int = 8089,
         files_to_copy_to_instance: OrderedDict = OrderedDict()):
         
+        
         self.config = config
         self.synchronization_object = synchronization_object
         self.web_port = web_port

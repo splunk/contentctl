@@ -29,6 +29,9 @@ from bin.objects.enums import DetectionTestingTargetInfrastructure
 
 
 
+
+
+
 class TestDriver:
     def __init__(self, detections:list[Detection], config: TestConfig):
         #Create the queue and enque all of the tests
@@ -109,8 +112,12 @@ class TestDriver:
 
     
 
-    def finish(self, baseline:OrderedDict):
+    def finish(self):
         self.cleanup()
+        if self.resultsManager.pass_count == self.total_number_of_tests:
+            return True
+        return False
+
         
     def cleanup(self):
         
@@ -199,9 +206,6 @@ class TestDriver:
         
         return False
         
-
-
-
 
     def summarize(self)->str:
         

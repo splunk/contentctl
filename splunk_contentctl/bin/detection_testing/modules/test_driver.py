@@ -23,7 +23,7 @@ import yaml
 from bin.objects.test_config import TestConfig
 from bin.objects.detection import Detection
 from bin.detection_testing.modules.test_objects import ResultsManager
-
+from bin.objects.enums import DetectionTestingTargetInfrastructure
 
 
 
@@ -63,7 +63,7 @@ class TestDriver:
         # Warning the first time this function is called with interval = 0.0 or None it will return a meaningless 0.0 value which you are supposed to ignore.
         # We call this exactly once here to prime for future calls and throw away the result
         _ = psutil.cpu_times_percent(percpu=False)
-        
+        self.config = config
         self.resultsManager = ResultsManager()
 
 
@@ -112,16 +112,6 @@ class TestDriver:
     def finish(self, baseline:OrderedDict):
         self.cleanup()
         
-        
-
-        if self.checkContainerFailure():
-            print("One or more containers crashed or the test was HALTED early, so testing did not complete successfully. We wrote out all the results that we could")
-            return False
-        else:
-            return True
-
-        
-
     def cleanup(self):
         
         try:
@@ -156,22 +146,24 @@ class TestDriver:
 
         return elapsed
     
-    def getTestElapsedTime(self)->Union[datetime.timedelta,None]:
+    def getTestElapsedTime(self)->Union[datetime.timedelta,str]:
         currentTime = datetime.datetime.now()
         if self.test_start_time is None:
-            return None
+            return "Cannot calculate yet - Splunk Instance(s) still being set up."
         elapsed = currentTime - self.test_start_time
         return elapsed
     
-    def getTimeDeltaRoundedToNearestSecond(self, delta: datetime.timedelta)->str:
+    def getTimeDeltaRoundedToNearestSecond(self, delta: Union[str,datetime.timedelta])->str:
+        if isinstance(delta, str):
+            return delta
         rounded_delta = datetime.timedelta(seconds = round(delta.total_seconds()))
         return str(rounded_delta)
 
 
     def getAverageTimePerTest(self)->Union[str,datetime.timedelta]:
         elapsed = self.getTestElapsedTime()
-        if elapsed == None:
-            return "Cannot calculate yet - Splunk Instance(s) still being set up." 
+        if isinstance(elapsed,str):
+            return elapsed
         
         num_tests_completed = self.resultsManager.result_count
         if  num_tests_completed == 0:
@@ -197,73 +189,66 @@ class TestDriver:
 
 
         
+    def all_instances_ready(self):
+        CHECKED_READY = True
+        if CHECKED_READY and self.test_start_time is not None:
+            return True
+        elif CHECKED_READY and self.test_start_time is None:
+            self.test_start_time = datetime.datetime.now()
+            return True
+        
+        return False
+        
 
-    def summarize(self,testing_currently_active:bool=False)->bool:
+
+
+
+    def summarize(self)->str:
         
         try:
-        
             #Get a summary of some system stats
-            system_stats=self.get_system_stats()
-            system_stats = ""
-            
-            
-            if not testing_currently_active:
-                #Testing has not started yet. We are setting up containers
-                print("***********PROGRESS UPDATE***********\n"\
-                      f"\tWaiting for container setup: {self.getTimeDeltaRoundedToNearestSecond(self.getTotalElapsedTime())}\n")
+            if self.config.target_infrastructure == DetectionTestingTargetInfrastructure.container:
+                #We should also probably check that the IP is 127.0.0.1 as well?  But we will leave
+                #this alone for now
+                system_stats=self.get_system_stats()
             else:
-                
-                if self.container_ready_time is None:
-                    #This is the first status update since container setup has completed.  Get the current time.
-                    #This makes our remaining time estimates better since that estimate should not involve
-                    #the container setup time  
-                    self.test_start_time = datetime.datetime.now()
-
-                numberOfCompletedTests = self.resultsManager.result_count
-                remaining_tests = self.testing_queue.qsize()         
-                testsCurrentlyRunning = self.total_number_of_tests - remaining_tests - numberOfCompletedTests
-                total_execution_time_seconds = round(current_time - self.start_time)
-
-                test_execution_time_seconds = current_time - self.container_ready_time
-                
-                
-                if numberOfCompletedTests == 0 or test_execution_time_seconds == 0:
-                    estimated_seconds_to_finish_all_tests = "UNKNOWN"
-                    estimated_completion_time_string = "UNKNOWN"
-                    average_time_per_test_string = "UNKNOWN"
-                else:
-                    average_time_per_test = test_execution_time_seconds / numberOfCompletedTests
-                    average_time_per_test_string = datetime.timedelta(seconds=round(test_execution_time_seconds/numberOfCompletedTests))
-                    #divide testsCurrentlyRunning by 2.0 because, on average, each running test will be 50% completed
-                    estimated_seconds_to_finish_all_tests = round(average_time_per_test * (remaining_tests + testsCurrentlyRunning/2.0))
-                    estimated_completion_time_string = datetime.timedelta(seconds=estimated_seconds_to_finish_all_tests)
-                    
-                
-
+                system_stats = None
             
-                print(f"***********PROGRESS UPDATE***********\n"\
-                f"\tElapsed Time               : {datetime.timedelta(seconds=total_execution_time_seconds)}\n"\
-                f"\tTest Execution Time        : {datetime.timedelta(seconds=round(test_execution_time_seconds))}\n"\
-                f"\tEstimated Remaining Time   : {estimated_completion_time_string}\n"\
-                f"\tTests to run               : {remaining_tests}\n"\
-                f"\tAverage Time Per Test      : {average_time_per_test_string}\n",
-                f"\tTests currently running    : {testsCurrentlyRunning}\n"\
-                f"\tTests completed            : {numberOfCompletedTests}\n"\
-                f"\t\tSuccess : {self.resultsManager.pass_count}\n"\
-                f"\t\tFailure : {self.resultsManager.fail_count}\n"\
-                f"\t{system_stats}\n")
+            
+            
+            status_string = "***********PROGRESS UPDATE***********\n"
+            if not self.all_instances_ready():
+                status_string += f"\tWaiting for container setup: {self.getTimeDeltaRoundedToNearestSecond(self.getTotalElapsedTime())}\n"
+                return status_string
+            
+            
+            
+            elapsed_time = self.getTimeDeltaRoundedToNearestSecond(self.getTotalElapsedTime())
+            test_execution_time = self.getTimeDeltaRoundedToNearestSecond(self.getTestElapsedTime())
+            estimated_time_remaining = self.getAverageTimeRemaining()
+            tests_to_run = self.testing_queue.qsize()
+            average_time_per_test = self.getTimeDeltaRoundedToNearestSecond(self.getAverageTimePerTest())
+            tests_currently_running = "TO BE DETERMINED"
+            tests_completed = self.resultsManager.pass_count + self.resultsManager.fail_count
+            successes = self.resultsManager.pass_count
+            failures = self.resultsManager.fail_count
+            status_string += \
+                f"\tElapsed Time               : {elapsed_time}\n"\
+                f"\tTest Execution Time        : {test_execution_time}\n"\
+                f"\tEstimated Remaining Time   : {estimated_time_remaining}\n"\
+                f"\tTests to run               : {tests_to_run}\n"\
+                f"\tAverage Time Per Test      : {average_time_per_test}\n"\
+                f"\tTests currently running    : {tests_currently_running}\n"\
+                f"\tTests completed            : {tests_completed}\n"\
+                f"\t\tSuccesses : {successes}\n"\
+                f"\t\tFailures  : {failures}\n"
+            if status_string is not None:
+                status_string += f"\t{system_stats}\n"
+            
+            return status_string
 
         except Exception as e:
-            print("Error in printing execution summary: [%s]"%(str(e)))
-        finally:
-            self.lock.release()
-            
-        
-        #Return true while there are tests remaining
-        completed_tests = self.resultsManager.result_count
-        remaining_tests = self.total_number_of_tests - completed_tests
-        return remaining_tests > 0
-                
+            return f"Error in printing execution summary: [{str(e)}]"
         
     def addResult(self, detection:Detection):
         self.resultsManager.addCompletedDetection(detection)

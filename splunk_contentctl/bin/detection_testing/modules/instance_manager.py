@@ -18,7 +18,7 @@ from bin.detection_testing.modules.shared_test_objects import SharedTestObjects
 from bin.objects.enums import DetectionTestingTargetInfrastructure
 from bin.objects.detection import Detection
 from bin.objects.test_config import TestConfig
-
+from bin.objects.enums import InstanceState
 
 from tempfile import mkdtemp
 import pathlib
@@ -64,7 +64,7 @@ class InstanceManager:
         # Construct the baseline from the splunk version and the apps to be installed
         self.baseline = self.generate_baseline()
 
-        self.instances: list[splunk_instance.SplunkInstance] = []
+        self.instances: list[SplunkInstance] = []
 
     def generate_baseline(self) -> OrderedDict:
         baseline = OrderedDict()
@@ -86,17 +86,17 @@ class InstanceManager:
         return baseline
 
     def run_test(self) -> bool:
-        self.run_status_thread()
         self.run_instances()
+        self.shared_test_objects.beginTesting()
+        self.summary_thread.run()
         self.summary_thread.join()
 
-        print("sleep to prevent the cleanup...")
-        time.sleep(1600)
+
 
         for instance in self.instances:
-            if self.all_tests_completed == True:
+            if self.shared_test_objects.noUntestedDetectionsRemain():
                 instance.thread.join()
-            elif self.all_tests_completed == False:
+            else:
                 # For some reason, we stopped early.  So don't wait on the child threads to finish. Don't join,
                 # these threads may be stuck in their setup loops. Continue on.
                 pass
@@ -151,9 +151,9 @@ class InstanceManager:
 
     def getTestElapsedTime(self) -> Union[datetime.timedelta, str]:
         currentTime = datetime.datetime.now()
-        if self.test_start_time is None:
+        if self.shared_test_objects.test_start_time is None:
             return "Cannot calculate yet - Splunk Instance(s) still being set up."
-        elapsed = currentTime - self.test_start_time
+        elapsed = currentTime - self.shared_test_objects.test_start_time
         return elapsed
 
     def getTimeDeltaRoundedToNearestSecond(self, delta: Union[str, datetime.timedelta]) -> str:
@@ -192,14 +192,15 @@ class InstanceManager:
         return self.getTimeDeltaRoundedToNearestSecond(total_time_remaining)
 
     def all_instances_ready(self):
-        CHECKED_READY = True
-        if CHECKED_READY and self.test_start_time is not None:
-            return True
-        elif CHECKED_READY and self.test_start_time is None:
-            self.test_start_time = datetime.datetime.now()
-            return True
+        for instance in self.instances:
+            if instance.testingStats.instance_state == InstanceState.running:
+                #This instance is ready, but we need to check the rest of them
+                pass
+            else:
+                #At least one instance is not ready
+                return False
 
-        return False
+        return True
 
     def summarize(self) -> str:
 
@@ -247,7 +248,21 @@ class InstanceManager:
         except Exception as e:
             return f"Error in printing execution summary: [{str(e)}]"
 
-    def checkFailures(self) -> bool:
+    def atLeastOneInstanceErrored(self) -> bool:
+        for instance in self.instances:
+            if instance.testingStats.instance_state == InstanceState.error:
+                return True
+        #Nothing was in an error state
+        return False
+    
+    def atLeastOneInstanceRunning(self):
+        for instance in self.instances:
+            if instance.testingStats.instance_state == InstanceState.starting or \
+               instance.testingStats.instance_state == InstanceState.running or \
+               instance.testingStats.instance_state == InstanceState.stopping :
+                print(f"Instance {instance.get_name()} is [{instance.testingStats.instance_state}]")
+                return True
+            print(f"{instance.get_name()} - {instance.testingStats.instance_state}")
         return False
 
     def run_instances(self) -> None:
@@ -274,12 +289,19 @@ class InstanceManager:
         for instance in self.instances:
             instance.thread.start()
 
-    def run_status_thread(self) -> None:
-        self.summary_thread.start()
+        
+
+
 
     def queue_status_thread(self, status_interval: int = 60, num_steps: int = 10) -> None:
+        print("status thread start")
+        while self.atLeastOneInstanceRunning():
+            if self.atLeastOneInstanceErrored():
+                break
 
-        while True:
+            print(self.summarize())
+            time.sleep(30)
+            continue
             # This for loop lets us run the summarize print less often, but check for failure more often
             for chunk in range(0, status_interval, int(status_interval/num_steps)):
                 if self.shared_test_objects.checkContainerFailure():
@@ -301,3 +323,4 @@ class InstanceManager:
                 # There are no more tests to run, so we can return from this thread
                 self.all_tests_completed = True
                 return None
+        print("status thread finish")

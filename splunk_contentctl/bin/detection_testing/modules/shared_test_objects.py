@@ -21,6 +21,7 @@ class SharedTestObjects:
         
         
         self.start_time = datetime.datetime.now()
+        self.test_start_time = None
 
         # These are important for a running tally. Final summarization and 
         # output will independently calculate these, though
@@ -29,6 +30,19 @@ class SharedTestObjects:
         self.fail_count = 0
         
         
+
+    def beginTesting(self):
+        self.test_start_time = datetime.datetime.now()
+        
+    def noUntestedDetectionsRemain(self)->bool:
+        if self.testing_queue.qsize() == 0:
+            return True
+        return False
+    
+    def numberOfDetectionEqualNumberOfResults(self)->bool:
+        if self.total_number_of_detections == len(self.results):
+            return True
+        return False
 
 
     def addCompletedDetection(self, detection:Detection):

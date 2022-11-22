@@ -69,7 +69,7 @@ class TestingStats:
     instance_stop_time:Union[datetime.datetime,None] = None
     testing_start_time:Union[datetime.datetime,None] = None
     testing_stop_time:Union[datetime.datetime,None] = None
-    instance_state: InstanceState = InstanceState.starting
+    instance_state: InstanceState = InstanceState.stopped
     
     instance_state:InstanceState
     def __init__(self):
@@ -737,13 +737,12 @@ class SplunkInstance:
                   "This does not mean there was an error!")
         else:
             self.print(f"Instance [{self.get_name()}] has finished running [{self.testingStats.num_detections_tested}] detections.")
-        self.testingStats.instance_state = InstanceState.stopped
         return None
 
     def run(self):
         self.setup()
         self.shared_test_objects.start_barrier.wait()
-        self.testingStats.instance_state = InstanceState.running
+        self.testingStats.setInstanceState(InstanceState.running)
         detection_to_test = self.shared_test_objects.getDetection()
         while detection_to_test is not None:
             try:
@@ -767,7 +766,7 @@ class SplunkInstance:
         self,
         seconds_between_attempts: int = 10,
     ) -> bool:
-        self.print("Waiting for Splunk Instance interface to come up...")
+        self.print("Waiting for Splunk Instance Web Interface to come up...")
         while True:
             try:
                 service = self.get_service()
@@ -895,6 +894,11 @@ class SplunkContainer(SplunkInstance):
         
 
 
+    def teardown(self):
+        self.stopContainer()
+        self.removeContainer()
+        super().teardown()
+
     def get_name(self)->str:
         return self.container_name
 
@@ -1002,17 +1006,24 @@ class SplunkContainer(SplunkInstance):
         try:        
             
             
+            self.testingStats.setInstanceState(InstanceState.stopping)
+            self.print(f"Stopping container")
             container:docker.models.containers.Container = self.get_client().containers.get(self.get_name())
             #Note that stopping does not remove any of the volumes or logs,
             #so stopping can be useful if we want to debug any container failure 
             container.stop(timeout=10)
-            self.synchronization_object.containerFailure()
+            self.print("Container successfully stopped")
+            self.testingStats.setInstanceState(InstanceState.stopped)
             return True
 
         except Exception as e:
             # Container does not exist, or we could not get it. Throw and error
             self.print("Error stopping docker container")
             return False
+        
+        finally:
+            #Consider it to be stopped, not errored
+            self.testingStats.setInstanceState(InstanceState.stopped)
         
 
     def removeContainer(
@@ -1025,6 +1036,7 @@ class SplunkContainer(SplunkInstance):
             # Container does not exist, no need to try and remove it
             return True
         try:
+            self.print("Removing container")
             # container was found, so now we try to remove it
             # v also removes volumes linked to the container
             container.remove(
@@ -1032,17 +1044,22 @@ class SplunkContainer(SplunkInstance):
             )
             # remove it even if it is running. remove volumes as well
             # No need to print that the container has been removed, it is expected behavior
+            self.print("Container removed")
             return True
         except Exception as e:
             self.print("Could not remove Docker Container")
                 
             raise (Exception(f"CONTAINER REMOVE ERROR: {str(e)}"))
+        finally:
+            #Consider it to be stopped, not errored
+            self.testingStats.setInstanceState(InstanceState.stopped)
+
 
 
     #@wrapt_timeout_decorator.timeout(MAX_CONTAINER_START_TIME_SECONDS, timeout_exception=RuntimeError)
     def setup(self):
         
-        
+        self.testingStats.setInstanceState(InstanceState.starting)
         self.container.start()
         self.print(f"Starting container and installing [{len(self.config.apps)}] apps/TAs...")
         

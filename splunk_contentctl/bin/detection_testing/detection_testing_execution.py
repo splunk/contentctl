@@ -243,6 +243,7 @@ def main(config: TestConfig, director:DirectorOutputDto):
     #Update the signal handler
 
     signal.signal(signal.SIGINT, shutdown_signal_handler_execution)
+
     try:
         result = cm.run_test()
     except Exception as e:

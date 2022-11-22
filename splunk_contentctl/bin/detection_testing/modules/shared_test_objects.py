@@ -33,7 +33,7 @@ class SharedTestObjects:
 
     def beginTesting(self):
         self.test_start_time = datetime.datetime.now()
-        
+
     def noUntestedDetectionsRemain(self)->bool:
         if self.testing_queue.qsize() == 0:
             return True
@@ -49,7 +49,6 @@ class SharedTestObjects:
         #Record the overall result of the detection
         
         self.result_count += 1
-        self.results.append(detection)
 
         if not detection.get_success():
             self.fail_count += 1 
@@ -77,6 +76,8 @@ class SharedTestObjects:
             background = self.generate_background_section()
             summary = self.generate_summary_section()
             detections = self.generate_detections_section()
+            
+
             obj = {"background": background, "summary": summary, "detections": detections}
             with open(full_path, "w") as output:
                 json.dump(obj, output, indent=3)
@@ -110,6 +111,7 @@ class SharedTestObjects:
 
     def generate_detections_section(self)->list[dict]:
         results = []
+        print(f"number of detection results is {len(self.results)}")
         for detection in self.results:
             success = True
             thisDetection = {"name"  : detection.name,
@@ -117,6 +119,7 @@ class SharedTestObjects:
                              "search": detection.search,
                              "path"  : str(detection.file_path),
                              "tests" : []}
+            print(f"number of tests in the detection {thisDetection['name']} is {len(detection.test.tests)}")
             for test in detection.test.tests:
                 #Set all the default fields which we can show, even if there 
                 #is an error
@@ -150,11 +153,11 @@ class SharedTestObjects:
                     #If something unexpected happens, should we raise an exception?
                     #if result.job is None:
                     #    raise(Exception(f"Detection {detection.name}, Test {test.name} in file {detection.file_path} was None, but should not be!"))
-                    test_result["success"] = test.result.success,
-                    test_result["logic"] = test.result.logic,
-                    test_result["noise"] = test.result.noise,
-                    test_result["resultCount"] = float(test.result.job_content.get('resultCount',0)),
-                    test_result["runDuration"] = float(test.result.job_content.get('runDuration',0)),
+                    test_result["success"] = test.result.success
+                    test_result["logic"] = test.result.logic
+                    test_result["noise"] = test.result.noise
+                    test_result["resultCount"] = int(test.result.job_content.get('resultCount',0))
+                    test_result["runDuration"] = float(test.result.job_content.get('runDuration',0))
                     test_result["missing_observables"] = test.result.missing_observables
                     test_success = test.result.success
 

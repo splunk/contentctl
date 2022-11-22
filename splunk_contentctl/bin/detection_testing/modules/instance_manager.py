@@ -234,8 +234,8 @@ class InstanceManager:
                 f"\tElapsed Time               : {elapsed_time}\n"\
                 f"\tTest Execution Time        : {test_execution_time}\n"\
                 f"\tEstimated Remaining Time   : {estimated_time_remaining}\n"\
-                f"\tTests to run               : {tests_to_run}\n"\
                 f"\tAverage Time Per Test      : {average_time_per_test}\n"\
+                f"\tTests to run               : {tests_to_run}\n"\
                 f"\tTests currently running    : {tests_currently_running}\n"\
                 f"\tTests completed            : {tests_completed}\n"\
                 f"\t\tSuccesses : {successes}\n"\

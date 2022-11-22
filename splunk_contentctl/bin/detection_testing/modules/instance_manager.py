@@ -58,6 +58,7 @@ class InstanceManager:
 
         self.summary_thread = threading.Thread(
             target=self.queue_status_thread, args=())
+        
 
         print("CODE TO GENERATE YOUR BASELINE INFORMATION HERE")
 
@@ -88,7 +89,7 @@ class InstanceManager:
     def run_test(self) -> bool:
         self.run_instances()
         self.shared_test_objects.beginTesting()
-        self.summary_thread.run()
+        self.summary_thread.start()
         self.summary_thread.join()
 
 
@@ -118,8 +119,7 @@ class InstanceManager:
     def cleanup(self):
 
         try:
-            print(
-                "Removing all attack data that was downloaded during this test at: [{self.shared_test_objects.attack_data_root_folder}]")
+            print(f"Removing all attack data that was downloaded during this test at: [{self.shared_test_objects.attack_data_root_folder}]")
             shutil.rmtree(self.shared_test_objects.attack_data_root_folder)
             print("Successfully removed all attack data")
         finally:

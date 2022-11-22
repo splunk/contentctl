@@ -22,32 +22,29 @@ def start(args):
 
     print("""
 Running Splunk Security Content Control Tool (contentctl) 
-starting program loaded for TIE Fighter...
-      _                                            _
-     T T                                          T T
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     | |                   ____                   | |
-     | |            ___.r-"`--'"-r.____           | |
-     | |.-._,.,---~"_/_/  .----.  \_\_"~---,.,_,-.| |
-     | ]|.[_]_ T~T[_.-Y  / \  / \  Y-._]T~T _[_].|| |
-    [|-+[  ___]| [__  |-=[--()--]=-|  __] |[___  ]+-|]
-     | ]|"[_]  l_j[_"-l  \ /  \ /  !-"_]l_j  [_]~|| |
-     | |`-' "~"---.,_\\"\  "o--o"  /"/_,.---"~" `-'| |
-     | |             ~~"^-.____.-^"~~             | |
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     | |                                          | |
-     l_i                                          l_j -Row
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢶⠛⡇⠀⠀⠀⠀⠀⠀⣠⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⣀⠼⠖⠛⠋⠉⠉⠓⠢⣴⡻⣾⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢀⡠⠔⠊⠁⠀⠀⠀⠀⠀⠀⣠⣤⣄⠻⠟⣏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⣠⠞⠁⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⢻⣿⣿⠀⢀⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⢸⡇⠀⠀⠀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠀⠈⠁⠘⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⢸⡉⠓⠒⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⠀⠀⠀⠈⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠈⡇⠀⢠⠀⠀⠀⠀⠀⠀⠀⠈⡷⣄⠀⠀⢀⠈⠀⠀⠑⢄⠀⠑⢄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠹⡄⠘⡄⠀⠀⠀⠀⢀⡠⠊⠀⠙⠀⠀⠈⢣⠀⠀⠀⢀⠀⠀⠀⠉⠒⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠉⠁⠛⠲⢶⡒⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠉⠂⠀⠀⠀⠀⠤⡙⠢⣄⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢹⠀⠀⡀⠀⠀⢸⠀⠀⠀⠀⠘⠇⠀⠀⠀⠀⠀⠀⠀⠀⢀⠈⠀⠈⠳⡄⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠈⡇⠀⠣⠀⠀⠈⠀⢀⠀⠀⠀⠀⠀⠀⢀⣀⠀⠀⢀⡀⠀⠑⠄⠈⠣⡘⢆⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢧⠀⠀⠀⠀⠀⠀⠿⠀⠀⠀⠀⣠⠞⠉⠀⠀⠀⠀⠙⢆⠀⠀⡀⠀⠁⠈⢇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢹⠀⢤⠀⠀⠀⠀⠀⠀⠀⠀⢰⠁⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠙⡄⠀⡀⠈⡆
+⠀⠀⠀⠀⠀⠀⠀⠀⠸⡆⠘⠃⠀⠀⠀⢀⡄⠀⠀⡇⠀⠀⡄⠀⠀⠀⠰⡀⠀⠀⡄⠀⠉⠀⠃⠀⢱
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢣⡀⠀⠀⡆⠀⠸⠇⠀⠀⢳⠀⠀⠈⠀⠀⠀⠐⠓⠀⠀⢸⡄⠀⠀⠀⡀⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⡀⠀⢻⠀⠀⠀⠀⢰⠛⢆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠃⠀⡆⠀⠃⡼
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣷⣤⣽⣧⠀⠀⠀⡜⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠃
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⣿⣇⡿⠹⣷⣄⣬⡗⠢⣤⠖⠛⢳⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⡰⠃⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠋⢠⣾⢿⡏⣸⠀⠀⠈⠋⠛⠧⠤⠘⠛⠉⠙⠒⠒⠒⠒⠉⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠻⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
+    By: Splunk Threat Research Team [STRT] - research@splunk.com
     """)
 
     # parse config
@@ -203,13 +200,11 @@ def main(args):
     parser.set_defaults(func=lambda _: parser.print_help())
     actions_parser = parser.add_subparsers(title="Splunk content actions", dest="action")
 
-
     # available actions
-    #new_parser = actions_parser.add_parser("new", help="Create new content (detection, story, baseline)")
     init_parser = actions_parser.add_parser("init", help="initialize a Splunk content pack using and customizes a configuration under contentctl.yml")
     validate_parser = actions_parser.add_parser("validate", help="validates a Splunk content pack")
     build_parser = actions_parser.add_parser("build", help="builds a Splunk content pack package to be distributed")
-    new_content_parser = actions_parser.add_parser("new", help="create new Splunk content object, defaults to")
+    new_content_parser = actions_parser.add_parser("new", help="create new Splunk content object (detection, or story)")
     reporting_parser = actions_parser.add_parser("report", help="create Splunk content report of the current pack")
     inspect_parser = actions_parser.add_parser("inspect", help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.")
     deploy_parser = actions_parser.add_parser("deploy", help="install an application on a target Splunk instance.")  
@@ -217,8 +212,8 @@ def main(args):
 
 
     # init actions
-    init_parser.add_argument("-s", "--skip_configuration", action=argparse.BooleanOptionalAction, required=False, default=False, help="skips configuration of the pack and generates a default configuration, defaults to False")
-    init_parser.add_argument("-o", "--output", required=False, type=str, default='.' )
+    init_parser.add_argument("-s", "--skip_configuration", action='store_true', required=False, default=False, help="skips configuration of the pack and generates a default configuration")
+    init_parser.add_argument("-o", "--output", required=False, type=str, default='.', help="output directory to initialize the content pack in" )
     init_parser.set_defaults(func=initialize)
 
     validate_parser.add_argument("-p", "--pack", required=False, type=str, default='SPLUNK_ENTERPRISE_APP', 

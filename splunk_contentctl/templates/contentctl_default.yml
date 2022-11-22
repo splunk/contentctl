@@ -38,17 +38,21 @@ deploy:
   server:
 
 build:
-  format: app
-  # supported API (see details here), BA (see deployment here)
-  path: dist/my_splunk_content_pack
-  name: "My Splunk Content Pack"
-  prefix: "MSCA"
-
+  splunk_app:
+    path: dist/my_splunk_content_pack
+    name: "My Splunk Content Pack"
+    prefix: "MSCA"
+    author: "Geralt of Rivia"
+    author_email: "geralt@monsterkiller.com"
+  json_objects:
+    path: dist/api
+  ba_objects:
+    path: dist/ssa
 
 enrichments:
   attack_enrichment: True
   cve_enrichment: True
-  splunk_app_enrichment: False
+  splunk_app_enrichment: True
 
 custom_validators:
   field: 

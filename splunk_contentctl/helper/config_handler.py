@@ -13,7 +13,7 @@ class ConfigHandler:
         yml_dict_default = YmlReader.load_file(os.path.join(os.path.dirname(__file__), '../templates/contentctl_default.yml'))
 
         try:
-            yml_dict = YmlReader.load_file(os.path.join(os.path.dirname(__file__), '../../', config_path))
+            yml_dict = YmlReader.load_file(os.path.join(os.path.dirname(__file__), '../', config_path))
         except:
             print("no config file found, running with default from templates/contentctl_default.yml")
             yml_dict = ''

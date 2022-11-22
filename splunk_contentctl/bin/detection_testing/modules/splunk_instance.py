@@ -1,3 +1,9 @@
+from __future__ import annotations
+#Only used for static typing. We need this to avoid circular import warning
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from bin.detection_testing.modules.instance_manager import SharedTestObjects
+
 from collections import OrderedDict
 import datetime
 import docker
@@ -13,7 +19,6 @@ import xmltodict
 from requests.auth import HTTPBasicAuth
 from tempfile import mkdtemp, mkstemp
 from shutil import rmtree, copyfile
-from bin.detection_testing.modules.instance_manager import SharedTestObjects
 from bin.objects.test_config import TestConfig
 import pathlib
 import time
@@ -42,6 +47,9 @@ from bin.objects.unit_test_baseline import UnitTestBaseline
 from bin.objects.unit_test_attack_data import UnitTestAttackData
 from bin.objects.unit_test_result import UnitTestResult
 from bin.objects.enums import InstanceState
+
+
+
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/%d/release/%s/download"
 SPLUNK_START_ARGS = "--accept-license"
@@ -747,7 +755,7 @@ class SplunkInstance:
                 success = False
             
             self.testingStats.addTest()
-            self.shared_test_objects.addResult(detection_to_test)
+            self.shared_test_objects.addCompletedDetection(detection_to_test)
             #Get the next detection to test. If there are no more detections to test,
             #or there is an issue and one of the instance(s) is no longer running,
             #then this will return None
@@ -847,7 +855,7 @@ class SplunkInstance:
 class SplunkContainer(SplunkInstance):
         
     def __init__(self, config: TestConfig,
-                 synchronization_object: test_driver.TestDriver,
+                 shared_test_objects: SharedTestObjects,
                  web_port: int = 8000,
                  hec_port: int = 8088,
                  management_port: int = 8089,
@@ -857,7 +865,7 @@ class SplunkContainer(SplunkInstance):
         web_port = web_port + container_number
         hec_port = hec_port + 2*container_number
         management_port = management_port + 2*container_number
-        super().__init__(config, synchronization_object, web_port, hec_port, management_port)
+        super().__init__(config, shared_test_objects, web_port, hec_port, management_port)
         self.ports={
             "8000/tcp":web_port,
             "8088/tcp":hec_port,

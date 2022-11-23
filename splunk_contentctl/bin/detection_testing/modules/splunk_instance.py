@@ -13,9 +13,9 @@ import docker.models.resource
 import docker.models.containers
 from docker.models.resource import Model
 import os.path
-import random
+
 import requests
-import xmltodict
+
 from requests.auth import HTTPBasicAuth
 from tempfile import mkdtemp, mkstemp
 from shutil import rmtree, copyfile
@@ -675,58 +675,33 @@ class SplunkInstance:
 
     
     def configure_hec(self):
+        
+        
+        self.channel = str(uuid.uuid4())
         try:
-
-            auth = HTTPBasicAuth(self.config.splunk_app_username, self.config.splunk_app_password)
-            address = f"https://{self.config.test_instance_address}:{self.management_port}/services/data/inputs/http"
-            
-            data = {
-                "name": "DETECTION_TESTING_HEC",
-                "index": "main",
-                "indexes": "main,_internal,_audit", #this needs to support all the indexes in test files
-                "useACK": True
-            }
-            import urllib3
-            urllib3.disable_warnings()
-            self.print("fix logic to detect if endpoint already exists")
-            '''
-            r = requests.get(address, data=data, auth=auth, verify=False)
-            try:
-                if r.status_code == 200:
-                    #Yes, this endpoint exists!
-                    asDict = xmltodict.parse(r.text)
-                    #Long, messy way to get the token we need. This could use more error checking for sure.
-                    self.tokenString = [m['#text'] for m in asDict['feed']['entry']['content']['s:dict']['s:key'] if '@name' in m and m['@name']=='token'][0]
-                    self.channel = str(uuid.uuid4())
-                    print(f"HEC Endpoint for [{self.get_name()}] already exists with token [{self.tokenString}].  Using channel [{self.channel}]")    
-                    return
-            except Exception as e:
-                #Exception was generated, probably on the giant list comprehension becasue the HEC endpoint
-                #was probably not found. Just ignore it and fall through to where we actually create the
-                #endpoint
-                pass
-            '''
-            #Otherwise no, the endpoint does not exist. Create it
-            r = requests.post(address, data=data, auth=auth, verify=False)
-            if r.status_code == 201:
-                asDict = xmltodict.parse(r.text)
-                #Long, messy way to get the token we need. This could use more error checking for sure.
-                self.tokenString = [m['#text'] for m in asDict['feed']['entry']['content']['s:dict']['s:key'] if '@name' in m and m['@name']=='token'][0]
-                self.channel = str(uuid.uuid4())
-                self.print(f"Successfully configured HEC Endpoint for [{self.get_name()}] with channel [{self.channel}] and token [{self.tokenString}]")
-                return
-                
-            else:
-                raise(Exception(f"Error setting up hec.  Response code from {address} was [{r.status_code}]: {r.text} "))
-            
+            res = self.get_service().input(path='/servicesNS/nobody/splunk_httpinput/data/inputs/http/http:%2F%2FDETECTION_TESTING_HEC')
+            self.tokenString = res.token
+            self.print(f"HEC Endpoint for [{self.get_name()}] already exists with token [{self.tokenString}].  Using channel [{self.channel}]")
+            return
         except Exception as e:
-            raise(Exception(f"There was an issue setting up HEC....{str(e)}"))
-            
-    
+            #HEC input does not exist.  That's okay, we will create it
+            self.print(f"HEC ENDPOINT DOES NOT EXIST: {str(e)}")
+            pass
+        
+        try:
+            inputs = client.Inputs(self.get_service())
+            created_input = inputs.create(name="DETECTION_TESTING_HEC", kind="http", index= "main", indexes = "main,_internal,_audit", useACK=True)
+            self.tokenString = created_input.token
+            self.print(f"Successfully configured HEC Endpoint for [{self.get_name()}] with channel [{self.channel}] and token [{self.tokenString}]")
+            return
 
 
+        except Exception as e:
+            raise(Exception(f"Failure creating HEC Endpoint: {str(e)}"))
+                
 
     def setup(self)->None:
+        self.testingStats.setInstanceState(InstanceState.starting)
         self.wait_for_splunk_ready()
         self.configure_hec()
         self.testingStats.begin()
@@ -1029,7 +1004,7 @@ class SplunkContainer(SplunkInstance):
     def removeContainer(
         self, removeVolumes: bool = True, forceRemove: bool = True
     ) -> bool:
-
+        return True
         try:
             container:docker.models.containers.Container = self.get_client().containers.get(self.get_name())
         except Exception as e:

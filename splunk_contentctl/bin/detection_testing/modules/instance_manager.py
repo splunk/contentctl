@@ -240,7 +240,7 @@ class InstanceManager:
                 f"\tTests completed            : {tests_completed}\n"\
                 f"\t\tSuccesses : {successes}\n"\
                 f"\t\tFailures  : {failures}\n"
-            if status_string is not None:
+            if system_stats is not None:
                 status_string += f"\t{system_stats}\n"
 
             return status_string

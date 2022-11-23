@@ -49,9 +49,11 @@ class UnitTestResult(BaseModel):
         
         elif 'resultCount' in values['job_content'] and int(values['job_content']['resultCount']) == 1:
             #in the future we probably want other metrics, about noise or others, here
+            values['logic'] = True
             values['success'] = True
             
         elif 'resultCount' in values['job_content'] and int(values['job_content']['resultCount']) != 1:
+            values['logic'] = False
             values['success'] = False
             
         else:

@@ -1,6 +1,6 @@
 
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, root_validator, validator
 
 
 from typing import Union
@@ -16,6 +16,9 @@ class UnitTestResult(BaseModel):
     noise: bool = False
     exception:bool = False
     success:bool = False
+    class Config:
+        validate_assignment = True
+
 
     def get_summary(self, test_name:str, verbose=False)->str:
         lines:list[str] = []
@@ -39,14 +42,55 @@ class UnitTestResult(BaseModel):
         if self.job_content is not None:
             return self.job_content.get("search", "NO SEARCH FOUND - JOB MISSING SEARCH FIELD")
         return "NO SEARCH FOUND - JOB IS EMPTY"
+    
+    def add_message(self, message:str):
+        if self.message is None:
+            self.message = message
+        else:
+            self.message += f"\n{message}"
+    
+    
 
     @root_validator(pre=False)
     def update_success(cls, values):
         if values['job_content'] is None:
             values['exception'] = True
             values['success'] = False
+            if values['message'] is None:
+                #If the message has not been overridden, then put in a default
+                values['message'] = "Job Content was None - unknown failure reason"
+            #Otherwise, a message has been passed so don't overwrite it    
             return values    
         
+        if 'messages' in values['job_content']:
+            all_messages = values['job_content']['messages']
+            unique_messages = set()
+            for level, level_messages in all_messages.items():
+                if level in ['info']:
+                    #we will skip any info messages
+                    continue
+                elif level in ['fatal', 'error']:
+                    for msg in level_messages:
+                        #These error indicate a failure - the search was 
+                        #not successful. They are important for debugging,
+                        #so we will pass them to the user.
+                        #They also represent a an error during the test
+                        values['logic'] = False
+                        values['success'] = False
+                        values['exception'] = True
+                        unique_messages.add(msg)
+                else:
+                    unknown_messages_as_single_string = "\n".join(level_messages)
+                    unique_messages.add(unknown_messages_as_single_string)
+                
+            if len(unique_messages) == 0:
+                values['message'] = None #No messages
+            
+            else: 
+                #Merge all those messages together
+                values['message'] = "\n".join(unique_messages)
+
+        #Can there still be a success even if there was an error/fatal message above? Probably not?
         elif 'resultCount' in values['job_content'] and int(values['job_content']['resultCount']) == 1:
             #in the future we probably want other metrics, about noise or others, here
             values['logic'] = True
@@ -55,9 +99,12 @@ class UnitTestResult(BaseModel):
         elif 'resultCount' in values['job_content'] and int(values['job_content']['resultCount']) != 1:
             values['logic'] = False
             values['success'] = False
+        
+        
             
         else:
             raise(Exception("Result created with indeterminate success."))
+        
         return values
         
     def update_missing_observables(self, missing_observables:set[str]):
@@ -73,8 +120,9 @@ class UnitTestResult(BaseModel):
 
     def get_job_field(self, fieldName:str):
         if self.job_content is None:
-            return f"FIELD NAME {fieldName} does not exist in Job Content because Job Content is NONE"
-        return self.job_content.get(fieldName, f"FIELD NAME {fieldName} does not exist in Job Content")
+            #return f"FIELD NAME {fieldName} does not exist in Job Content because Job Content is NONE"
+            return None
+        return self.job_content.get(fieldName, None)
             
     def get_time(self)->timedelta:
         if self.job_content is None:

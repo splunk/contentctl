@@ -172,10 +172,8 @@ class InstanceManager:
             return "Cannot calculate yet - first test has not finished yet"
 
         average_time_per_test = elapsed / self.shared_test_objects.result_count
-        rounded_time_string = self.getTimeDeltaRoundedToNearestSecond(
-            average_time_per_test)
-
-        return str(rounded_time_string)
+    
+        return average_time_per_test
 
     def getAverageTimeRemaining(self) -> str:
         avg = self.getAverageTimePerTest()
@@ -226,7 +224,6 @@ class InstanceManager:
             tests_to_run = self.shared_test_objects.testing_queue.qsize()
             average_time_per_test = self.getTimeDeltaRoundedToNearestSecond(
                 self.getAverageTimePerTest())
-            tests_currently_running = "TO BE DETERMINED"
             tests_completed = self.shared_test_objects.result_count
             successes = self.shared_test_objects.pass_count
             failures = self.shared_test_objects.fail_count
@@ -236,7 +233,6 @@ class InstanceManager:
                 f"\tEstimated Remaining Time   : {estimated_time_remaining}\n"\
                 f"\tAverage Time Per Test      : {average_time_per_test}\n"\
                 f"\tTests to run               : {tests_to_run}\n"\
-                f"\tTests currently running    : {tests_currently_running}\n"\
                 f"\tTests completed            : {tests_completed}\n"\
                 f"\t\tSuccesses : {successes}\n"\
                 f"\t\tFailures  : {failures}\n"

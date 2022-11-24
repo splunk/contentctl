@@ -167,6 +167,9 @@ class SplunkInstance:
         return service
     
     def test_detection(self, detection:Detection, attack_data_root_folder)->bool:
+        if detection.test is None:
+            self.print(f"No unit tests found found for {detection.name}")
+            return False
         abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
         success = self.execute_tests(detection, abs_folder_path)
         
@@ -174,7 +177,7 @@ class SplunkInstance:
             #no need to be extremely verbose and print out everything
             beginning = f"[{detection.name} --> PASS ({len(detection.test.tests)} test(s))]"
         else:
-            beginning = f"[{detection.name} --> FAIL (FAILURES: {detection.get_num_failed_tests()}, PASSES: {detection.get_num_successful_tests})]"
+            beginning = f"[{detection.name} --> FAIL (FAILURES: {detection.get_num_failed_tests()}, PASSES: {detection.get_num_successful_tests()})]"
 
         
         summaries = []
@@ -466,13 +469,31 @@ class SplunkInstance:
 
 
         try:
+            
             job = service.jobs.create(splunk_search, **kwargs)
-            _ = job.results(output_mode='json')
+            
+            
+            result = UnitTestResult(job_content=job.content)
+            try:
+                #This will fail if an exception is raised during the search
+                _ = job.results(output_mode='json')
+            except Exception as e:
+                #There was an exception raised during the search, so we 
+                #will return that to the user
+                if result.message != None:
+                    #Do nothing - the error was already captured in the result
+                    pass
+                else:
+                    #add this to the messages for the result.
+                    
+                    result.add_message(f"Error(s) running search: {str(e)}")
+                
+                return result
+                
+
+            
             result = UnitTestResult(job_content=job.content)
             
-            
-
-
             if result.success == False:
                 #The test did not work, so just return the failure.  We may try to run
                 #this search again because we might just not be done ingesting and
@@ -528,7 +549,7 @@ class SplunkInstance:
 
         except Exception as e:
             error_message = "Unable to execute detection: %s"%(str(e))
-            print(error_message,file=sys.stderr)
+            self.print(error_message)
             return UnitTestResult(job_content=None, missing_observables=[], message=error_message)
 
 
@@ -572,12 +593,19 @@ class SplunkInstance:
         
         start = timeit.default_timer()
         MAX_TIME = 120
-        sleep_base = 2
-        sleep_exp = 0
+        #Fibonacci sequence is a good way to determine how long to sleep.
+        #It concentrates shorter sleeps at the beginning while growing
+        #wait time at a reasonable rate. The other good option is x^2
+        
+        #These defaults make the first sleep time 2
+        sleep_time_0 = 1
+        sleep_time_1 = 1
+
         while True:
-            sleeptime = sleep_base**sleep_exp
-            sleep_exp += 1
-            
+            sleeptime = sleep_time_0 + sleep_time_1
+            sleep_time_0 = sleep_time_1
+            sleep_time_1 = sleeptime
+            self.print(f"Waiting {sleeptime} before trying the search {test.name}")
             time.sleep(sleeptime)
             #Run the baseline(s) if they exist for this test
             try:
@@ -585,6 +613,13 @@ class SplunkInstance:
                 if result is None:
                     #There were no baselines, do nothing
                     pass
+                elif result.exception:
+                    # There was an actual exception generated while running the baseline.
+                    # No sense in trying the baseline again
+                    result.add_message("Did not execute detection because of Baseline Failure.")
+                    test.result = result
+
+                    break
                 elif result.success:
                     #great, all of the baselines ran and were successful.
                     pass
@@ -613,7 +648,7 @@ class SplunkInstance:
                 #We were successful, no need to run again. 
                 break
             elif test.result.exception:
-                #There was an exception, not just a failure to find what we're looking for. break 
+                #There was an exception, not just a failure to find what we're looking for break 
                 break
             elif timeit.default_timer() - start > MAX_TIME:
                 #We ran out of time
@@ -636,8 +671,17 @@ class SplunkInstance:
                 formatted_message = message_template.format(status="SUCCESS")
 
             #Just use this to pause on input, we don't do anything with the response
-            self.print(f"DETECTION FILE: {detection.file_path}")
-            self.print(f"DETECTION SEARCH: {test.result.get_job_field('search')}")
+            self.print(f"FILE: {detection.file_path}")
+            sid = test.result.get_job_field('sid')
+            link = f"http://{self.config.test_instance_address}:{self.web_port}/en-US/app/search/search?sid={sid}"
+            if sid is not None:
+                self.print(f"LINK: {link}")
+            search = test.result.get_job_field('search')
+            if search is None:
+                search = "Unknown error getting search"
+            if test.result.message is not None:
+                self.print(f"MESSAGE: {test.result.message}")
+            self.print(f"SEARCH:\n{search}")
             _ = input(formatted_message)
             
 
@@ -666,10 +710,6 @@ class SplunkInstance:
     
         #Treat a baseline just like a UnitTestTest - that's basically what it is!
         result = self.test_detection_search(detection, baseline)
-        if result.exception:
-            result.message = f"There was an exception running the baseline [{baseline.file}]"
-        else:
-            result.message = f"Not successful running the baseline [{baseline.file}]"
         return result
 
 

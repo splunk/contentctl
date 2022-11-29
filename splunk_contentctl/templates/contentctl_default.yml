@@ -1,0 +1,50 @@
+#config file
+
+global:
+  log_path: "contentctl.log"
+  log_level: INFO
+
+scheduling:
+  cron_schedule: 0 * * * *
+  earliest_time: -70m@m
+  latest_time: -10m@m
+  schedule_window: auto
+
+alert_actions:
+  notable:
+    rule_description: '%description%'
+    rule_title: '%name%'
+    nes_fields:
+    - user
+    - dest
+    - src
+
+test:
+  docker_image: ""
+  apps: .
+  assets: csv
+
+deploy:
+  target: splunk_search_head
+  username:
+  password:
+  server:
+
+build:
+  splunk_app:
+    path: dist/my_splunk_content_pack
+    name: "My Splunk Content Pack"
+    prefix: "MSCA"
+    author: "Geralt of Rivia"
+    author_email: "geralt@monsterkiller.com"
+  json_objects:
+    path: dist/api
+  ba_objects:
+    path: dist/ssa
+
+enrichments:
+  attack_enrichment: True
+  cve_enrichment: True
+  splunk_app_enrichment: True
+
+  

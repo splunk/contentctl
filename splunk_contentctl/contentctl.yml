@@ -1,0 +1,45 @@
+global:
+  log_path: contentctl.log
+  log_level: INFO
+content:
+  detections: null
+  stories: ''
+  playbooks: ''
+scheduling:
+  cron_schedule: 0 * * * *
+  earliest_time: -70m@m
+  latest_time: -10m@m
+  schedule_window: auto
+alert_actions:
+  notable:
+    rule_description: '%description%'
+    rule_title: '%name%'
+    nes_fields:
+    - user
+    - dest
+    - src
+test:
+  docker_image: ''
+  apps: .
+  assets: csv
+deploy:
+  target: splunk_search_head
+  app_path: null
+  username: null
+  password: null
+  server: null
+build:
+  splunk_app:
+    path: dist/my_splunk_content_pack
+    name: My Splunk Content Pack
+    prefix: 'MY '
+    author: Geralt of Rivia
+    author_email: geralt@monsterkiller.com
+enrichments:
+  attack_enrichment: true
+  cve_enrichment: true
+  splunk_app_enrichment: true
+custom_validators:
+  field: null
+  validation_type: regex
+  value: r'xxxx'

@@ -227,8 +227,10 @@ def main(config: TestConfig, director:DirectorOutputDto):
 
 
     try:
+        
         cm = instance_manager.InstanceManager(config,
                                               detections_to_test)
+        
     except Exception as e:
         print("Error - unrecoverable error trying to set up the containers: [%s].\n\tQuitting..."%(str(e)),file=sys.stderr)
         sys.exit(1)
@@ -236,12 +238,13 @@ def main(config: TestConfig, director:DirectorOutputDto):
     def shutdown_signal_handler_execution(sig, frame):
         #Set that a container has failed which will gracefully stop the other containers.
         #This way we get our full cleanup routine, too!
-        print("Got a signal to shut down. Shutting down all containers, please wait...", file=sys.stderr)
+        cm.force_finish()
+
+
         
-        cm.checkFailures()
     
     #Update the signal handler
-
+    
     signal.signal(signal.SIGINT, shutdown_signal_handler_execution)
 
     try:

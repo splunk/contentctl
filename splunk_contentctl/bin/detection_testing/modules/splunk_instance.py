@@ -74,6 +74,7 @@ class TestingStats:
     instance_state:InstanceState
     def __init__(self):
         self.num_detections_tested = 0
+        self.instance_state = InstanceState.running
         self.instance_start_time = datetime.datetime.now()
         self.testing_start_time = datetime.datetime.now()
     def begin(self):
@@ -141,6 +142,7 @@ class SplunkInstance:
 
         
         self.testingStats = TestingStats()
+        #self.process = multiprocessing.Process(target=self.run, )
         self.thread = threading.Thread(target=self.run, )
         self.files_to_copy_to_instance = files_to_copy_to_instance
 
@@ -153,7 +155,8 @@ class SplunkInstance:
 
     def get_name(self)->str:
         return self.config.test_instance_address
-        
+    
+
     def get_service(self):
         try:
             service = client.connect(
@@ -166,6 +169,8 @@ class SplunkInstance:
             raise(Exception(f"Unable to connect to Splunk instance at [{self.config.test_instance_address}]: {str(e)}"))
         return service
     
+    
+
     def test_detection(self, detection:Detection, attack_data_root_folder)->bool:
         if detection.test is None:
             self.print(f"No unit tests found found for {detection.name}")
@@ -592,16 +597,20 @@ class SplunkInstance:
 
         
         start = timeit.default_timer()
-        MAX_TIME = 120
+        MAX_TIME = 60
         #Fibonacci sequence is a good way to determine how long to sleep.
         #It concentrates shorter sleeps at the beginning while growing
         #wait time at a reasonable rate. The other good option is x^2
         
-        #These defaults make the first sleep time 2
+        #These defaults make the first sleep time 3
         sleep_time_0 = 1
-        sleep_time_1 = 1
+        sleep_time_1 = 2
 
         while True:
+            if timeit.default_timer() - start > MAX_TIME:
+                #We ran out of time
+                break
+
             sleeptime = sleep_time_0 + sleep_time_1
             sleep_time_0 = sleep_time_1
             sleep_time_1 = sleeptime
@@ -609,6 +618,7 @@ class SplunkInstance:
             time.sleep(sleeptime)
             #Run the baseline(s) if they exist for this test
             try:
+                
                 result = self.execute_baselines(detection, test)
                 if result is None:
                     #There were no baselines, do nothing
@@ -650,13 +660,14 @@ class SplunkInstance:
             elif test.result.exception:
                 #There was an exception, not just a failure to find what we're looking for break 
                 break
-            elif timeit.default_timer() - start > MAX_TIME:
-                #We ran out of time
-                break
             else:
                 #We still have some time left, we will just run through the loop again
                 continue
-            
+        
+        if test.result is None:
+            #We should not have gotten here without test.result being assigned
+            test.result = UnitTestResult(job_content=None, message="Failed to produce a test result for unknown reason")
+
         if self.config.post_test_behavior == PostTestBehavior.always_pause or \
         (test.result.success == False and self.config.post_test_behavior == PostTestBehavior.pause_on_failure):
         
@@ -741,48 +752,65 @@ class SplunkInstance:
                 
 
     def setup(self)->None:
-        self.testingStats.setInstanceState(InstanceState.starting)
         self.wait_for_splunk_ready()
         self.configure_hec()
         self.testingStats.begin()
         return None        
     def teardown(self)->None:
-        if self.testingStats.num_detections_tested == 0:
-            self.print(f"Container [{self.get_name()}] did not find any tests and will not start.\n"\
-                  "This does not mean there was an error!")
+
+        if self.shared_test_objects.force_finish == True:
+            self.print(f"Finishing due to error or cancellation after testing [{self.testingStats.num_detections_tested}] detections.")
+        elif self.testingStats.num_detections_tested == 0 :
+            self.print(f"Did not find any tests and will not start.")
         else:
-            self.print(f"Instance [{self.get_name()}] has finished running [{self.testingStats.num_detections_tested}] detections.")
+            self.print(f"Finished testing [{self.testingStats.num_detections_tested}] detections.")
+        self.testingStats.setInstanceState(InstanceState.stopped)
         return None
 
     def run(self):
-        self.setup()
-        self.shared_test_objects.start_barrier.wait()
-        self.testingStats.setInstanceState(InstanceState.running)
-        detection_to_test = self.shared_test_objects.getDetection()
-        while detection_to_test is not None:
-            try:
-                success = self.test_detection(detection_to_test, self.shared_test_objects.attack_data_root_folder)
-            except Exception as e:
-                self.print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
-                import traceback
-                traceback.print_exc()
-                success = False
-            
-            self.testingStats.addTest()
-            self.shared_test_objects.addCompletedDetection(detection_to_test)
-            #Get the next detection to test. If there are no more detections to test,
-            #or there is an issue and one of the instance(s) is no longer running,
-            #then this will return None
+        try:
+            self.testingStats.setInstanceState(InstanceState.starting)
+            self.setup()
+            self.shared_test_objects.start_barrier.wait()
+            self.testingStats.setInstanceState(InstanceState.running)
             detection_to_test = self.shared_test_objects.getDetection()
+            while detection_to_test is not None:
+                try:
+                    success = self.test_detection(detection_to_test, self.shared_test_objects.attack_data_root_folder)
+                except Exception as e:
+                    self.print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    success = False
+                
+                self.testingStats.addTest()
+                self.shared_test_objects.addCompletedDetection(detection_to_test)
+                #Get the next detection to test. If there are no more detections to test,
+                #or there is an issue and one of the instance(s) is no longer running,
+                #then this will return None
+                detection_to_test = self.shared_test_objects.getDetection()
+        except Exception as e:
+            self.shared_test_objects.force_finish = True
+            self.print(f"Exception while running test: {str(e)}")
 
-        self.teardown()
+        finally:
+            self.teardown()
     
     def wait_for_splunk_ready(
         self,
-        seconds_between_attempts: int = 10,
+        seconds_between_attempts: int = 10, max_wait_time_seconds: int=0
     ) -> bool:
+        #Wait time of zero is appropriate for SplunkServer.  Containers may take much longer
+
+        start_time = datetime.datetime.now()
+
         self.print("Waiting for Splunk Instance Web Interface to come up...")
         while True:
+            if self.shared_test_objects.force_finish:
+                raise(Exception("Test finished or terminated early.  Stop waiting for interface"))
+            timediff = datetime.datetime.now() - start_time
+
+
             try:
                 service = self.get_service()
                 if service.restart_required:
@@ -798,7 +826,12 @@ class SplunkInstance:
                 # calling function, we have a timeout, so it's okay if this function could get 
                 # stuck in an infinite loop (the caller will generate a timeout error)
                 pass
-                    
+
+            if max_wait_time_seconds == 0:
+                raise(Exception(f"Unable to contact Splunk Instance - if this is a Splunk Server ensure that the address, ports, and credentials are correct and that the server is currently running."))                    
+            if timediff.total_seconds() > max_wait_time_seconds:
+                raise(Exception(f"Unable to connect to Splunk Instance - Exceeded maximum start time of {max_wait_time_seconds}"))                    
+            
             time.sleep(seconds_between_attempts)
         
             
@@ -910,9 +943,17 @@ class SplunkContainer(SplunkInstance):
 
 
     def teardown(self):
+        self.testingStats.setInstanceState(InstanceState.stopping)
         self.stopContainer()
         self.removeContainer()
         super().teardown()
+
+    def wait_for_splunk_ready(
+        self,
+        seconds_between_attempts: int = 10, max_wait_time_seconds: int=0
+    ) -> bool:
+        MAX_CONTAINER_SETUP_WAIT_TIME_SECONDS = 600
+        return super().wait_for_splunk_ready(max_wait_time_seconds=600)
 
     def get_name(self)->str:
         return self.container_name
@@ -1044,7 +1085,6 @@ class SplunkContainer(SplunkInstance):
     def removeContainer(
         self, removeVolumes: bool = True, forceRemove: bool = True
     ) -> bool:
-        return True
         try:
             container:docker.models.containers.Container = self.get_client().containers.get(self.get_name())
         except Exception as e:

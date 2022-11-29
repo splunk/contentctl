@@ -546,8 +546,8 @@ def main(args):
         return args.func(args)
     except Exception as e:
         print(f"Error for function [{args.func.__name__}]: {str(e)}")
-        #import traceback
-        #print(traceback.format_exc())
+        import traceback
+        print(traceback.format_exc())
 
         sys.exit(1)
 

@@ -11,13 +11,14 @@ import json
 
 class SharedTestObjects:
     def __init__(self, detections:list[Detection], num_containers:int=1):
-        self.testing_queue:queue.Queue[Detection] = queue.Queue()
+        self.testing_queue: queue.Queue[Detection] = queue.Queue()
         for detection in detections:
             self.testing_queue.put(detection)
         self.attack_data_root_folder = mkdtemp(prefix="attack_data_", dir=os.getcwd())
         self.total_number_of_detections = len(detections)
         self.start_barrier = threading.Barrier(num_containers)
         self.results:list[Detection] = []
+        self.force_finish: bool = False
         
         
         self.start_time = datetime.datetime.now()
@@ -31,12 +32,17 @@ class SharedTestObjects:
         
         
 
+
     def beginTesting(self):
         self.test_start_time = datetime.datetime.now()
 
     def noUntestedDetectionsRemain(self)->bool:
         if self.testing_queue.qsize() == 0:
             return True
+        if self.force_finish:
+            print("Testing stopped early due to exception or interruption")
+            return True
+
         return False
     
     def numberOfDetectionEqualNumberOfResults(self)->bool:
@@ -62,7 +68,8 @@ class SharedTestObjects:
         self.results.append(detection)
     
     def getDetection(self)-> Union[Detection,None]:
-        
+        if self.force_finish:
+            return None
         try:
             return self.testing_queue.get(block=False)
         except Exception as e:
@@ -119,7 +126,6 @@ class SharedTestObjects:
                              "search": detection.search,
                              "path"  : str(detection.file_path),
                              "tests" : []}
-            print(f"number of tests in the detection {thisDetection['name']} is {len(detection.test.tests)}")
             for test in detection.test.tests:
                 #Set all the default fields which we can show, even if there 
                 #is an error

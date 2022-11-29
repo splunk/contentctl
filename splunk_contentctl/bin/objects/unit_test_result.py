@@ -63,6 +63,7 @@ class UnitTestResult(BaseModel):
             return values    
         
         if 'messages' in values['job_content']:
+            fatal_or_error = False
             all_messages = values['job_content']['messages']
             unique_messages = set()
             for level, level_messages in all_messages.items():
@@ -79,6 +80,7 @@ class UnitTestResult(BaseModel):
                         values['success'] = False
                         values['exception'] = True
                         unique_messages.add(msg)
+                        fatal_or_error = True
                 else:
                     unknown_messages_as_single_string = "\n".join(level_messages)
                     unique_messages.add(unknown_messages_as_single_string)
@@ -89,9 +91,13 @@ class UnitTestResult(BaseModel):
             else: 
                 #Merge all those messages together
                 values['message'] = "\n".join(unique_messages)
+            
+            if fatal_or_error:
+                return values
+            
 
         #Can there still be a success even if there was an error/fatal message above? Probably not?
-        elif 'resultCount' in values['job_content'] and int(values['job_content']['resultCount']) == 1:
+        if 'resultCount' in values['job_content'] and int(values['job_content']['resultCount']) == 1:
             #in the future we probably want other metrics, about noise or others, here
             values['logic'] = True
             values['success'] = True
@@ -112,9 +118,9 @@ class UnitTestResult(BaseModel):
         self.success = self.determine_success()
     
     def determine_success(self)->bool:
-        values_dict = self.update_success(self.__dict__)
-        self.exception = values_dict['exception']
-        self.success = values_dict['success']
+        #values_dict = self.update_success(self.__dict__)
+        #self.exception = values_dict['exception']
+        #self.success = values_dict['success']
         return self.success
     
 

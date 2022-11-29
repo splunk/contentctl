@@ -8,10 +8,9 @@ import random
 
 import json
 import string
-import threading
 import time
 import timeit
-import queue
+
 from typing import Union
 from bin.detection_testing.modules.splunk_instance import SplunkInstance, SplunkContainer, SplunkServer
 from bin.detection_testing.modules.shared_test_objects import SharedTestObjects
@@ -22,6 +21,7 @@ from bin.objects.enums import InstanceState
 
 from tempfile import mkdtemp
 import pathlib
+import threading
 import shutil
 import psutil
 
@@ -42,22 +42,8 @@ class InstanceManager:
         self.shared_test_objects = SharedTestObjects(
             detections, self.config.num_containers)
 
-        print("\n\n***********************")
-        print(f"Log into your [{self.config.num_containers}] Splunk Instance(s) after they are ready at http://127.0.0.1:[{WEB_PORT_START}-{WEB_PORT_START + self.config.num_containers - 1}]")
-        print("\tSplunk App Username: [%s]" % ("admin"))
-        print("\tSplunk App Password: ", end='')
-
-        print("[%s]" % (self.config.splunk_app_password))
-
-        print("***********************\n\n")
-
-        if self.config.target_infrastructure == DetectionTestingTargetInfrastructure.container:
-            print("start and set up some containers")
-        else:
-            print("it's just a server that is already set up")
-
         self.summary_thread = threading.Thread(
-            target=self.queue_status_thread, args=())
+            target=self.queue_status_thread)
         
 
         print("CODE TO GENERATE YOUR BASELINE INFORMATION HERE")
@@ -66,6 +52,15 @@ class InstanceManager:
         self.baseline = self.generate_baseline()
 
         self.instances: list[SplunkInstance] = []
+
+
+        
+        #Everything seems to have started okay with no exceptions, print he 
+        print("\n\n***********************")
+        print(f"Log into your [{self.config.num_containers}] Splunk Instance(s) after they are ready at http://{self.config.test_instance_address}:[{WEB_PORT_START}-{WEB_PORT_START + self.config.num_containers - 1}]")
+        print(f"\tSplunk App Username: [{self.config.splunk_app_username}]")
+        print(f"\tSplunk App Password: [{self.config.splunk_app_password}]")
+        print("***********************\n\n")
 
     def generate_baseline(self) -> OrderedDict:
         baseline = OrderedDict()
@@ -90,6 +85,7 @@ class InstanceManager:
         self.run_instances()
         self.shared_test_objects.beginTesting()
         self.summary_thread.start()
+        
         self.summary_thread.join()
 
 
@@ -213,7 +209,7 @@ class InstanceManager:
 
             status_string = "***********PROGRESS UPDATE***********\n"
             if not self.all_instances_ready():
-                status_string += f"\tWaiting for container setup: {self.getTimeDeltaRoundedToNearestSecond(self.getTotalElapsedTime())}\n"
+                status_string += f"\tWaiting for instance setup: {self.getTimeDeltaRoundedToNearestSecond(self.getTotalElapsedTime())}\n"
                 return status_string
 
             elapsed_time = self.getTimeDeltaRoundedToNearestSecond(
@@ -251,14 +247,13 @@ class InstanceManager:
         #Nothing was in an error state
         return False
     
+
     def atLeastOneInstanceRunning(self):
         for instance in self.instances:
             if instance.testingStats.instance_state == InstanceState.starting or \
                instance.testingStats.instance_state == InstanceState.running or \
                instance.testingStats.instance_state == InstanceState.stopping :
-                print(f"Instance {instance.get_name()} is [{instance.testingStats.instance_state}]")
                 return True
-            print(f"{instance.get_name()} - {instance.testingStats.instance_state}")
         return False
 
     def run_instances(self) -> None:
@@ -288,35 +283,22 @@ class InstanceManager:
         
 
 
+    def force_finish(self):
+        self.shared_test_objects.force_finish = True
 
-    def queue_status_thread(self, status_interval: int = 60, num_steps: int = 10) -> None:
-        print("status thread start")
+
+    def queue_status_thread(self, status_interval: int = 60, num_steps: int = 30) -> None:        
+        #This loop lets us frequently check to see if the testing
+        #is complete but only print out status every once in a while
+        check_interval = int(status_interval/num_steps)
         while self.atLeastOneInstanceRunning():
-            if self.atLeastOneInstanceErrored():
-                break
-
-            print(self.summarize())
-            time.sleep(30)
-            continue
-            # This for loop lets us run the summarize print less often, but check for failure more often
-            for chunk in range(0, status_interval, int(status_interval/num_steps)):
-                if self.shared_test_objects.checkContainerFailure():
-                    print(
-                        "One of the containers has shut down prematurely or the test was halted. Ensuring all containers are stopped.")
-                    for container in self.containers:
-                        container.stopContainer()
-                    print("All containers stopped")
-                    self.all_tests_completed = False
-                    return None
-                time.sleep(status_interval/num_steps)
-
-            at_least_one_container_has_started_running_tests = False
-            for container in self.containers:
-                if container.test_start_time != -1:
-                    at_least_one_container_has_started_running_tests = True
+            for chunk in range(0, status_interval, check_interval):
+                if not self.atLeastOneInstanceRunning():
                     break
-            if self.shared_test_objects.summarize(testing_currently_active=at_least_one_container_has_started_running_tests) == False:
-                # There are no more tests to run, so we can return from this thread
-                self.all_tests_completed = True
-                return None
-        print("status thread finish")
+                time.sleep(check_interval)
+            print(self.summarize())
+        
+        return None
+
+
+

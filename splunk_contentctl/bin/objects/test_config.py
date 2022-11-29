@@ -41,9 +41,11 @@ def getTestConfigFromYMLFile(path:pathlib.Path):
 class TestConfig(BaseModel, extra=Extra.forbid):
     repo_path: str = Field(default='.', title="Path to the root of your app")
     repo_url: Union[str,None] = Field(default=None, title="HTTP(s) path to the repo for repo_path.  If this field is blank, it will be inferred from the repo")
+    mock:bool = Field(default=False, title="Whether or not to actually run the test, or just generate the app and test configuration files")
     main_branch: Union[str,None] = Field(default=None, title="Main branch of the repo, if applicable.")
     test_branch: Union[str,None] = Field(default=None, title="Branch of the repo to be tested, if applicable.")
     commit_hash: Union[str,None] = Field(default=None, title="Commit hash of the repo state to be tested, if applicable")
+    target_infrastructure: DetectionTestingTargetInfrastructure = Field(default=DetectionTestingTargetInfrastructure.container, title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}")
     full_image_path: str = Field(default="registry.hub.docker.com/splunk/splunk:latest", title="Full path to the container image to be used")
     container_name: str = Field(default="splunk_detection_testing_%d", title="Template to be used for naming the Splunk Test Containers which will be created")
     post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, title=f"What to do after a test has completed.  Choose one of {PostTestBehavior._member_names_}")
@@ -53,13 +55,13 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     pr_number: Union[int,None] = Field(default=None, title="The number of the PR to test")
     splunk_app_username: Union[str,None] = Field(default="admin", title="The name of the user for testing")
     splunk_app_password: Union[str,None] = Field(default=Utils.get_random_password(), title="Password for logging into Splunk Server")
-    mock:bool = Field(default=False, title="Whether or not to actually run the test, or just generate the app and test configuration files")
+    
     splunkbase_username:Union[str,None] = Field(default=None, title="The username for logging into Splunkbase in case apps must be downloaded")
     splunkbase_password:Union[str,None] = Field(default=None, title="The password for logging into Splunkbase in case apps must be downloaded")
     apps: list[App] = Field(default=[], title="A list of all the apps to be installed on each container")
     
     test_instance_address:str = Field(default="127.0.0.1", title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'")
-    target_infrastructure: DetectionTestingTargetInfrastructure = Field(default=DetectionTestingTargetInfrastructure.container, title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}")
+    
     
 
             
@@ -160,7 +162,10 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         return v
     
     @validator('full_image_path', always=True)
-    def validate_full_image_path(cls,v):
+    def validate_full_image_path(cls,v, values):
+        if values.get('target_infrastructure', None) == DetectionTestingTargetInfrastructure.server.value:
+            print(f"No need to validate target image path {v}, testing target is preconfigured server")
+            return v
         #This behavior may change if we start supporting local/offline containers and 
         #the logic to build them
         if ':' not in v:
@@ -301,10 +306,10 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     
     @validator('target_infrastructure', always=True)
     def validate_target_infrastructure(cls, v, values):
-        if v == DetectionTestingTargetInfrastructure.server:
+        if v == DetectionTestingTargetInfrastructure.server.value:
             #No need to validate that the docker client is available
             return v
-        elif v == DetectionTestingTargetInfrastructure.container:
+        elif v == DetectionTestingTargetInfrastructure.container.value:
             if values["mock"] is False:
                 #we need to make sure we can actually get the docker client from the environment
                 try:

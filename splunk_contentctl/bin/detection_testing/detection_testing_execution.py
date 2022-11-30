@@ -202,6 +202,7 @@ def main(config: TestConfig, director:DirectorOutputDto):
     def shutdown_signal_handler_execution(sig, frame):
         #Set that a container has failed which will gracefully stop the other containers.
         #This way we get our full cleanup routine, too!
+        print("[CONTROLLER]: Received SIGINT (CTRL-C). Shutting down and finalizing results. Please note this may take 2-3 minutes.")
         cm.force_finish()
 
 

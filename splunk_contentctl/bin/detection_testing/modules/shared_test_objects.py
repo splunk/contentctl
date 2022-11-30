@@ -33,9 +33,6 @@ class SharedTestObjects:
         
 
 
-    def beginTesting(self):
-        self.test_start_time = datetime.datetime.now()
-
     def noUntestedDetectionsRemain(self)->bool:
         if self.testing_queue.qsize() == 0:
             return True
@@ -58,16 +55,20 @@ class SharedTestObjects:
 
         if not detection.get_success():
             self.fail_count += 1 
-            print(f"FAILURE: [{detection.name}]")
         else:
             self.pass_count += 1
-            print(f"SUCCESS: [{detection.name}]")
 
         #We keep the whole thing because it removes the need to duplicate
         #certain fields when generating the summary
         self.results.append(detection)
     
     def getDetection(self)-> Union[Detection,None]:
+        
+        if self.test_start_time is None:
+            #This is the first time we have gotten a detection,
+            #so testing phase has JUST begun.  Set the start time.
+            self.test_start_time = datetime.datetime.now()
+
         if self.force_finish:
             return None
         try:

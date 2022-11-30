@@ -83,7 +83,7 @@ class InstanceManager:
 
     def run_test(self) -> bool:
         self.run_instances()
-        self.shared_test_objects.beginTesting()
+        
         self.summary_thread.start()
         
         self.summary_thread.join()

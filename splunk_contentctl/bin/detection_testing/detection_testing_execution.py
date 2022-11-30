@@ -55,7 +55,9 @@ def copy_local_apps_to_directory(config: TestConfig):
     for app in config.apps:
     
         if app.must_download_from_splunkbase == False:
+            
             if app.local_path is not None:
+                
                 if app.local_path == os.path.join(CONTAINER_APP_DIRECTORY, pathlib.Path(app.local_path).name):
                     print(f"same file {app.local_path}, skip...")
                 else:
@@ -183,51 +185,13 @@ def main(config: TestConfig, director:DirectorOutputDto):
             print("There was an unrecoverage error during the mock.\n\tQuitting...",file=sys.stderr)
             sys.exit(1)
 
-    
-
-    
-    
-    
-    #This functionality shouldn't be in
-    #detection_testing_execution.  We will move it elsewhere
-    '''
-    def shutdown_signal_handler_setup(sig, frame):
-        
-        print(f"Signal {sig} received... stopping all [{config.num_containers}] containers and shutting down...")
-        shutdown_client = docker.client.from_env()
-        errorCount = 0
-        for container_number in range(config.num_containers):
-            container_name = config.container_name%container_number
-            print(f"Shutting down {container_name}...", file=sys.stderr, end='')
-            sys.stdout.flush()
-            try:
-                container = shutdown_client.containers.get(container_name)
-                #Note that stopping does not remove any of the volumes or logs,
-                #so stopping can be useful if we want to debug any container failure 
-                container.stop(timeout=10)
-                print("done", file=sys.stderr)
-            except Exception as e:
-                print(f"Error trying to shut down {container_name}. It may have already shut down.  Stop it youself with 'docker containter stop {container_name}", sys.stderr)
-                errorCount += 1
-        if errorCount == 0:
-            print("All containers shut down successfully", file=sys.stderr)        
-        else:
-            print(f"{errorCount} containers may still be running. Find out what is running with:\n\t'docker container ls'\nand shut them down with\n\t'docker container stop CONTAINER_NAME' ", file=sys.stderr)
-        
-        print("Quitting...",file=sys.stderr)
-        #We must use os._exit(1) because sys.exit(1) actually generates an exception which can be caught! And then we don't Quit!
-        os._exit(1)
-        
-
-            
-
-    #Setup requires a different teardown handler than during execution
-    signal.signal(signal.SIGINT, shutdown_signal_handler_setup)
-    '''
-
+    try:
+        copy_local_apps_to_directory(config)
+    except Exception as e:
+        print(f"Error download application(s): {str(e)}")
+        sys.exit(1)
 
     try:
-        
         cm = instance_manager.InstanceManager(config,
                                               detections_to_test)
         

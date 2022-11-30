@@ -176,6 +176,7 @@ class SplunkInstance:
             self.print(f"No unit tests found found for {detection.name}")
             return False
         abs_folder_path = mkdtemp(prefix="DATA_", dir=attack_data_root_folder)
+        
         success = self.execute_tests(detection, abs_folder_path)
         
         if success:
@@ -614,7 +615,7 @@ class SplunkInstance:
             sleeptime = sleep_time_0 + sleep_time_1
             sleep_time_0 = sleep_time_1
             sleep_time_1 = sleeptime
-            self.print(f"Waiting {sleeptime} before trying the search {test.name}")
+            
             time.sleep(sleeptime)
             #Run the baseline(s) if they exist for this test
             try:
@@ -828,7 +829,7 @@ class SplunkInstance:
                 pass
 
             if max_wait_time_seconds == 0:
-                raise(Exception(f"Unable to contact Splunk Instance - if this is a Splunk Server ensure that the address, ports, and credentials are correct and that the server is currently running."))                    
+                raise(Exception(f"Unable to contact Splunk Instance - if this is a Splunk Server ensure that the address, ports, and credentials are correct and that the server is currently running - [{str(e)}]"))                    
             if timediff.total_seconds() > max_wait_time_seconds:
                 raise(Exception(f"Unable to connect to Splunk Instance - Exceeded maximum start time of {max_wait_time_seconds}"))                    
             
@@ -962,6 +963,8 @@ class SplunkContainer(SplunkInstance):
         apps_to_install = []
         require_credentials=False
         for app in self.config.apps:
+            #import pprint
+            #pprint.pprint(app.__dict__)
             if app.local_path is not None:
                 filepath = pathlib.Path(app.local_path)
                 #path to the mount in the docker container
@@ -981,7 +984,7 @@ class SplunkContainer(SplunkInstance):
         env["SPLUNK_START_ARGS"] = SPLUNK_START_ARGS
         env["SPLUNK_PASSWORD"] = self.config.splunk_app_password
         splunk_apps_url, require_credentials = self.prepare_apps_path()
-        
+
         if require_credentials:
             env["SPLUNKBASE_USERNAME"] = self.config.splunkbase_username
             env["SPLUNKBASE_PASSWORD"] = self.config.splunkbase_password
@@ -1085,6 +1088,7 @@ class SplunkContainer(SplunkInstance):
     def removeContainer(
         self, removeVolumes: bool = True, forceRemove: bool = True
     ) -> bool:
+        return True
         try:
             container:docker.models.containers.Container = self.get_client().containers.get(self.get_name())
         except Exception as e:

@@ -737,7 +737,7 @@ class SplunkInstance:
             return
         except Exception as e:
             #HEC input does not exist.  That's okay, we will create it
-            self.print(f"HEC ENDPOINT DOES NOT EXIST: {str(e)}")
+            #self.print(f"HEC ENDPOINT DOES NOT EXIST: {str(e)}")
             pass
         
         try:

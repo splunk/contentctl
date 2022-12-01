@@ -25,7 +25,7 @@ class Generate:
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)
 
-        if input_dto.product == SecurityContentProduct.SPLUNK_ENTERPRISE_APP:
+        if input_dto.product == SecurityContentProduct.splunk_app:
             conf_output = ConfOutput(input_dto.director_input_dto.input_path)
             conf_output.writeHeaders(input_dto.output_path)
             conf_output.writeObjects(director_output_dto.detections, input_dto.output_path, SecurityContentType.detections)

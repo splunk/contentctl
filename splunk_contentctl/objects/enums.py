@@ -40,6 +40,6 @@ class SecurityContentType(enum.Enum):
 class SecurityContentProduct(enum.Enum):
     #This covers ESCU as well as other apps initialized 
     #by splunk_security_content_builder
-    SPLUNK_ENTERPRISE_APP = 1
+    splunk_app = 1
     SSA = 2
     API = 3

@@ -48,8 +48,19 @@ Running Splunk Security Content Control Tool (contentctl)
     """)
 
     # parse config
-    config = ConfigHandler.read_config(config_path)
-    ConfigHandler.validate_config(config)
+    try:
+        config = ConfigHandler.read_config(config_path)
+    except Exception as e:
+        raise(Exception(f"Error reading the config file specific at {args.config} - {str(e)}"))
+    try:
+        ConfigHandler.validate_config(config)
+    except Exception as e:
+        raise(Exception(f"Error validating the config file specified at {args.config} - {str(e)}"))
+    import pathlib
+    currentDir = str(pathlib.Path('.'))
+    print(f"***FIX: hardcoding path to local directory {currentDir}***")
+    config['path'] = currentDir 
+
     return config 
 
 def configure(args)->None:
@@ -69,7 +80,7 @@ def content_changer(args) -> None:
 
 def build(args) -> None:
     if args.product == 'SPLUNK_ENTERPRISE_APP':
-        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
+        product = SecurityContentProduct.splunk_app
     elif args.product == 'SSA':
         product = SecurityContentProduct.SSA
     elif args.product == 'API':
@@ -107,36 +118,34 @@ def test(args) -> None:
 
 def validate(args) -> None:
     config = start(args)
-    
-    if args.product == 'SPLUNK_ENTERPRISE_APP':
-        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
-    elif args.product == 'SSA':
-        product = SecurityContentProduct.SSA
-    else:
-        print("ERROR: product " + args.product + " not supported")
-        sys.exit(1)   
+    import pprint
+    pprint.pprint(config)
 
-    director_input_dto = DirectorInputDto(
-        input_path = args.path,
-        product = product,
-        create_attack_csv = False,
-        skip_enrichment = args.skip_enrichment
-    )
+    for product_type in config['build']:
+        if product_type not in config['build']:
+            raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
+                             f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
 
-    validate_input_dto = ValidateInputDto(
-        director_input_dto = director_input_dto,
-        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP
-    )
+        print(f"Validating {product_type}")
+        director_input_dto = DirectorInputDto(
+            input_path = config['path'],
+            product = product_type,
+            create_attack_csv = False,
+            skip_enrichment = config['enrichments']['splunk_app_enrichment']
+            )
 
-    validate = Validate()
-    validate.execute(validate_input_dto)
+        validate_input_dto = ValidateInputDto(
+            director_input_dto = director_input_dto,
+            product = product_type
+        )
 
-
+        validate = Validate()
+        validate.execute(validate_input_dto)
 
 def doc_gen(args) -> None:
     director_input_dto = DirectorInputDto(
         input_path = args.path,
-        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP,
+        product = SecurityContentProduct.splunk_app,
         create_attack_csv = False,
         skip_enrichment = args.skip_enrichment
     )
@@ -170,7 +179,7 @@ def reporting(args) -> None:
 
     director_input_dto = DirectorInputDto(
         input_path = args.path,
-        product = SecurityContentProduct.SPLUNK_ENTERPRISE_APP,
+        product = SecurityContentProduct.splunk_app,
         create_attack_csv = False,
         skip_enrichment = args.skip_enrichment
     )
@@ -263,5 +272,4 @@ def main(args):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-2                                  
+                                  

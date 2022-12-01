@@ -1,9 +1,7 @@
-from email.policy import default
-import string
-import uuid
-import requests
+
+
 import pathlib
-import re
+
 
 from pydantic import BaseModel, root_validator, validator, ValidationError, Extra, Field
 from pydantic.main import ModelMetaclass
@@ -12,15 +10,13 @@ from datetime import datetime
 from typing import Union
 
 import validators
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.enums import SecurityContentProduct
-from bin.objects.app import App
-from bin.objects.enums import DataModel
-from bin.objects.test_config import TestConfig
-from bin.helper.utils import Utils  
+
+from splunk_contentctl.objects.enums import SecurityContentProduct
+
+from splunk_contentctl.helper.utils import Utils  
 
 from semantic_version import Version
-import argparse 
+
 import git
 ALWAYS_PULL = True
 

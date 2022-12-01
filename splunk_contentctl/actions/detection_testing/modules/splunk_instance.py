@@ -2,7 +2,7 @@ from __future__ import annotations
 #Only used for static typing. We need this to avoid circular import warning
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from bin.detection_testing.modules.instance_manager import SharedTestObjects
+    from splunk_contentctl.actions.detection_testing.modules.instance_manager import SharedTestObjects
 
 from collections import OrderedDict
 import datetime
@@ -19,16 +19,16 @@ import requests
 from requests.auth import HTTPBasicAuth
 from tempfile import mkdtemp, mkstemp
 from shutil import rmtree, copyfile
-from bin.objects.test_config import TestConfig
+
 import pathlib
 import time
 import timeit
 from typing import Union
 import threading
-import wrapt_timeout_decorator
+#import wrapt_timeout_decorator
 import sys
 import traceback
-from bin.objects.enums import PostTestBehavior
+
 import json
 import uuid
 import requests
@@ -36,17 +36,18 @@ import splunklib.client as client
 import splunklib.results as results
 from urllib3 import disable_warnings
 import urllib.parse
-from bin.helper.utils import Utils
-from bin.detection_testing.modules.DataManipulation import DataManipulation
 
-from bin.objects.detection import Detection
-from bin.objects.baseline import Baseline
-from bin.objects.unit_test import UnitTest
-from bin.objects.unit_test_test import UnitTestTest
-from bin.objects.unit_test_baseline import UnitTestBaseline
-from bin.objects.unit_test_attack_data import UnitTestAttackData
-from bin.objects.unit_test_result import UnitTestResult
-from bin.objects.enums import InstanceState
+from splunk_contentctl.helper.utils import Utils
+from splunk_contentctl.actions.detection_testing.modules.DataManipulation import DataManipulation
+
+from splunk_contentctl.objects.test_config import TestConfig
+from splunk_contentctl.objects.enums import PostTestBehavior
+from splunk_contentctl.objects.detection import Detection
+from splunk_contentctl.objects.unit_test_test import UnitTestTest
+from splunk_contentctl.objects.unit_test_baseline import UnitTestBaseline
+from splunk_contentctl.objects.unit_test_attack_data import UnitTestAttackData
+from splunk_contentctl.objects.unit_test_result import UnitTestResult
+from splunk_contentctl.objects.enums import InstanceState
 
 
 

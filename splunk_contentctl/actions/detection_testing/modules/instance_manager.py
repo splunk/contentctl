@@ -12,12 +12,13 @@ import time
 import timeit
 
 from typing import Union
-from bin.detection_testing.modules.splunk_instance import SplunkInstance, SplunkContainer, SplunkServer
-from bin.detection_testing.modules.shared_test_objects import SharedTestObjects
-from bin.objects.enums import DetectionTestingTargetInfrastructure
-from bin.objects.detection import Detection
-from bin.objects.test_config import TestConfig
-from bin.objects.enums import InstanceState
+
+from splunk_contentctl.actions.detection_testing.modules.splunk_instance import SplunkInstance, SplunkContainer, SplunkServer
+from splunk_contentctl.actions.detection_testing.modules.shared_test_objects import SharedTestObjects
+from splunk_contentctl.objects.enums import DetectionTestingTargetInfrastructure
+from splunk_contentctl.objects.detection import Detection
+from splunk_contentctl.objects.test_config import TestConfig
+from splunk_contentctl.objects.enums import InstanceState
 
 from tempfile import mkdtemp
 import pathlib

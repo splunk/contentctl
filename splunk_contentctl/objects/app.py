@@ -9,9 +9,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Union
 import validators
-from bin.objects.security_content_object import SecurityContentObject
-from bin.objects.enums import DataModel
-from bin.helper.utils import Utils
+from splunk_contentctl.objects.security_content_object import SecurityContentObject
+from splunk_contentctl.objects.enums import DataModel
+from splunk_contentctl.helper.utils import Utils
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{release}/download"
 

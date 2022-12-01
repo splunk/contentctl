@@ -28,7 +28,7 @@ from splunk_contentctl.helper.link_validator import LinkValidator
 from typing import Union
 
 
-from bin.objects.unit_test_result import UnitTestResult
+from splunk_contentctl.objects.unit_test_result import UnitTestResult
 
 
 class Detection(BaseModel, SecurityContentObject):

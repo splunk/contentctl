@@ -19,13 +19,13 @@ import requests
 
 
 
-from bin.detection_testing.modules import instance_manager
-from bin.objects.detection import Detection
-from bin.helper.utils import Utils
-from bin.objects.test_config import TestConfig
-from bin.detection_testing.modules.github_service import GithubService
-from bin.objects.enums import PostTestBehavior, DetectionTestingMode
-from bin.input.director import DirectorOutputDto
+from splunk_contentctl.actions.detection_testing.modules.instance_manager import InstanceManager
+from splunk_contentctl.objects.detection import Detection
+from splunk_contentctl.helper.utils import Utils
+from splunk_contentctl.objects.test_config import TestConfig
+from splunk_contentctl.actions.detection_testing.modules.github_service import GithubService
+from splunk_contentctl.objects.enums import DetectionTestingMode
+from splunk_contentctl.actions.generate import DirectorOutputDto
 import yaml
 
 
@@ -192,7 +192,7 @@ def main(config: TestConfig, director:DirectorOutputDto):
         sys.exit(1)
 
     try:
-        cm = instance_manager.InstanceManager(config,
+        cm = InstanceManager(config,
                                               detections_to_test)
         
     except Exception as e:

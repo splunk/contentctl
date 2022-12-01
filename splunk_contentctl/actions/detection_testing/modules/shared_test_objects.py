@@ -1,4 +1,4 @@
-from bin.objects.detection import Detection
+
 import queue
 from tempfile import mkdtemp
 import threading
@@ -6,8 +6,11 @@ import datetime
 import os
 from typing import Union
 import pathlib
-from bin.objects.unit_test_result import UnitTestResult
 import json
+
+from splunk_contentctl.objects.detection import Detection
+from splunk_contentctl.objects.unit_test_result import UnitTestResult
+
 
 class SharedTestObjects:
     def __init__(self, detections:list[Detection], num_containers:int=1):

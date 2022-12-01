@@ -23,6 +23,8 @@ gitpython = "^3.1.29"
 docker = "^6.0.1"
 psutil = "^5.9.4"
 splunk-sdk = "^1.7.2"
+validators = "^0.20.0"
+semantic-version = "^2.10.0"
 
 [tool.poetry.dev-dependencies]
 

@@ -16,10 +16,10 @@ import argparse
 
 
 
-from bin.objects.enums import PostTestBehavior, DetectionTestingMode, DetectionTestingTargetInfrastructure
+from splunk_contentctl.objects.enums import PostTestBehavior, DetectionTestingMode, DetectionTestingTargetInfrastructure
 
-from bin.objects.app import App
-from bin.helper.utils import Utils
+from splunk_contentctl.objects.app import App
+from splunk_contentctl.helper.utils import Utils
 
 
 

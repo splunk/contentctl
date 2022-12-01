@@ -11,14 +11,15 @@ import datetime
 import git
 import yaml
 from git.objects import base
-from bin.objects.detection import Detection
 
-from bin.objects.enums import DetectionTestingMode
+from splunk_contentctl.objects.detection import Detection
+
+from splunk_contentctl.objects.enums import DetectionTestingMode
 import random
 import pathlib
 
-from bin.objects.test_config import TestConfig
-from bin.input.director import DirectorOutputDto
+from splunk_contentctl.objects.test_config import TestConfig
+from splunk_contentctl.actions.generate import DirectorOutputDto
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)

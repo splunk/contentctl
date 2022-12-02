@@ -103,7 +103,7 @@ class ContentPackConfig(BaseModel):
 
 
 
-def NewContentPack(args, default_config):
+def NewContentPack(args, default_config:dict)->ContentPackConfig:
     """
     new function creates a new configuration file based on the user input on the terminal.
     :param config: python dictionary having the configuration 
@@ -302,11 +302,7 @@ def NewContentPack(args, default_config):
 
     print("Load the custom_config into the pydantic model we have created")
     cfg = ContentPackConfig().parse_obj(custom_config)
-    import pprint
-    pprint.pprint(cfg.__dict__)
-    print("********************")
-    pprint.pprint(custom_config)
-    print("done")
+    return cfg
         
 
 

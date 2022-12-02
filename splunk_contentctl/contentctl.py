@@ -1,7 +1,7 @@
 import sys
 import argparse
 import os
-
+import yaml
 
 from splunk_contentctl.actions.validate import ValidateInputDto, Validate
 from splunk_contentctl.actions.generate import GenerateInputDto, Generate
@@ -15,9 +15,10 @@ from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
 from splunk_contentctl.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
 from splunk_contentctl.helper.config_handler import ConfigHandler
 
+from splunk_contentctl.actions.initialize import ContentPackConfig
 
 
-def start(args):
+def start(args)->ContentPackConfig:
     config_path = args.config
 
     print("""
@@ -49,6 +50,7 @@ Running Splunk Security Content Control Tool (contentctl)
 
     # parse config
     try:
+        #Read the config as a dict
         config = ConfigHandler.read_config(config_path)
     except Exception as e:
         raise(Exception(f"Error reading the config file specific at {args.config} - {str(e)}"))
@@ -56,7 +58,25 @@ Running Splunk Security Content Control Tool (contentctl)
         ConfigHandler.validate_config(config)
     except Exception as e:
         raise(Exception(f"Error validating the config file specified at {args.config} - {str(e)}"))
-    return config
+    
+    
+    
+    try:
+        file_handler = open(config_path, 'r', encoding="utf-8")
+        try:
+            yml_obj = yaml.safe_load(file_handler)
+        except yaml.YAMLError as exc:
+            raise(exc)
+            
+    except OSError as exc:
+        raise(exc)
+
+        
+    try:
+        configObject = ContentPackConfig().parse_obj(yml_obj)
+    except Exception as e:
+        raise(Exception(f"Error parsing the config file '{config_path}': {str(e)}"))
+    return configObject
     
 
 def configure(args)->None:
@@ -67,7 +87,7 @@ def configure(args)->None:
 def initialize(args)->None:
     # start app
     config = start(args)
-    NewContentPack(args, config)
+    NewContentPack(args, config.__dict__)
 
 def content_changer(args) -> None:
     pass
@@ -77,23 +97,24 @@ def content_changer(args) -> None:
 def build(args) -> None:
     config = start(args)
 
-    for product_type in config['build']:
-        if product_type not in config['build']:
+    for product_type in config.build:
+        if product_type not in SecurityContentProduct:
             raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
                              f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
 
         print(f"Building {product_type}")
+        
         director_input_dto = DirectorInputDto(
-            input_path = config['path'],
+            input_path = config.globals.path,
             product = product_type,
             create_attack_csv = True,
-            skip_enrichment = config['skip_enrichment']
+            skip_enrichment = not config.enrichments.attack_enrichment
         )
 
         generate_input_dto = GenerateInputDto(
             director_input_dto = director_input_dto,
             product = product_type,
-            output_path = config['build'][product_type]['path']
+            output_path = config.build[product_type].path
         )
 
         generate = Generate()
@@ -113,18 +134,18 @@ def test(args) -> None:
 
 def validate(args) -> None:
     config = start(args)
-
-    for product_type in config['build']:
-        if product_type not in config['build']:
+    
+    for product_type in config.build:
+        if product_type not in SecurityContentProduct:
             raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
                              f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
 
         print(f"Validating {product_type}")
         director_input_dto = DirectorInputDto(
-            input_path = config['path'],
+            input_path = config.globals.path,
             product = product_type,
             create_attack_csv = False,
-            skip_enrichment = config['skip_enrichment']
+            skip_enrichment = not config.enrichments.attack_enrichment
             )
 
         validate_input_dto = ValidateInputDto(

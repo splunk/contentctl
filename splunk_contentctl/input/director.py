@@ -15,6 +15,7 @@ from splunk_contentctl.objects.enums import SecurityContentProduct
 from splunk_contentctl.helper.utils import Utils
 from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
 
+from splunk_contentctl.actions.initialize import ContentPackConfig
 
 @dataclass(frozen=True)
 class DirectorInputDto:
@@ -22,6 +23,7 @@ class DirectorInputDto:
     product: SecurityContentProduct
     create_attack_csv : bool
     skip_enrichment: bool
+    #config: ContentPackConfig
 
 @dataclass()
 class DirectorOutputDto:
@@ -53,7 +55,6 @@ class Director():
 
 
     def execute(self, input_dto: DirectorInputDto) -> None:
-        print("are we even running")
         self.input_dto = input_dto
 
         if not self.input_dto.skip_enrichment:
@@ -65,10 +66,8 @@ class Director():
         self.investigation_builder = InvestigationBuilder()
         self.story_builder = StoryBuilder('ESCU')
         self.detection_builder = DetectionBuilder(self.input_dto.skip_enrichment)
-        print(f"TO HERE: {self.input_dto.product}")
         
-        if self.input_dto.product == SecurityContentProduct.splunk_app.name or self.input_dto.product == SecurityContentProduct.json_objects.name:
-            print("inside the if")
+        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
@@ -76,6 +75,7 @@ class Director():
             self.createSecurityContent(SecurityContentType.baselines)
             self.createSecurityContent(SecurityContentType.investigations)
             self.createSecurityContent(SecurityContentType.playbooks)
+            print(f"The number of deployments is {len(self.output_dto.deployments)}")
             self.createSecurityContent(SecurityContentType.detections)
             self.createSecurityContent(SecurityContentType.stories)
         
@@ -83,8 +83,11 @@ class Director():
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.detections)
             
+    def createSecurityContentFromObject(self, type: SecurityContentType)->None:
+        
+        return None
 
-    def createSecurityContent(self, type: SecurityContentType) -> list:
+    def createSecurityContent(self, type: SecurityContentType) -> None:
         objects = []
         if type == SecurityContentType.deployments:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name), 'ESCU'))
@@ -99,12 +102,14 @@ class Director():
         progress_percent = 0
         type_string = "UNKNOWN TYPE"
 
-        security_content_files = None
+        
 
         if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
             security_content_files = [f for f in files if 'ssa___' not in f]
         elif self.input_dto.product == SecurityContentProduct.ba_objects:
             security_content_files = [f for f in files if 'ssa___' in f]
+        else:
+            raise(Exception(f"Cannot createSecurityContent for unknown product '{self.input_dto.product}'"))
 
 
         for index,file in enumerate(security_content_files):

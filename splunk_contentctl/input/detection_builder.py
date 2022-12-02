@@ -11,15 +11,15 @@ from splunk_contentctl.objects.macro import Macro
 from splunk_contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from splunk_contentctl.enrichments.cve_enrichment import CveEnrichment
 from splunk_contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
-
+from splunk_contentctl.actions.initialize import ContentPackConfig
 
 class DetectionBuilder():
     security_content_obj : SecurityContentObject
     force_cached_or_offline: bool 
-    skip_enrichment: bool
+    config: ContentPackConfig
 
-    def __init__(self, skip_enrichment:bool = False):
-        self.skip_enrichment = skip_enrichment
+    def __init__(self, config:ContentPackConfig):
+        self.config = config
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
@@ -234,7 +234,7 @@ class DetectionBuilder():
 
 
     def addCve(self) -> None:
-        if self.skip_enrichment:
+        if not self.config.enrichments.cve_enrichment:
             return None
         if self.security_content_obj:
             self.security_content_obj.cve_enrichment = []
@@ -243,7 +243,7 @@ class DetectionBuilder():
                     self.security_content_obj.cve_enrichment.append(CveEnrichment.enrich_cve(cve))
 
     def addSplunkApp(self) -> None:
-        if self.skip_enrichment:
+        if not self.config.enrichments.splunk_app_enrichment:
             return None
         if self.security_content_obj:
             self.security_content_obj.splunk_app_enrichment = []

@@ -114,7 +114,7 @@ def build(args) -> None:
         generate_input_dto = GenerateInputDto(
             director_input_dto = director_input_dto,
             product = product_type,
-            output_path = config.build[product_type].path
+            output_path = config.build[product_type].pa
         )
 
         generate = Generate()
@@ -134,27 +134,14 @@ def test(args) -> None:
 
 def validate(args) -> None:
     config = start(args)
-    
-    for product_type in config.build:
-        if product_type not in SecurityContentProduct:
-            raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
-                             f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
 
-        print(f"Validating {product_type}")
-        director_input_dto = DirectorInputDto(
-            input_path = config.globals.path,
-            product = product_type,
-            create_attack_csv = False,
-            skip_enrichment = not config.enrichments.attack_enrichment
-            )
+    print(f"Beginning validation")
+    director_input_dto = DirectorInputDto()
 
-        validate_input_dto = ValidateInputDto(
-            director_input_dto = director_input_dto,
-            product = product_type
-        )
+    validate_input_dto = ValidateInputDto(director_input_dto = director_input_dto)
 
-        validate = Validate()
-        validate.execute(validate_input_dto)
+    validate = Validate()
+    validate.execute(validate_input_dto, config)
 
 def doc_gen(args) -> None:
     director_input_dto = DirectorInputDto(

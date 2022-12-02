@@ -93,12 +93,8 @@ class ContentPackConfig(BaseModel):
     
     globals: ContentPackConfig_globals = ContentPackConfig_globals()
     scheduling: ContentPackConfig_scheduling = ContentPackConfig_scheduling()
-    alert_actions: dict[AlertActions, ContentPackConfig_alert_action] = {AlertActions.notable:ContentPackConfig_notable(), 
-                                                                         AlertActions.rba: ContentPackConfig_rba(), 
-                                                                         AlertActions.email:ContentPackConfig_email()}
-    build: dict[SecurityContentProduct, ContentPackConfig_build] = {SecurityContentProduct.splunk_app: ContentPackConfig_splunk_app(),
-                                                                    SecurityContentProduct.json_objects: ContentPackConfig_json_objects(),
-                                                                    SecurityContentProduct.ba_objects: ContentPackConfig_ba_objects()}
+    alert_actions: dict[AlertActions, ContentPackConfig_alert_action] = {}
+    build: dict[SecurityContentProduct, ContentPackConfig_build] = {}
     enrichments: ContentPackConfig_enrichments = ContentPackConfig_enrichments()
 
 

@@ -5,7 +5,7 @@ from posixpath import split
 from typing import Optional
 import sys
 from attackcti import attack_client
-
+from functools import cache
 import logging
 logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
 
@@ -13,7 +13,8 @@ logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
 class AttackEnrichment():
 
     @classmethod
-    def get_attack_lookup(self, input_path: str, store_csv : bool) -> dict:
+    @cache
+    def get_attack_lookup(cls, input_path: str, store_csv : bool) -> dict:
         print("Getting MITRE Attack Enrichment Data. This may take some time...")
         attack_lookup = dict()
         file_path = os.path.join(input_path, "lookups", "mitre_enrichment.csv")

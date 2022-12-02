@@ -18,7 +18,7 @@ class ConfigHandler:
             print("no config file found, running with default from templates/contentctl_default.yml")
             yml_dict = ''
 
-        parent_keys = ['global', 'content', 'scheduling', 'alert_actions', 'test', 'deploy', 'build', 'enrichment', 'custom_validators']
+        parent_keys = ['globals', 'content', 'scheduling', 'alert_actions', 'test', 'deploy', 'build', 'enrichment', 'custom_validators']
 
         for parent_key in parent_keys:
             if parent_key in yml_dict:

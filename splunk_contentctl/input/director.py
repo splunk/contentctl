@@ -53,6 +53,7 @@ class Director():
 
 
     def execute(self, input_dto: DirectorInputDto) -> None:
+        print("are we even running")
         self.input_dto = input_dto
 
         if not self.input_dto.skip_enrichment:
@@ -64,8 +65,10 @@ class Director():
         self.investigation_builder = InvestigationBuilder()
         self.story_builder = StoryBuilder('ESCU')
         self.detection_builder = DetectionBuilder(self.input_dto.skip_enrichment)
-
-        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.API:
+        print(f"TO HERE: {self.input_dto.product}")
+        
+        if self.input_dto.product == SecurityContentProduct.splunk_app.name or self.input_dto.product == SecurityContentProduct.json_objects.name:
+            print("inside the if")
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
@@ -76,7 +79,7 @@ class Director():
             self.createSecurityContent(SecurityContentType.detections)
             self.createSecurityContent(SecurityContentType.stories)
         
-        elif self.input_dto.product == SecurityContentProduct.SSA:
+        elif self.input_dto.product == SecurityContentProduct.ba_objects:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.detections)
             
@@ -98,9 +101,9 @@ class Director():
 
         security_content_files = None
 
-        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.API:
+        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
             security_content_files = [f for f in files if 'ssa___' not in f]
-        elif self.input_dto.product == SecurityContentProduct.SSA:
+        elif self.input_dto.product == SecurityContentProduct.ba_objects:
             security_content_files = [f for f in files if 'ssa___' in f]
 
 

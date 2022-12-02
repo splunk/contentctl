@@ -35,7 +35,7 @@ class Generate:
             conf_output.writeObjects(director_output_dto.lookups, input_dto.output_path, SecurityContentType.lookups)
             conf_output.writeObjects(director_output_dto.macros, input_dto.output_path, SecurityContentType.macros)
 
-        elif input_dto.product == SecurityContentProduct.SSA:
+        elif input_dto.product == SecurityContentProduct.ba_objects:
             shutil.rmtree(input_dto.output_path + '/srs/', ignore_errors=True)
             shutil.rmtree(input_dto.output_path + '/complex/', ignore_errors=True)
             os.makedirs(input_dto.output_path + '/complex/')
@@ -43,7 +43,7 @@ class Generate:
             ba_yml_output = BAYmlOutput()
             ba_yml_output.writeObjects(director_output_dto.detections, input_dto.output_path)
 
-        elif input_dto.product == SecurityContentProduct.API:
+        elif input_dto.product == SecurityContentProduct.json_objects:
             api_json_output = ApiJsonOutput()
             api_json_output.writeObjects(director_output_dto.detections, input_dto.output_path, SecurityContentType.detections)
             api_json_output.writeObjects(director_output_dto.stories, input_dto.output_path, SecurityContentType.stories)

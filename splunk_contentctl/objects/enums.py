@@ -40,6 +40,15 @@ class SecurityContentType(enum.Enum):
 class SecurityContentProduct(enum.Enum):
     #This covers ESCU as well as other apps initialized 
     #by splunk_security_content_builder
-    splunk_app = 1
-    SSA = 2
-    API = 3
+    splunk_app = "splunk_app"
+    ba_objects = "ba_objects"
+    json_objects = "json_objects"
+
+class LogLevel(enum.Enum):
+    NONE = "NONE"
+    ERROR = "ERROR"
+    INFO = "INFO"
+class AlertActions(enum.Enum):
+    notable = "notable"
+    rba = "rba"
+    email = "email"

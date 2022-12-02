@@ -56,12 +56,8 @@ Running Splunk Security Content Control Tool (contentctl)
         ConfigHandler.validate_config(config)
     except Exception as e:
         raise(Exception(f"Error validating the config file specified at {args.config} - {str(e)}"))
-    import pathlib
-    currentDir = str(pathlib.Path('.'))
-    print(f"***FIX: hardcoding path to local directory {currentDir}***")
-    config['path'] = currentDir 
-
-    return config 
+    return config
+    
 
 def configure(args)->None:
     pass
@@ -79,31 +75,30 @@ def content_changer(args) -> None:
 
 
 def build(args) -> None:
-    if args.product == 'SPLUNK_ENTERPRISE_APP':
-        product = SecurityContentProduct.splunk_app
-    elif args.product == 'SSA':
-        product = SecurityContentProduct.SSA
-    elif args.product == 'API':
-        product = SecurityContentProduct.API
-    else:
-        print("ERROR: product " + args.product + " not supported")
-        sys.exit(1)   
+    config = start(args)
 
-    director_input_dto = DirectorInputDto(
-        input_path = args.path,
-        product = product,
-        create_attack_csv = True,
-        skip_enrichment = args.skip_enrichment
-    )
+    for product_type in config['build']:
+        if product_type not in config['build']:
+            raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
+                             f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
 
-    generate_input_dto = GenerateInputDto(
-        director_input_dto = director_input_dto,
-        product = product,
-        output_path = os.path.abspath(args.output)
-    )
+        print(f"Building {product_type}")
+        director_input_dto = DirectorInputDto(
+            input_path = config['path'],
+            product = product_type,
+            create_attack_csv = True,
+            skip_enrichment = config['skip_enrichment']
+        )
 
-    generate = Generate()
-    generate.execute(generate_input_dto)
+        generate_input_dto = GenerateInputDto(
+            director_input_dto = director_input_dto,
+            product = product_type,
+            output_path = config['build'][product_type]['path']
+        )
+
+        generate = Generate()
+        generate.execute(generate_input_dto)
+    
 
 
 def inspect(args) -> None:
@@ -118,8 +113,6 @@ def test(args) -> None:
 
 def validate(args) -> None:
     config = start(args)
-    import pprint
-    pprint.pprint(config)
 
     for product_type in config['build']:
         if product_type not in config['build']:
@@ -131,7 +124,7 @@ def validate(args) -> None:
             input_path = config['path'],
             product = product_type,
             create_attack_csv = False,
-            skip_enrichment = config['enrichments']['splunk_app_enrichment']
+            skip_enrichment = config['skip_enrichment']
             )
 
         validate_input_dto = ValidateInputDto(
@@ -230,7 +223,8 @@ def main(args):
     #validate_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
     validate_parser.set_defaults(func=validate)
 
-    build_parser.add_argument("-o", "--output", required=True, type=str,
+    #These arguments are not required because they will be read from the config
+    build_parser.add_argument("-o", "--output", required=False, type=str,
        help="Path where to store the deployment package")
     build_parser.add_argument("-pr", "--product", required=False, type=str, default="SPLUNK_ENTERPRISE_APP",
        help="Type of package to create, choose between `SPLUNK_ENTERPRISE_APP`, `SSA` or `API`.")

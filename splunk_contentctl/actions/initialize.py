@@ -7,6 +7,10 @@ import yaml
 import sys
 import questionary
 import os
+from splunk_contentctl.objects.enums import LogLevel
+
+import abc
+from pydantic import BaseModel, Field
 
 DEFAULT_FOLDERS = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist']
 
@@ -17,6 +21,86 @@ def create_folders(path):
         folder_path = path + "/" + folder
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
+
+
+
+
+
+    
+
+
+class ContentPackConfig_globals(BaseModel):
+    log_path: str = "contentctl.log"
+    log_level: LogLevel = LogLevel.INFO
+    #Added until we decide where to put it
+    path: str = '.'
+
+class ContentPackConfig_scheduling(BaseModel):
+    cron_schedule: str = "0 * * * *"
+    eariliest_time: str = "-70m@m"
+    latest_time: str = "-10m@m"
+    schedule_window: str = "auto"
+
+
+class ContentPackConfig_alert_action(BaseModel, abc.ABC):
+    pass
+
+class ContentPackConfig_notable(ContentPackConfig_alert_action):
+    rule_description:str = '%description%'
+    rule_title: str = '%name%'
+    nes_fields: list[str] = ['user','dest','src']
+
+class ContentPackConfig_rba(ContentPackConfig_alert_action):
+    enabled: bool = True
+
+class ContentPackConfig_email(ContentPackConfig_alert_action):
+    subject: str = "Alert %name% triggered"
+    message: str = "The rule %name% triggered base on %description%"
+    to: str = "geralt@monsterkiller.com"
+
+
+#This will likely need to be updated to TestConfig, but is fine for testing
+class ContentPackConfig_test(BaseModel):
+    docker_image: str = ''
+    apps: str = '.'
+    assets: str = 'csv'
+
+#Abstract class for the different types of builds
+class ContentPackConfig_build(BaseModel, abc.ABC):
+    path: str
+
+class ContentPackConfig_splunk_app(ContentPackConfig_build):
+    path:str = "dist/capybara_splunk_content_pack"
+    name: str =  "Capybara Splunk Content Pack"
+    prefix: str = "CAP"
+    author: str = "Geralt of Rivia"
+    author_email:str =  "geralt@monsterkiller.com"
+
+class ContentPackConfig_json_objects(ContentPackConfig_build):
+    path: str = "dist/api"
+
+class ContentPackConfig_ba_objects(ContentPackConfig_build):
+    path: str = "dist/ssa"
+
+class ContentPackConfig_enrichments(BaseModel):
+    attack_enrichment: bool = True
+    cve_enrichment: bool = True
+    splunk_app_enrichment: bool = True
+
+
+from splunk_contentctl.objects.enums import AlertActions, SecurityContentProduct
+class ContentPackConfig(BaseModel):
+    
+    globals: ContentPackConfig_globals = ContentPackConfig_globals()
+    scheduling: ContentPackConfig_scheduling = ContentPackConfig_scheduling()
+    alert_actions: dict[AlertActions, ContentPackConfig_alert_action] = {AlertActions.notable:ContentPackConfig_notable(), 
+                                                                         AlertActions.rba: ContentPackConfig_rba(), 
+                                                                         AlertActions.email:ContentPackConfig_email()}
+    build: dict[SecurityContentProduct, ContentPackConfig_build] = {SecurityContentProduct.splunk_app: ContentPackConfig_splunk_app(),
+                                                                    SecurityContentProduct.json_objects: ContentPackConfig_json_objects(),
+                                                                    SecurityContentProduct.ba_objects: ContentPackConfig_ba_objects()}
+    enrichments: ContentPackConfig_enrichments = ContentPackConfig_enrichments()
+
 
 
 def NewContentPack(args, default_config):
@@ -215,6 +299,14 @@ def NewContentPack(args, default_config):
     # write folder structure
     create_folders(args.output)
     print('The following folders were created: {0} under {1}.\nContent pack has been initialized, please run `new` to create new content.'.format(DEFAULT_FOLDERS, args.output))
+
+    print("Load the custom_config into the pydantic model we have created")
+    cfg = ContentPackConfig().parse_obj(custom_config)
+    import pprint
+    pprint.pprint(cfg.__dict__)
+    print("********************")
+    pprint.pprint(custom_config)
+    print("done")
         
 
 

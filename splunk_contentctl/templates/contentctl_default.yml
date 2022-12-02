@@ -1,6 +1,6 @@
 #config file
 
-global:
+globals:
   log_path: "contentctl.log"
   log_level: INFO
 

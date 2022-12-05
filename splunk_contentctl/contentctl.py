@@ -55,7 +55,7 @@ Running Splunk Security Content Control Tool (contentctl)
     """)    
 
 
-def start(args):
+def start(args)->Config:
     print_ascii_art()
     return ConfigHandler.read_config(os.path.join(args.path, 'contentctl.yml'))
 
@@ -72,30 +72,42 @@ def initialize(args)->None:
     )
 
 
+#REMOVE AFTER TEST INTEGRATION IS COMPLETE
+#extra config argument is only here for test integration work
+from typing import Union
+def build(args, config: Union[Config,None] = None) -> DirectorOutputDto:
+    #REMOVE AFTER TEST INTEGRATION IS COMPLETE
+    if config is None:
+        config = start(args)
+    else:
+        print("Using a hardcoded config for contentctl test integration")
 
-def build(args) -> DirectorOutputDto:
-    config = start(args)
+    
 
     #REMOVE AFTER TEST INTEGRATION IS COMPLETE
     directors:list[DirectorOutputDto] = []
     for product_type in config.build:
+        #REMOVE AFTER TEST INTEGRATION IS COMPLETE
+        product_type = SecurityContentProduct.splunk_app
+
         if product_type not in SecurityContentProduct:
             raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
                              f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
+        
 
         print(f"Building {product_type}")
         
         director_input_dto = DirectorInputDto(
-            input_path = config.globals.path,
-            product = product_type,
+            args.path,
+            product_type,
             config = config
         )
 
 
         generate_input_dto = GenerateInputDto(
-            director_input_dto = director_input_dto,
-            product = product_type,
-            output_path = config.build[product_type].pa
+            director_input_dto,
+            product_type,
+            output_path = config.build.splunk_app.path
         )
 
         generate = Generate()
@@ -120,7 +132,7 @@ def deploy(args) -> None:
 
 
 def eric_test(args):
-    
+    '''
     import yaml
     with open("Res.yml","r") as res:
         try:
@@ -128,11 +140,13 @@ def eric_test(args):
             test_object = TestConfig.parse_obj(data)
         except Exception as e:
             raise(Exception(f"Error parsing test config: {str(e)}"))
-            
-    print("Not checking out the specified branch yet.  What should we do? Default to the one in the config? Overwrite the one in the config with the current?")
-        
-    
-    
+    '''     
+    print("security_content repo MUST be checked out into the current directory - this requirement is just for initial testing")
+    test_config = TestConfig()
+    return
+    args.path = "xxx"
+
+
     args.path = test_object.repo_path
     args.product = "SPLUNK_ENTERPRISE_APP"
     args.output = os.path.join(test_object.repo_path, "dist","escu")
@@ -140,7 +154,7 @@ def eric_test(args):
     
     
     director = build(args)
-    import pprint
+    
     
     
 

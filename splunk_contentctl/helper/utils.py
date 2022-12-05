@@ -86,6 +86,22 @@ class Utils:
 
 
     @staticmethod
+    def get_default_branch_name(repo_path:str, repo_url:str)->str:
+        #Even though the default branch is only a notion in GitHub or 
+        #similar systems, we will consinder the default branch
+        #to be the name of the branch that is the HEAD of the repo.
+        #This means that it should work for ANY repo with a remote.
+        
+        repo = git.Repo(repo_path)
+
+        #Only works for remotes!
+        for remote in repo.remotes.origin.refs:
+            if remote.name.endswith("/HEAD"):
+                return remote.name
+        raise(ValueError(f"Failed to find default branch in repo_path: {repo_path}\n  * repo_url: {repo_url}"))
+
+
+    @staticmethod
     def validate_git_branch_name(repo_path:str, repo_url:str, name:str)->bool:
         #Get a list of all branches
         repo = git.Repo(repo_path)

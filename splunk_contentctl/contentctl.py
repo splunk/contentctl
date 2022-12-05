@@ -15,16 +15,11 @@ from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
 from splunk_contentctl.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
 from splunk_contentctl.helper.config_handler import ConfigHandler
 
-from splunk_contentctl.actions.initialize import ContentPackConfig
+from splunk_contentctl.objects.config import Config
 
 
-<<<<<<< HEAD
+
 def print_ascii_art():
-=======
-def start(args)->ContentPackConfig:
-    config_path = args.config
-
->>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
     print("""
 Running Splunk Security Content Control Tool (contentctl) 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -114,7 +109,6 @@ def test(args) -> None:
 def validate(args) -> None:
     config = start(args)
 
-<<<<<<< HEAD
     director_input_dto = DirectorInputDto(
         input_path = os.path.abspath(args.path),
         product = SecurityContentProduct[args.product],
@@ -128,15 +122,6 @@ def validate(args) -> None:
     validate = Validate()
     validate.execute(validate_input_dto)
 
-=======
-    print(f"Beginning validation")
-    director_input_dto = DirectorInputDto()
-
-    validate_input_dto = ValidateInputDto(director_input_dto = director_input_dto)
-
-    validate = Validate()
-    validate.execute(validate_input_dto, config)
->>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
 
 def doc_gen(args) -> None:
     director_input_dto = DirectorInputDto(

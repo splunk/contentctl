@@ -16,17 +16,15 @@ from splunk_contentctl.helper.utils import Utils
 from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
 from splunk_contentctl.objects.config import Config
 
-from splunk_contentctl.actions.initialize import ContentPackConfig
+from splunk_contentctl.objects.config import Config
+
 
 @dataclass(frozen=True)
 class DirectorInputDto:
-<<<<<<< HEAD
     input_path: str
     product: SecurityContentProduct
     config: Config
-=======
-    pass
->>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
+
 
 @dataclass()
 class DirectorOutputDto:
@@ -50,17 +48,12 @@ class Director():
     story_builder: StoryBuilder
     detection_builder: DetectionBuilder
     attack_enrichment: dict
-    config: ContentPackConfig
+    config: Config
 
 
-    def __init__(self, output_dto: DirectorOutputDto, config:ContentPackConfig) -> None:
+    def __init__(self, output_dto: DirectorOutputDto) -> None:
         self.output_dto = output_dto
         self.attack_enrichment = dict()
-        self.config = config
-        if config.enrichments.attack_enrichment:
-            self.attack_enrichment = AttackEnrichment.get_attack_lookup(config.globals.path, config.enrichments.cve_enrichment)
-        else:
-            self.attack_enrichment = dict()
 
 
     def execute(self, input_dto: DirectorInputDto) -> None:
@@ -70,7 +63,7 @@ class Director():
             self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path)
 
         self.basic_builder = BasicBuilder()
-        self.playbook_builder = PlaybookBuilder(self.config.globals.path)
+        self.playbook_builder = PlaybookBuilder(self.input_dto.input_path)
         self.baseline_builder = BaselineBuilder()
         self.investigation_builder = InvestigationBuilder()
         self.story_builder = StoryBuilder()
@@ -104,14 +97,14 @@ class Director():
 
         return None
 
-    def createSecurityContent(self, type: SecurityContentType, product:SecurityContentProduct) -> None:
+    def createSecurityContent(self, type: SecurityContentType) -> None:
         objects = []
         if type == SecurityContentType.deployments:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.config.globals.path, str(type.name), 'ESCU'))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name), 'ESCU'))
         elif type == SecurityContentType.unit_tests:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.config.globals.path, 'tests'))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
         else:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.config.globals.path, str(type.name)))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
 
         validation_error_found = False
                 
@@ -120,9 +113,9 @@ class Director():
 
         
 
-        if product == SecurityContentProduct.splunk_app or product == SecurityContentProduct.json_objects:
+        if self.input_dto.product == SecurityContentProduct.splunk_app or product == SecurityContentProduct.json_objects:
             security_content_files = [f for f in files if 'ssa___' not in f]
-        elif product == SecurityContentProduct.ba_objects:
+        elif self.input_dto.product == SecurityContentProduct.ba_objects:
             security_content_files = [f for f in files if 'ssa___' in f]
         else:
             raise(Exception(f"Cannot createSecurityContent for unknown product '{product}'"))
@@ -155,12 +148,8 @@ class Director():
                         self.output_dto.playbooks.append(playbook)                    
                 
                 elif type == SecurityContentType.baselines:
-<<<<<<< HEAD
                         type_string = "Baselines"
                         self.constructBaseline(self.baseline_builder, file)
-=======
-                        self.constructBaseline(self.baseline_builder, file, self.output_dto.deployments)
->>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
                         baseline = self.baseline_builder.getObject()
                         self.output_dto.baselines.append(baseline)
                 
@@ -170,26 +159,14 @@ class Director():
                         self.output_dto.investigations.append(investigation)
 
                 elif type == SecurityContentType.stories:
-<<<<<<< HEAD
                         type_string = "Stories"
                         self.constructStory(self.story_builder, file)
-=======
-                        self.constructStory(self.story_builder, file, 
-                            self.output_dto.detections, self.output_dto.baselines, self.output_dto.investigations)
->>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
                         story = self.story_builder.getObject()
                         self.output_dto.stories.append(story)
             
                 elif type == SecurityContentType.detections:
-<<<<<<< HEAD
                         type_string = "Detections"
                         self.constructDetection(self.detection_builder, file)
-=======
-                        self.constructDetection(self.detection_builder, file, 
-                            self.output_dto.deployments, self.output_dto.playbooks, self.output_dto.baselines,
-                            self.output_dto.tests, self.attack_enrichment, self.output_dto.macros,
-                            self.output_dto.lookups, self.config.enrichments.cve_enrichment)
->>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
                         detection = self.detection_builder.getObject()
                         self.output_dto.detections.append(detection)
             
@@ -259,16 +236,7 @@ class Director():
 
     def constructDeployment(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-<<<<<<< HEAD
         builder.setObject(file_path, SecurityContentType.deployments)
-=======
-        builder.setObject(path, SecurityContentType.deployments)
-    
-    def constructDeploymentFromObject(self, builder: BasicBuilder, obj: dict) -> None:
-        builder.reset()
-        builder.setObject(obj, SecurityContentType.deployments)
->>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
-
 
     def constructLookup(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()

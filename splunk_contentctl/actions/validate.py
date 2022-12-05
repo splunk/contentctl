@@ -7,37 +7,32 @@ from typing import Union
 
 from splunk_contentctl.objects.enums import SecurityContentProduct
 from splunk_contentctl.input.director import Director, DirectorInputDto, DirectorOutputDto
-from splunk_contentctl.actions.initialize import ContentPackConfig
+
 
 @dataclass(frozen=True)
 class ValidateInputDto:
     director_input_dto: DirectorInputDto
-    
+
 
 class Validate:
 
-    def execute(self, input_dto: ValidateInputDto, config: ContentPackConfig) -> None:
-        #Validate each of the products we have defined in our configuration
-        for product in config.build:
-            print(f"Validating '{product.name}'...")
-            director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
-            director = Director(director_output_dto, config)
-            director.execute(input_dto.director_input_dto, product)      
+    def execute(self, input_dto: ValidateInputDto) -> None:
 
-            # uuid validation all objects
-            try:
-                security_content_objects = director_output_dto.detections + director_output_dto.stories + director_output_dto.baselines + director_output_dto.investigations + director_output_dto.playbooks + director_output_dto.deployments
-                self.validate_duplicate_uuids(security_content_objects)
+        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
+        director = Director(director_output_dto)
+        director.execute(input_dto.director_input_dto)      
 
-                # validate tests
-                self.validate_detection_exist_for_test(director_output_dto.tests, director_output_dto.detections)
+        # uuid validation all objects
+        try:
+            security_content_objects = director_output_dto.detections + director_output_dto.stories + director_output_dto.baselines + director_output_dto.investigations + director_output_dto.playbooks + director_output_dto.deployments
+            self.validate_duplicate_uuids(security_content_objects)
 
-            except ValueError as e:
-                print(e)
-                sys.exit(1)
-            print(f"Validation of '{product.name}' successful.\n")
+            # validate tests
+            self.validate_detection_exist_for_test(director_output_dto.tests, director_output_dto.detections)
 
-        print(f'Validation of {[prod.name for prod in config.build.keys()]} successful.')
+        except ValueError as e:
+            print(e)
+            sys.exit(1)
 
 
 

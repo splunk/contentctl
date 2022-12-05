@@ -142,7 +142,7 @@ def eric_test(args):
             raise(Exception(f"Error parsing test config: {str(e)}"))
     '''     
     print("security_content repo MUST be checked out into the current directory - this requirement is just for initial testing")
-    test_config = TestConfig()
+    test_config = TestConfig.parse_obj({'repo_path': "/tmp/security_content"})
     return
     args.path = "xxx"
 
@@ -321,8 +321,8 @@ def main(args):
         return args.func(args)
     except Exception as e:
         print(f"Error for function [{args.func.__name__}]: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
+        #import traceback
+        #print(traceback.format_exc())
         sys.exit(1)
 
 

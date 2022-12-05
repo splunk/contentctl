@@ -54,8 +54,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     num_containers: int = Field(default=1, title="Number of testing containers to start in parallel.")
     pr_number: Union[int,None] = Field(default=None, title="The number of the PR to test")
     splunk_app_username: Union[str,None] = Field(default="admin", title="The name of the user for testing")
-    splunk_app_password: Union[str,None] = Field(default=Utils.get_random_password(), title="Password for logging into Splunk Server")
-    
+    splunk_app_password: Union[str,None] = Field(default="password", title="Password for logging into Splunk Server")
     splunkbase_username:Union[str,None] = Field(default=None, title="The username for logging into Splunkbase in case apps must be downloaded")
     splunkbase_password:Union[str,None] = Field(default=None, title="The password for logging into Splunkbase in case apps must be downloaded")
     apps: list[App] = Field(default=[], title="A list of all the apps to be installed on each container")
@@ -68,12 +67,12 @@ class TestConfig(BaseModel, extra=Extra.forbid):
 
     #Ensure that at least 1 of test_branch, commit_hash, and/or pr_number were passed. 
     #Otherwise, what are we testing??
-    @root_validator(pre=True)
+    @root_validator(pre=False)
     def ensure_there_is_something_to_test(cls, values):
         if 'test_branch' not in values and 'commit_hash' not in values and'pr_number' not in values:
-            raise(ValueError(f"At least one of 'test_branch', 'commit_hash', and/or 'pr_number' must be defined so that we know what to test."))
-        
-
+            if 'mode' in values and values['mode'] == DetectionTestingMode.changes:
+                raise(ValueError(f"Under mode [{DetectionTestingMode.changes}], 'test_branch', 'commit_hash', and/or 'pr_number' must be defined so that we know what to test.")) 
+            
         return values
 
     
@@ -150,9 +149,10 @@ class TestConfig(BaseModel, extra=Extra.forbid):
 
     @validator('test_branch', always=True)
     def validate_test_branch(cls, v, values):
-        Utils.check_required_fields('test_branch', values, ['repo_path', 'repo_url'])
+        Utils.check_required_fields('test_branch', values, ['repo_path', 'repo_url', 'main_branch'])
         if v is None:
-            return v
+            print(f"No test_branch provided, so we will default to using the main_branch '{values['main_branch']}'")
+            return values['main_branch']
         try:
             Utils.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
         except Exception as e:
@@ -264,7 +264,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     def validate_splunk_app_password(cls, v):
         if v == None:
             #No app password was provided, so generate one
-            v = utils.get_random_password()
+            v = Utils.get_random_password()
         else:
             MIN_PASSWORD_LENGTH = 6
             if len(v) < MIN_PASSWORD_LENGTH:

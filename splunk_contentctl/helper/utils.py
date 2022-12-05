@@ -93,11 +93,12 @@ class Utils:
         #This means that it should work for ANY repo with a remote.
         
         repo = git.Repo(repo_path)
-
+        
         #Only works for remotes!
         for remote in repo.remotes.origin.refs:
             if remote.name.endswith("/HEAD"):
-                return remote.name
+                #return the name of this branch.  it will be prefixed with 'origin/', so remove the origin/
+                return remote.ref.name.replace("origin/", "")
         raise(ValueError(f"Failed to find default branch in repo_path: {repo_path}\n  * repo_url: {repo_url}"))
 
 

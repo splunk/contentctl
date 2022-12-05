@@ -13,13 +13,10 @@ from splunk_contentctl.enrichments.cve_enrichment import CveEnrichment
 from splunk_contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 
 
+
 class DetectionBuilder():
     security_content_obj : SecurityContentObject
-    force_cached_or_offline: bool 
-    skip_enrichment: bool
 
-    def __init__(self, skip_enrichment:bool = False):
-        self.skip_enrichment = skip_enrichment
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
@@ -187,10 +184,6 @@ class DetectionBuilder():
             if attack_enrichment:
                 if self.security_content_obj.tags.mitre_attack_id:
                     self.security_content_obj.tags.mitre_attack_enrichments = []
-                    if self.skip_enrichment:
-                        # We just want to make the above, mitre_attack_enrichments, and
-                        # empty list since we didn't actually fetch those enrichments
-                        return
                     for mitre_attack_id in self.security_content_obj.tags.mitre_attack_id:
                         if mitre_attack_id in attack_enrichment:
                             mitre_attack_enrichment = MitreAttackEnrichment(
@@ -241,8 +234,6 @@ class DetectionBuilder():
 
 
     def addCve(self) -> None:
-        if self.skip_enrichment:
-            return None
         if self.security_content_obj:
             self.security_content_obj.cve_enrichment = []
             if self.security_content_obj.tags.cve:
@@ -250,8 +241,6 @@ class DetectionBuilder():
                     self.security_content_obj.cve_enrichment.append(CveEnrichment.enrich_cve(cve))
 
     def addSplunkApp(self) -> None:
-        if self.skip_enrichment:
-            return None
         if self.security_content_obj:
             self.security_content_obj.splunk_app_enrichment = []
             if self.security_content_obj.tags.supported_tas:

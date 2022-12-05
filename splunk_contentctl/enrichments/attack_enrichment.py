@@ -5,7 +5,7 @@ from posixpath import split
 from typing import Optional
 import sys
 from attackcti import attack_client
-
+from functools import cache
 import logging
 logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
 
@@ -13,7 +13,8 @@ logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
 class AttackEnrichment():
 
     @classmethod
-    def get_attack_lookup(self, input_path: str, store_csv : bool) -> dict:
+
+    def get_attack_lookup(self, input_path: str) -> dict:
         print("Getting MITRE Attack Enrichment Data. This may take some time...")
         attack_lookup = dict()
         file_path = os.path.join(input_path, "lookups", "mitre_enrichment.csv")
@@ -55,24 +56,23 @@ class AttackEnrichment():
                 if not ('revoked' in technique):
                     attack_lookup[technique['technique_id']] = {'technique': technique['technique'], 'tactics': tactics, 'groups': apt_groups}
 
-            if store_csv:
-                f = open(file_path, 'w')
-                writer = csv.writer(f)
-                writer.writerow(['mitre_id', 'technique', 'tactics' ,'groups'])
-                for key in attack_lookup.keys():
-                    if len(attack_lookup[key]['groups']) == 0:
-                        groups = 'no'
-                    else:
-                        groups = '|'.join(attack_lookup[key]['groups'])
-                    
-                    writer.writerow([
-                        key,
-                        attack_lookup[key]['technique'],
-                        '|'.join(attack_lookup[key]['tactics']),
-                        groups
-                    ])
+            f = open(file_path, 'w')
+            writer = csv.writer(f)
+            writer.writerow(['mitre_id', 'technique', 'tactics' ,'groups'])
+            for key in attack_lookup.keys():
+                if len(attack_lookup[key]['groups']) == 0:
+                    groups = 'no'
+                else:
+                    groups = '|'.join(attack_lookup[key]['groups'])
                 
-                f.close()
+                writer.writerow([
+                    key,
+                    attack_lookup[key]['technique'],
+                    '|'.join(attack_lookup[key]['tactics']),
+                    groups
+                ])
+            
+            f.close()
 
         except Exception as err:
             print('Warning: ' + str(err))

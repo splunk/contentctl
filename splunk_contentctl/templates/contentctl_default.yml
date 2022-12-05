@@ -1,6 +1,6 @@
 #config file
 
-global:
+general:
   log_path: "contentctl.log"
   log_level: INFO
 
@@ -21,14 +21,14 @@ alert_actions:
 
 test:
   docker_image: ""
-  apps: .
+  apps: []
   assets: csv
 
 deploy:
   target: splunk_search_head
-  username:
-  password:
-  server:
+  username: tbd
+  password: tbd
+  server: tbd
 
 build:
   splunk_app:

@@ -12,12 +12,12 @@ from splunk_contentctl.input.director import Director, DirectorInputDto, Directo
 @dataclass(frozen=True)
 class ValidateInputDto:
     director_input_dto: DirectorInputDto
-    product: SecurityContentProduct
 
 
 class Validate:
 
-    def execute(self, input_dto: ValidateInputDto) -> DirectorOutputDto:
+
+    def execute(self, input_dto: ValidateInputDto) -> None:
         director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)      
@@ -33,10 +33,8 @@ class Validate:
         except ValueError as e:
             print(e)
             sys.exit(1)
-        
-        print('Validation of security content successful.')
 
-        return director_output_dto
+        return None
 
 
     def validate_duplicate_uuids(self, security_content_objects):

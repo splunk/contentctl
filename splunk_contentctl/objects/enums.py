@@ -40,10 +40,18 @@ class SecurityContentType(enum.Enum):
 class SecurityContentProduct(enum.Enum):
     #This covers ESCU as well as other apps initialized 
     #by splunk_security_content_builder
-    SPLUNK_ENTERPRISE_APP = 1
-    SSA = 2
-    API = 3
+    splunk_app = "splunk_app"
+    ba_objects = "ba_objects"
+    json_objects = "json_objects"
 
+class LogLevel(enum.Enum):
+    NONE = "NONE"
+    ERROR = "ERROR"
+    INFO = "INFO"
+class AlertActions(enum.Enum):
+    notable = "notable"
+    rba = "rba"
+    email = "email"
 class PostTestBehavior(str, enum.Enum):
     always_pause = "always_pause"
     pause_on_failure = "pause_on_failure"
@@ -64,3 +72,6 @@ class InstanceState(str, enum.Enum):
     error = "error"
     stopping = "stopping"
     stopped = "stopped"
+
+
+

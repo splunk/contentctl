@@ -12,7 +12,6 @@ from splunk_contentctl.input.director import Director, DirectorInputDto, Directo
 @dataclass(frozen=True)
 class ValidateInputDto:
     director_input_dto: DirectorInputDto
-    product: SecurityContentProduct
 
 
 class Validate:

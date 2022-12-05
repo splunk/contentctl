@@ -8,7 +8,7 @@ from splunk_contentctl.actions.generate import GenerateInputDto, Generate
 from splunk_contentctl.actions.reporting import ReportingInputDto, Reporting
 from splunk_contentctl.actions.new_content import NewContentInputDto, NewContent
 from splunk_contentctl.actions.doc_gen import DocGenInputDto, DocGen
-from splunk_contentctl.actions.initialize import NewContentPack
+from splunk_contentctl.actions.initialize import Initialize, InitializeInputDto
 from splunk_contentctl.input.director import DirectorInputDto
 from splunk_contentctl.objects.enums import SecurityContentType, SecurityContentProduct
 from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
@@ -17,9 +17,7 @@ from splunk_contentctl.helper.config_handler import ConfigHandler
 
 
 
-def start(args):
-    config_path = args.config
-
+def print_ascii_art():
     print("""
 Running Splunk Security Content Control Tool (contentctl) 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -45,19 +43,13 @@ Running Splunk Security Content Control Tool (contentctl)
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠻⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
     By: Splunk Threat Research Team [STRT] - research@splunk.com
-    """)
+    """)    
 
-    # parse config
-    try:
-        config = ConfigHandler.read_config(config_path)
-    except Exception as e:
-        raise(Exception(f"Error reading the config file specific at {args.config} - {str(e)}"))
-    try:
-        ConfigHandler.validate_config(config)
-    except Exception as e:
-        raise(Exception(f"Error validating the config file specified at {args.config} - {str(e)}"))
-    return config
-    
+
+def start(args):
+    print_ascii_art()
+    return ConfigHandler.read_config(os.path.join(args.path, 'contentctl.yml'))
+
 
 def configure(args)->None:
     pass
@@ -65,14 +57,12 @@ def configure(args)->None:
     # build_skeleton.configure(args)
 
 def initialize(args)->None:
-    # start app
-    config = start(args)
-    NewContentPack(args, config)
-
-def content_changer(args) -> None:
-    pass
-
-
+    print_ascii_art()
+    Initialize().execute(
+        InitializeInputDto(
+            path=os.path.abspath(args.path)
+        )
+    )
 
 def build(args) -> None:
     config = start(args)
@@ -114,26 +104,19 @@ def test(args) -> None:
 def validate(args) -> None:
     config = start(args)
 
-    for product_type in config['build']:
-        if product_type not in config['build']:
-            raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
-                             f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
+    director_input_dto = DirectorInputDto(
+        input_path = os.path.abspath(args.path),
+        product = SecurityContentProduct[args.product],
+        config = config
+    )
 
-        print(f"Validating {product_type}")
-        director_input_dto = DirectorInputDto(
-            input_path = config['path'],
-            product = product_type,
-            create_attack_csv = False,
-            skip_enrichment = config['skip_enrichment']
-            )
+    validate_input_dto = ValidateInputDto(
+        director_input_dto = director_input_dto
+    )
 
-        validate_input_dto = ValidateInputDto(
-            director_input_dto = director_input_dto,
-            product = product_type
-        )
+    validate = Validate()
+    validate.execute(validate_input_dto)
 
-        validate = Validate()
-        validate.execute(validate_input_dto)
 
 def doc_gen(args) -> None:
     director_input_dto = DirectorInputDto(
@@ -196,8 +179,8 @@ def main(args):
     # grab arguments
     parser = argparse.ArgumentParser(
         description="Use `contentctl action -h` to get help with any Splunk content action")
-    parser.add_argument("-c", "--config", required=False, default="contentctl.yml",
-                        help="path to the configuration file of your Splunk content, defaults to: contentctl.yml")
+    parser.add_argument("-p", "--path", required=False, default=".",
+                        help="path to the content path containing the contentctl.yml")
 
     parser.set_defaults(func=lambda _: parser.print_help())
     actions_parser = parser.add_subparsers(title="Splunk content actions", dest="action")
@@ -214,13 +197,15 @@ def main(args):
 
 
     # init actions
-    init_parser.add_argument("-s", "--skip_configuration", action='store_true', required=False, default=False, help="skips configuration of the pack and generates a default configuration")
-    init_parser.add_argument("-o", "--output", required=False, type=str, default='.', help="output directory to initialize the content pack in" )
+    #init_parser.add_argument("-s", "--skip_configuration", action='store_true', required=False, default=False, help="skips configuration of the pack and generates a default configuration")
+    #init_parser.add_argument("-o", "--output", required=False, type=str, default='.', help="output directory to initialize the content pack in" )
     init_parser.set_defaults(func=initialize)
 
-    validate_parser.add_argument("-p", "--pack", required=False, type=str, default='SPLUNK_ENTERPRISE_APP', 
-                                 help="Type of package to create, choose between all, `SPLUNK_ENTERPRISE_APP` or `SSA`.")
+    #validate_parser.add_argument("-p", "--pack", required=False, type=str, default='SPLUNK_ENTERPRISE_APP', 
+    #                             help="Type of package to create, choose between all, `SPLUNK_ENTERPRISE_APP` or `SSA`.")
     #validate_parser.add_argument("-t", "--template", required=False, type=argparse.FileType("r"), default=DEFAULT_CONFIGURE_OUTPUT_FILE, help="Path to the template which will be used to create a configuration file for generating your app.")
+    validate_parser.add_argument("-pr", "--product", required=False, type=str, default="splunk_app",
+       help="Type of package to create, choose between .")
     validate_parser.set_defaults(func=validate)
 
     #These arguments are not required because they will be read from the config
@@ -240,11 +225,11 @@ def main(args):
         help="output path to store the detection or story")
     reporting_parser.set_defaults(func=reporting)
 
-    inspect_parser.add_argument("-p", "--app_path", required=False, type=str, default=None, help="path to the Splunk app to be inspected")
+    inspect_parser.add_argument("-ap", "--app_path", required=False, type=str, default=None, help="path to the Splunk app to be inspected")
     inspect_parser.set_defaults(func=inspect)
 
 
-    deploy_parser.add_argument("-p", "--app_path", required=True, type=str, help="path to the Splunk app you wish to deploy")
+    deploy_parser.add_argument("-ap", "--app_path", required=True, type=str, help="path to the Splunk app you wish to deploy")
     deploy_parser.add_argument("--username", required=True, type=str, help="splunk.com username")
     deploy_parser.add_argument("--password", required=True, type=str, help="splunk.com password")
     deploy_parser.add_argument("--server", required=False, default="https://admin.splunk.com", type=str, help="override server URL, defaults to: https://admin.splunk.com")

@@ -14,14 +14,14 @@ from splunk_contentctl.objects.enums import SecurityContentType
 from splunk_contentctl.objects.enums import SecurityContentProduct
 from splunk_contentctl.helper.utils import Utils
 from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
+from splunk_contentctl.objects.config import Config
 
 
 @dataclass(frozen=True)
 class DirectorInputDto:
     input_path: str
     product: SecurityContentProduct
-    create_attack_csv : bool
-    skip_enrichment: bool
+    config: Config
 
 @dataclass()
 class DirectorOutputDto:
@@ -53,22 +53,19 @@ class Director():
 
 
     def execute(self, input_dto: DirectorInputDto) -> None:
-        print("are we even running")
         self.input_dto = input_dto
 
-        if not self.input_dto.skip_enrichment:
-            self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path, self.input_dto.create_attack_csv)
+        if not self.input_dto.config.enrichments.attack_enrichment:
+            self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path)
 
         self.basic_builder = BasicBuilder()
         self.playbook_builder = PlaybookBuilder(self.input_dto.input_path)
         self.baseline_builder = BaselineBuilder()
         self.investigation_builder = InvestigationBuilder()
-        self.story_builder = StoryBuilder('ESCU')
-        self.detection_builder = DetectionBuilder(self.input_dto.skip_enrichment)
-        print(f"TO HERE: {self.input_dto.product}")
-        
-        if self.input_dto.product == SecurityContentProduct.splunk_app.name or self.input_dto.product == SecurityContentProduct.json_objects.name:
-            print("inside the if")
+        self.story_builder = StoryBuilder()
+        self.detection_builder = DetectionBuilder()
+
+        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
@@ -108,8 +105,6 @@ class Director():
 
 
         for index,file in enumerate(security_content_files):
-        
-            print(file)
             #Index + 1 because we are zero indexed, not 1 indexed.  This ensures
             # that printouts end at 100%, not some other number 
             progress_percent = ((index+1)/len(security_content_files)) * 100
@@ -141,7 +136,7 @@ class Director():
                 
                 elif type == SecurityContentType.baselines:
                         type_string = "Baselines"
-                        self.constructBaseline(self.baseline_builder, file, self.output_dto.deployments)
+                        self.constructBaseline(self.baseline_builder, file)
                         baseline = self.baseline_builder.getObject()
                         self.output_dto.baselines.append(baseline)
                 
@@ -153,17 +148,13 @@ class Director():
 
                 elif type == SecurityContentType.stories:
                         type_string = "Stories"
-                        self.constructStory(self.story_builder, file, 
-                            self.output_dto.detections, self.output_dto.baselines, self.output_dto.investigations)
+                        self.constructStory(self.story_builder, file)
                         story = self.story_builder.getObject()
                         self.output_dto.stories.append(story)
             
                 elif type == SecurityContentType.detections:
                         type_string = "Detections"
-                        self.constructDetection(self.detection_builder, file, 
-                            self.output_dto.deployments, self.output_dto.playbooks, self.output_dto.baselines,
-                            self.output_dto.tests, self.attack_enrichment, self.output_dto.macros,
-                            self.output_dto.lookups, self.input_dto.skip_enrichment)
+                        self.constructDetection(self.detection_builder, file)
                         detection = self.detection_builder.getObject()
                         self.output_dto.detections.append(detection)
             
@@ -192,74 +183,78 @@ class Director():
             sys.exit(1)
 
 
-    def constructDetection(self, builder: DetectionBuilder, path: str, deployments: list, playbooks: list, baselines: list, tests: list, attack_enrichment: dict, macros: list, lookups: list, skip_enrichment : bool) -> None:
+    def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path)
-        builder.addDeployment(deployments)
+        builder.setObject(file_path)
+        builder.addDeployment(self.output_dto.deployments)
         builder.addRBA()
         builder.addProvidingTechnologies()
         builder.addNesFields()
         builder.addAnnotations()
         builder.addMappings()
-        builder.addBaseline(baselines)
-        builder.addPlaybook(playbooks)
-        builder.addUnitTest(tests)
-        builder.addMacros(macros)
-        builder.addLookups(lookups)
+        builder.addBaseline(self.output_dto.baselines)
+        builder.addPlaybook(self.output_dto.playbooks)
+        builder.addUnitTest(self.output_dto.tests)
+        builder.addMacros(self.output_dto.macros)
+        builder.addLookups(self.output_dto.lookups)
         
-        if not skip_enrichment:
+        if self.input_dto.config.enrichments.attack_enrichment:
             builder.addMitreAttackEnrichment(self.attack_enrichment)
+
+        if self.input_dto.config.enrichments.cve_enrichment:
             builder.addCve()
+    
+        if self.input_dto.config.enrichments.splunk_app_enrichment:
             builder.addSplunkApp()
 
 
-    def constructStory(self, builder: StoryBuilder, path: str, detections: list, baselines: list, investigations: list) -> None:
+    def constructStory(self, builder: StoryBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path)
-        builder.addDetections(detections)
-        builder.addInvestigations(investigations)
-        builder.addBaselines(baselines)
+        builder.setObject(file_path)
+        builder.addDetections(self.output_dto.detections)
+        builder.addInvestigations(self.output_dto.investigations)
+        builder.addBaselines(self.output_dto.baselines)
         builder.addAuthorCompanyName()
 
 
-    def constructBaseline(self, builder: BaselineBuilder, path: str, deployments: list) -> None:
+    def constructBaseline(self, builder: BaselineBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path)
-        builder.addDeployment(deployments)
+        builder.setObject(file_path)
+        builder.addDeployment(self.output_dto.deployments)
 
 
-    def constructDeployment(self, builder: BasicBuilder, path: str) -> None:
+    def constructDeployment(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path, SecurityContentType.deployments)
+        builder.setObject(file_path, SecurityContentType.deployments)
 
 
-    def constructLookup(self, builder: BasicBuilder, path: str) -> None:
+    def constructLookup(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path, SecurityContentType.lookups)
+        builder.setObject(file_path, SecurityContentType.lookups)
 
 
-    def constructMacro(self, builder: BasicBuilder, path: str) -> None:
+    def constructMacro(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path, SecurityContentType.macros)
+        builder.setObject(file_path, SecurityContentType.macros)
 
 
-    def constructPlaybook(self, builder: PlaybookBuilder, path: str) -> None:
+    def constructPlaybook(self, builder: PlaybookBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path)
+        builder.setObject(file_path)
         builder.addDetections()
 
 
-    def constructTest(self, builder: BasicBuilder, path: str) -> None:
+    def constructTest(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path, SecurityContentType.unit_tests)
+        builder.setObject(file_path, SecurityContentType.unit_tests)
 
 
-    def constructInvestigation(self, builder: InvestigationBuilder, path: str) -> None:
+    def constructInvestigation(self, builder: InvestigationBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path)
+        builder.setObject(file_path)
         builder.addInputs()
         builder.addLowercaseName()
 
-    def constructObjects(self, builder: BasicBuilder, path: str) -> None:
+    def constructObjects(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(path)
+        builder.setObject(file_path)

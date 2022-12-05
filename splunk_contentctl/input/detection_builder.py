@@ -11,10 +11,18 @@ from splunk_contentctl.objects.macro import Macro
 from splunk_contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from splunk_contentctl.enrichments.cve_enrichment import CveEnrichment
 from splunk_contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
-
+from splunk_contentctl.actions.initialize import ContentPackConfig
 
 class DetectionBuilder():
     security_content_obj : SecurityContentObject
+<<<<<<< HEAD
+=======
+    force_cached_or_offline: bool 
+    config: ContentPackConfig
+
+    def __init__(self, config:ContentPackConfig):
+        self.config = config
+>>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)

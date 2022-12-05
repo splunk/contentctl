@@ -1,7 +1,7 @@
 import sys
 import argparse
 import os
-
+import yaml
 
 from splunk_contentctl.actions.validate import ValidateInputDto, Validate
 from splunk_contentctl.actions.generate import GenerateInputDto, Generate
@@ -15,9 +15,16 @@ from splunk_contentctl.enrichments.attack_enrichment import AttackEnrichment
 from splunk_contentctl.input.new_content_generator import NewContentGenerator, NewContentGeneratorInputDto
 from splunk_contentctl.helper.config_handler import ConfigHandler
 
+from splunk_contentctl.actions.initialize import ContentPackConfig
 
 
+<<<<<<< HEAD
 def print_ascii_art():
+=======
+def start(args)->ContentPackConfig:
+    config_path = args.config
+
+>>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
     print("""
 Running Splunk Security Content Control Tool (contentctl) 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -56,6 +63,7 @@ def configure(args)->None:
     # import build_skeleton
     # build_skeleton.configure(args)
 
+
 def initialize(args)->None:
     print_ascii_art()
     Initialize().execute(
@@ -64,26 +72,28 @@ def initialize(args)->None:
         )
     )
 
+
 def build(args) -> None:
     config = start(args)
 
-    for product_type in config['build']:
-        if product_type not in config['build']:
+    for product_type in config.build:
+        if product_type not in SecurityContentProduct:
             raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
                              f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
 
         print(f"Building {product_type}")
+        
         director_input_dto = DirectorInputDto(
-            input_path = config['path'],
+            input_path = config.globals.path,
             product = product_type,
             create_attack_csv = True,
-            skip_enrichment = config['skip_enrichment']
+            skip_enrichment = not config.enrichments.attack_enrichment
         )
 
         generate_input_dto = GenerateInputDto(
             director_input_dto = director_input_dto,
             product = product_type,
-            output_path = config['build'][product_type]['path']
+            output_path = config.build[product_type].pa
         )
 
         generate = Generate()
@@ -104,6 +114,7 @@ def test(args) -> None:
 def validate(args) -> None:
     config = start(args)
 
+<<<<<<< HEAD
     director_input_dto = DirectorInputDto(
         input_path = os.path.abspath(args.path),
         product = SecurityContentProduct[args.product],
@@ -117,6 +128,15 @@ def validate(args) -> None:
     validate = Validate()
     validate.execute(validate_input_dto)
 
+=======
+    print(f"Beginning validation")
+    director_input_dto = DirectorInputDto()
+
+    validate_input_dto = ValidateInputDto(director_input_dto = director_input_dto)
+
+    validate = Validate()
+    validate.execute(validate_input_dto, config)
+>>>>>>> 748e7b7432bdea368373dc1c02427a24b5158279
 
 def doc_gen(args) -> None:
     director_input_dto = DirectorInputDto(

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 class InitializeInputDto:
     path: str
 
+
 class Initialize:
 
     def execute(self, input_dto: InitializeInputDto) -> None:

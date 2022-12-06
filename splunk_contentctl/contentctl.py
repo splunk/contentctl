@@ -12,7 +12,7 @@ from splunk_contentctl.actions.new_content import NewContentInputDto, NewContent
 from splunk_contentctl.actions.doc_gen import DocGenInputDto, DocGen
 from splunk_contentctl.actions.initialize import Initialize, InitializeInputDto
 from splunk_contentctl.input.director import DirectorInputDto
-from splunk_contentctl.objects.enums import SecurityContentType, SecurityContentProduct
+from splunk_contentctl.objects.enums import SecurityContentType, SecurityContentProduct, DetectionTestingMode, PostTestBehavior
 from splunk_contentctl.input.new_content_generator import NewContentGeneratorInputDto
 from splunk_contentctl.helper.config_handler import ConfigHandler
 
@@ -144,7 +144,7 @@ def deploy(args) -> None:
 
 
 
-def eric_test(args):
+def test(args):
     '''
     import yaml
     with open("Res.yml","r") as res:
@@ -156,6 +156,13 @@ def eric_test(args):
     '''     
     print("security_content repo MUST be checked out into '/tmp/security_content' - this requirement is just for initial testing")
     
+    
+
+    if args.detections_list is not None and args.mode is not DetectionTestingMode.selected.name:
+        print(f"--mode was '{args.mode}', but a detections_list was provided.  We will update --mode to '{DetectionTestingMode.selected.name}' for you")
+        args.mode = DetectionTestingMode.selected.name
+
+
     args.path = "/tmp/security_content"
     args.output = os.path.join(args.path, "dist","escu")
     
@@ -172,7 +179,13 @@ def eric_test(args):
     with tarfile.open(archive_path, "w:gz") as app_archive:
         app_archive.add(app_path, arcname=app_path.name)
 
-    test_config = TestConfig.parse_obj({'repo_path': args.path})
+    
+
+
+    test_config = TestConfig.parse_obj({'repo_path': args.path, 
+                                        'mode': args.mode, 
+                                        'post_test_behavior': args.behavior,
+                                        'detections_list': args.detections_list})
     
     
 
@@ -180,7 +193,7 @@ def eric_test(args):
             release="1.0.0",local_path=archive_path, description="lame description", http_path=None, splunkbase_path=None)
     
     test_config.apps.append(a)
-
+    
     Test().execute(test_config, director)
         
 
@@ -323,7 +336,27 @@ def main(args):
     deploy_parser.set_defaults(func=deploy)
 
 
-    test_parser.set_defaults(func=eric_test)
+
+    test_parser.add_argument("--mode", required=False, default=DetectionTestingMode.all.name, type=str, 
+                             choices=DetectionTestingMode._member_names_, 
+                             help="Controls which detections to test. 'all' will test all detections in the repo."\
+                             " 'changes' will check only detections that have changed between the current/test "\
+                             "branch and the default branch. 'selected' will test a list of detections that have "\
+                             "been provided via the --selected command line argument (see for more details)." )
+    test_parser.add_argument('--behavior', required=False, default=PostTestBehavior.pause_on_failure.name, type=str,
+                             choices= PostTestBehavior._member_names_, 
+                             help="Controls what to do when a test completes. 'always_pause' means that the state of "\
+                             "the test will always pause after a test, allowing the user to log into the "\
+                             "server and experiment with the search and data before it is removed.  'pause_on_failure' "\
+                             "will pause execution ONLY when a test fails. The user may press ENTER in the terminal "\
+                             "running the test to move on to the next test.  'never_pause' will never stop testing, "\
+                             "even if a test fails. Please note that 'never_pause' MUST be used for a test to "\
+                             "run in an unattended manner or in a CI/CD system - otherwise a single failed test "\
+                             "will result in the testing never finishing as the tool waits for input.")
+    test_parser.add_argument('-d', '--detections_list', required=False, nargs='+', type=str, help="An explicit list "\
+                             "of detections to test. Their paths should be relative to the app path.")
+
+    test_parser.set_defaults(func=test)
 
     # parse them
     args = parser.parse_args()
@@ -335,8 +368,8 @@ def main(args):
         return args.func(args)
     except Exception as e:
         print(f"Error for function [{args.func.__name__}]: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
+        #import traceback
+        #print(traceback.format_exc())
         sys.exit(1)
 
 

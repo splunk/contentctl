@@ -165,6 +165,10 @@ def test(args):
         args.mode = DetectionTestingMode.selected.name
 
     config = start(args)
+    Utils.warning_print(f"Disabling all enrichments for debugging speed.")
+    config.enrichments.attack_enrichment = False
+    config.enrichments.cve_enrichment = False
+    config.enrichments.splunk_app_enrichment = False
     try:
         Utils.warning_print(f"Ensuring security_content repo exists at {sec_content_path}")
         git.Repo(sec_content_path)

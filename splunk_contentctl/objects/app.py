@@ -12,8 +12,10 @@ import validators
 from splunk_contentctl.objects.security_content_object import SecurityContentObject
 from splunk_contentctl.objects.enums import DataModel
 from splunk_contentctl.helper.utils import Utils
-
+import yaml
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{release}/download"
+
+
 
 class App(BaseModel, extra=Extra.forbid):
     
@@ -153,3 +155,14 @@ class App(BaseModel, extra=Extra.forbid):
                 return None
         return SPLUNKBASE_URL.format(uid=values['uid'], release = values['release'])
         
+
+def get_default_apps()->list[App]:
+    all_app_objs:list[App] = []
+    with open("templates/app_default.yml", "r") as app_data:
+        all_apps_raw = yaml.safe_load_all(app_data)
+        print(all_apps_raw)
+        for a in all_apps_raw:
+            app_obj = App.parse_obj(a)
+            all_app_objs.append(app_obj)
+    return all_app_objs
+    

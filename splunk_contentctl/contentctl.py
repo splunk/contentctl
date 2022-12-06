@@ -156,30 +156,32 @@ def eric_test(args):
     '''     
     print("security_content repo MUST be checked out into '/tmp/security_content' - this requirement is just for initial testing")
     
-    
-    
     args.path = "/tmp/security_content"
     args.output = os.path.join(args.path, "dist","escu")
-    director = build(args)
     
+    config = start(args)
+    
+
+    director = build(args, config)
+    
+    import pathlib
+    app_path = pathlib.Path(config.build.splunk_app.path)
+    archive_path = f"{str(app_path)}.tar.gz"
+    print(f"tar.gz'ing {app_path} so it can be installed as an app")
+    import tarfile
+    with tarfile.open(archive_path, "w:gz") as app_archive:
+        app_archive.add(app_path, arcname=app_path.name)
+
     test_config = TestConfig.parse_obj({'repo_path': args.path})
-    sys.exit(0)
-
-
-
-
-
+    
     
 
-    '''
     a = App(uid=9999, appid="my_custom_app", title="my_custom_app",
-            release="1.0.0",local_path=str(app), description="lame description", http_path=None, splunkbase_path=None)
+            release="1.0.0",local_path=archive_path, description="lame description", http_path=None, splunkbase_path=None)
     
     test_config.apps.append(a)
-    '''
-    
-    return
-    Test().execute(test_object, director)
+
+    Test().execute(test_config, director)
         
 
 

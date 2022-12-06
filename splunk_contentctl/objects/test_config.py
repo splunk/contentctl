@@ -18,7 +18,7 @@ import argparse
 
 from splunk_contentctl.objects.enums import PostTestBehavior, DetectionTestingMode, DetectionTestingTargetInfrastructure
 
-from splunk_contentctl.objects.app import App
+from splunk_contentctl.objects.app import App, get_default_apps
 from splunk_contentctl.helper.utils import Utils
 
 
@@ -57,7 +57,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     splunk_app_password: Union[str,None] = Field(default="password", title="Password for logging into Splunk Server")
     splunkbase_username:Union[str,None] = Field(default=None, title="The username for logging into Splunkbase in case apps must be downloaded")
     splunkbase_password:Union[str,None] = Field(default=None, title="The password for logging into Splunkbase in case apps must be downloaded")
-    apps: list[App] = Field(default=[], title="A list of all the apps to be installed on each container")
+    apps: list[App] = Field(default=get_default_apps(), title="A list of all the apps to be installed on each container")
     
     test_instance_address:str = Field(default="127.0.0.1", title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'")
     

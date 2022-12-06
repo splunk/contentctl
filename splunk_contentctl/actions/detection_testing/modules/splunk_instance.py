@@ -1089,7 +1089,7 @@ class SplunkContainer(SplunkInstance):
     def removeContainer(
         self, removeVolumes: bool = True, forceRemove: bool = True
     ) -> bool:
-        return True
+        
         try:
             container:docker.models.containers.Container = self.get_client().containers.get(self.get_name())
         except Exception as e:

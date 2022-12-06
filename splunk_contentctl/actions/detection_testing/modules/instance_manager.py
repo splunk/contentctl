@@ -188,12 +188,12 @@ class InstanceManager:
 
     def all_instances_ready(self):
         for instance in self.instances:
-            if instance.testingStats.instance_state == InstanceState.running:
+            if instance.testingStats.instance_state == InstanceState.starting:
                 #This instance is ready, but we need to check the rest of them
-                pass
+                return False
             else:
                 #At least one instance is not ready
-                return False
+                pass
 
         return True
 

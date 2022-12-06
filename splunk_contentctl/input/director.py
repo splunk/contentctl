@@ -71,14 +71,16 @@ class Director():
 
     def execute(self, input_dto: DirectorInputDto) -> None:
         self.input_dto = input_dto
-
-        if not self.input_dto.config.enrichments.attack_enrichment:
+        
+        
+        if self.input_dto.config.enrichments.attack_enrichment:
             self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path)
-
+        
         self.basic_builder = BasicBuilder()
         self.playbook_builder = PlaybookBuilder(self.input_dto.input_path)
         self.baseline_builder = BaselineBuilder()
         self.investigation_builder = InvestigationBuilder()
+        print("Storybuilder is using static app_name DEMO_APP")
         self.story_builder = StoryBuilder()
         self.detection_builder = DetectionBuilder()
 
@@ -113,7 +115,9 @@ class Director():
     def createSecurityContent(self, type: SecurityContentType) -> None:
         objects = []
         if type == SecurityContentType.deployments:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name), 'ESCU'))
+            #files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name), 'ESCU'))
+            print("temporary change to deployments folder for testing")
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
         elif type == SecurityContentType.unit_tests:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
         else:

@@ -141,7 +141,6 @@ class TestConfig(BaseModel, extra=Extra.forbid):
             v = main_branch
 
         try:
-            print(f"validating main_branch name {v}")
             Utils.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
         except Exception as e:
             raise ValueError(f"Error validating main_branch: {str(e)}")

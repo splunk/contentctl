@@ -53,5 +53,5 @@ class Generate:
             api_json_output.writeObjects(director_output_dto.macros, input_dto.output_path, SecurityContentType.macros)
             api_json_output.writeObjects(director_output_dto.deployments, input_dto.output_path, SecurityContentType.deployments)
 
-        print('Generate of security content successful.')
+        print(f'Generate of security content successful to {input_dto.output_path}')
         return director_output_dto

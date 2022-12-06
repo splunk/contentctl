@@ -82,20 +82,34 @@ def build(args, config: Union[Config,None] = None) -> DirectorOutputDto:
     else:
         print("Using a hardcoded config for contentctl test integration")
 
+    product_type = SecurityContentProduct.splunk_app
+    print("only attempting to generate splunk_app")
+    director_input_dto = DirectorInputDto(
+            args.path,
+            product_type,
+            config = config
+        )
+
+
+    generate_input_dto = GenerateInputDto(
+        director_input_dto,
+        product_type,
+        output_path = config.build.splunk_app.path
+    )
+
+    generate = Generate()
+
+    director = generate.execute(generate_input_dto)
+    return director
+    #END REMOVE AFTER TEST INTEGRATION IS COMPLETE
     
 
-    #REMOVE AFTER TEST INTEGRATION IS COMPLETE
-    directors:list[DirectorOutputDto] = []
     for product_type in config.build:
-        #REMOVE AFTER TEST INTEGRATION IS COMPLETE
-        product_type = SecurityContentProduct.splunk_app
-
+        
         if product_type not in SecurityContentProduct:
             raise(Exception(f"Unsupported product type {product_type} found in configuration file {args.config}.\n"
                              f"Only the following product types are valid: {SecurityContentProduct._member_names_}"))
         
-
-        print(f"Building {product_type}")
         
         director_input_dto = DirectorInputDto(
             args.path,
@@ -113,11 +127,10 @@ def build(args, config: Union[Config,None] = None) -> DirectorOutputDto:
         generate = Generate()
 
         #REMOVE AFTER TEST INTEGRATION IS COMPLETE
-        directors.append(generate.execute(generate_input_dto))
+        director = generate.execute(generate_input_dto)
 
 
-    #REMOVE AFTER TEST INTEGRATION IS COMPLETE
-    return directors[0]
+
 
 
 
@@ -141,31 +154,31 @@ def eric_test(args):
         except Exception as e:
             raise(Exception(f"Error parsing test config: {str(e)}"))
     '''     
-    print("security_content repo MUST be checked out into the current directory - this requirement is just for initial testing")
-    test_config = TestConfig.parse_obj({'repo_path': "/tmp/security_content"})
-    return
-    args.path = "xxx"
-
-
-    args.path = test_object.repo_path
-    args.product = "SPLUNK_ENTERPRISE_APP"
-    args.output = os.path.join(test_object.repo_path, "dist","escu")
-    args.skip_enrichment = True
+    print("security_content repo MUST be checked out into '/tmp/security_content' - this requirement is just for initial testing")
     
     
+    
+    args.path = "/tmp/security_content"
+    args.output = os.path.join(args.path, "dist","escu")
     director = build(args)
     
-    
+    test_config = TestConfig.parse_obj({'repo_path': args.path})
+    sys.exit(0)
+
+
+
+
+
     
 
-    app = build(args)
-    
+    '''
     a = App(uid=9999, appid="my_custom_app", title="my_custom_app",
             release="1.0.0",local_path=str(app), description="lame description", http_path=None, splunkbase_path=None)
-
-    test_object.apps.append(a)
-    print(f"generate complete. written to {args.output}")
     
+    test_config.apps.append(a)
+    '''
+    
+    return
     Test().execute(test_object, director)
         
 
@@ -265,9 +278,8 @@ def main(args):
     reporting_parser = actions_parser.add_parser("report", help="create Splunk content report of the current pack")
     inspect_parser = actions_parser.add_parser("inspect", help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.")
     deploy_parser = actions_parser.add_parser("deploy", help="install an application on a target Splunk instance.")  
-    test_parser = actions_parser.add_parser("test", help="test Splunk content detections inside a docker instance.")    
 
-    test_parser = actions_parser.add_parser("test", help="Run a test of the detections locally")
+    test_parser = actions_parser.add_parser("test", help="Run a test of the detections against a Splunk Server or Splunk Docker Container")
 
     # init actions
     #init_parser.add_argument("-s", "--skip_configuration", action='store_true', required=False, default=False, help="skips configuration of the pack and generates a default configuration")
@@ -321,8 +333,8 @@ def main(args):
         return args.func(args)
     except Exception as e:
         print(f"Error for function [{args.func.__name__}]: {str(e)}")
-        #import traceback
-        #print(traceback.format_exc())
+        import traceback
+        print(traceback.format_exc())
         sys.exit(1)
 
 

@@ -10,6 +10,7 @@ from splunk_contentctl.input.yml_reader import YmlReader
 
 class StoryBuilder():
     story: Story
+    app_name: str = "DEMO_APP"
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)

@@ -55,6 +55,8 @@ Running Splunk Security Content Control Tool (contentctl)
     """)    
 
 
+
+
 def start(args)->Config:
     print_ascii_art()
     return ConfigHandler.read_config(os.path.join(args.path, 'contentctl.yml'))
@@ -145,53 +147,73 @@ def deploy(args) -> None:
 
 
 def test(args):
-    '''
-    import yaml
-    with open("Res.yml","r") as res:
-        try:
-            data = yaml.safe_load(res)
-            test_object = TestConfig.parse_obj(data)
-        except Exception as e:
-            raise(Exception(f"Error parsing test config: {str(e)}"))
-    '''     
-    print("security_content repo MUST be checked out into '/tmp/security_content' - this requirement is just for initial testing")
+    
+    from splunk_contentctl.helper.utils import Utils
+    import pathlib
+    import git
+    import shutil
+    import tarfile
+    Utils.warning_print(f"Imported some libraries that will only be used until other features have been build")
     
     
-
+    args.path = "/tmp/security_content"
+    args.output = os.path.join(args.path, "dist","escu")
+    sec_content_path = pathlib.Path("/tmp/security_content")
+    
     if args.detections_list is not None and args.mode is not DetectionTestingMode.selected.name:
         print(f"--mode was '{args.mode}', but a detections_list was provided.  We will update --mode to '{DetectionTestingMode.selected.name}' for you")
         args.mode = DetectionTestingMode.selected.name
 
-
-    args.path = "/tmp/security_content"
-    args.output = os.path.join(args.path, "dist","escu")
-    
     config = start(args)
+    try:
+        Utils.warning_print(f"Ensuring security_content repo exists at {sec_content_path}")
+        git.Repo(sec_content_path)
+    except Exception as e:
+        Utils.warning_print(f"The security_content git repo MUST be checked out to {sec_content_path}: {str(e)}")
+        sys.exit(1)
+    
+    app_path = pathlib.Path(config.build.splunk_app.path)
+    try:
+        
+        Utils.warning_print("Ensuring proper files exist in dist besides those that we generate")
+        shutil.copytree(args.output, config.build.splunk_app.path, dirs_exist_ok=True)
+    except Exception as e:
+        Utils.warning_print(f"Unable to copy {args.output} to {config.build.splunk_app.path} - this is required so that content app which is built is a valid app and things like macros work in search: {str(e)}")
+        sys.exit(1)
     
 
     director = build(args, config)
     
-    import pathlib
-    app_path = pathlib.Path(config.build.splunk_app.path)
+    
+    
     archive_path = f"{str(app_path)}.tar.gz"
-    print(f"tar.gz'ing {app_path} so it can be installed as an app")
-    import tarfile
-    with tarfile.open(archive_path, "w:gz") as app_archive:
-        app_archive.add(app_path, arcname=app_path.name)
+
+    
+    
+    try:
+        Utils.warning_print(f"Tar.gz'ing {app_path} to create {archive_path} for installation during setup")
+        with tarfile.open(archive_path, "w:gz") as app_archive:
+            app_archive.add(app_path, arcname=app_path.name)
+    except Exception as e:
+        Utils.warning_print(f"Error creating {archive_path} for installation during setup: {str(e)}")
+        sys.exit(1)
 
     
 
-
+    Utils.warning_print(f"Creating a TestConfig with defaults defined in splunk_contentctl/objects/test_config.py except for:\n"
+                 f"\tpath: {args.path}\n"
+                 f"\tmode: {args.mode}\n"
+                 f"\tpost_test_behavior: {args.behavior}\n"
+                 f"\tdetections_list: {args.detections_list}")
     test_config = TestConfig.parse_obj({'repo_path': args.path, 
                                         'mode': args.mode, 
                                         'post_test_behavior': args.behavior,
                                         'detections_list': args.detections_list})
     
     
-
+    Utils.warning_print("Adding the app that we generated to the apps list")
     a = App(uid=9999, appid="my_custom_app", title="my_custom_app",
             release="1.0.0",local_path=archive_path, description="lame description", http_path=None, splunkbase_path=None)
-    
     test_config.apps.append(a)
     
     Test().execute(test_config, director)

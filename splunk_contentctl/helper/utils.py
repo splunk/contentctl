@@ -222,3 +222,7 @@ class Utils:
         random.SystemRandom().shuffle(password_list)
         password = "".join(password_list)
         return password
+    
+    @staticmethod
+    def warning_print(msg:str, prefix:str = "MESSAGE TO CONTENTCTL DEV"):
+        print(f"{prefix}: {msg}")

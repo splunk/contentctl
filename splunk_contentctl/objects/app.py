@@ -159,8 +159,7 @@ class App(BaseModel, extra=Extra.forbid):
 def get_default_apps()->list[App]:
     all_app_objs:list[App] = []
     with open("templates/app_default.yml", "r") as app_data:
-        all_apps_raw = yaml.safe_load_all(app_data)
-        print(all_apps_raw)
+        all_apps_raw = yaml.safe_load(app_data)
         for a in all_apps_raw:
             app_obj = App.parse_obj(a)
             all_app_objs.append(app_obj)

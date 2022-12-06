@@ -99,7 +99,3 @@
   title: "Splunk Common Information Model (CIM)"
   release: "5.0.2"
   http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-common-information-model-cim_501.tgz
-
-
-#splunkbase_username: emcginnistwo
-#splunkbase_password: fh45%12DF*9(

@@ -156,9 +156,9 @@ def test(args):
     Utils.warning_print(f"Imported some libraries that will only be used until other features have been build")
     
     
-    args.path = "/tmp/security_content"
+    args.path = "/tmp/demo/security_content"
     args.output = os.path.join(args.path, "dist","escu")
-    sec_content_path = pathlib.Path("/tmp/security_content")
+    sec_content_path = pathlib.Path(args.path)
     
     if args.detections_list is not None and args.mode is not DetectionTestingMode.selected.name:
         print(f"--mode was '{args.mode}', but a detections_list was provided.  We will update --mode to '{DetectionTestingMode.selected.name}' for you")

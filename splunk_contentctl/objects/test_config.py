@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Union
 import docker
 import argparse
+import docker.errors
 
 
 
@@ -180,38 +181,58 @@ class TestConfig(BaseModel, extra=Extra.forbid):
             raise(ValueError(f"Error, the image_name {v} does not include a tag.  A tagged container MUST be included to ensure consistency when testing"))
         
         #Check to make sure we have the latest version of the image
-        import docker.errors
+        #We have this as a wrapped, nested try/except because if we 
+        #encounter some error in trying to get the latest version, but
+        #we do have some version already, we will allow the test to continue.
+        #For example, this may occur if an image has been previously downloaded,
+        #but the server no longer has internet connectivity and can't get the 
+        #image again. in this case, don't fail - continue with the test
         try:
-            client = docker.from_env()
-            print(f"Getting the latest version of the container image: {v}...", end='', flush=True)
-            client.images.pull(v)
-            print("done")
-        except docker.errors.APIError as e:
-            print("error")
-            if e.is_client_error():
-                if "invalid reference format" in str(e.explanation):
-                    simple_explanation = f"The format of the docker image reference is incorrect. Please use a valid image reference"
+            try:
+                client = docker.from_env()
+                print(f"Getting the latest version of the container image: {v}...", end='', flush=True)
+                client.images.pull(v)
+                print("done")
+            except docker.errors.APIError as e:
+                print("error")
+                if e.is_client_error():
+                    if "invalid reference format" in str(e.explanation):
+                        simple_explanation = f"The format of the docker image reference is incorrect. Please use a valid image reference"
+                    else:
+                        simple_explanation = f"The most likely cause of this error is that the image/tag "\
+                                            "does not exist or it is stored in a private repository and you are not logged in."
+                    
+                elif e.is_server_error():
+                    simple_explanation = f"The mostly likely cause is that the server cannot be reached. "\
+                                        "Please ensure that the server hosting your docker image is available "\
+                                        "and you have internet access, if required."
+                
                 else:
-                    simple_explanation = f"The most likely cause of this error is that the image/tag "\
-                                          "does not exist or it is stored in a private repository and you are not logged in."
+                    simple_explanation = f"Unable to pull image {v} for UNKNOWN reason. Please consult the detailed error below."
                 
-            elif e.is_server_error():
-                simple_explanation = f"The mostly likely cause is that the server cannot be reached. "\
-                                      "Please ensure that the server hosting your docker image is available "\
-                                      "and you have internet access, if required."
-            
-            else:
-                simple_explanation = f"Unable to pull image {v} for UNKNOWN reason. Please consult the detailed error below."
-            
-            verbose_explanation = e.explanation
-                
-            raise(ValueError(f"Error Pulling Docker Image '{v}'\n  - SIMPLE EXPLANATION: {simple_explanation}\n\n"\
-                              f"  - VERBOSE EXPLANATION: {verbose_explanation}\n"))
-        except Exception as e:
-            print("error")
-            raise(ValueError(f"Uknown error pulling Docker Image '{v}': {str(e)}"))
+                verbose_explanation = e.explanation
+                    
+                raise(ValueError(f"Error Pulling Docker Image '{v}'\n  - EXPLANATION: {simple_explanation} (full error text: '{verbose_explanation}'"))
+            except Exception as e:
+                print("error")
+                raise(ValueError(f"Uknown error pulling Docker Image '{v}': {str(e)}"))
         
+        except Exception as e:
+            #There was some exception that prevented us from getting the latest version
+            #of the image. However, if we already have it, use the current version and
+            #down fully raise the exception - just use it
+            client = docker.from_env()
+            try:
+                client.api.inspect_image(v)
+                print(e)
+                print(f"We will default to using the version of the image {v} which has "\
+                       "already been downloaded to this machine. Please note that it may be out of date.")
 
+            except Exception as e2:
+                raise(ValueError(f"{str(e)}Image is not previously cached, so we could not use an old version."))
+
+
+        
         
         return v
     

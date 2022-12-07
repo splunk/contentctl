@@ -1077,7 +1077,7 @@ class SplunkContainer(SplunkInstance):
             container:docker.models.containers.Container = self.get_client().containers.get(self.get_name())
             #Note that stopping does not remove any of the volumes or logs,
             #so stopping can be useful if we want to debug any container failure 
-            container.stop(timeout=10)
+            container.stop(timeout=timeout)
             self.print("Container successfully stopped")
             self.testingStats.setInstanceState(InstanceState.stopped)
             return True

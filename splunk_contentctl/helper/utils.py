@@ -224,5 +224,6 @@ class Utils:
         return password
     
     @staticmethod
-    def warning_print(msg:str, prefix:str = "MESSAGE TO CONTENTCTL DEV"):
-        print(f"{prefix}: {msg}")
+    def warning_print(msg:str, prefix:str = "MESSAGE TO CONTENTCTL DEV", suppress=False):
+        if not suppress:
+            print(f"{prefix}: {msg}")

@@ -85,7 +85,8 @@ def build(args, config: Union[Config,None] = None) -> DirectorOutputDto:
         print("Using a hardcoded config for contentctl test integration")
 
     product_type = SecurityContentProduct.splunk_app
-    print("only attempting to generate splunk_app")
+    from splunk_contentctl.helper.utils import Utils
+    Utils.warning_print("Build is only generating a splunk_app, then returning")
     director_input_dto = DirectorInputDto(
             args.path,
             product_type,
@@ -176,24 +177,20 @@ def test(args):
         Utils.warning_print(f"The security_content git repo MUST be checked out to {sec_content_path}: {str(e)}")
         sys.exit(1)
     
-    app_path = pathlib.Path(config.build.splunk_app.path)
+
     try:
-        
-        Utils.warning_print("Ensuring proper files exist in dist besides those that we generate")
+        app_path = pathlib.Path(config.build.splunk_app.path)        
+        Utils.warning_print("Ensuring proper files exist in dist besides those that we generate. They are copied from security_content")
         shutil.copytree(args.output, config.build.splunk_app.path, dirs_exist_ok=True)
     except Exception as e:
         Utils.warning_print(f"Unable to copy {args.output} to {config.build.splunk_app.path} - this is required so that content app which is built is a valid app and things like macros work in search: {str(e)}")
         sys.exit(1)
     
-
+    Utils.warning_print("Explicitly calling build workflow")
     director = build(args, config)
     
-    
-    
-    archive_path = f"{str(app_path)}.tar.gz"
 
-    
-    
+    archive_path = f"{str(app_path)}.tar.gz"
     try:
         Utils.warning_print(f"Tar.gz'ing {app_path} to create {archive_path} for installation during setup")
         with tarfile.open(archive_path, "w:gz") as app_archive:
@@ -209,13 +206,14 @@ def test(args):
                  f"\tmode: {args.mode}\n"
                  f"\tpost_test_behavior: {args.behavior}\n"
                  f"\tdetections_list: {args.detections_list}")
+
     test_config = TestConfig.parse_obj({'repo_path': args.path, 
                                         'mode': args.mode, 
                                         'post_test_behavior': args.behavior,
                                         'detections_list': args.detections_list})
     
-    
-    Utils.warning_print("Adding the app that we generated to the apps list")
+
+    Utils.warning_print("Adding the app that we generated to the apps list - we are using bogus values for the MANIFEST")
     a = App(uid=9999, appid="my_custom_app", title="my_custom_app",
             release="1.0.0",local_path=archive_path, description="lame description", http_path=None, splunkbase_path=None)
     test_config.apps.append(a)

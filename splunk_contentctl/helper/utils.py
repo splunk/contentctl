@@ -159,10 +159,35 @@ class Utils:
     
 
     @staticmethod
+    def verify_file_exists(file_path:str, verbose_print=False, timeout_seconds:int = 10)->None:
+        
+        try:
+            if pathlib.Path(file_path).is_file():
+                #This is a file and we know it exists
+                return None
+        except Exception as e:
+            print(f"Could not copy local file {file_path} the file because {str(e)}")
+
+
+        
+        #Try to make a head request to verify existence of the file
+        try:
+            req = requests.head(file_path, timeout=timeout_seconds, verify=True, allow_redirects=True)
+            if req.status_code > 400:
+                raise(Exception(f"Return code {req.status_code}"))
+        except Exception as e:
+            raise(Exception(f"Cannot confirm the existence of '{file_path}' - are you sure it exists: {str(e)}"))     
+        
+            
+
+    @staticmethod
     def download_file_from_http(file_path:str, destination_file:str, overwrite_file:bool=False, chunk_size:int=1024*1024, verbose_print:bool=False)->None:
         global TOTAL_BYTES, TOTAL_DOWNLOAD_TIME
         
         try:
+            #generates an exception only if the copyfile fails.
+            #if we try this with a URL, it won't be found as a file and no
+            #exception will be generated
             if pathlib.Path(file_path).is_file():
                 shutil.copyfile(file_path, destination_file)
                 return

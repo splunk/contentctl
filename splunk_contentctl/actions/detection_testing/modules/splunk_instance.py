@@ -729,7 +729,9 @@ class SplunkInstance:
     
     def configure_hec(self):
         
-        
+        if self.shared_test_objects.force_finish:
+            return
+
         self.channel = str(uuid.uuid4())
         try:
             res = self.get_service().input(path='/servicesNS/nobody/splunk_httpinput/data/inputs/http/http:%2F%2FDETECTION_TESTING_HEC')
@@ -809,7 +811,7 @@ class SplunkInstance:
         self.print("Waiting for Splunk Instance Web Interface to come up...")
         while True:
             if self.shared_test_objects.force_finish:
-                raise(Exception("Test finished or terminated early.  Stop waiting for interface"))
+                return True
             timediff = datetime.datetime.now() - start_time
 
 
@@ -1036,6 +1038,10 @@ class SplunkContainer(SplunkInstance):
         api_client = docker.APIClient()
         # need to use the low level client to put a file onto a container
         while not successful_copy:
+            #Help bail from the install quickly if we have stopped the test
+            if self.shared_test_objects.force_finish:
+                return successful_copy
+
             try:
                 with open(local_file_path, "rb") as fileData:
                     # splunk will restart a few times will installation of apps takes place so it will reload its indexes...
@@ -1123,33 +1129,6 @@ class SplunkContainer(SplunkInstance):
         self.container.start()
         self.print(f"Starting container and installing [{len(self.config.apps)}] apps/TAs...")
         
-        
-
-        # def shutdown_signal_handler(sig, frame):
-        #     shutdown_client = docker.client.from_env()
-        #     errorCount = 0
-        
-        #     print(f"Shutting down {self.container_name}...", file=sys.stderr)
-        #     try:
-        #         container = shutdown_client.containers.get(self.container_name)
-        #         #Note that stopping does not remove any of the volumes or logs,
-        #         #so stopping can be useful if we want to debug any container failure 
-        #         container.stop(timeout=10)
-        #         print(f"{self.container_name} shut down successfully", file=sys.stderr)        
-        #     except Exception as e:
-        #         print(f"Error trying to shut down {self.container_name}. It may have already shut down.  Stop it youself with 'docker containter stop {self.container_name}", sys.stderr)
-            
-            
-        #     #We must use os._exit(1) because sys.exit(1) actually generates an exception which can be caught! And then we don't Quit!
-        #     import os
-        #     os._exit(1)
-                
-
-                    
-        # import signal
-        # signal.signal(signal.SIGINT, shutdown_signal_handler)
-
-        # By default, first copy the index file then the datamodel file
         
         for file_description, file_dict in self.files_to_copy_to_instance.items():
             self.extract_tar_file_to_container(

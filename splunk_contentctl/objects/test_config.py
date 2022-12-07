@@ -23,7 +23,8 @@ from splunk_contentctl.helper.utils import Utils
 
 
 
-ALWAYS_PULL = True
+ALWAYS_PULL_REPO = False
+ALWAYS_PULL_DOCKER_IMAGE = False
 
 
 def getTestConfigFromYMLFile(path:pathlib.Path):
@@ -90,7 +91,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         
         try:
             
-            if ALWAYS_PULL:
+            if ALWAYS_PULL_REPO:
                 r.remotes.origin.pull()
         except Exception as e:
             raise ValueError(f"Error pulling git repository {v}: {str(e)}")
@@ -177,7 +178,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         #the logic to build them
         if ':' not in v:
             raise(ValueError(f"Error, the image_name {v} does not include a tag.  A tagged container MUST be included to ensure consistency when testing"))
-        if ALWAYS_PULL:
+        if ALWAYS_PULL_DOCKER_IMAGE:
             #Check to make sure we have the latest version of the image
             try:
                 client = docker.from_env()

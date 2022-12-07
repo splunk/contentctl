@@ -189,6 +189,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         #image again. in this case, don't fail - continue with the test
         try:
             try:
+                #connectivity to docker server is validated previously
                 client = docker.from_env()
                 print(f"Getting the latest version of the container image: {v}...", end='', flush=True)
                 client.images.pull(v)
@@ -231,9 +232,6 @@ class TestConfig(BaseModel, extra=Extra.forbid):
             except Exception as e2:
                 raise(ValueError(f"{str(e)}Image is not previously cached, so we could not use an old version."))
 
-
-        
-        
         return v
     
     #presumably the post test behavior is validated by the enum?
@@ -370,7 +368,8 @@ class TestConfig(BaseModel, extra=Extra.forbid):
                 try:
                     docker.client.from_env()
                 except Exception as e:
-                    raise(Exception(f"Error, failed to get docker client.  Is Docker Installed and Running? Error:\n\t{str(e)}"))            
+                    raise(Exception(f"Error, failed to get docker client.  Is Docker Installed and running "\
+                                    f"and are docker environment variables set properly? Error:\n\t{str(e)}"))            
         return v
     
     @validator('test_instance_address', always=True)

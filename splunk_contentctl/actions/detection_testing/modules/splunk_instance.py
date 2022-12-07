@@ -182,7 +182,7 @@ class SplunkInstance:
         
         if success:
             #no need to be extremely verbose and print out everything
-            beginning = f"[{detection.name} --> PASS ({len(detection.test.tests)} test(s))]"
+            beginning = f"[{detection.name} --> PASSES: {len(detection.test.tests)}]"
         else:
             beginning = f"[{detection.name} --> FAIL (FAILURES: {detection.get_num_failed_tests()}, PASSES: {detection.get_num_successful_tests()})]"
 

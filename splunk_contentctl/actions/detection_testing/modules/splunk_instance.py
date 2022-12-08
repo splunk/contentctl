@@ -409,7 +409,8 @@ class SplunkInstance:
             #Download the file
             #We need to overwrite the file - mkstemp will create an empty file with the 
             #given name
-            Utils.download_file_from_http(attackData.data, data_file, overwrite_file=True) 
+            if not Utils.try_to_get_attack_data_from_data_pack(self.config, attackData.data, data_file):
+                Utils.download_file_from_http(attackData.data, data_file, overwrite_file=True) 
         
         # Update timestamps before replay
         if attackData.update_timestamp:
@@ -780,12 +781,12 @@ class SplunkInstance:
             detection_to_test = self.shared_test_objects.getDetection()
             while detection_to_test is not None:
                 try:
-                    success = self.test_detection(detection_to_test, self.shared_test_objects.attack_data_root_folder)
+                    self.test_detection(detection_to_test, self.shared_test_objects.attack_data_root_folder)
                 except Exception as e:
                     self.print(f"Unhandled exception while testing detection [{detection_to_test.file_path}]: {str(e)}")
                     import traceback
                     traceback.print_exc()
-                    success = False
+                    
                 
                 self.testingStats.addTest()
                 self.shared_test_objects.addCompletedDetection(detection_to_test)
@@ -829,10 +830,11 @@ class SplunkInstance:
                 # Or, we tried to check restart_required while the server was restarting.  In the
                 # calling function, we have a timeout, so it's okay if this function could get 
                 # stuck in an infinite loop (the caller will generate a timeout error)
-                pass
+                if max_wait_time_seconds == 0:
+                    raise(Exception(f"Unable to contact Splunk Instance - if this is a Splunk Server ensure that the address, ports, and credentials are correct and that the server is currently running - [{str(e)}]"))                    
+                else:
+                    pass
 
-            if max_wait_time_seconds == 0:
-                raise(Exception(f"Unable to contact Splunk Instance - if this is a Splunk Server ensure that the address, ports, and credentials are correct and that the server is currently running - [{str(e)}]"))                    
             if timediff.total_seconds() > max_wait_time_seconds:
                 raise(Exception(f"Unable to connect to Splunk Instance - Exceeded maximum start time of {max_wait_time_seconds}"))                    
             

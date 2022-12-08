@@ -367,7 +367,7 @@ def main(args):
                              " 'changes' will check only detections that have changed between the current/test "\
                              "branch and the default branch. 'selected' will test a list of detections that have "\
                              "been provided via the --selected command line argument (see for more details)." )
-    test_parser.add_argument('--behavior', required=False, default=PostTestBehavior.pause_on_failure.name, type=str,
+    test_parser.add_argument('--behavior', required=False, default=PostTestBehavior.never_pause.name, type=str,
                              choices= PostTestBehavior._member_names_, 
                              help="Controls what to do when a test completes. 'always_pause' means that the state of "\
                              "the test will always pause after a test, allowing the user to log into the "\

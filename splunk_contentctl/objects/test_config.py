@@ -20,6 +20,8 @@ import docker.errors
 from splunk_contentctl.objects.enums import PostTestBehavior, DetectionTestingMode, DetectionTestingTargetInfrastructure
 
 from splunk_contentctl.objects.app import App
+from splunk_contentctl.objects.attack_data_cache import AttackDataCache
+
 from splunk_contentctl.helper.utils import Utils
 
 
@@ -47,7 +49,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     main_branch: Union[str,None] = Field(default=None, title="Main branch of the repo, if applicable.")
     test_branch: Union[str,None] = Field(default=None, title="Branch of the repo to be tested, if applicable.")
     commit_hash: Union[str,None] = Field(default=None, title="Commit hash of the repo state to be tested, if applicable")
-    target_infrastructure: DetectionTestingTargetInfrastructure = Field(default=DetectionTestingTargetInfrastructure.container, title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}")
+    target_infrastructure: DetectionTestingTargetInfrastructure = Field(default=DetectionTestingTargetInfrastructure.server, title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}")
     full_image_path: str = Field(default="registry.hub.docker.com/splunk/splunk:latest", title="Full path to the container image to be used")
     container_name: str = Field(default="splunk_detection_testing_%d", title="Template to be used for naming the Splunk Test Containers which will be created")
     post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, title=f"What to do after a test has completed.  Choose one of {PostTestBehavior._member_names_}")
@@ -61,7 +63,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     splunkbase_password:Union[str,None] = Field(default=None, title="The password for logging into Splunkbase in case apps must be downloaded")
     apps: list[App] = Field(default=App.get_default_apps(), title="A list of all the apps to be installed on each container")
     test_instance_address:str = Field(default="127.0.0.1", title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'")
-    
+    attack_data_cache: list[AttackDataCache] = Field(defaul=[], title="A number of Attack Data Caches that can significantly speed up Detection Testing by reducing the amount of Datasets to be downloaded for test replay.")
     
 
             

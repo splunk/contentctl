@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import git
 import shutil
@@ -8,8 +9,16 @@ from timeit import default_timer
 import pathlib
 import datetime
 from typing import Union
+import zipfile
 
 from splunk_contentctl.objects.security_content_object import SecurityContentObject
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from splunk_contentctl.objects.test_config import TestConfig
+
+
+
 TOTAL_BYTES = 0
 TOTAL_DOWNLOAD_TIME = 0
 ALWAYS_PULL = True
@@ -178,7 +187,50 @@ class Utils:
         except Exception as e:
             raise(Exception(f"Cannot confirm the existence of '{file_path}' - are you sure it exists: {str(e)}"))     
         
+    @staticmethod
+    def try_to_get_attack_data_from_data_pack(config: TestConfig, file_path:str, destination_file:str)->bool:
+        for cache in config.attack_data_cache:
+            if not cache.cache_valid:
+                #Don't try this if the cache is not valid
+                continue
+            #strip off the leading URL
+            cache_file_path = file_path.replace(cache.cache_file_uri_prefix, "")
+
+            #Get a handle on the referenced zip file and see if it exists
+            z = zipfile.Path(cache.cache_file_system_location, cache_file_path)
+            if z.exists():
+                with open(destination_file, "wb") as dest:
+                    dest.write(z.read_bytes())
+                print(f"CACHE   : {file_path}")
+                return True
+            else:
+                print(f"NO CACHE: {file_path}")
+                return False
+
+        return False
+        '''
+        try:    
+            attack_range_cache_path = "/tmp/archiveFun/alldata.zip"
             
+            #convert the file path into an archive path
+            parts = file_path.split("/attack_data/master/")
+            if len(parts) != 2:
+                print(f"Expected the path {file_path} to split into two parts, a host and a file path but got {parts}")
+                return False
+            z = zipfile.Path(attack_range_cache_path, parts[1])
+            if z.exists():
+                with open(destination_file, "wb") as dest:
+                    dest.write(z.read_bytes())
+                print(f"CACHE   : {file_path}")
+                return True
+            else:
+                print(f"NO CACHE: {file_path}")
+                return False
+        except Exception as e:
+            print(f"Unknown error checking for cached file: {str(e)}")
+            return False
+        '''
+                    
 
     @staticmethod
     def download_file_from_http(file_path:str, destination_file:str, overwrite_file:bool=False, chunk_size:int=1024*1024, verbose_print:bool=False)->None:

@@ -63,7 +63,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     splunkbase_password:Union[str,None] = Field(default=None, title="The password for logging into Splunkbase in case apps must be downloaded")
     apps: list[App] = Field(default=App.get_default_apps(), title="A list of all the apps to be installed on each container")
     test_instance_address:str = Field(default="127.0.0.1", title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'")
-    attack_data_cache: list[AttackDataCache] = Field(defaul=[], title="A number of Attack Data Caches that can significantly speed up Detection Testing by reducing the amount of Datasets to be downloaded for test replay.")
+    attack_data_cache: list[AttackDataCache] = Field(default=[AttackDataCache()], title="A number of Attack Data Caches that can significantly speed up Detection Testing by reducing the amount of Datasets to be downloaded for test replay.")
     
 
             

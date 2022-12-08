@@ -206,30 +206,10 @@ class Utils:
             else:
                 print(f"NO CACHE: {file_path}")
                 return False
+        print(f"NO CACHE: {file_path}")
 
         return False
-        '''
-        try:    
-            attack_range_cache_path = "/tmp/archiveFun/alldata.zip"
-            
-            #convert the file path into an archive path
-            parts = file_path.split("/attack_data/master/")
-            if len(parts) != 2:
-                print(f"Expected the path {file_path} to split into two parts, a host and a file path but got {parts}")
-                return False
-            z = zipfile.Path(attack_range_cache_path, parts[1])
-            if z.exists():
-                with open(destination_file, "wb") as dest:
-                    dest.write(z.read_bytes())
-                print(f"CACHE   : {file_path}")
-                return True
-            else:
-                print(f"NO CACHE: {file_path}")
-                return False
-        except Exception as e:
-            print(f"Unknown error checking for cached file: {str(e)}")
-            return False
-        '''
+        
                     
 
     @staticmethod

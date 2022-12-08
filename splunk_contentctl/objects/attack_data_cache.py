@@ -30,11 +30,11 @@ class AttackDataCache(BaseModel, extra=Extra.forbid):
     cache_file_uri: str = "https://media.githubusercontent.com/media/splunk/attack_data/master/alldata.zip"
     cache_file_system_location: str = "/tmp/archiveFun/alldata.zip"
     cache_update_time: Union[str,None] = "DATETIME REPRESENTATION FOR COMPARISON WITH HEAD.GET"
-    cache_valid: bool = True
+    cache_valid: bool = False
     cache_file_uri_prefix:str = "https://media.githubusercontent.com/media/splunk/attack_data/master/"
     
 
-    @root_validator(pre=True)
+    @root_validator(pre=False)
     def validate_cache(cls, values):
         #Check to see if we can reach the uri for the cache file
         try:
@@ -63,6 +63,7 @@ class AttackDataCache(BaseModel, extra=Extra.forbid):
                                                  overwrite_file=True, verbose_print=True)
             values['cache_valid'] = True
             values['cache_update_time'] = datetime.datetime.now.isoformat()
+            return values
             #We have refreshed the cache
         elif cache_file_uri_success and values['cache_valid']:
             Utils.warning_print("Figure out to tell using timestamp if cache at uri is newer than downloaded cache")
@@ -71,7 +72,8 @@ class AttackDataCache(BaseModel, extra=Extra.forbid):
             #We have refreshed the cache
             values['cache_valid'] = True
             values['cache_update_time'] = datetime.datetime.now.isoformat()
-        
+            return values
+        print("Unable to get the cache file")
         return values
 
 

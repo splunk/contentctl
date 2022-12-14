@@ -19,7 +19,7 @@ class Initialize:
             os.path.join(input_dto.path, 'contentctl.yml')
         )
            
-        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'tests', 'docs']
+        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'tests', 'docs', 'reporting']
         for folder in folders:
             os.makedirs(os.path.join(input_dto.path, folder))
 

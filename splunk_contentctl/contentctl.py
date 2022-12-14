@@ -174,16 +174,15 @@ def new_content(args) -> None:
  
 
 def reporting(args) -> None:
-
+    config = start(args)
     director_input_dto = DirectorInputDto(
         input_path = args.path,
         product = SecurityContentProduct.splunk_app,
-        create_attack_csv = False,
+        config = config
     )
 
     reporting_input_dto = ReportingInputDto(
-        director_input_dto = director_input_dto,
-        output_path = os.path.abspath(args.output)
+        director_input_dto = director_input_dto
     )
 
     reporting = Reporting()
@@ -214,7 +213,7 @@ def main(args):
     reporting_parser = actions_parser.add_parser("report", help="create Splunk content report of the current pack")
     inspect_parser = actions_parser.add_parser("inspect", help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.")
     deploy_parser = actions_parser.add_parser("deploy", help="install an application on a target Splunk instance.")
-    docs_parser = actions_parser.add_parser("docs", help="create documentation in docs folder")    
+    docs_parser = actions_parser.add_parser("docs", help="create documentation in docs folder")   
 
     test_parser = actions_parser.add_parser("test", help="Run a test of the detections against a Splunk Server or Splunk Docker Container")
 
@@ -230,8 +229,6 @@ def main(args):
         help="Type of security content object, choose between `detection`, `story`")
     new_content_parser.set_defaults(func=new_content)
 
-    reporting_parser.add_argument("-o", "--output", required=True, type=str,
-        help="output path to store the detection or story")
     reporting_parser.set_defaults(func=reporting)
 
     inspect_parser.add_argument("-ap", "--app_path", required=False, type=str, default=None, help="path to the Splunk app to be inspected")

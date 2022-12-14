@@ -1,3 +1,10 @@
+# custom
+dist/*
+apps*
+test_results*
+attack_data*
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -26,6 +33,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.pyc
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

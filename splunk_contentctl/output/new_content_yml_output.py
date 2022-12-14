@@ -13,13 +13,13 @@ class NewContentYmlOutput():
     
     def writeObjectNewContent(self, object: dict, type: SecurityContentType) -> None:
         if type == SecurityContentType.detections:
-            file_path = os.path.join(self.output_path, 'detections', object['source'], self.convertNameToFileName(object['name'],object['tags']['product']))
+            file_path = os.path.join(self.output_path, 'detections', self.convertNameToFileName(object['name'], object['tags']['product']))
             test_obj = {}
             test_obj['name'] = object['name'] + ' Unit Test'
             test_obj['tests'] = [
                 {
                     'name': object['name'],
-                    'file': object['source'] + '/' + self.convertNameToFileName(object['name'],object['tags']['product']),
+                    'file': self.convertNameToFileName(object['name'],object['tags']['product']),
                     'pass_condition': '| stats count | where count > 0',
                     'earliest_time': '-24h',
                     'latest_time': 'now',
@@ -34,15 +34,20 @@ class NewContentYmlOutput():
                     ]
                 }
             ]
-            file_path_test = os.path.join(self.output_path, 'tests', object['source'], self.convertNameToTestFileName(object['name'],object['tags']['product']))
+            file_path_test = os.path.join(self.output_path, 'tests', self.convertNameToTestFileName(object['name'], object['tags']['product']))
             YmlWriter.writeYmlFile(file_path_test, test_obj)
-            object.pop('source')
+            #object.pop('source')
+            YmlWriter.writeYmlFile(file_path, object)
+            print("Successfully created detection " + file_path)
+        
         elif type == SecurityContentType.stories:
-            file_path = os.path.join(self.output_path, 'stories', self.convertNameToFileName(object['name'],object['tags']['product']))
+            file_path = os.path.join(self.output_path, 'stories', self.convertNameToFileName(object['name'], object['tags']['product']))
+            YmlWriter.writeYmlFile(file_path, object)
+            print("Successfully created story " + file_path)        
+        
         else:
             raise(Exception(f"Object Must be Story or Detection, but is not: {object}"))
 
-        YmlWriter.writeYmlFile(file_path, object)
 
 
     def convertNameToFileName(self, name: str, product: list):

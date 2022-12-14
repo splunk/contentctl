@@ -1,16 +1,10 @@
-#config file
 
-global:
-  log_path: "contentctl.log"
-  log_level: INFO
-
-scheduling:
-  cron_schedule: 0 * * * *
-  earliest_time: -70m@m
-  latest_time: -10m@m
-  schedule_window: auto
-
-alert_actions:
+detection_configuration:
+  scheduling:
+    cron_schedule: 0 * * * *
+    earliest_time: -70m@m
+    latest_time: -10m@m
+    schedule_window: auto
   notable:
     rule_description: '%description%'
     rule_title: '%name%'
@@ -19,32 +13,22 @@ alert_actions:
     - dest
     - src
 
-test:
-  docker_image: ""
-  apps: .
-  assets: csv
-
 deploy:
-  target: splunk_search_head
-  username:
-  password:
-  server:
+  app: my_splunk_content_pack 
+  username: geralt
+  password: geralt123!
+  server: 1.2.3.4
 
 build:
   splunk_app:
     path: dist/my_splunk_content_pack
     name: "My Splunk Content Pack"
     prefix: "MSCA"
-    author: "Geralt of Rivia"
+    author: "Geralt of Riva"
     author_email: "geralt@monsterkiller.com"
-  json_objects:
-    path: dist/api
-  ba_objects:
-    path: dist/ssa
 
 enrichments:
   attack_enrichment: True
   cve_enrichment: True
   splunk_app_enrichment: True
 
-  

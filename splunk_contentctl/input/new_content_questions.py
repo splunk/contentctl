@@ -6,30 +6,6 @@ class NewContentQuestions():
     def get_questions_detection(self) -> list:
         questions = [
             {
-                'type': 'select',
-                'message': 'what product is this for',
-                'name': 'detection_product',
-                'choices': [
-                    'ESCU',
-                    'SSA'
-                ],
-                'default': 'ESCU'
-            },
-            {
-                'type': 'select',
-                'message': 'what kind of detection is this',
-                'name': 'detection_kind',
-                'choices': [
-                    'endpoint',
-                    'cloud',
-                    'application',
-                    'network',
-                    'web',
-                    'experimental'
-                ],
-                'default': 'endpoint'
-            },
-            {
                 'type': 'text',
                 'message': 'enter detection name',
                 'name': 'detection_name',
@@ -60,12 +36,6 @@ class NewContentQuestions():
                 'name': 'datamodels',
                 'choices': [
                     'Endpoint',
-                    'Endpoint_Processes (SSA)',
-                    'Endpoint_Registry (SSA)',
-                    'Endpoint_Filesystem (SSA)',
-                    'Endpoint_ResourceAccess (SSA)',
-                    'Endpoint_AccountManagement (SSA)',
-                    'Intrusion_Detection (SSA)',
                     'Authentication',
                     'Change',
                     'Email',

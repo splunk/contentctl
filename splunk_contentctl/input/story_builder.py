@@ -5,16 +5,12 @@ from pydantic import ValidationError
 
 from splunk_contentctl.objects.story import Story
 from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.objects.config import Config
 from splunk_contentctl.input.yml_reader import YmlReader
 
 
 class StoryBuilder():
     story: Story
-    check_references: bool
-    app_name: str
-
-    def __init__(self, app_name: str):
-        self.app_name = app_name
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
@@ -33,7 +29,7 @@ class StoryBuilder():
     def getObject(self) -> Story:
         return self.story
 
-    def addDetections(self, detections: list) -> None:
+    def addDetections(self, detections: list, config: Config) -> None:
         matched_detection_names = []
         matched_detections = []
         mitre_attack_enrichments = []
@@ -45,7 +41,7 @@ class StoryBuilder():
             if detection:
                 for detection_analytic_story in detection.tags.analytic_story:
                     if detection_analytic_story == self.story.name:
-                        matched_detection_names.append(str(f'{self.app_name} - ' + detection.name + ' - Rule'))
+                        matched_detection_names.append(str(f'{config.build.splunk_app.prefix} - ' + detection.name + ' - Rule'))
                         mitre_attack_enrichments_list = []
                         if (detection.tags.mitre_attack_enrichments):
                             for attack in detection.tags.mitre_attack_enrichments:
@@ -80,7 +76,7 @@ class StoryBuilder():
         for baseline in baselines:
             for baseline_analytic_story in  baseline.tags.analytic_story:
                 if baseline_analytic_story == self.story.name:
-                    matched_baseline_names.append(str(f'{{self.app_name}} - ' + baseline.name))
+                    matched_baseline_names.append(str(f'ESCU - ' + baseline.name))
 
         self.story.baseline_names = matched_baseline_names
 
@@ -90,7 +86,7 @@ class StoryBuilder():
         for investigation in investigations:
             for investigation_analytic_story in  investigation.tags.analytic_story:
                 if investigation_analytic_story == self.story.name:
-                    matched_investigation_names.append(str(f'{{self.app_name}} - ' + investigation.name + ' - Response Task'))
+                    matched_investigation_names.append(str(f'ESCU - ' + investigation.name + ' - Response Task'))
                     matched_investigations.append(investigation)
 
         self.story.investigation_names = matched_investigation_names

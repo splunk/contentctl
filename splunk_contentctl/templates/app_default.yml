@@ -1,0 +1,101 @@
+- uid: 6176
+  appid: "Splunk_TA_linux_sysmon"
+  title: "Add-on for Linux Sysmon"
+  release: "1.0.4"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/add-on-for-linux-sysmon_104.tgz
+
+- uid: 2757
+  appid: "Splunk_TA_paloalto"
+  title: "Palo Alto Networks Add-on for Splunk"
+  release: "7.1.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/palo-alto-networks-add-on-for-splunk_710.tgz
+
+- uid: 2882
+  appid: "Splunk_SA_Scientific_Python_linux_x86_64"
+  title: "Python for Scientific Computing (for Linux 64-bit)"
+  release: "4.0.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/python-for-scientific-computing-for-linux-64-bit_302.tgz
+
+- uid: 3719
+  appid: "Splunk_TA_aws-kinesis-firehose"
+  title: "Splunk Add-on for Amazon Kinesis Firehose"
+  release: "1.3.2"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-amazon-kinesis-firehose_132.tgz
+
+- uid: 4055
+  appid: "splunk_ta_o365"
+  title: "Splunk Add-on for Microsoft Office 365"
+  release: "4.1.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-office-365_400.tgz
+
+- uid: 742
+  appid: "Splunk_TA_windows"
+  title: "Splunk Add-on for Microsoft Windows"
+  release: "8.5.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_850_PATCHED.tgz
+
+- uid: 3258
+  appid: "Splunk_TA_nginx"
+  title: "Splunk Add-on for NGINX"
+  release: "3.2.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-nginx_310.tgz
+
+- uid: 5238
+  appid: "Splunk_TA_stream"
+  title: "Splunk Add-on for Stream Forwarders"
+  release: "8.1.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-stream-forwarders_810.tgz
+
+- uid: 5234
+  appid: "Splunk_TA_stream_wire_data"
+  title: "Splunk Add-on for Stream Wire Data"
+  release: "8.1.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-stream-wire-data_810.tgz
+
+- uid: 5709
+  appid: "Splunk_TA_microsoft_sysmon"
+  title: "Splunk Add-on for Sysmon"
+  release: "3.0.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-sysmon_300.tgz
+
+- uid: 833
+  appid: "Splunk_TA_nix"
+  title: "Splunk Add-on for Unix and Linux"
+  release: "8.7.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-unix-and-linux_860.tgz
+
+- uid: 1809
+  appid: "splunk_app_stream"
+  title: "Splunk App for Stream"
+  release: "8.1.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-app-for-stream_810.tgz
+
+- uid: 2890
+  appid: "Splunk_ML_Toolkit"
+  title: "Splunk Machine Learning Toolkit"
+  release: "5.3.3"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-machine-learning-toolkit_531.tgz
+
+- uid: 5466
+  appid: "Splunk_TA_zeek"
+  title: "TA for Zeek"
+  release: "1.0.5"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/ta-for-zeek_105.tgz
+
+- uid: 3110
+  appid: "Splunk_TA_microsoft-cloudservices"
+  title: "Splunk Add-on for Microsoft Cloud Services"
+  release: "4.5.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-cloud-services_450.tgz
+
+- uid: 2734
+  appid: "utbox"
+  title: "URL Toolbox"
+  release: "1.9.2"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/url-toolbox_192.tgz
+
+- uid: 1621
+  appid: "Splunk_SA_CIM"
+  title: "Splunk Common Information Model (CIM)"
+  release: "5.0.2"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-common-information-model-cim_501.tgz

@@ -5,12 +5,12 @@ from pydantic import ValidationError
 
 from splunk_contentctl.objects.story import Story
 from splunk_contentctl.objects.enums import SecurityContentType
+from splunk_contentctl.objects.config import Config
 from splunk_contentctl.input.yml_reader import YmlReader
 
 
 class StoryBuilder():
     story: Story
-    app_name: str = "DEMO_APP"
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
@@ -29,7 +29,7 @@ class StoryBuilder():
     def getObject(self) -> Story:
         return self.story
 
-    def addDetections(self, detections: list) -> None:
+    def addDetections(self, detections: list, config: Config) -> None:
         matched_detection_names = []
         matched_detections = []
         mitre_attack_enrichments = []
@@ -41,7 +41,7 @@ class StoryBuilder():
             if detection:
                 for detection_analytic_story in detection.tags.analytic_story:
                     if detection_analytic_story == self.story.name:
-                        matched_detection_names.append(str(f'{self.app_name} - ' + detection.name + ' - Rule'))
+                        matched_detection_names.append(str(f'{config.build.splunk_app.prefix} - ' + detection.name + ' - Rule'))
                         mitre_attack_enrichments_list = []
                         if (detection.tags.mitre_attack_enrichments):
                             for attack in detection.tags.mitre_attack_enrichments:

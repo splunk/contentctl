@@ -11,7 +11,7 @@ from splunk_contentctl.objects.macro import Macro
 from splunk_contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from splunk_contentctl.enrichments.cve_enrichment import CveEnrichment
 from splunk_contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
-
+from splunk_contentctl.objects.config import ConfigDetectionConfiguration
 
 
 class DetectionBuilder():
@@ -25,29 +25,9 @@ class DetectionBuilder():
         self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
 
 
-    def addDeployment(self, deployments: list) -> None:
+    def addDeployment(self, detection_configuration: ConfigDetectionConfiguration) -> None:
         if self.security_content_obj:
-            matched_deployments = []
-
-            for d in deployments:
-                d_tags = dict(d.tags)
-                for d_tag in d_tags.keys():
-                    for attr in dir(self.security_content_obj):
-                        if not (attr.startswith('__') or attr.startswith('_')):
-                            if attr == d_tag:
-                                if type(self.security_content_obj.__getattribute__(attr)) is str:
-                                    attr_values = [self.security_content_obj.__getattribute__(attr)]
-                                else:
-                                    attr_values = self.security_content_obj.__getattribute__(attr)
-                                
-                                for attr_value in attr_values:
-                                    if attr_value == d_tags[d_tag]:
-                                        matched_deployments.append(d)
-
-            if len(matched_deployments) == 0:
-                self.security_content_obj.deployment = None
-            else:
-                self.security_content_obj.deployment = matched_deployments[-1]
+            self.security_content_obj.deployment = detection_configuration
 
 
     def addRBA(self) -> None:
@@ -89,6 +69,7 @@ class DetectionBuilder():
 
             self.security_content_obj.risk = risk_objects
 
+
     def addProvidingTechnologies(self) -> None:
         if self.security_content_obj:
             # if self.security_content_obj.tags.supported_tas:
@@ -100,8 +81,6 @@ class DetectionBuilder():
                     self.security_content_obj.providing_technologies = ["Microsoft Windows"]
 
     
-
-
     def addNesFields(self) -> None:
         if self.security_content_obj:
             if self.security_content_obj.deployment:
@@ -109,7 +88,6 @@ class DetectionBuilder():
                     nes_fields = ",".join(list(self.security_content_obj.deployment.notable.nes_fields))
                     self.security_content_obj.nes_fields = nes_fields
                     
-
 
     def addMappings(self) -> None:
         if self.security_content_obj:

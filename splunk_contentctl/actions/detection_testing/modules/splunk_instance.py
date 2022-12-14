@@ -73,13 +73,16 @@ class TestingStats:
     instance_state: InstanceState = InstanceState.stopped
     
     instance_state:InstanceState
+    
     def __init__(self):
         self.num_detections_tested = 0
         self.instance_state = InstanceState.running
         self.instance_start_time = datetime.datetime.now()
         self.testing_start_time = datetime.datetime.now()
+    
     def begin(self):
         self.__init__()
+    
     def getAvgTimePerDetection(self)->str:
         delta = self.getElapsedTestingTime()
         if self.num_detections_tested == 0:
@@ -87,6 +90,7 @@ class TestingStats:
         time_per_test = delta / self.num_detections_tested
         time_per_test_rounded = time_per_test - datetime.timedelta(microseconds=time_per_test.microseconds)
         return str(time_per_test_rounded)
+    
     def getElapsedTime(self)->datetime.timedelta:
         if self.instance_stop_time is None:
             #Still running so use current time
@@ -94,6 +98,7 @@ class TestingStats:
         else:
             delta = self.instance_stop_time - self.instance_start_time
         return delta
+    
     def getElapsedTestingTime(self)->datetime.timedelta:
         if self.testing_start_time is None:
             raise(Exception("Cannot get elapsed time for testing - testing has not begun yet"))
@@ -103,6 +108,7 @@ class TestingStats:
         else:
             delta = self.testing_stop_time - self.testing_start_time
         return delta    
+    
     def addTest(self):
         self.num_detections_tested += 1
 
@@ -760,6 +766,7 @@ class SplunkInstance:
         self.configure_hec()
         self.testingStats.begin()
         return None        
+    
     def teardown(self)->None:
 
         if self.shared_test_objects.force_finish == True:
@@ -794,10 +801,11 @@ class SplunkInstance:
                 #then this will return None
                 detection_to_test = self.shared_test_objects.getDetection()
         except Exception as e:
+            print(f"Exception while running test: {str(e)}")
             self.shared_test_objects.force_finish = True
-            self.print(f"Exception while running test: {str(e)}")
 
         finally:
+            print("finally")
             self.teardown()
     
     def wait_for_splunk_ready(
@@ -929,11 +937,11 @@ class SplunkContainer(SplunkInstance):
         SPLUNK_CONTAINER_APPS_DIR = "/opt/splunk/etc/apps"
 
         self.files_to_copy_to_instance["INDEXES"] = {
-            "local_file_path": os.path.join(self.config.repo_path,"bin/docker_detection_tester/indexes.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")}
+            "local_file_path": os.path.join(os.path.dirname(__file__), "../", "indexes.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "search")}
         self.files_to_copy_to_instance["DATAMODELS"] = {
-            "local_file_path": os.path.join(self.config.repo_path,"bin/docker_detection_tester/datamodels.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "Splunk_SA_CIM")}
+            "local_file_path": os.path.join(os.path.dirname(__file__), "../", "datamodels.conf.tar"), "container_file_path": os.path.join(SPLUNK_CONTAINER_APPS_DIR, "Splunk_SA_CIM")}
         self.files_to_copy_to_instance["AUTHORIZATIONS"] = {
-            "local_file_path": os.path.join(self.config.repo_path,"bin/docker_detection_tester/authorize.conf.tar"), "container_file_path": "/opt/splunk/etc/system/local"}
+            "local_file_path": os.path.join(os.path.dirname(__file__), "../", "authorize.conf.tar"), "container_file_path": "/opt/splunk/etc/system/local"}
         
 
         self.mounts = [docker.types.Mount(source=os.path.abspath(os.path.join(pathlib.Path('.'),"apps")),
@@ -1131,6 +1139,7 @@ class SplunkContainer(SplunkInstance):
         
         
         for file_description, file_dict in self.files_to_copy_to_instance.items():
+
             self.extract_tar_file_to_container(
                 file_dict["local_file_path"], file_dict["container_file_path"]
             )

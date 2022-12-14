@@ -161,16 +161,28 @@ def main(config: TestConfig, director:DirectorOutputDto):
 
 
     #Get a handle to the git repo
-    github_service = GithubService(config)
+    #github_service = GithubService(config)
 
     #Get all of the detections that we will test in this run
-    detections_to_test = github_service.get_detections_to_test(config, director)
+    if config.mode==DetectionTestingMode.all:
+        #Don't need to do anything, we don't need to remove it from the list
+       pass
+    
+    elif config.mode==DetectionTestingMode.selected:
+        selected_set = set(os.path.join(config.repo_path, d) for d in config.detections_list)
+        all_detections_set = set([d.file_path for d in director.detections])
+        difference = selected_set - all_detections_set
+        if len(difference) > 0:
+            newline = "\n * "
+            print(list(all_detections_set)[:10])
+            raise(Exception(f"The detections in the detections_list do not exist:{newline}{newline.join(difference)}"))
+        
+        #All the detections exist, so find them an update the objects to reflect them
+        director.detections = [d for d in director.detections if d.file_path in selected_set]
+    
+    detections_to_test = director.detections
     
     print("***This run will test [%d] detections!***"%(len(detections_to_test)))
-    
-
-
-    
     
 
 
@@ -192,8 +204,7 @@ def main(config: TestConfig, director:DirectorOutputDto):
         sys.exit(1)
 
     try:
-        cm = InstanceManager(config,
-                                              detections_to_test)
+        cm = InstanceManager(config, detections_to_test)
         
     except Exception as e:
         print("Error - unrecoverable error trying to set up the containers: [%s].\n\tQuitting..."%(str(e)),file=sys.stderr)

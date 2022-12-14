@@ -47,10 +47,10 @@ class InstanceManager:
             target=self.queue_status_thread)
         
 
-        print("CODE TO GENERATE YOUR BASELINE INFORMATION HERE")
+        #print("CODE TO GENERATE YOUR BASELINE INFORMATION HERE")
 
         # Construct the baseline from the splunk version and the apps to be installed
-        self.baseline = self.generate_baseline()
+        #self.baseline = self.generate_baseline()
 
         self.instances: list[SplunkInstance] = []
 
@@ -190,6 +190,7 @@ class InstanceManager:
         for instance in self.instances:
             if instance.testingStats.instance_state == InstanceState.starting:
                 #This instance is ready, but we need to check the rest of them
+                print(instance.testingStats.instance_state)
                 return False
             else:
                 #At least one instance is not ready

@@ -13,14 +13,46 @@ class ConfigScheduling(BaseModel):
     schedule_window: str
 
 
-class ConfigAlertActionNotable(BaseModel):
+class ConfigNotable(BaseModel):
     rule_description: str
     rule_title: str
     nes_fields: list
 
 
+class ConfigEmail(BaseModel):
+    subject: str
+    to: str
+    message: str
+
+
+class ConfigSlack(BaseModel):
+    channel: str
+    message: str
+
+
+class ConfigPhantom(BaseModel):
+    cam_workers: str
+    label: str
+    phantom_server: str
+    sensitivity: str
+    severity: str
+
+
+class ConfigRba(BaseModel):
+    enabled: str
+
+
+class ConfigDetectionConfiguration(BaseModel):
+    scheduling: ConfigScheduling
+    notable: ConfigNotable = None
+    email: ConfigEmail = None
+    slack: ConfigSlack = None
+    phantom: ConfigPhantom = None
+    rba: ConfigRba = None
+
+
 class ConfigAlertAction(BaseModel):
-    notable: ConfigAlertActionNotable
+    notable: ConfigNotable
 
 
 class ConfigTest(BaseModel):
@@ -30,7 +62,7 @@ class ConfigTest(BaseModel):
 
 
 class ConfigDeploy(BaseModel):
-    target: str
+    app: str
     username: str
     password: str
     server: str
@@ -54,8 +86,8 @@ class ConfigBuildBa(BaseModel):
 
 class ConfigBuild(BaseModel):
     splunk_app: ConfigBuildSplunk
-    json_objects: ConfigBuildJson
-    ba_objects: ConfigBuildBa
+    #json_objects: ConfigBuildJson
+    #ba_objects: ConfigBuildBa
 
 
 class ConfigEnrichments(BaseModel):
@@ -66,10 +98,9 @@ class ConfigEnrichments(BaseModel):
 
 
 class Config(BaseModel):
-    general: ConfigGlobal
-    scheduling: ConfigScheduling
-    alert_actions: ConfigAlertAction
-    test: ConfigTest
+    #general: ConfigGlobal
+    detection_configuration: ConfigDetectionConfiguration
+    test: ConfigTest = None
     deploy: ConfigDeploy
     build: ConfigBuild
     enrichments: ConfigEnrichments

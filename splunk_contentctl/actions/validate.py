@@ -18,13 +18,13 @@ class Validate:
 
 
     def execute(self, input_dto: ValidateInputDto) -> None:
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
+        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)      
 
         # uuid validation all objects
         try:
-            security_content_objects = director_output_dto.detections + director_output_dto.stories + director_output_dto.baselines + director_output_dto.investigations + director_output_dto.playbooks + director_output_dto.deployments
+            security_content_objects = director_output_dto.detections + director_output_dto.stories + director_output_dto.baselines + director_output_dto.investigations + director_output_dto.playbooks
             self.validate_duplicate_uuids(security_content_objects)
 
             # validate tests

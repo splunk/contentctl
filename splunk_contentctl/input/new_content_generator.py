@@ -36,15 +36,10 @@ class NewContentGenerator():
             self.output_dto.obj['author'] = answers['detection_author']
             self.output_dto.obj['type'] = answers['detection_type']
             self.output_dto.obj['datamodel'] = answers['datamodels']
-            if answers['detection_product'] == 'SSA':
-                answers['datamodels'] = [d.replace(' (SSA)', '') for d in answers['datamodels']]
-                self.output_dto.obj['datamodel'] = answers['datamodels']
-            if answers['detection_product'] == 'ESCU':
-                self.output_dto.obj['datamodel'] = answers['datamodels']
+            self.output_dto.obj['datamodel'] = answers['datamodels']
             self.output_dto.obj['description'] = 'UPDATE_DESCRIPTION'   
-            if answers['detection_product'] == 'ESCU':
-                file_name = self.output_dto.obj['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
-                self.output_dto.obj['search'] = answers['detection_search'] + ' | `' + file_name + '_filter`'
+            file_name = self.output_dto.obj['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
+            self.output_dto.obj['search'] = answers['detection_search'] + ' | `' + file_name + '_filter`'
             self.output_dto.obj['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
             self.output_dto.obj['known_false_positives'] = 'UPDATE_KNOWN_FALSE_POSITIVES'            
             self.output_dto.obj['references'] = ['REFERENCE']
@@ -61,16 +56,11 @@ class NewContentGenerator():
             self.output_dto.obj['tags']['mitre_attack_id'] = [x.strip() for x in answers['mitre_attack_ids'].split(',')]
             self.output_dto.obj['tags']['nist'] = ['DE.CM']
             self.output_dto.obj['tags']['observable'] = [{'name': 'UPDATE', 'type': 'UPDATE', 'role': ['UPDATE']}]
-            if answers['detection_product'] == 'SSA':
-                self.output_dto.obj['tags']['risk_severity'] = 'UPDATE: <low>, <medium>, <high>'
-            if answers['detection_product'] == 'ESCU':
-                self.output_dto.obj['tags']['product'] = ['Splunk Enterprise','Splunk Enterprise Security','Splunk Cloud']
-            if answers['detection_product'] == 'SSA':
-                self.output_dto.obj['tags']['product'] = ['Splunk Behavioral Analytics']
+            self.output_dto.obj['tags']['product'] = ['Splunk Enterprise','Splunk Enterprise Security','Splunk Cloud']
             self.output_dto.obj['tags']['required_fields'] = ['UPDATE']
             self.output_dto.obj['tags']['risk_score'] = 'UPDATE (impact * confidence)/100'
             self.output_dto.obj['tags']['security_domain'] = answers['security_domain']
-            self.output_dto.obj['source'] = answers['detection_kind']
+            #self.output_dto.obj['source'] = answers['detection_kind']
         
 
         elif input_dto.type == SecurityContentType.stories:

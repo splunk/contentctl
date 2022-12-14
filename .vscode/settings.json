@@ -1,0 +1,5 @@
+{
+    "python.terminal.activateEnvironment": true,
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.testing.cwd": "${workspaceFolder}"
+}

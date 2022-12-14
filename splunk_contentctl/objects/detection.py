@@ -15,7 +15,7 @@ from splunk_contentctl.objects.security_content_object import SecurityContentObj
 from splunk_contentctl.objects.enums import AnalyticsType
 from splunk_contentctl.objects.enums import DataModel
 from splunk_contentctl.objects.detection_tags import DetectionTags
-from splunk_contentctl.objects.deployment import Deployment
+from splunk_contentctl.objects.config import ConfigDetectionConfiguration
 from splunk_contentctl.objects.unit_test import UnitTest
 from splunk_contentctl.objects.macro import Macro
 from splunk_contentctl.objects.lookup import Lookup
@@ -52,7 +52,7 @@ class Detection(BaseModel, SecurityContentObject):
     # enrichments
     deprecated: bool = None
     experimental: bool = None
-    deployment: Deployment = None
+    deployment: ConfigDetectionConfiguration = None
     annotations: dict = None
     risk: list = None
     playbooks: list[Playbook] = None

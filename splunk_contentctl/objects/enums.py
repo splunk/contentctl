@@ -59,7 +59,6 @@ class PostTestBehavior(str, enum.Enum):
 
 class DetectionTestingMode(str, enum.Enum):
     selected = "selected"
-    changes = "changes"
     all = "all"
 
 class DetectionTestingTargetInfrastructure(str, enum.Enum):

@@ -46,10 +46,10 @@ class DirectorOutputDto:
      baselines: list[Baseline]
      investigations: list[Investigation]
      playbooks: list[Playbook]
-     deployments: list[Deployment]
      macros: list[Macro]
      lookups: list[Lookup]
      tests: list[UnitTest]
+
 
 class Director():
     input_dto: DirectorInputDto
@@ -80,7 +80,6 @@ class Director():
         self.playbook_builder = PlaybookBuilder(self.input_dto.input_path)
         self.baseline_builder = BaselineBuilder()
         self.investigation_builder = InvestigationBuilder()
-        print("Storybuilder is using static app_name DEMO_APP")
         self.story_builder = StoryBuilder()
         self.detection_builder = DetectionBuilder()
 
@@ -88,7 +87,6 @@ class Director():
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
-            self.createSecurityContent(SecurityContentType.deployments)
             self.createSecurityContent(SecurityContentType.baselines)
             self.createSecurityContent(SecurityContentType.investigations)
             self.createSecurityContent(SecurityContentType.playbooks)
@@ -99,26 +97,10 @@ class Director():
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.detections)
             
-    def createSecurityContentFromObject(self, content_type: SecurityContentType)->None:
-        raise(Exception("Not yet implemented"))
-        objects = []
-
-        for object in objects:
-            if content_type == SecurityContentType.deployments:
-                            type_string = "Deployments"
-                            self.constructDeploymentFromObject(self.basic_builder, object)
-                            deployment = self.basic_builder.getObject()
-                            self.output_dto.deployments.append(deployment)
-
-        return None
 
     def createSecurityContent(self, type: SecurityContentType) -> None:
         objects = []
-        if type == SecurityContentType.deployments:
-            #files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name), 'ESCU'))
-            print("temporary change to deployments folder for testing")
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
-        elif type == SecurityContentType.unit_tests:
+        if type == SecurityContentType.unit_tests:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
         else:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
@@ -127,10 +109,6 @@ class Director():
                 
         already_ran = False
         progress_percent = 0
-
-
-        
-
 
         if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
             security_content_files = [f for f in files if 'ssa___' not in f]
@@ -141,9 +119,6 @@ class Director():
 
 
         for index,file in enumerate(security_content_files):
-
-            #Index + 1 because we are zero indexed, not 1 indexed.  This ensures
-            # that printouts end at 100%, not some other number 
             progress_percent = ((index+1)/len(security_content_files)) * 100
             try:
                 type_string = "UNKNOWN TYPE"
@@ -217,7 +192,7 @@ class Director():
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path)
-        builder.addDeployment(self.output_dto.deployments)
+        builder.addDeployment(self.input_dto.config.detection_configuration)
         builder.addRBA()
         builder.addProvidingTechnologies()
         builder.addNesFields()
@@ -242,7 +217,7 @@ class Director():
     def constructStory(self, builder: StoryBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path)
-        builder.addDetections(self.output_dto.detections)
+        builder.addDetections(self.output_dto.detections, self.input_dto.config)
         builder.addInvestigations(self.output_dto.investigations)
         builder.addBaselines(self.output_dto.baselines)
         builder.addAuthorCompanyName()

@@ -42,7 +42,7 @@ class App(BaseModel, extra=Extra.forbid):
     #Splunkbase path is made of the combination of uid and release fields
     splunkbase_path: Union[str,None]
     
-    must_download_from_splunkbase: bool = False
+    must_download_from_splunkbase: bool = True
 
     @staticmethod
     def validate_string_alphanumeric_with_underscores(input:str)->bool:

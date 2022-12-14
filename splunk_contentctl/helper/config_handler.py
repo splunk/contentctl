@@ -11,13 +11,11 @@ class ConfigHandler:
 
     @classmethod
     def read_config(cls, config_path: str) -> Config:
-        yml_dict_default = YmlReader.load_file(os.path.join(os.path.dirname(__file__), '../templates/contentctl_default.yml'))
-
         try:
-            yml_dict = YmlReader.load_file(os.path.join(os.path.dirname(__file__), '../', config_path))
+            yml_dict = YmlReader.load_file(config_path)
         except:
-            print("no config file found, running with default from templates/contentctl_default.yml")
-            yml_dict = yml_dict_default
+            print("ERROR: no contentctl.yml found in given path")
+            sys.exit(1)
 
         try: 
             config = Config.parse_obj(yml_dict)

@@ -84,8 +84,8 @@ def build(args) -> DirectorOutputDto:
 
     generate = Generate()
 
-    director_output_dto = generate.execute(generate_input_dto)
-    return director_output_dto
+    generate.execute(generate_input_dto)
+    
 
 
 def inspect(args) -> None:
@@ -104,7 +104,21 @@ def deploy(args) -> None:
 
 def test(args):
     config = start(args)
-    director_output_dto = build(args)
+
+    product_type = SecurityContentProduct.splunk_app
+    director_input_dto = DirectorInputDto(
+        input_path = os.path.abspath(args.path),
+        product = product_type,
+        config = config
+    )
+    generate_input_dto = GenerateInputDto(
+        director_input_dto
+    )
+
+    generate = Generate()
+
+    director_output_dto = generate.execute(generate_input_dto)
+
     test_config = TestConfig.parse_obj({'repo_path': args.path, 
                                         'mode': args.mode, 
                                         'post_test_behavior': args.behavior,
@@ -189,7 +203,7 @@ def reporting(args) -> None:
     reporting.execute(reporting_input_dto)
 
 
-def main(args):
+def main():
     """
     main function parses the arguments passed to the script and calls the respctive method.
     :param args: arguments passed by the user on command line while calling the script.
@@ -261,7 +275,4 @@ def main(args):
     args = parser.parse_args()
     
     return args.func(args)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])                                  
+                         

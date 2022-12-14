@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+import os
 
 from pydantic import BaseModel, validator, ValidationError, Extra, Field
 from dataclasses import dataclass
@@ -160,7 +161,7 @@ class App(BaseModel, extra=Extra.forbid):
     @staticmethod
     def get_default_apps()->list[App]:
         all_app_objs:list[App] = []
-        with open("templates/app_default.yml", "r") as app_data:
+        with open(os.path.join(os.path.dirname(__file__), "../", "templates/app_default.yml"), "r") as app_data:
             all_apps_raw = yaml.safe_load(app_data)
             for a in all_apps_raw:
                 app_obj = App.parse_obj(a)

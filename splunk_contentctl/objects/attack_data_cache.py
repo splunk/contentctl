@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 import validators
 import pathlib
@@ -27,13 +28,55 @@ from splunk_contentctl.helper.utils import Utils
 
 from typing import Union
 class AttackDataCache(BaseModel, extra=Extra.forbid):
-    cache_file_uri: str = "https://media.githubusercontent.com/media/splunk/attack_data/master/alldata.zip"
-    cache_file_system_location: str = "/tmp/archiveFun/alldata.zip"
-    cache_update_time: Union[str,None] = "DATETIME REPRESENTATION FOR COMPARISON WITH HEAD.GET"
-    cache_valid: bool = False
-    cache_file_uri_prefix:str = "https://media.githubusercontent.com/media/splunk/attack_data/master/"
+    name: str
+    description: str
+    cache_descriptor_uri: str
+    cache_file_uri: str
+    cache_file_uri_prefix: str
     
 
+    @root_validator(pre=False)
+    def validate_all(cls, v, values):
+        import requests
+        import yaml
+        try:
+            req = requests.get(values['cache_descriptor_uri'])
+            if req.status_code >= 400:
+                raise(Exception(f"Status code {req.status_code} when fetching {values['cache_descriptor_uri']}"))
+            req = requests.get(v)
+            
+            cache_config:dict = yaml.safe_load(req.text)
+            loaded_cfg = AttackDataCache.construct(**cache_config)
+
+        except Exception as e:
+            print(f"Unable to validate URI {values['cache_descriptor_uri']}: {str(e)}")
+            #Don't return the URI, return None since we could not validate
+            values['cache_descriptor_uri'] = None
+            loaded_cfg = None
+        
+        if values['cache_file_uri'] is not None:
+            cache_file = pathlib.Path(values['cache_file_system_location'])
+            if cache_file.exists():
+                if values['cache_file_sha256'] is not None:
+                    import hashlib
+                    with open(cache_file, 'rb') as dat:
+                        res = hashlib.sha256(dat.read()).hexdigest()
+                    if values['cache_file_sha256'] != res:
+                        print(f"Warning, calculated sha256 of file to be {res} but expected hash of file to be {values['cache_file_sha256']}")
+                        values['cache_file_uri'] = None
+                    else:
+                        print(f"Expected and confirmed sha256 of {res}")
+                        values['cache_file_valid'] = True
+                        return values
+        
+        if values['cache_file_uri'] is None
+            #cache file does not exist, or was invalid, so we will get it
+            Utils.download_file_from_http(values['cache_descriptor_uri'], )
+        
+
+
+        
+    '''
     @root_validator(pre=False)
     def validate_cache(cls, values):
         #Check to see if we can reach the uri for the cache file
@@ -75,6 +118,6 @@ class AttackDataCache(BaseModel, extra=Extra.forbid):
             return values
         print("Unable to get the cache file")
         return values
-
+    '''
 
         

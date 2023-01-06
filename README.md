@@ -18,7 +18,7 @@ contentctl is a single application that support the full cycle of security conte
 - [Statically Validate](contentctl-validate) Content Against a Well-Defined Baseline
 - [Building](contentctl-build) a Content Pack for your target - Use a supported output format or design your own
 - [Generate](contentctl-generate) documentation, MITRE Maps, and a website that makes your Content Pack searchable and easy to understand  
--  [Test](contentctl-test) your Content Pack on a running Splunk Instance
+- [Test](contentctl-test) your Content Pack on a running Splunk Instance
 - [Deploy](contentctl-deploy) your Content Pack to Splunk Cloud Instance, via REST API, or create a Splunkbase Application for manual deployment   
  
  
@@ -26,12 +26,15 @@ contentctl is a single application that support the full cycle of security conte
  # Ecosystem
 | Project               | Description                                             |
 | --------------------- | ------------------------------------------------------- |
-| [Splunk Attack Range](https://github.com/splunk/attack_range)          | Single-page application routing                         |
-| [Red Canary Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)          | Single-page application routing
-| [Splunk Attack Data](https://github.com/splunk/attack_data)          | Single-page application routing                         |                         |
-| [Splunk Security Content](https://github.com/splunk/security_content)          | Single-page application routing                         |
-| [Splunk contentctl](https://github.com/splunk/contentctl)          | Single-page application routing                         |
-| [Other Important Project(s)](https://github.com/otherorg/projectname)          | Additional projects that exist in the STRT Cinematic Universe - are there any more to add?                         |
+| [Splunk Attack Range](https://github.com/splunk/attack_range)          | Easily deploy a preconfigured Splunk Environment locally or on AWS containing a Splunk Instance, Windows and Linux Machines, and Attacker Tools like Kali Linux.  Automatically simulate attacks or run your own|
+| [PurpleSharp Attack Simulation](https://github.com/mvelazc0/PurpleSharp) | Open source adversary simulation tool for Windows Active Directory environments (integrated into Attack Range)|
+| [Red Canary Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)          | Library of attack simulations mapped to the MITRE ATT&CK® framework (integrated into Attack Range)|
+| [Splunk Attack Data](https://github.com/splunk/attack_data)          | Repository of Attack Simulation Data for writing and Testing Detections|                         |
+| [Splunk Security Content](https://github.com/splunk/security_content)          | Splunk Threat Research Team's Content included in the [Enterprise Security Content Update App (ESCU)](https://splunkbase.splunk.com/app/3449)|
+| [Splunk contentctl](https://github.com/splunk/contentctl)          | Generate, validate, build, test, and deploy custom Security Content|
+| [Other Important Project(s)](https://github.com/otherorg/projectname)          | Additional projects that exist in the STRT Cinematic Universe - are there any more to add?|
+
+
 
 
 ## Workflow

@@ -3,8 +3,7 @@
 ![logo](docs/contentctl-logo.png)
 =====
 
-# Acronyms
-SOC - Security Operation Center
+
 
 # Introduction
 #### Security Is Hard 
@@ -56,25 +55,43 @@ TestResults --contentctl deploy-->SplunkCloudInstance
 ```
 
 ## Installation
+### Requirements
+| Requirement | Required | Description | 
+| --------------------- | ----- | ---- |
+| Python <3.9 | Not Supported | No support planned.  contentctl tool uses modern language constructs not supported ion Python3.8 and below |
+| Python 3.9 | Required | contentctl tool is written in Python |
+| Python 3.10 | Not Supported (yet) | Will be supported |
+| Python 3.11 | Not Supported (yet) | Will be supported |
+| Docker (local or remote) | Recommended | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test.  This is the easiest, and recommended, testing method.  Alternatively, you may specify the address and credentials for a preconfigured server for testing or choose to skip dynamic testing. Please see the page [Dynamic Testing with Docker](testingWithDocker) for important information about performance on macOS |
 
 
-### Using pip (Available when released)
-Install contentctl using pip: 
+
+**Because contentctl uses a large number of dependencies, it's recommended to install it in a virtual environment. The instructions below follow this recommendation.**
+
+#### Install via pip (recommended): 
 ```
+python3.9 -m venv .venv
+source .venv/bin/activate
 pip install splunk-contentctl
 ```
 
-### From Source
-Make sure you have poetry installed:
+#### From Source (advanced)
 ```
 git clone git@github.com:splunk/contentctl.git
+cd contentctl
+python3.9 -m venv .venv
+source .venv/bin/activate
+python -m pip install poetry
 poetry install
 poetry shell
 contentctl --help
 ```
 
 
-## Usage
+# Usage
+
+## contentctl init
+## 
 
 1. **init** - Initilialize a new repo from scratch so you can easily add your own content to a custom application. 
 2. **new** - Creates new content (detection, story)
@@ -84,4 +101,11 @@ contentctl --help
 6. **docs** - Create documentation as Markdown
 7. **reporting** - Create different reporting files such as a Mitre ATT&CK overlay
 
+
+
+# Acronyms
+| Acronym | Meaning| Description | 
+| --------------------- | ------------------------------------------------------- | ---- |
+| SOC | Security Operation Center | Description of a SoC | 
+| DaC | Detection as Code | A systematic approach applying DevOps priciples to Detection Engineering. DaC enables Continuous Integration and Continuous Delivery of Detectionsa via automated validation, testing, and deployment |
 

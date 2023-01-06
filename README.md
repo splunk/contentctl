@@ -3,6 +3,54 @@
 ![logo](docs/contentctl-logo.png)
 =====
 
+# Acronyms
+SOC - Security Operation Center
+
+# Introduction
+#### Security Is Hard 
+Anyone who has managed a [SOC](acronym) will tell you it's hard work.  SOC Managers, Detection Engineers, and Cybersecurity Professionals must understand and manage countless tools and data sources while ensuring the reliability and security of their network and applications.  At the same time, they must be able to detect and react to data breeches, vulnerabilities, and performance degradation in minutes - not seconds or hours.
+These responsibilities leave little time for writing new content - let alone documentation, maintenance, and testing of legacy content.  Existing solutions like Wikis, JIRA tickets, Excel Spreadsheets, and "asking that one team member who knows everything" don't scale and spread information across various systems.       
+#### contentctl Makes It ~~Easy~~ Less Hard 
+contentctl is a single application that support the full cycle of security content development (each of the links below will redirect to the appropriate section of the README/Wiki):
+
+- [Create Content Packs](contentctl-init) - Version-Controlled collections of searches, documentation, and test data
+- [Add New Content](contentctl-new-content) - searches, macros, lookups, and other content
+- [Statically Validate](contentctl-validate) Content Against a Well-Defined Baseline
+- [Building](contentctl-build) a Content Pack for your target - Use a supported output format or design your own
+- [Generate](contentctl-generate) documentation, MITRE Maps, and a website that makes your Content Pack searchable and easy to understand  
+-  [Test](contentctl-test) your Content Pack on a running Splunk Instance
+- [Deploy](contentctl-deploy) your Content Pack to Splunk Cloud Instance, via REST API, or create a Splunkbase Application for manual deployment   
+ 
+ 
+ 
+ # Ecosystem
+| Project               | Description                                             |
+| --------------------- | ------------------------------------------------------- |
+| [Splunk Attack Range](https://github.com/splunk/attack_range)          | Single-page application routing                         |
+| [Red Canary Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)          | Single-page application routing
+| [Splunk Attack Data](https://github.com/splunk/attack_data)          | Single-page application routing                         |                         |
+| [Splunk Security Content](https://github.com/splunk/security_content)          | Single-page application routing                         |
+| [Splunk contentctl](https://github.com/splunk/contentctl)          | Single-page application routing                         |
+| [Other Important Project(s)](https://github.com/otherorg/projectname)          | Additional projects that exist in the STRT Cinematic Universe - are there any more to add?                         |
+
+
+## Workflow
+```mermaid
+graph TD
+starting_state --contentctl init--> contentPack 
+newContent{new_content} --contentctl new sigma content--> contentPack
+newContent{new_content} --contentctl new spl content--> contentPack
+contentPack --contentctl validate--> ValidatedContent
+ValidatedContent --contentctl build--> SplunkContent
+ValidatedContent --contentctl build--> OtherOutputFormat
+ValidatedContent --contentctl docgen--> WebsiteDocumentation
+ValidatedContent --contentctl docgen--> MITRE_mapDocumentation
+SplunkContent --contentctl test via container-->TestResults
+SplunkContent --contentctl test via preconfigured server-->TestResults
+TestResults --contentctl deploy-->SplunkRESTAPI
+TestResults --contentctl deploy-->SplunkbaseApp
+TestResults --contentctl deploy-->SplunkCloudInstance
+```
 
 ## Installation
 

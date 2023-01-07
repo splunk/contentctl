@@ -31,6 +31,7 @@ contentctl is a single application that support the full cycle of security conte
 | [Splunk Attack Data](https://github.com/splunk/attack_data)          | Repository of Attack Simulation Data for writing and Testing Detections|                         |
 | [Splunk Security Content](https://github.com/splunk/security_content)          | Splunk Threat Research Team's Content included in the [Enterprise Security Content Update App (ESCU)](https://splunkbase.splunk.com/app/3449)|
 | [Splunk contentctl](https://github.com/splunk/contentctl)          | Generate, validate, build, test, and deploy custom Security Content|
+| [SigmaHQ Sigma Rules](https://github.com/SigmaHQ/sigma) | Official Repository for Sigma Rules. These rules are an excellent starting point for new content. |
 | [Other Important Project(s)](https://github.com/otherorg/projectname)          | Additional projects that exist in the STRT Cinematic Universe - are there any more to add?|
 
 
@@ -56,6 +57,17 @@ TestResults --contentctl deploy-->SplunkCloudInstance
 
 ## Installation
 ### Requirements
+Testing is run using [GitHub Hosted Runners](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners).  Ubuntu22.04 is the recommended configuration.
+| Operating System | Supported | Passing Intregration Tests | 
+| ---------------- | --------- | ------ |
+| Windows 10       | Yes       | [windows10TestBadge](Windows10TestBadge)  |
+| Windows 11       | Yes       | [windows11TestBadge](Windows11TestBadge)  |
+| Ununtu 20.04 LTS | Yes       | [ubuntu2004TestBadge](ubuntu2004TestBadge)|
+| *Ubuntu 22.04 LTS| Yes       | [ubuntu2204TestBadge](ubuntu2204TestBadge)|
+| macOS Big Sur 11       | Yes       | [macOS11TestBadge](macOS11TestBadge)|
+| macOS Montery 12       | Yes       | [macOS12TestBadge](macOS12TestBadge)|
+
+
 | Requirement | Required | Description | 
 | --------------------- | ----- | ---- |
 | Python <3.9 | Not Supported | No support planned.  contentctl tool uses modern language constructs not supported ion Python3.8 and below |

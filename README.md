@@ -102,8 +102,34 @@ contentctl --help
 
 # Usage
 
-## contentctl init
-## 
+### contentctl init
+Creates a new Content Pack in the current directory as well as a configuration file called [contentctl.yml](contentctl.yml) which contains a number of important configuration options.
+The content pack contains a wide variety of content types:
+- [detections](detection)
+- [baselines](baseline)
+- [lookups](lookup)
+- [macros](macro)
+- [stories](story)
+
+### contentctl new [--type TYPE]
+Choose TYPE {detection, story} to create new content for the Content Pack.  The tool will interactively ask a series of questions required for generating a basic piece of content and automatically add it to the Content Pack.
+
+### contentctl validate
+Performs static validation on all of the content in this Content Pack.  Writing validation is extremely complex.  Each piece of content can one or dozens of fields ranging from free text to numbers to references to other content.  contentctl's build in validation ensures that a number of conditions are met:
+- Required fields in content are defined
+- Values in fields are appropriate.  For example, if content references a Datamodel, then that Datamodel must be valid. Similarly, numeric values that must fall within a certain range must be validated.
+- If a piece of content references other content, then it exists.  For example, if a detection makes use of a macro then the existence and correctness of the macro must be validated.
+- There are no conflicts between content.  For example, two detections cannot have the same name.
+If any of these conditions are not met, then a descriptive error will be printed and contentctl will return a nonzero exit code.  This makes it suitable for running in an automated workflow or other CICD context.  Instead of exiting on the first error, _contentctl validate_ will continue validating all content so that it can present all relevant error before exiting.
+
+### contentctl build
+Generates Content Packs in the output format defined in the [contentctl.yml](contentctl.yml) configuration file.  These outputs may include {splunk_app, api, ba}.  When _contentctl build_ runs, it first performs a _contentctl validate_ in order to ensure that a valid app is generated.  Note that it is *NOT* required or recommended to run _contentctl validate_ separately if the intention is to build a Content Pack.
+
+### contentctl report
+### contentctl inspect
+### contentctl deploy
+### contentctl docs
+### contentctl test
 
 1. **init** - Initilialize a new repo from scratch so you can easily add your own content to a custom application. 
 2. **new** - Creates new content (detection, story)
@@ -120,4 +146,4 @@ contentctl --help
 | --------------------- | ------------------------------------------------------- | ---- |
 | SOC | Security Operation Center | Description of a SoC | 
 | DaC | Detection as Code | A systematic approach applying DevOps priciples to Detection Engineering. DaC enables Continuous Integration and Continuous Delivery of Detectionsa via automated validation, testing, and deployment |
-
+| CICD | Continuous Integration/Continuous Delivery | A modern DevOps practice that encourages users to make small, frequent changes which are automatically tested and deployed. This contrasts with legacy approaches that emphasize large changes which may be manually tested an infrequently deployed. |

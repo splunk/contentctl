@@ -45,7 +45,6 @@ newContent{new_content} --contentctl new sigma content--> contentPack
 newContent{new_content} --contentctl new spl content--> contentPack
 contentPack --contentctl validate--> ValidatedContent
 ValidatedContent --contentctl build--> SplunkContent
-ValidatedContent --contentctl build--> OtherOutputFormat
 ValidatedContent --contentctl docgen--> WebsiteDocumentation
 ValidatedContent --contentctl docgen--> MITRE_mapDocumentation
 SplunkContent --contentctl test via container-->TestResults

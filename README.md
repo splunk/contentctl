@@ -150,7 +150,7 @@ Generates Content Packs in the output format defined in the [contentctl.yml](con
 
 
 # License
-Copyright 2022 Splunk Inc.
+Copyright 2023 Splunk Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 

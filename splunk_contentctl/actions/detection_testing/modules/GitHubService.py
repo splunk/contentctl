@@ -31,21 +31,52 @@ SSA_PREFIX = "ssa___"
 
 
 class GithubService:
-    def get_detections_selected(self, director: DirectorOutputDto) -> list[Detection]:
-        detections_to_test: list[Detection] = []
-        if self.config.detections_list is None:
-            raise (Exception("detections_list should not be None"))
-        detections_set = set(self.config.detections_list)
-        for detection in director.detections:
-            if detection.file_path in detections_set:
-                detections_to_test.append(detection)
-                detections_set.remove(detection.file_path)
-
-        if len(detections_set) > 0:
-            missing_detections = "\n\t - ".join(detections_set)
+    def get_detections(self, director: DirectorOutputDto) -> list[Detection]:
+        if self.config.mode == DetectionTestingMode.selected:
+            return self.get_detections_selected(director)
+        elif self.config.mode == DetectionTestingMode.all:
+            return self.get_detections_all(director)
+        elif self.config.mode == DetectionTestingMode.changes:
+            return self.get_detections_changed(director)
+        else:
             raise (
                 Exception(
-                    f"Failed to find the following detections for testing:\n\t - {missing_detections}"
+                    f"Error: Unsupported detection testing mode in GithubServer: {self.config.mode}"
+                )
+            )
+
+    def get_detections_selected(self, director: DirectorOutputDto) -> list[Detection]:
+        detections_to_test: list[Detection] = []
+        requested_set = set(self.requested_detections)
+        missing_detections: set[pathlib.Path] = set()
+
+        for requested in requested_set:
+            matching = list(
+                filter(
+                    lambda detection: pathlib.Path(detection.file_path).resolve()
+                    == requested.resolve(),
+                    director.detections,
+                )
+            )
+            if len(matching) == 1:
+                detections_to_test.append(matching.pop())
+            elif len(matching) == 0:
+                missing_detections.add(requested)
+            else:
+                raise (
+                    Exception(
+                        f"Error: multiple detection files found when attemping to resolve [{str(requested)}]"
+                    )
+                )
+
+        if len(missing_detections) > 0:
+            missing_detections_str = "\n\t - ".join(
+                [str(path.absolute()) for path in missing_detections]
+            )
+            print(director.detections)
+            raise (
+                Exception(
+                    f"Failed to find the following detection file(s) for testing:\n\t - {missing_detections_str}"
                 )
             )
 
@@ -67,7 +98,9 @@ class GithubService:
 
     def __init__(self, config: TestConfig):
         self.repo = None
+        self.requested_detections: list[pathlib.Path] = []
         self.config = config
+
         if config.mode == DetectionTestingMode.selected:
             if config.detections_list is None or len(config.detections_list) < 1:
                 raise (
@@ -90,6 +123,10 @@ class GithubService:
                         )
                     )
                 else:
+                    self.requested_detections = [
+                        pathlib.Path(detection_file_name)
+                        for detection_file_name in config.detections_list
+                    ]
                     return
 
         elif config.mode == DetectionTestingMode.changes:
@@ -134,8 +171,6 @@ class GithubService:
                     f"Unsupported detection testing mode [{config.mode}].  Supported detection testing modes are [{DetectionTestingMode._member_names_}]"
                 )
             )
-
-        pass
 
     def __init2__(self, config: TestConfig):
 

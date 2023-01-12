@@ -162,7 +162,7 @@ There are a number of different testing modes that control which content will be
 contentctl test's default mode allows it to quickly test all content with requiring user interaction.  This makes it suitable for local tests as well as CI/CD workflows.  However, users often want to troubleshoot a test if it fails.  contentctl allows you to change the tool's behavior if and/or when a test fails:
 - --behavior never_pause - The default behavior.  If a test does not pass, the tool begins the next test immediately
 - --behavior pause_on_failure - If a test fails, then additional information about that test, and the raw SPL of the test, is printed to the terminal.  A user may then click (or CMD+Click) the "LINK" to begin interactively debugging the failed test on the Splunk Server.  Note that the credentials for the server are printed out at the very beginning of the test.  After you have finished debugging the failure, hit "Return" in the terminal to move on to the next test. The attack_data for this test remains loaded on the server for debugging until the user moves on to the next test.
-- - --behavior always_pause - Similar to pause_on_failure, but this pauses after every test regardless of whether it passes or fails.  
+- --behavior always_pause - Similar to pause_on_failure, but this pauses after every test regardless of whether it passes or fails.  
 
 
 1. **init** - Initilialize a new repo from scratch so you can easily add your own content to a custom application. 

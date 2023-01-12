@@ -32,7 +32,7 @@ contentctl is a single application that support the full cycle of security conte
 | [Splunk Security Content](https://github.com/splunk/security_content)          | Splunk Threat Research Team's Content included in the [Enterprise Security Content Update App (ESCU)](https://splunkbase.splunk.com/app/3449)|
 | [Splunk contentctl](https://github.com/splunk/contentctl)          | Generate, validate, build, test, and deploy custom Security Content|
 | [SigmaHQ Sigma Rules](https://github.com/SigmaHQ/sigma) | Official Repository for Sigma Rules. These rules are an excellent starting point for new content. |
-| [Other Important Project(s)](https://github.com/otherorg/projectname)          | Additional projects that exist in the STRT Cinematic Universe - are there any more to add?|
+| [Other Important Project(s)](https://github.com/otherorg/projectname)          | Additional projects that STRT uses or contributes to|
 
 
 
@@ -127,8 +127,43 @@ Generates Content Packs in the output format defined in the [contentctl.yml](con
 ### contentctl report
 ### contentctl inspect
 ### contentctl deploy
+The reason to build content is so that it can be deployed to your environment.  However, deploying content to multiple servers and different types of infrastructure can be tricky and time-consuming.  contentctl makes this easy by supporting a number of different deployment mechanisms. Deployment targets can be defined in [contentctl.yml](contentctl.yml).
+- Deploy via API - Using the REST API, individual pieces of content are deployed to a running server.  This is a great way to deploy all of the content in a content pack, but can also be used to deploy individual peices of content.
+- Deploy to Splunk Cloud via ACS - Using the Automated Private App Vetting (APAV) Feature of the Admin Config Service (ACS), Splunk Cloud customers can easily deploy custom apps to their environments.   
 ### contentctl docs
 ### contentctl test
+The static validation performed by *contentctl validate* can only take you so far.  While it's powerful, and fast, it can only tell determine if the content is *syntactically* correct.  *contentctl test* can test your content on real Splunk Infrastructure to ensure there are no errors in your SPL, raw data can be properly ingested/processed/accelerated on your server, your search finds the event(s) you're looking for in raw data, and even provides high-level runtime performance metrics about your searches.    The following diagram shows this workflow at a high level
+
+```mermaid
+graph TD
+SplunkContainer--start-->SplunkInstance
+SplunkServer-->SplunkInstance
+SplunkInstance--Install Apps-->ConfiguredServer
+SplunkInstance--Configure Settings-->ConfiguredServer
+ContentPack--Deploy-->ConfiguredInstance
+ConfiguredInstance--Start Test-->Testing
+Testing--Test Detection-->Detection
+
+Detection--Replay Raw Data-->Result
+subgraph Test Indidivual Detection
+	Detection--Execute Search-->Result	
+end
+Result--Cleanup-->Testing
+Testing--Cleanup-->TestResults
+```
+
+#### Testing Modes
+There are a number of different testing modes that control which content will be tested.  This can be controlled with the `--mode {}` option at the command line
+- all - This will test all of the content in the content pack. Please note that by default only detections marked production will be tested (detections marked as deprecated or experimental, for example, will be ignored).
+- selected - Detections whose relative paths are provided on the command line will be tested.  This is particularly useful if you would like to troubleshoot or update just a handful of detections and can save a significant amount of time.  For example, to test two detections use the following command `contentctl test --mode selected --detections_list detections/detection_one.yml detections/detection_two.yml`
+- **changes - (not currently supported) If you have a large number of detections and use a branching workflow to create new content or update content, then this is an easy way to automatically find and test only that content automatically.  This prevents you from needing to explicitly list the subset of content to test using "selected"** 
+
+#### Testing Behavior
+contentctl test's default mode allows it to quickly test all content with requiring user interaction.  This makes it suitable for local tests as well as CI/CD workflows.  However, users often want to troubleshoot a test if it fails.  contentctl allows you to change the tool's behavior if and/or when a test fails:
+- --behavior never_pause - The default behavior.  If a test does not pass, the tool begins the next test immediately
+- --behavior pause_on_failure - If a test fails, then additional information about that test, and the raw SPL of the test, is printed to the terminal.  A user may then click (or CMD+Click) the "LINK" to begin interactively debugging the failed test on the Splunk Server.  Note that the credentials for the server are printed out at the very beginning of the test.  After you have finished debugging the failure, hit "Return" in the terminal to move on to the next test. The attack_data for this test remains loaded on the server for debugging until the user moves on to the next test.
+- - --behavior always_pause - Similar to pause_on_failure, but this pauses after every test regardless of whether it passes or fails.  
+
 
 1. **init** - Initilialize a new repo from scratch so you can easily add your own content to a custom application. 
 2. **new** - Creates new content (detection, story)
@@ -146,6 +181,8 @@ Generates Content Packs in the output format defined in the [contentctl.yml](con
 | SOC | Security Operation Center | Description of a SoC | 
 | DaC | Detection as Code | A systematic approach applying DevOps priciples to Detection Engineering. DaC enables Continuous Integration and Continuous Delivery of Detectionsa via automated validation, testing, and deployment |
 | CICD | Continuous Integration/Continuous Delivery | A modern DevOps practice that encourages users to make small, frequent changes which are automatically tested and deployed. This contrasts with legacy approaches that emphasize large changes which may be manually tested an infrequently deployed. |
+| ACS| Admin Config Service | The [Splunk Admin Configu Service](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2209/Config/ACSIntro) is a cloud-native API that provides programmatic self-service administration capabilities for Splunk Cloud Platform. One of its features, Automated Private App Vetting (APAV) enables the installation of custom app on Splunk Cloud instances. | 
+| APAV | Automated Private App Vetting | [Automated Private App Vetting](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2209/Config/ManageApps) enables admins to use the ACS API to install, upgrade, and uninstall apps directly on your Splunk Cloud Platform deployment without assistance from Splunk Support. |
 
 
 # License

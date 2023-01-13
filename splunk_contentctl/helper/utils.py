@@ -225,34 +225,47 @@ class Utils:
         file_path: str,
         destination_file: str,
         overwrite_file: bool = True,
+        verbose_print: bool = False,
     ):
+        sourcePath = pathlib.Path(file_path)
+        destPath = pathlib.Path(destination_file)
+        if verbose_print:
+            print(
+                f"Copying [{sourcePath}] to [{destPath}]...",
+                end="",
+                flush=True,
+            )
         try:
             # generates an exception only if the copyfile fails.
             # if we try this with a URL, it won't be found as a file and no
             # exception will be generated
-            if pathlib.Path(file_path).is_file():
-                if pathlib.Path(destination_file).is_file():
-                    if overwrite_file:
-                        shutil.copyfile(file_path, destination_file)
+            if sourcePath.is_file():
+                if destPath.is_file():
+                    if overwrite_file and not sourcePath.samefile(destPath):
+                        shutil.copyfile(sourcePath, destPath)
                     else:
                         # Don't do anything, don't overwrite the file
                         pass
-                elif pathlib.Path(destination_file).exists():
+                elif destPath.exists():
                     raise (
                         Exception(
-                            f"[{destination_file}] exists, but it is not a file.  It cannot be overwritten."
+                            f"[{destPath}] exists, but it is not a file.  It cannot be overwritten."
                         )
                     )
                 else:
-                    shutil.copyfile(file_path, destination_file)
+                    shutil.copyfile(sourcePath, destPath)
             else:
-                raise (Exception(f"[{file_path}] does not exist"))
+                raise (Exception(f"[{sourcePath}] does not exist"))
         except Exception as e:
+            if verbose_print:
+                print("Error")
             raise (
                 Exception(
-                    f"Error: Could not copy local file [{file_path}] to [{destination_file}]: [{str(e)}]"
+                    f"Error: Could not copy local file [{sourcePath}] to [{destPath}]: [{str(e)}]"
                 )
             )
+        if verbose_print:
+            print("Done")
 
     @staticmethod
     def download_file_from_http(
@@ -262,57 +275,78 @@ class Utils:
         verbose_print: bool = False,
     ):
         global TOTAL_BYTES, TOTAL_DOWNLOAD_TIME
-
-        if os.path.exists(destination_file) and overwrite_file is False:
-            print(f"[{destination_file}] already exists...using cached version")
-            return
+        destinationPath = pathlib.Path(destination_file)
         if verbose_print:
-            print(f"downloading to [{destination_file}]...", end="", flush=True)
+            print(
+                f"Downloading [{file_path}] to [{destinationPath}]...",
+                end="",
+                flush=True,
+            )
+
+        if destinationPath.is_file() and overwrite_file is False:
+            print(f"Using cached version")
+            return
+        elif destinationPath.exists():
+            print("Error")
+            raise (
+                Exception(
+                    f"[{destinationPath}] already exists, but it is not a file. We cannot overwrite it."
+                )
+            )
 
         try:
             download_start_time = default_timer()
             bytes_written = 0
             file_to_download = requests.get(file_path, stream=True)
             file_to_download.raise_for_status()
-            with open(destination_file, "wb") as output:
+            with destinationPath.open("wb") as output:
                 for piece in file_to_download.iter_content(chunk_size=1024 * 8):
                     bytes_written += output.write(piece)
             download_stop_time = default_timer()
             delta = download_stop_time - download_start_time
-            if verbose_print:
-                if delta < 1:
-                    time_string = f"{round(delta, ndigits=1)} seconds"
-                else:
-                    time_string = humanize.naturaldelta(round(delta))
-                print(
-                    f"Done ({time_string}, {humanize.naturalsize(bytes_written,format='%d')})"
-                )
             TOTAL_BYTES += bytes_written
             TOTAL_DOWNLOAD_TIME += delta
+
         except requests.exceptions.ConnectionError as e:
+            if verbose_print:
+                print("Error")
             raise (
                 Exception(
-                    f"Error: Could not download file [{file_path}] to [{destination_file}] (Unable to connect to server. Are you sure the server exists and you have connectivity to it?): [{str(e)}]"
+                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Unable to connect to server. Are you sure the server exists and you have connectivity to it?): [{str(e)}]"
                 )
             )
 
         except requests.exceptions.HTTPError as e:
+            if verbose_print:
+                print("Error")
             raise (
                 Exception(
-                    f"Error: Could not download file [{file_path}] to [{destination_file}] (The file was probably not found on the server): [{str(e)}]"
+                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (The file was probably not found on the server): [{str(e)}]"
                 )
             )
         except requests.exceptions.Timeout as e:
+            if verbose_print:
+                print("Error")
             raise (
                 Exception(
-                    f"Error: Could not download file [{file_path}] to [{destination_file}] (Timeout getting file): [{str(e)}]"
+                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Timeout getting file): [{str(e)}]"
                 )
             )
         except Exception as e:
+            if verbose_print:
+                print("Error")
             raise (
                 Exception(
-                    f"Error: Could not download file [{file_path}] to [{destination_file}] (Unknown Reason): [{str(e)}]"
+                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Unknown Reason): [{str(e)}]"
                 )
+            )
+        if verbose_print:
+            if delta < 1:
+                time_string = f"{round(delta, ndigits=1)} seconds"
+            else:
+                time_string = humanize.naturaldelta(round(delta))
+            print(
+                f"Done ({time_string}, {humanize.naturalsize(bytes_written,format='%d')})"
             )
 
         return

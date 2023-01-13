@@ -47,10 +47,12 @@ def get_app_from_local_path(app: App, target_directory: pathlib.Path):
                 f"Error: cannot copy app {app.title} from local.  local_path is None"
             )
         )
-    print(f"Copying local app [{app.title} - {app.release}]...", end="")
+
     path_to_local_file = pathlib.Path(app.local_path)
     path_to_destination = target_directory.joinpath(path_to_local_file.name)
-    Utils.copy_local_file(str(path_to_local_file), str(path_to_destination))
+    Utils.copy_local_file(
+        str(path_to_local_file), str(path_to_destination), verbose_print=True
+    )
 
 
 def get_app_from_http_path(app: App, target_directory: pathlib.Path):

@@ -25,6 +25,7 @@ psutil = "^5.9.4"
 splunk-sdk = "^1.7.2"
 validators = "^0.20.0"
 semantic-version = "^2.10.0"
+humanize = "^4.4.0"
 
 [tool.poetry.dev-dependencies]
 

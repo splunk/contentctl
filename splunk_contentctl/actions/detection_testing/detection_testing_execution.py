@@ -49,19 +49,8 @@ def get_app_from_local_path(app: App, target_directory: pathlib.Path):
         )
     print(f"Copying local app [{app.title} - {app.release}]...", end="")
     path_to_local_file = pathlib.Path(app.local_path)
-    if not path_to_local_file.is_file():
-        raise (
-            Exception(
-                f"Error: Local app path {path_to_local_file.absolute()} does not exist"
-            )
-        )
     path_to_destination = target_directory.joinpath(path_to_local_file.name)
-
-    if path_to_destination.is_file():
-        print("done (cached)")
-    else:
-        shutil.copyfile(path_to_local_file, path_to_destination)
-        print("done (copied)")
+    Utils.copy_local_file(str(path_to_local_file), str(path_to_destination))
 
 
 def get_app_from_http_path(app: App, target_directory: pathlib.Path):
@@ -71,16 +60,14 @@ def get_app_from_http_path(app: App, target_directory: pathlib.Path):
                 f"Error: cannot download app {app.title} from http.  http_path is None"
             )
         )
-    print(f"Downloading http app [{app.title} - {app.release}]...", end="")
+    # print(f"Downloading http app [{app.title} - {app.release}]...", end="")
     path_on_server = str(urlparse(app.http_path).path)
     # Get just the filename from that path
     filename = pathlib.Path(path_on_server).name
     destination_path = target_directory.joinpath(filename)
-    if destination_path.is_file():
-        print("done (cached)")
-    else:
-        Utils.download_file_from_http(app.http_path, destination_path.as_posix())
-        print("done (downloaded)")
+    Utils.download_file_from_http(
+        app.http_path, destination_path.as_posix(), verbose_print=True
+    )
 
 
 def get_app(app: App, target_directory: pathlib.Path):
@@ -88,9 +75,9 @@ def get_app(app: App, target_directory: pathlib.Path):
         # This app will be downloaded by the container
         get_app_from_splunkbase(app, target_directory)
     elif app.local_path is not None:
-        get_app_from_http_path(app, target_directory)
-    elif app.http_path:
         get_app_from_local_path(app, target_directory)
+    elif app.http_path:
+        get_app_from_http_path(app, target_directory)
     else:
         raise (
             Exception(
@@ -99,7 +86,7 @@ def get_app(app: App, target_directory: pathlib.Path):
         )
 
 
-def copy_local_apps_to_directory(config: TestConfig):
+def stage_apps(config: TestConfig):
 
     try:
         # Make sure the directory exists.  If it already did, that's okay. Don't delete anything from it
@@ -122,17 +109,24 @@ def copy_local_apps_to_directory(config: TestConfig):
         get_app_from_splunkbase(app, CONTAINER_APP_PATH)
 
     # Get all the other apps
+    app_exceptions: list[str] = []
     for app in alphabetically_sorted_apps:
         try:
             get_app(app, CONTAINER_APP_PATH)
         except Exception as e:
-            raise (
-                Exception(
-                    f"Could not download {app.title}, not http_path or local_path "
-                    f"or Splunkbase Credentials provided: [{str(e)}]"
-                )
+            app_exceptions.append(
+                f"Error: Unable to stage app for installation: [{str(e)}"
             )
-    print(f"[{len(config.apps)}] processed for installation")
+    if len(app_exceptions) == 0:
+        print(f"[{len(config.apps)}] apps processed successfully for installation")
+        return
+    else:
+        exceptions_string = "\n\t - ".join(app_exceptions)
+        raise (
+            Exception(
+                f"Error: Unable to stage {len(app_exceptions)} apps for installation:\n\t - {exceptions_string}"
+            )
+        )
 
 
 def main(config: TestConfig, detections: list[Detection]):
@@ -142,7 +136,7 @@ def main(config: TestConfig, detections: list[Detection]):
     requests.packages.urllib3.disable_warnings()
 
     try:
-        copy_local_apps_to_directory(config)
+        stage_apps(config)
     except Exception as e:
         print(f"Error downloading application(s): {str(e)}")
         sys.exit(1)

@@ -503,9 +503,14 @@ class SplunkInstance:
             # Download the file
             # We need to overwrite the file - mkstemp will create an empty file with the
             # given name
-            Utils.download_file_from_http(
-                attackData.data, data_file, overwrite_file=True
-            )
+            try:
+                # In case the path is a local file, try to get it
+                Utils.copy_local_file(attackData.data, data_file)
+            except Exception as e:
+                # The path wasn't a local file. So try to download it
+                Utils.download_file_from_http(
+                    attackData.data, data_file, overwrite_file=True
+                )
 
         # Update timestamps before replay
         if attackData.update_timestamp:

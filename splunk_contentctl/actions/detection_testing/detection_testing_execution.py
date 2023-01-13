@@ -30,78 +30,109 @@ from splunk_contentctl.actions.detection_testing.modules.github_service import (
 from splunk_contentctl.objects.enums import DetectionTestingMode
 from splunk_contentctl.actions.generate import DirectorOutputDto
 import yaml
+from splunk_contentctl.objects.app import App
+
+CONTAINER_APP_PATH = pathlib.Path("apps")
 
 
-CONTAINER_APP_DIRECTORY = "apps"
-MOCK_DIRECTORY = "mock_directory"
+def get_app_from_splunkbase(app: App, target_directory: pathlib.Path):
+    print(f"App {app.title} will be downloaded by the container at runtime")
+    pass
+
+
+def get_app_from_local_path(app: App, target_directory: pathlib.Path):
+    if app.local_path is None:
+        raise (
+            Exception(
+                f"Error: cannot copy app {app.title} from local.  local_path is None"
+            )
+        )
+    print(f"Copying local app [{app.title} - {app.release}]...", end="")
+    path_to_local_file = pathlib.Path(app.local_path)
+    if not path_to_local_file.is_file():
+        raise (
+            Exception(
+                f"Error: Local app path {path_to_local_file.absolute()} does not exist"
+            )
+        )
+    path_to_destination = target_directory.joinpath(path_to_local_file.name)
+
+    if path_to_destination.is_file():
+        print("done (cached)")
+    else:
+        shutil.copyfile(path_to_local_file, path_to_destination)
+        print("done (copied)")
+
+
+def get_app_from_http_path(app: App, target_directory: pathlib.Path):
+    if app.http_path is None:
+        raise (
+            Exception(
+                f"Error: cannot download app {app.title} from http.  http_path is None"
+            )
+        )
+    print(f"Downloading http app [{app.title} - {app.release}]...", end="")
+    path_on_server = str(urlparse(app.http_path).path)
+    # Get just the filename from that path
+    filename = pathlib.Path(path_on_server).name
+    destination_path = target_directory.joinpath(filename)
+    if destination_path.is_file():
+        print("done (cached)")
+    else:
+        Utils.download_file_from_http(app.http_path, destination_path.as_posix())
+        print("done (downloaded)")
+
+
+def get_app(app: App, target_directory: pathlib.Path):
+    if app.must_download_from_splunkbase:
+        # This app will be downloaded by the container
+        get_app_from_splunkbase(app, target_directory)
+    elif app.local_path is not None:
+        get_app_from_http_path(app, target_directory)
+    elif app.http_path:
+        get_app_from_local_path(app, target_directory)
+    else:
+        raise (
+            Exception(
+                f"Error: Unable to get app {app.title} - no Splunkbase info, local_path, or http_path"
+            )
+        )
 
 
 def copy_local_apps_to_directory(config: TestConfig):
 
-    if config.mock:
-        shutil.rmtree(MOCK_DIRECTORY, ignore_errors=True)
-
     try:
         # Make sure the directory exists.  If it already did, that's okay. Don't delete anything from it
         # We want to re-use previously downloaded apps
-        os.makedirs(CONTAINER_APP_DIRECTORY, exist_ok=True)
+        os.makedirs(CONTAINER_APP_PATH, exist_ok=True)
 
     except Exception as e:
         raise (
             Exception(
-                f"Some error occured when trying to make the {CONTAINER_APP_DIRECTORY}: [{str(e)}]"
+                f"Error: When trying to make the {CONTAINER_APP_PATH}: [{str(e)}]"
             )
         )
 
-    for app in config.apps:
+    alphabetically_sorted_apps = sorted(config.apps, key=lambda a: a.title)
 
-        if app.must_download_from_splunkbase == False:
+    # Get all the splunkbase apps
+    for app in [
+        a for a in alphabetically_sorted_apps if a.must_download_from_splunkbase
+    ]:
+        get_app_from_splunkbase(app, CONTAINER_APP_PATH)
 
-            if app.local_path is not None:
-
-                if app.local_path == os.path.join(
-                    CONTAINER_APP_DIRECTORY, pathlib.Path(app.local_path).name
-                ):
-                    print(f"same file {app.local_path}, skip...")
-                else:
-                    shutil.copy(
-                        app.local_path,
-                        os.path.join(
-                            CONTAINER_APP_DIRECTORY, pathlib.Path(app.local_path).name
-                        ),
-                    )
-            elif app.http_path:
-                filename = pathlib.Path(
-                    urlparse(app.http_path).path
-                ).name  # get the filename from the url
-                download_path = os.path.join(CONTAINER_APP_DIRECTORY, filename)
-                Utils.download_file_from_http(
-                    app.http_path, download_path, verbose_print=True
-                )
-                app.local_path = download_path
-            else:
-                raise (
-                    Exception(
-                        f"Could not download {app.title}, not http_path or local_path or Splunkbase Credentials provided"
-                    )
-                )
-
-        else:
-            # no need to do anything, the containers will download from splunkbase
-            pass
-    """
-    apps_to_download = [app for app in config.apps if app.must_download_from_splunkbase == True]
-    if len(apps_to_download) > 0:
-        print(f"Found {len(apps_to_download)} apps that we must download from Splunkbase....")
-        from external_libraries.download_splunkbase.download_splunkbase import download_all_apps
+    # Get all the other apps
+    for app in alphabetically_sorted_apps:
         try:
-            download_all_apps(config.splunkbase_username, config.splunkbase_password, apps_to_download, pathlib.Path(CONTAINER_APP_DIRECTORY))
+            get_app(app, CONTAINER_APP_PATH)
         except Exception as e:
-            import traceback
-            print(traceback.format_exc())
-            sys.exit(1)
-        print("done")
-    """
+            raise (
+                Exception(
+                    f"Could not download {app.title}, not http_path or local_path "
+                    f"or Splunkbase Credentials provided: [{str(e)}]"
+                )
+            )
+    print(f"[{len(config.apps)}] processed for installation")
 
 
 def main(config: TestConfig, detections: list[Detection]):
@@ -110,12 +141,10 @@ def main(config: TestConfig, detections: list[Detection]):
     # insecure warning every time due to invalid cert.
     requests.packages.urllib3.disable_warnings()
 
-    print("***This run will test [%d] detections!***" % (len(detections)))
-
     try:
         copy_local_apps_to_directory(config)
     except Exception as e:
-        print(f"Error download application(s): {str(e)}")
+        print(f"Error downloading application(s): {str(e)}")
         sys.exit(1)
 
     try:

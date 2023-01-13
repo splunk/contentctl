@@ -133,6 +133,7 @@ class GithubService:
             # Changes is ONLY possible if the app is version controlled
             # in a github repo.  Ensure that this is the case and, if not
             # raise an exception
+            raise (Exception("Mode [changes] is not yet supported."))
             try:
                 repo = git.Repo(config.repo_path)
             except Exception as e:

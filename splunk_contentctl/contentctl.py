@@ -4,7 +4,9 @@ import os
 
 import yaml
 
-
+from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
+    GithubService,
+)
 from splunk_contentctl.actions.validate import ValidateInputDto, Validate
 from splunk_contentctl.actions.generate import (
     GenerateInputDto,
@@ -84,7 +86,7 @@ def build(args) -> DirectorOutputDto:
 
     generate = Generate()
 
-    generate.execute(generate_input_dto)
+    return generate.execute(generate_input_dto)
 
 
 def inspect(args) -> None:
@@ -101,48 +103,45 @@ def deploy(args) -> None:
 
 def test(args):
     config = start(args)
+
+    # set some arguments that are not
+    # yet exposed/written properly in
+    # the config file
     test_config = TestConfig.parse_obj(
         {
-            "repo_path": args.path,
+            # "repo_path": args.path,
             "mode": args.mode,
             "post_test_behavior": args.behavior,
             "detections_list": args.detections_list,
         }
     )
 
-    from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
-        GithubService,
-    )
-
     # We do this before generating the app to save some time if options are incorrect.
+    # For example, if the detection(s) we are trying to test do not exist
     githubService = GithubService(test_config)
 
-    product_type = SecurityContentProduct.splunk_app
-    director_input_dto = DirectorInputDto(
-        input_path=os.path.abspath(args.path), product=product_type, config=config
+    director_output_dto = build(args)
+
+    # All this information will later come from the config, so we will
+    # be able to do it in Test().execute. For now, we will do it here
+    test_config.apps.append(
+        App(
+            uid=9999,
+            appid="my_custom_app",
+            title="my_custom_app",
+            release="1.0.0",
+            local_path=os.path.join(
+                os.path.abspath(args.path), f"{config.build.splunk_app.path}.tar.gz"
+            ),
+            description="some description",
+            http_path=None,
+            splunkbase_path=None,
+        )
     )
-    generate_input_dto = GenerateInputDto(director_input_dto)
 
-    generate = Generate()
+    detections = githubService.get_detections(director_output_dto)
 
-    director_output_dto = generate.execute(generate_input_dto)
-
-    app_path = os.path.join(
-        os.path.abspath(args.path), config.build.splunk_app.path + ".tar.gz"
-    )
-    a = App(
-        uid=9999,
-        appid="my_custom_app",
-        title="my_custom_app",
-        release="1.0.0",
-        local_path=app_path,
-        description="lame description",
-        http_path=None,
-        splunkbase_path=None,
-    )
-    test_config.apps.append(a)
-
-    Test().execute(test_config, director_output_dto)
+    Test().execute(test_config, detections)
 
 
 def validate(args) -> None:

@@ -130,16 +130,14 @@ def test(args):
             appid="my_custom_app",
             title="my_custom_app",
             release="1.0.0",
+            http_path=None,
             local_path=os.path.join(
                 os.path.abspath(args.path), f"{config.build.splunk_app.path}.tar.gz"
             ),
             description="some description",
-            http_path=None,
             splunkbase_path=None,
         )
     )
-
-    detections = githubService.get_detections(director_output_dto)
 
     Test().execute(test_config, detections)
 

@@ -13,6 +13,13 @@ import yaml
 from git.objects import base
 
 from splunk_contentctl.objects.detection import Detection
+from splunk_contentctl.objects.story import Story
+from splunk_contentctl.objects.baseline import Baseline
+from splunk_contentctl.objects.investigation import Investigation
+from splunk_contentctl.objects.playbook import Playbook
+from splunk_contentctl.objects.macro import Macro
+from splunk_contentctl.objects.lookup import Lookup
+from splunk_contentctl.objects.unit_test import UnitTest
 
 from splunk_contentctl.objects.enums import DetectionTestingMode
 import random
@@ -31,6 +38,43 @@ SSA_PREFIX = "ssa___"
 
 
 class GithubService:
+    def get_all_content(self, director: DirectorOutputDto) -> DirectorOutputDto:
+        # get a new director that will be used for testing.
+        return DirectorOutputDto(
+            self.get_detections(director),
+            self.get_stories(director),
+            self.get_baselines(director),
+            self.get_investigations(director),
+            self.get_playbooks(director),
+            self.get_macros(director),
+            self.get_lookups(director),
+            [],
+        )
+
+    def get_stories(self, director: DirectorOutputDto) -> list[Story]:
+        stories: list[Story] = []
+        return stories
+
+    def get_baselines(self, director: DirectorOutputDto) -> list[Baseline]:
+        baselines: list[Baseline] = []
+        return baselines
+
+    def get_investigations(self, director: DirectorOutputDto) -> list[Investigation]:
+        investigations: list[Investigation] = []
+        return investigations
+
+    def get_playbooks(self, director: DirectorOutputDto) -> list[Playbook]:
+        playbooks: list[Playbook] = []
+        return playbooks
+
+    def get_macros(self, director: DirectorOutputDto) -> list[Macro]:
+        macros: list[Macro] = []
+        return macros
+
+    def get_lookups(self, director: DirectorOutputDto) -> list[Lookup]:
+        lookups: list[Lookup] = []
+        return lookups
+
     def get_detections(self, director: DirectorOutputDto) -> list[Detection]:
         if self.config.mode == DetectionTestingMode.selected:
             return self.get_detections_selected(director)

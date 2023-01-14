@@ -286,7 +286,12 @@ class Utils:
         if destinationPath.is_file() and overwrite_file is False:
             print(f"Using cached version")
             return
+        elif destinationPath.is_file() and overwrite_file is True:
+            # Overwrite the file
+            pass
         elif destinationPath.exists():
+            # The path exists but it is not a file.  This is an issue
+            # regardless of whether or not overwrite_file is enabled
             print("Error")
             raise (
                 Exception(

@@ -32,7 +32,7 @@ from splunk_contentctl.objects.config import Config
 
 from splunk_contentctl.objects.app import App
 from splunk_contentctl.objects.test_config import TestConfig
-from splunk_contentctl.actions.test import Test
+from splunk_contentctl.actions.test import Test, TestInputDto
 
 
 def print_ascii_art():
@@ -139,7 +139,8 @@ def test(args):
         )
     )
 
-    Test().execute(test_config, detections)
+    test_input_dto = TestInputDto(director_output_dto, test_config, githubService)
+    Test().execute(test_input_dto)
 
 
 def validate(args) -> None:

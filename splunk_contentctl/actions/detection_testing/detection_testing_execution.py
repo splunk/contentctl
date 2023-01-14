@@ -31,24 +31,22 @@ from splunk_contentctl.objects.enums import DetectionTestingMode
 from splunk_contentctl.actions.generate import DirectorOutputDto
 import yaml
 from splunk_contentctl.objects.app import App
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingManager import (
+    DetectionTestingManager,
+)
 
 CONTAINER_APP_PATH = pathlib.Path("apps")
 
 
-
-
-
-def main(config: TestConfig, testDirector: DirectorOutputDto]):
+def main(config: TestConfig, testDirector: DirectorOutputDto):
     # Disable insecure warnings.  We make a number of HTTP requests to Splunk
     # docker containers that we've set up.  Without this line, we get an
     # insecure warning every time due to invalid cert.
 
     requests.packages.urllib3.disable_warnings()
     detections = testDirector.detections
-    try:
-        stage_apps(config)
-    except Exception as e:
-        raise (Exception(f"Error downloading application(s): {str(e)}"))
+
+    manager = DetectionTestingManager(config)
 
     try:
         cm = InstanceManager(config, detections)

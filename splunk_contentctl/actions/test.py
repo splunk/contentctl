@@ -26,5 +26,5 @@ class Test:
 
         main(input_dto.config, test_director)
 
-    def prepare_test_infrastructure(self, config: TestConfig, barrier: Barrier):
-        print("Preparing infrastructure")
+    # def prepare_test_infrastructure(self, config: TestConfig, barrier: Barrier):
+    #    print("Preparing infrastructure")

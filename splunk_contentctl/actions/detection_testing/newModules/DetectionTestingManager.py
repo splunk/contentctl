@@ -4,22 +4,72 @@ import pathlib
 import os
 from splunk_contentctl.helper.utils import Utils
 from urllib.parse import urlparse
+import time
 
 CONTAINER_APP_PATH = pathlib.Path("apps")
 
+from dataclasses import dataclass
+import threading
+import ctypes
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
+    DetectionTestingInfrastructure,
+)
+
+
+@dataclass(frozen=True)
+class DetectionTestingManagerInputDTO:
+    pass
+
+
+@dataclass(frozen=True)
+class DetectionTestingManagerOutputDTO:
+    pass
+
+
+def stubRun():
+    print("running container")
+    import time
+
+    time.sleep(120)
+
 
 class DetectionTestingManager:
+    detectionTestingInfrastructureObjects: list[DetectionTestingInfrastructure] = []
+
     def __init__(self, config: TestConfig):
         self.config = config
+
+        pass
+
+    def setup(self):
         self.stage_apps()
+        self.stage_apps()
+        self.create_DetectionTestingInfrastructureObjects()
+
+    def execute(self, tick_seconds: int = 1):
+        # Start all of the threads
+        for obj in self.detectionTestingInfrastructureObjects:
+            t = threading.Thread(obj.thread.run())
+
+        start_time = time.time()
+        try:
+            while True:
+                elapsed_time = time.time() - start_time
+                self.status(elapsed_time)
+                time.sleep(tick_seconds)
+        except Exception as e:
+            print("ERROR EXECUTING TEST")
+
+    def status(self, elapsed_time: float):
 
         pass
 
     def create_DetectionTestingInfrastructureObjects(self):
         pass
 
-    def createThreads(self):
-        pass
+    def runThreads(self):
+        for t in self.detectionTestingIngrastructureThreads:
+            t.run()
 
     def get_app_from_splunkbase(self, app: App, target_directory: pathlib.Path):
         print(f"App {app.title} will be downloaded by the container at runtime")
@@ -70,7 +120,7 @@ class DetectionTestingManager:
             )
 
     def stage_apps(self):
-
+        print("Preparing apps...")
         try:
             # Make sure the directory exists.  If it already did, that's okay. Don't delete anything from it
             # We want to re-use previously downloaded apps

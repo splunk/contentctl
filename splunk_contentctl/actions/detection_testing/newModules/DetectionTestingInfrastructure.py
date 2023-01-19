@@ -1,4 +1,9 @@
+import threading
+
+
 class DetectionTestingInfrastructure:
+    thread: threading.Thread
+
     def __init__(self):
         pass
 
@@ -9,4 +14,7 @@ class DetectionTestingInfrastructure:
         pass
 
     def status(self):
+        pass
+
+    def check_health(self):
         pass

@@ -7,24 +7,28 @@ from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
     GithubService,
 )
 
+from argparse import Namespace
+from splunk_contentctl.contentctl import build
+
 MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
 
 @dataclass(frozen=True)
 class TestInputDto:
     director_output_dto: DirectorOutputDto
-    config: TestConfig
     githubService: GithubService
+    config: TestConfig
+
+
+class TestOutputDto:
+    results: list
 
 
 class Test:
-    def execute(self, input_dto: TestInputDto) -> None:
+    def execute(self, input_dto: TestInputDto) -> TestOutputDto:
 
         test_director = input_dto.githubService.get_all_content(
             input_dto.director_output_dto
         )
 
         main(input_dto.config, test_director)
-
-    # def prepare_test_infrastructure(self, config: TestConfig, barrier: Barrier):
-    #    print("Preparing infrastructure")

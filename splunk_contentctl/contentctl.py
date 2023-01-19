@@ -32,7 +32,7 @@ from splunk_contentctl.objects.config import Config
 
 from splunk_contentctl.objects.app import App
 from splunk_contentctl.objects.test_config import TestConfig
-from splunk_contentctl.actions.test import Test, TestInputDto
+from splunk_contentctl.actions.test import Test, TestInputDto, TestOutputDto
 
 
 def print_ascii_art():
@@ -101,7 +101,7 @@ def deploy(args) -> None:
     deploy.execute(deploy_input_dto)
 
 
-def test(args):
+def test(args: argparse.Namespace) -> TestOutputDto:
     config = start(args)
 
     # set some arguments that are not
@@ -139,8 +139,14 @@ def test(args):
         )
     )
 
-    test_input_dto = TestInputDto(director_output_dto, test_config, githubService)
-    Test().execute(test_input_dto)
+    test_input_dto = TestInputDto(
+        director_output_dto=director_output_dto,
+        githubService=githubService,
+        config=test_config,
+    )
+    test = Test()
+    test_output_dto = test.execute(test_input_dto)
+    return test_output_dto
 
 
 def validate(args) -> None:

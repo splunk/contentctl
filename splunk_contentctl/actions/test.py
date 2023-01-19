@@ -7,6 +7,11 @@ from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
     GithubService,
 )
 
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingManager import (
+    DetectionTestingManager,
+)
+
+
 from argparse import Namespace
 from splunk_contentctl.contentctl import build
 
@@ -31,4 +36,5 @@ class Test:
             input_dto.director_output_dto
         )
 
-        main(input_dto.config, test_director)
+        DetectionTestingManager()
+        # main(input_dto.config, test_director)

@@ -14,6 +14,17 @@ import ctypes
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
 )
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewController import (
+    DetectionTestingViewController,
+)
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewWeb import (
+    DetectionTestingViewWeb,
+)
+
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewCLI import (
+    DetectionTestingViewCLI,
+)
+from pydantic import BaseModel
 
 
 @dataclass(frozen=True)
@@ -33,16 +44,14 @@ def stubRun():
     time.sleep(120)
 
 
-class DetectionTestingManager:
+class DetectionTestingManager(BaseModel):
     detectionTestingInfrastructureObjects: list[DetectionTestingInfrastructure] = []
-
-    def __init__(self, config: TestConfig):
-        self.config = config
-
-        pass
+    views: list[DetectionTestingViewController] = [
+        DetectionTestingViewCLI(),
+        DetectionTestingViewWeb(),
+    ]
 
     def setup(self):
-        self.stage_apps()
         self.stage_apps()
         self.create_DetectionTestingInfrastructureObjects()
 
@@ -54,6 +63,7 @@ class DetectionTestingManager:
         start_time = time.time()
         try:
             while True:
+                print("status tick")
                 elapsed_time = time.time() - start_time
                 self.status(elapsed_time)
                 time.sleep(tick_seconds)
@@ -61,15 +71,11 @@ class DetectionTestingManager:
             print("ERROR EXECUTING TEST")
 
     def status(self, elapsed_time: float):
-
-        pass
+        for view in self.views:
+            view.showStatus(elapsed_time)
 
     def create_DetectionTestingInfrastructureObjects(self):
         pass
-
-    def runThreads(self):
-        for t in self.detectionTestingIngrastructureThreads:
-            t.run()
 
     def get_app_from_splunkbase(self, app: App, target_directory: pathlib.Path):
         print(f"App {app.title} will be downloaded by the container at runtime")

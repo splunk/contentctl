@@ -138,8 +138,8 @@ The static validation performed by *contentctl validate* can only take you so fa
 graph TD
 SplunkContainer--start-->SplunkInstance
 SplunkServer-->SplunkInstance
-SplunkInstance--Install Apps-->ConfiguredServer
-SplunkInstance--Configure Settings-->ConfiguredServer
+SplunkInstance--Install Apps-->ConfiguredInstance
+SplunkInstance--Configure Settings-->ConfiguredInstance
 ContentPack--Deploy-->ConfiguredInstance
 ConfiguredInstance--Start Test-->Testing
 Testing--Test Detection-->Detection

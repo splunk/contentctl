@@ -3,14 +3,15 @@ from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView
     DetectionTestingViewController,
 )
 import tabulate
-
+from typing import Union
+from threading import Thread
 
 DEFAULT_WEB_UI_PORT = 9999
 
 
 class DetectionTestingViewWeb(DetectionTestingViewController):
-    refresh_count: int = 0
     bottleApp: Bottle = Bottle()
+    thread: Union[Thread, None] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -20,17 +21,20 @@ class DetectionTestingViewWeb(DetectionTestingViewController):
         self.bottleApp.route("/status", callback=self.showStatus)
         self.bottleApp.route("/results", callback=self.showResults)
         self.bottleApp.route("/report", callback=self.createReport)
-        self.bottleApp.run(host="localhost", port=9999)
 
-    def showStatus(self, elapsed_seconds: float = 60):
+        self.thread = Thread(
+            target=self.bottleApp.run,
+            kwargs={"host": "localhost", "port": 9999},
+            daemon=True,
+        )
+        # Must run the server as a thread in the background
+        self.thread.start()
+
+    def showStatus(self, elapsed_seconds: Union[float, None] = None):
+
         # Status updated on page load
         headers = ["Varaible Name", "Variable Value"]
-        data = [
-            ["Some Number", 0],
-            ["Some String", "this is a string"],
-            ["Refresh Count", self.refresh_count],
-        ]
-        self.refresh_count += 1
+        data = [["Some Number", 0], ["Some String", "this is a string"]]
         table = tabulate.tabulate(data, headers=headers, tablefmt="html")
         return template(table)
 

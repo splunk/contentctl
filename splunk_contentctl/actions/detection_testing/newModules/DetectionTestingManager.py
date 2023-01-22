@@ -5,6 +5,7 @@ import os
 from splunk_contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 import time
+from queue import Queue
 
 CONTAINER_APP_PATH = pathlib.Path("apps")
 
@@ -25,16 +26,8 @@ from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView
     DetectionTestingViewCLI,
 )
 from pydantic import BaseModel
-
-
-@dataclass(frozen=True)
-class DetectionTestingManagerInputDTO:
-    pass
-
-
-@dataclass(frozen=True)
-class DetectionTestingManagerOutputDTO:
-    pass
+from splunk_contentctl.input.director import DirectorOutputDto
+from splunk_contentctl.objects.detection import Detection
 
 
 def stubRun():
@@ -44,20 +37,49 @@ def stubRun():
     time.sleep(120)
 
 
+@dataclass(frozen=True)
+class DetectionTestingManagerInputDto:
+    detectionTestingInfrastructureObjects: list[DetectionTestingInfrastructure]
+    views: list[DetectionTestingViewController]
+    config: TestConfig
+    testContent: DirectorOutputDto
+    inputQueue: Queue[Detection] = Queue()
+    tick_seconds: float = 1
+
+
+@dataclass
+class DetectionTestingManagerOutputDto:
+    pass
+
+
 class DetectionTestingManager(BaseModel):
-    detectionTestingInfrastructureObjects: list[DetectionTestingInfrastructure] = []
-    views: list[DetectionTestingViewController] = [
-        DetectionTestingViewCLI(),
-        DetectionTestingViewWeb(),
-    ]
+    input_dto: DetectionTestingManagerInputDto
+    output_dto: DetectionTestingManagerOutputDto
+    pending_queue: Queue[Detection]
+    completed_queue: list
+
+    def __init__(self, output_dto: DetectionTestingManagerOutputDto):
+        self.output_dto = output_dto
 
     def setup(self):
+        # Some views, such as the Web View, will require some initial setup.
+        for view in self.input_dto.views:
+            view.setup()
+
         self.stage_apps()
+        for content in self.input_dto.testContent.detections:
+            self.pending_queue.put(content)
+
         self.create_DetectionTestingInfrastructureObjects()
 
-    def execute(self, tick_seconds: int = 1):
+    def execute(
+        self,
+        detectionTestingManagerInputDto: DetectionTestingManagerInputDto,
+    ) -> DetectionTestingManagerOutputDto:
+        self.input_dto = detectionTestingManagerInputDto
+
         # Start all of the threads
-        for obj in self.detectionTestingInfrastructureObjects:
+        for obj in self.input_dto.detectionTestingInfrastructureObjects:
             t = threading.Thread(obj.thread.run())
 
         start_time = time.time()
@@ -66,15 +88,21 @@ class DetectionTestingManager(BaseModel):
                 print("status tick")
                 elapsed_time = time.time() - start_time
                 self.status(elapsed_time)
-                time.sleep(tick_seconds)
+                time.sleep(self.input_dto.tick_seconds)
         except Exception as e:
             print("ERROR EXECUTING TEST")
 
-    def status(self, elapsed_time: float):
-        for view in self.views:
+        return DetectionTestingManagerOutputDto()
+
+    def status(
+        self,
+        elapsed_time: float,
+    ):
+        for view in self.input_dto.views:
             view.showStatus(elapsed_time)
 
     def create_DetectionTestingInfrastructureObjects(self):
+
         pass
 
     def get_app_from_splunkbase(self, app: App, target_directory: pathlib.Path):

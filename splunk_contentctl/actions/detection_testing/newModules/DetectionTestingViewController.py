@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 import abc
+from typing import Callable
 
 
 class DetectionTestingViewController(BaseModel, abc.ABC):

@@ -5,12 +5,14 @@ import os
 from splunk_contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 import time
-from queue import Queue
+
+# from queue import Queue
 
 CONTAINER_APP_PATH = pathlib.Path("apps")
 
 from dataclasses import dataclass
-import threading
+
+# import threading
 import ctypes
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
@@ -43,7 +45,7 @@ class DetectionTestingManagerInputDto:
     views: list[DetectionTestingViewController]
     config: TestConfig
     testContent: DirectorOutputDto
-    inputQueue: Queue[Detection] = Queue()
+    # inputQueue: Queue[Detection] = Queue()
     tick_seconds: float = 1
 
 
@@ -54,12 +56,12 @@ class DetectionTestingManagerOutputDto:
 
 class DetectionTestingManager(BaseModel):
     input_dto: DetectionTestingManagerInputDto
-    output_dto: DetectionTestingManagerOutputDto
-    pending_queue: Queue[Detection]
-    completed_queue: list
+    output_dto: DetectionTestingManagerOutputDto = DetectionTestingManagerOutputDto()
+    # pending_queue: Queue[Detection] = Queue()
+    completed_queue: list = []
 
-    def __init__(self, output_dto: DetectionTestingManagerOutputDto):
-        self.output_dto = output_dto
+    # def __init__(self, output_dto: DetectionTestingManagerOutputDto):
+    #    self.output_dto = output_dto
 
     def setup(self):
         # Some views, such as the Web View, will require some initial setup.
@@ -67,8 +69,8 @@ class DetectionTestingManager(BaseModel):
             view.setup()
 
         self.stage_apps()
-        for content in self.input_dto.testContent.detections:
-            self.pending_queue.put(content)
+        # for content in self.input_dto.testContent.detections:
+        #    self.pending_queue.put(content)
 
         self.create_DetectionTestingInfrastructureObjects()
 
@@ -79,8 +81,12 @@ class DetectionTestingManager(BaseModel):
         self.input_dto = detectionTestingManagerInputDto
 
         # Start all of the threads
-        for obj in self.input_dto.detectionTestingInfrastructureObjects:
-            t = threading.Thread(obj.thread.run())
+        # for obj in self.input_dto.detectionTestingInfrastructureObjects:
+        #    t = threading.Thread(obj.thread.run())
+
+        i = DetectionTestingInfrastructure(config=self.input_dto.config)
+        i.configure_imported_roles()
+        i.configure_delete_indexes()
 
         start_time = time.time()
         try:
@@ -167,7 +173,9 @@ class DetectionTestingManager(BaseModel):
                 )
             )
 
-        alphabetically_sorted_apps = sorted(self.config.apps, key=lambda a: a.title)
+        alphabetically_sorted_apps = sorted(
+            self.input_dto.config.apps, key=lambda a: a.title
+        )
 
         # Get all the other apps
         app_exceptions: list[str] = []
@@ -180,7 +188,7 @@ class DetectionTestingManager(BaseModel):
                 )
         if len(app_exceptions) == 0:
             print(
-                f"[{len(self.config.apps)}] apps processed successfully for installation"
+                f"[{len(self.input_dto.config.apps)}] apps processed successfully for installation"
             )
             return
         else:

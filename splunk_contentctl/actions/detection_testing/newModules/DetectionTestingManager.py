@@ -87,6 +87,7 @@ class DetectionTestingManager(BaseModel):
         i = DetectionTestingInfrastructure(config=self.input_dto.config)
         i.configure_imported_roles()
         i.configure_delete_indexes()
+        i.configure_conf_file_datamodels()
 
         start_time = time.time()
         try:

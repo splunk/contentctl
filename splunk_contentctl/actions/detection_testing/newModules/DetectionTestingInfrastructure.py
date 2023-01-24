@@ -8,6 +8,8 @@ from splunk_contentctl.objects.test_config import TestConfig
 
 from typing import Union
 import configparser
+from ssl import SSLEOFError
+import time
 
 
 class DetectionTestingInfrastructure(BaseModel, abc.ABC):
@@ -29,13 +31,36 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def connect_to_api(self):
 
-        test_instance_api_port = 8089
-        self._conn = client.connect(
-            host=self.config.test_instance_address,
-            port=test_instance_api_port,
-            username=self.config.splunk_app_username,
-            password=self.config.splunk_app_password,
-        )
+        while True:
+            time.sleep(5)
+            try:
+                test_instance_api_port = 8089
+                conn = client.connect(
+                    host=self.config.test_instance_address,
+                    port=test_instance_api_port,
+                    username=self.config.splunk_app_username,
+                    password=self.config.splunk_app_password,
+                )
+                if conn.restart_required:
+                    # we will wait and try again
+                    print("there is a pending restart")
+                    continue
+                # Finished setup
+                self._conn = conn
+                return
+            except ConnectionRefusedError as e:
+                raise (e)
+            except SSLEOFError as e:
+                print(
+                    "Waiting to connect to Splunk Infrastructure for Configuration..."
+                )
+            except Exception as e:
+                print(
+                    f"Unhandled exception getting connection to splunk server: {str(e)}"
+                )
+                import sys
+
+                sys.exit(1)
 
     def configure_imported_roles(
         self, imported_roles: list[str] = ["user", "power", "can_delete"]
@@ -55,7 +80,18 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 f"Error configuring deleteIndexesAllowed with '{indexes_encoded}': [{str(e)}]"
             )
 
+    def wait_for_conf_file(self, app_name: str, conf_file_name: str):
+        while True:
+            time.sleep(1)
+            try:
+                res = self._conn.get(f"configs/conf-{conf_file_name}", app=app_name)
+                print(f"configs/conf-{conf_file_name} exists")
+                return
+            except Exception as e:
+                print(f"Waiting for [{app_name} - {conf_file_name}.conf: {str(e)}")
+
     def configure_conf_file_datamodels(self, APP_NAME: str = "Splunk_SA_CIM"):
+        self.wait_for_conf_file(APP_NAME, "datamodels")
 
         parser = configparser.ConfigParser()
         parser.read("/tmp/datamodels.conf")

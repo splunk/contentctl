@@ -1,6 +1,5 @@
 
 # Splunk Contentctl
-![logo](docs/contentctl-logo.png)
 =====
 
 

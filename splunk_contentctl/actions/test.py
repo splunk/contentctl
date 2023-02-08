@@ -9,11 +9,13 @@ from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
 
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingManager import (
     DetectionTestingManager,
+    DetectionTestingManagerOutputDto,
+    DetectionTestingManagerInputDto,
 )
 
 
 from argparse import Namespace
-from splunk_contentctl.contentctl import build
+
 
 MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
@@ -36,5 +38,18 @@ class Test:
             input_dto.director_output_dto
         )
 
-        DetectionTestingManager()
+        output_dto = DetectionTestingManagerOutputDto()
+        manager_input_dto = DetectionTestingManagerInputDto(
+            config=input_dto.config,
+            testContent=test_director,
+        )
+        manager = DetectionTestingManager(
+            input_dto=manager_input_dto, output_dto=output_dto
+        )
+
+        manager.setup()
+        manager.execute()
+        t = TestOutputDto()
+
+        return t
         # main(input_dto.config, test_director)

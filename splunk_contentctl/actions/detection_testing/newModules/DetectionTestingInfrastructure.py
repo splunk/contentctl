@@ -4,17 +4,30 @@ import abc
 import requests
 import splunklib.client as client
 
-from splunk_contentctl.objects.test_config import TestConfig
+from splunk_contentctl.objects.test_config import (
+    TestConfig,
+    CONTAINER_APP_DIR,
+    LOCAL_APP_DIR,
+)
 
 from typing import Union
 import configparser
 from ssl import SSLEOFError
 import time
+import uuid
+import docker
+import docker.models
+import docker.models.resource
+import docker.models.containers
+import docker.types
+import os
 
 
 class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     # thread: threading.Thread = threading.Thread()
     config: TestConfig
+    hec_token: str
+    hec_channel: str
     _conn: client.Service = PrivateAttr()
 
     class Config:
@@ -23,21 +36,71 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def __init__(self, **data):
         super().__init__(**data)
 
+    def start(self):
+        raise (
+            NotImplementedError(
+                "start() is not implemented for Abstract Type DetectionTestingInfrastructure"
+            )
+        )
+
+    def get_name(self) -> str:
+        raise (
+            NotImplementedError(
+                "get_name() is not implemented for Abstract Type DetectionTestingInfrastructure"
+            )
+        )
+
     def setup(self):
+        self.start()
         self.connect_to_api()
         self.configure_imported_roles()
         self.configure_delete_indexes()
         self.configure_conf_file_datamodels()
+        self.configure_hec()
+
+    def configure_hec(self):
+
+        self.channel = str(uuid.uuid4())
+        try:
+            res = self._conn.input(
+                path="/servicesNS/nobody/splunk_httpinput/data/inputs/http/http:%2F%2FDETECTION_TESTING_HEC"
+            )
+            self.hec_token = str(res.token)
+            print(
+                f"HEC Endpoint for [{self.get_name()}] already exists with token [{self.hec_token}].  Using channel [{self.hec_channel}]"
+            )
+            return
+        except Exception as e:
+            # HEC input does not exist.  That's okay, we will create it
+            pass
+
+        try:
+
+            res = self._conn.inputs.create(
+                name="DETECTION_TESTING_HEC",
+                kind="http",
+                index="main",
+                indexes="main,_internal,_audit",
+                useACK=True,
+            )
+            self.hec_token = str(res.token)
+            print(
+                f"Successfully configured HEC Endpoint for [{self.get_name()}] with token [{self.hec_token}] and channel [{self.hec_channel}]"
+            )
+            return
+
+        except Exception as e:
+            raise (Exception(f"Failure creating HEC Endpoint: {str(e)}"))
 
     def connect_to_api(self):
 
         while True:
             time.sleep(5)
             try:
-                test_instance_api_port = 8089
+
                 conn = client.connect(
                     host=self.config.test_instance_address,
-                    port=test_instance_api_port,
+                    port=self.config.api_port,
                     username=self.config.splunk_app_username,
                     password=self.config.splunk_app_password,
                 )
@@ -121,3 +184,90 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def check_health(self):
         pass
+
+
+class DetectionTestingContainer(DetectionTestingInfrastructure):
+    container: docker.models.resource.Model
+
+    def start(self):
+        self.container = self.make_container()
+        self.container.start()
+
+    def get_name(self) -> str:
+        return self.config.container_name
+
+    def get_docker_client(self):
+        try:
+            c = docker.client.from_env()
+
+            return c
+        except Exception as e:
+            raise (Exception(f"Failed to get docker client: {str(e)}"))
+
+    def make_container(self) -> docker.models.resource.Model:
+        # First, make sure that the container has been removed if it already existed
+        self.removeContainer()
+
+        ports_dict = {
+            "8000/tcp": self.config.web_ui_port,
+            "8088/tcp": self.config.api_port,
+            "8089/tcp": self.config.hec_port,
+        }
+
+        mounts = [
+            docker.types.Mount(
+                source=LOCAL_APP_DIR.absolute(),
+                target=CONTAINER_APP_DIR.absolute(),
+                type="bind",
+                read_only=True,
+            )
+        ]
+
+        environment = {}
+        environment["SPLUNK_START_ARGS"] = "--accept-license"
+        environment["SPLUNK_PASSWORD"] = self.config.splunk_app_password
+        environment["SPLUNK_APPS_URL"] = ",".join(
+            p.environment_path for p in self.config.apps
+        )
+        if (
+            self.config.splunkbase_password is not None
+            and self.config.splunkbase_username is not None
+        ):
+            environment["SPLUNKBASE_USERNAME"] = self.config.splunkbase_username
+            environment["SPLUNKBASE_PASSWORD"] = self.config.splunkbase_password
+
+        container = self.get_docker_client().containers.create(
+            self.config.full_image_path,
+            ports=ports_dict,
+            environment=environment,
+            name=self.get_name(),
+            mounts=mounts,
+            detach=True,
+        )
+
+        return container
+
+    def removeContainer(self, removeVolumes: bool = True, forceRemove: bool = True):
+
+        try:
+            container: docker.models.containers.Container = (
+                self.get_docker_client().containers.get(self.get_name())
+            )
+        except Exception as e:
+            # Container does not exist, no need to try and remove it
+            return
+        try:
+            print("Removing container")
+            # container was found, so now we try to remove it
+            # v also removes volumes linked to the container
+            container.remove(v=removeVolumes, force=forceRemove)
+            # remove it even if it is running. remove volumes as well
+            # No need to print that the container has been removed, it is expected behavior
+            print("Container removed")
+
+        except Exception as e:
+            raise (
+                Exception(
+                    f"Could not remove Docker Container [{self.config.container_name}]: {str(e)}"
+                )
+            )

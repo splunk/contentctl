@@ -24,13 +24,7 @@ from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfr
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewController import (
     DetectionTestingViewController,
 )
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewWeb import (
-    DetectionTestingViewWeb,
-)
 
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewCLI import (
-    DetectionTestingViewCLI,
-)
 from pydantic import BaseModel
 from splunk_contentctl.input.director import DirectorOutputDto
 from splunk_contentctl.objects.detection import Detection
@@ -43,20 +37,17 @@ def stubRun():
     time.sleep(120)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class DetectionTestingManagerInputDto:
     config: TestConfig
     testContent: DirectorOutputDto
-    views: list[DetectionTestingViewController] = [
-        DetectionTestingViewWeb(),
-        DetectionTestingViewCLI(),
-    ]
+    views: list[DetectionTestingViewController]
     tick_seconds: float = 1
 
 
 @dataclass
 class DetectionTestingManagerOutputDto:
-    outputQueue: list[Detection] = []
+    outputQueue: list[Detection]
 
 
 class DetectionTestingManager(BaseModel):

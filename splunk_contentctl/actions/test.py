@@ -12,7 +12,13 @@ from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingMana
     DetectionTestingManagerOutputDto,
     DetectionTestingManagerInputDto,
 )
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewWeb import (
+    DetectionTestingViewWeb,
+)
 
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewCLI import (
+    DetectionTestingViewCLI,
+)
 
 from argparse import Namespace
 
@@ -38,10 +44,14 @@ class Test:
             input_dto.director_output_dto
         )
 
-        output_dto = DetectionTestingManagerOutputDto()
+        output_dto = DetectionTestingManagerOutputDto(outputQueue=[])
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,
             testContent=test_director,
+            views=[
+                DetectionTestingViewWeb(),
+                DetectionTestingViewCLI(),
+            ],
         )
         manager = DetectionTestingManager(
             input_dto=manager_input_dto, output_dto=output_dto

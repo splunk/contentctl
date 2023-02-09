@@ -26,8 +26,8 @@ import os
 class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     # thread: threading.Thread = threading.Thread()
     config: TestConfig
-    hec_token: str
-    hec_channel: str
+    hec_token: str = None
+    hec_channel: str = None
     _conn: client.Service = PrivateAttr()
 
     class Config:
@@ -187,7 +187,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
 
 class DetectionTestingContainer(DetectionTestingInfrastructure):
-    container: docker.models.resource.Model
+    container: docker.models.resource.Model = None
 
     def start(self):
         self.container = self.make_container()
@@ -216,8 +216,8 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
 
         mounts = [
             docker.types.Mount(
-                source=LOCAL_APP_DIR.absolute(),
-                target=CONTAINER_APP_DIR.absolute(),
+                source=str(LOCAL_APP_DIR.absolute()),
+                target=str(CONTAINER_APP_DIR.absolute()),
                 type="bind",
                 read_only=True,
             )
@@ -236,6 +236,10 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
             environment["SPLUNKBASE_USERNAME"] = self.config.splunkbase_username
             environment["SPLUNKBASE_PASSWORD"] = self.config.splunkbase_password
 
+        import pprint
+
+        pprint.pprint(environment)
+        sys.exit(0)
         container = self.get_docker_client().containers.create(
             self.config.full_image_path,
             ports=ports_dict,

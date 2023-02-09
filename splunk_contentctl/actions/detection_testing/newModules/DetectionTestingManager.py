@@ -1,6 +1,7 @@
 from splunk_contentctl.objects.test_config import TestConfig
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
+    DetectionTestingContainer,
 )
 from splunk_contentctl.objects.app import App
 import pathlib
@@ -9,6 +10,7 @@ from splunk_contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 import time
 from copy import deepcopy
+from splunk_contentctl.objects.enums import DetectionTestingTargetInfrastructure
 
 # from queue import Queue
 
@@ -99,9 +101,30 @@ class DetectionTestingManager(BaseModel):
             instanceConfig.api_port += instance_index
             instanceConfig.web_ui_port += instance_index
             instanceConfig.hec_port += instance_index
-            instanceConfig.container_name = instanceConfig.container_name.format(
+            instanceConfig.container_name = instanceConfig.container_name % (
                 instance_index
             )
-            self.detectionTestingInfrastructureObjects.append(
-                DetectionTestingInfrastructure(config=instanceConfig)
-            )
+
+            if (
+                self.input_dto.config.target_infrastructure
+                == DetectionTestingTargetInfrastructure.container
+            ):
+                self.detectionTestingInfrastructureObjects.append(
+                    DetectionTestingContainer(config=instanceConfig)
+                )
+
+            elif (
+                self.input_dto.config.target_infrastructure
+                == DetectionTestingTargetInfrastructure.server
+            ):
+                import sys
+
+                print("server support not yet implemented")
+                sys.exit(1)
+            else:
+                import sys
+
+                print(
+                    f"Unsupported target infrastructure '{self.input_dto.config.target_infrastructure}'"
+                )
+                sys.exit(1)

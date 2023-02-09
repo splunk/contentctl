@@ -124,20 +124,20 @@ def test(args: argparse.Namespace) -> TestOutputDto:
 
     # All this information will later come from the config, so we will
     # be able to do it in Test().execute. For now, we will do it here
-    test_config.apps.append(
-        App(
-            uid=9999,
-            appid="my_custom_app",
-            title="my_custom_app",
-            release="1.0.0",
-            http_path=None,
-            local_path=os.path.join(
-                os.path.abspath(args.path), f"{config.build.splunk_app.path}.tar.gz"
-            ),
-            description="some description",
-            splunkbase_path=None,
-        )
+    app = App(
+        uid=9999,
+        appid="my_custom_app",
+        title="my_custom_app",
+        release="1.0.0",
+        http_path=None,
+        local_path=os.path.join(
+            os.path.abspath(args.path), f"{config.build.splunk_app.path}.tar.gz"
+        ),
+        description="some description",
+        splunkbase_path=None,
     )
+
+    test_config.apps.append(app)
 
     test_input_dto = TestInputDto(
         director_output_dto=director_output_dto,

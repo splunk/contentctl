@@ -236,10 +236,6 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
             environment["SPLUNKBASE_USERNAME"] = self.config.splunkbase_username
             environment["SPLUNKBASE_PASSWORD"] = self.config.splunkbase_password
 
-        import pprint
-
-        pprint.pprint(environment)
-        sys.exit(0)
         container = self.get_docker_client().containers.create(
             self.config.full_image_path,
             ports=ports_dict,

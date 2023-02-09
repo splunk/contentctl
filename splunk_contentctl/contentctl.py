@@ -137,7 +137,10 @@ def test(args: argparse.Namespace) -> TestOutputDto:
         splunkbase_path=None,
     )
 
-    test_config.apps.append(app)
+    # We need to do this instead of appending to retrigger validation.
+    # It does not happen the first time since validation does not run for default values
+    # unless we use always=True in the validator
+    test_config.apps += [app]
 
     test_input_dto = TestInputDto(
         director_output_dto=director_output_dto,

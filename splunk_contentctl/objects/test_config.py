@@ -42,7 +42,7 @@ def getTestConfigFromYMLFile(path: pathlib.Path):
         print(f"Error loading test configuration file '{path}': {str(e)}")
 
 
-class TestConfig(BaseModel, extra=Extra.forbid):
+class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
     repo_path: str = Field(default=".", title="Path to the root of your app")
     repo_url: Union[str, None] = Field(
         default=None,
@@ -128,6 +128,9 @@ class TestConfig(BaseModel, extra=Extra.forbid):
     @validator("hec_port", "web_ui_port", "api_port", each_item=False)
     def validate_ports_overlap(cls, v):
         global PREVIOUSLY_ALLOCATED_PORTS
+        if type(v) is not list:
+            # Otherwise this throws error when we update a single field
+            return v
         if len(set(v)) != len(v):
             raise (ValueError(f"Duplicate ports detected: [{v}]"))
 
@@ -460,7 +463,7 @@ class TestConfig(BaseModel, extra=Extra.forbid):
         else:
             return v
 
-    @validator("apps", always=True)
+    @validator("apps")
     def validate_apps(cls, v, values):
         Utils.check_required_fields(
             "repo_url", values, ["splunkbase_username", "splunkbase_password"]

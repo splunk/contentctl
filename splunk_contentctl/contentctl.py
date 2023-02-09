@@ -140,7 +140,8 @@ def test(args: argparse.Namespace) -> TestOutputDto:
     # We need to do this instead of appending to retrigger validation.
     # It does not happen the first time since validation does not run for default values
     # unless we use always=True in the validator
-    test_config.apps += [app]
+    # we always want to keep CIM as the last app installed
+    test_config.apps = [app] + test_config.apps
 
     test_input_dto = TestInputDto(
         director_output_dto=director_output_dto,

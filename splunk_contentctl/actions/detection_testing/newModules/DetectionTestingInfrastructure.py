@@ -52,17 +52,22 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def setup(self):
         self.start()
-        self.connect_to_api()
+        self.get_conn()
         self.configure_imported_roles()
         self.configure_delete_indexes()
         self.configure_conf_file_datamodels()
         self.configure_hec()
+        self.wait_for_ui_ready()
+
+    def wait_for_ui_ready(self):
+        print("waiting for ui...")
+        self.get_conn()
+        print("done waiting for ui")
 
     def configure_hec(self):
-
-        self.channel = str(uuid.uuid4())
+        self.hec_channel = str(uuid.uuid4())
         try:
-            res = self._conn.input(
+            res = self.get_conn().input(
                 path="/servicesNS/nobody/splunk_httpinput/data/inputs/http/http:%2F%2FDETECTION_TESTING_HEC"
             )
             self.hec_token = str(res.token)
@@ -92,8 +97,20 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except Exception as e:
             raise (Exception(f"Failure creating HEC Endpoint: {str(e)}"))
 
-    def connect_to_api(self):
+    def get_conn(self) -> client.Service:
+        try:
+            if not self._conn:
+                self.connect_to_api()
+            elif self._conn.restart_required:
+                # continue trying to re-establish a connection until after
+                # the server has restarted
+                self.connect_to_api()
+        except Exception as e:
+            # there was some issue getting the connection. Try again just once
+            self.connect_to_api()
+        return self._conn
 
+    def connect_to_api(self):
         while True:
             time.sleep(5)
             try:
@@ -104,6 +121,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     username=self.config.splunk_app_username,
                     password=self.config.splunk_app_password,
                 )
+
                 if conn.restart_required:
                     # we will wait and try again
                     print("there is a pending restart")
@@ -121,9 +139,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 print(
                     f"Unhandled exception getting connection to splunk server: {str(e)}"
                 )
-                import sys
-
-                sys.exit(1)
 
     def configure_imported_roles(
         self, imported_roles: list[str] = ["user", "power", "can_delete"]
@@ -161,7 +176,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         for datamodel_name in parser:
             if datamodel_name == "DEFAULT":
-                print("Skipping the default for ConfigParser")
+                # Skip the DEFAULT section for configparser
                 continue
             for name, value in parser[datamodel_name].items():
                 try:
@@ -210,8 +225,8 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
 
         ports_dict = {
             "8000/tcp": self.config.web_ui_port,
-            "8088/tcp": self.config.api_port,
-            "8089/tcp": self.config.hec_port,
+            "8088/tcp": self.config.hec_port,
+            "8089/tcp": self.config.api_port,
         }
 
         mounts = [

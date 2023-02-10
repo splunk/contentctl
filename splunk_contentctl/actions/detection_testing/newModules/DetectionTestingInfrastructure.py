@@ -223,8 +223,7 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
     def make_container(self) -> docker.models.resource.Model:
         # First, make sure that the container has been removed if it already existed
         self.removeContainer()
-        print(f"In create hec {self.config.hec_port}")
-        print(f"In create api {self.config.api_port}")
+
         ports_dict = {
             "8000/tcp": self.config.web_ui_port,
             "8088/tcp": self.config.hec_port,

@@ -20,3 +20,7 @@ class DetectionTestingViewCLI(DetectionTestingViewController):
 
     def createReport(self):
         pass
+
+    def stop(self):
+        print("stopping cli")
+        pass

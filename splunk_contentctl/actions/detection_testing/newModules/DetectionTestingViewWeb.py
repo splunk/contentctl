@@ -1,17 +1,36 @@
-from bottle import route, run, template, Bottle
+from bottle import route, run, template, Bottle, ServerAdapter
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewController import (
     DetectionTestingViewController,
 )
 import tabulate
 from typing import Union
-from threading import Thread
+from wsgiref.simple_server import make_server, WSGIRequestHandler
 
-DEFAULT_WEB_UI_PORT = 9999
+
+DEFAULT_WEB_UI_PORT = 8000
+
+
+class SimpleWebServer(ServerAdapter):
+    server = None
+
+    def run(self, handler):
+        class DontLog(WSGIRequestHandler):
+            def log_request(*args, **kwargs):
+                pass
+
+            def log_exception(*args, **kwargs):
+                print(f"Exception in Web View:\n\tARGS:{args}\n\t{kwargs}")
+
+        self.options["handler_class"] = DontLog
+        self.server = make_server(
+            "localhost", DEFAULT_WEB_UI_PORT, handler, **self.options
+        )
+        self.server.serve_forever()
 
 
 class DetectionTestingViewWeb(DetectionTestingViewController):
     bottleApp: Bottle = Bottle()
-    thread: Union[Thread, None] = None
+    server: SimpleWebServer = SimpleWebServer()
 
     class Config:
         arbitrary_types_allowed = True
@@ -22,16 +41,14 @@ class DetectionTestingViewWeb(DetectionTestingViewController):
         self.bottleApp.route("/results", callback=self.showResults)
         self.bottleApp.route("/report", callback=self.createReport)
 
-        self.thread = Thread(
-            target=self.bottleApp.run,
-            kwargs={"host": "localhost", "port": 9999},
-            daemon=True,
-        )
-        # Must run the server as a thread in the background
-        self.thread.start()
+        print("Start bottle app")
+        self.bottleApp.run(server=self.server)
+
+    def stop(self):
+        self.server.server.shutdown()
 
     def showStatus(self, elapsed_seconds: Union[float, None] = None):
-
+        print("run show status")
         # Status updated on page load
         headers = ["Varaible Name", "Variable Value"]
         data = [["Some Number", 0], ["Some String", "this is a string"]]
@@ -40,8 +57,8 @@ class DetectionTestingViewWeb(DetectionTestingViewController):
 
     def showResults(self):
         # Results generated on page load
-        return template("results for {{status}}", status="RESULTS")
+        return template("page for {{status}}", status="RESULTS")
 
     def createReport(self):
         # Report generated on page load
-        return template("results for {{status}}", status="REPORT")
+        return template("page for {{status}}", status="REPORT")

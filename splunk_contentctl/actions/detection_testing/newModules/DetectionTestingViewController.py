@@ -10,6 +10,9 @@ class DetectionTestingViewController(BaseModel, abc.ABC):
     def setup(self):
         pass
 
+    def stop(self):
+        pass
+
     def showStatus(self, elapsed_seconds: float):
         pass
 

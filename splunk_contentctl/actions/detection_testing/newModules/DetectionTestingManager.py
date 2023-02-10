@@ -59,22 +59,46 @@ class DetectionTestingManager(BaseModel):
 
     def setup(self):
         # Some views, such as the Web View, will require some initial setup.
-        for view in self.input_dto.views:
-            view.setup()
+        # for view in self.input_dto.views:
+        #    view.setup()
 
         # for content in self.input_dto.testContent.detections:
         #    self.pending_queue.put(content)
 
-        self.create_DetectionTestingInfrastructureObjects()
+        # self.create_DetectionTestingInfrastructureObjects()
+        pass
 
     def execute(self) -> DetectionTestingManagerOutputDto:
 
         # Start all of the threads
         # for obj in self.input_dto.detectionTestingInfrastructureObjects:
         #    t = threading.Thread(obj.thread.run())
+        import concurrent.futures
 
+        self.input_dto.config.num_containers = 4
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.input_dto.config.num_containers
+        ) as executor:
+            future_instances = {
+                executor.submit(
+                    self.create_DetectionTestingInfrastructureObjects, index
+                ): index
+                for index in range(self.input_dto.config.num_containers)
+            }
+            print("now we wait for completion")
+            for future in concurrent.futures.as_completed(future_instances):
+                print(f"Finished running {future}")
+                try:
+                    result = future.result()
+                except Exception as e:
+                    print(f"Error running container: {str(e)}")
+
+        """
         for obj in self.detectionTestingInfrastructureObjects:
-            obj.setup()
+            import threading
+
+            t = threading.Thread(target=obj.setup, daemon=True)
+            t.start()
 
         start_time = time.time()
         try:
@@ -85,7 +109,10 @@ class DetectionTestingManager(BaseModel):
                 time.sleep(self.input_dto.tick_seconds)
         except Exception as e:
             print("ERROR EXECUTING TEST")
+        """
+        import sys
 
+        sys.exit(0)
         return DetectionTestingManagerOutputDto()
 
     def status(
@@ -95,36 +122,33 @@ class DetectionTestingManager(BaseModel):
         for view in self.input_dto.views:
             view.showStatus(elapsed_time)
 
-    def create_DetectionTestingInfrastructureObjects(self):
-        for instance_index in range(self.input_dto.config.num_containers):
-            instanceConfig = deepcopy(self.input_dto.config)
-            instanceConfig.api_port += instance_index
-            instanceConfig.web_ui_port += instance_index
-            instanceConfig.hec_port += instance_index
-            instanceConfig.container_name = instanceConfig.container_name % (
-                instance_index
+    def create_DetectionTestingInfrastructureObjects(self, index: int):
+        import sys
+
+        instanceConfig = deepcopy(self.input_dto.config)
+        instanceConfig.api_port += index * 2
+        instanceConfig.hec_port += index * 2
+        instanceConfig.web_ui_port += index
+
+        instanceConfig.container_name = instanceConfig.container_name % (index,)
+
+        if (
+            self.input_dto.config.target_infrastructure
+            == DetectionTestingTargetInfrastructure.container
+        ):
+
+            d = DetectionTestingContainer(config=instanceConfig).setup()
+
+        elif (
+            self.input_dto.config.target_infrastructure
+            == DetectionTestingTargetInfrastructure.server
+        ):
+
+            print("server support not yet implemented")
+            sys.exit(1)
+        else:
+
+            print(
+                f"Unsupported target infrastructure '{self.input_dto.config.target_infrastructure}'"
             )
-
-            if (
-                self.input_dto.config.target_infrastructure
-                == DetectionTestingTargetInfrastructure.container
-            ):
-                self.detectionTestingInfrastructureObjects.append(
-                    DetectionTestingContainer(config=instanceConfig)
-                )
-
-            elif (
-                self.input_dto.config.target_infrastructure
-                == DetectionTestingTargetInfrastructure.server
-            ):
-                import sys
-
-                print("server support not yet implemented")
-                sys.exit(1)
-            else:
-                import sys
-
-                print(
-                    f"Unsupported target infrastructure '{self.input_dto.config.target_infrastructure}'"
-                )
-                sys.exit(1)
+            sys.exit(1)

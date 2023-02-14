@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from splunk_contentctl.objects.test_config import TestConfig
-from splunk_contentctl.actions.detection_testing.detection_testing_execution import main
+
 from splunk_contentctl.input.director import DirectorOutputDto
 from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
     GithubService,
@@ -9,9 +9,15 @@ from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
 
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingManager import (
     DetectionTestingManager,
-    DetectionTestingManagerOutputDto,
     DetectionTestingManagerInputDto,
 )
+
+
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
+    DetectionTestingManagerOutputDto,
+)
+
+
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewWeb import (
     DetectionTestingViewWeb,
 )
@@ -44,13 +50,14 @@ class Test:
             input_dto.director_output_dto
         )
 
-        output_dto = DetectionTestingManagerOutputDto(outputQueue=[])
+        output_dto = DetectionTestingManagerOutputDto()
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,
             testContent=test_director,
             views=[
                 DetectionTestingViewWeb(),
                 DetectionTestingViewCLI(),
+                # DetectionTestingViewFile()
             ],
         )
         manager = DetectionTestingManager(
@@ -59,6 +66,7 @@ class Test:
 
         manager.setup()
         manager.execute()
+
         t = TestOutputDto()
 
         return t

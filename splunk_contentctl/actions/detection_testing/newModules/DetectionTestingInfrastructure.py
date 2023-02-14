@@ -1,14 +1,18 @@
 import threading
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, PrivateAttr, Field
+from dataclasses import dataclass
 import abc
 import requests
 import splunklib.client as client
-
+from splunk_contentctl.objects.detection import Detection
+from splunk_contentctl.objects.unit_test_test import UnitTestTest
+from splunk_contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from splunk_contentctl.objects.test_config import (
     TestConfig,
     CONTAINER_APP_DIR,
     LOCAL_APP_DIR,
 )
+from shutil import copyfile
 
 from typing import Union
 import configparser
@@ -21,11 +25,28 @@ import docker.models.resource
 import docker.models.containers
 import docker.types
 import os
+import sys
+from tempfile import TemporaryDirectory, mktemp
+import pathlib
+from splunk_contentctl.helper.utils import Utils
+from splunk_contentctl.actions.detection_testing.modules.DataManipulation import (
+    DataManipulation,
+)
+
+
+@dataclass(frozen=False)
+class DetectionTestingManagerOutputDto:
+    inputQueue: list[Detection] = Field(default_factory=list)
+    outputQueue: list[Detection] = Field(default_factory=list)
+    replay_index: str = "main"
+    replay_host: str = "CONTENTCTL_HOST"
+    terminate: bool = False
 
 
 class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     # thread: threading.Thread = threading.Thread()
     config: TestConfig
+    sync_obj: DetectionTestingManagerOutputDto
     hec_token: str = None
     hec_channel: str = None
     _conn: client.Service = PrivateAttr()
@@ -51,13 +72,22 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         )
 
     def setup(self):
-        self.start()
-        self.get_conn()
-        self.configure_imported_roles()
-        self.configure_delete_indexes()
-        self.configure_conf_file_datamodels()
-        self.configure_hec()
-        self.wait_for_ui_ready()
+        try:
+            for func in [
+                self.start,
+                self.get_conn,
+                self.configure_imported_roles,
+                self.configure_delete_indexes,
+                self.configure_conf_file_datamodels,
+                self.configure_hec,
+                self.wait_for_ui_ready,
+            ]:
+                self.check_for_teardown()
+                func()
+        except Exception as e:
+            print(e)
+            return
+
         print("Finished and ready!")
 
     def wait_for_ui_ready(self):
@@ -82,7 +112,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         try:
 
-            res = self._conn.inputs.create(
+            res = self.get_conn().inputs.create(
                 name="DETECTION_TESTING_HEC",
                 kind="http",
                 index="main",
@@ -111,8 +141,16 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.connect_to_api()
         return self._conn
 
+    def check_for_teardown(self):
+        # Make sure we can easily quit during setup if we need to.
+        # Some of these stages can take a long time
+        if self.sync_obj.terminate:
+            # Exiting in a thread just quits the thread, not the entire process
+            raise (Exception(f"Testing stopped for {self.get_name()}"))
+
     def connect_to_api(self):
         while True:
+            self.check_for_teardown()
             time.sleep(5)
             try:
 
@@ -145,7 +183,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self, imported_roles: list[str] = ["user", "power", "can_delete"]
     ):
 
-        self._conn.roles.post(
+        self.get_conn().roles.post(
             self.config.splunk_app_username, imported_roles=imported_roles
         )
 
@@ -153,7 +191,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         endpoint = "/services/properties/authorize/default/deleteIndexesAllowed"
         indexes_encoded = ";".join(indexes)
         try:
-            self._conn.post(endpoint, value=indexes_encoded)
+            self.get_conn().post(endpoint, value=indexes_encoded)
         except Exception as e:
             print(
                 f"Error configuring deleteIndexesAllowed with '{indexes_encoded}': [{str(e)}]"
@@ -161,9 +199,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def wait_for_conf_file(self, app_name: str, conf_file_name: str):
         while True:
+            self.check_for_teardown()
             time.sleep(1)
             try:
-                res = self._conn.get(f"configs/conf-{conf_file_name}", app=app_name)
+                res = self.get_conn().get(
+                    f"configs/conf-{conf_file_name}", app=app_name
+                )
                 print(f"configs/conf-{conf_file_name} exists")
                 return
             except Exception as e:
@@ -181,7 +222,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 continue
             for name, value in parser[datamodel_name].items():
                 try:
-                    res = self._conn.post(
+                    res = self.get_conn().post(
                         f"properties/datamodels/{datamodel_name}/{name}",
                         app=APP_NAME,
                         value=value,
@@ -193,10 +234,94 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     )
 
     def execute(self):
+
+        while True:
+            try:
+                detection = self.sync_obj.inputQueue.pop()
+            except IndexError as e:
+                print(f"No more detections to test, shutting down {self.get_name()}")
+                self.finish()
+                return
+            self.test_detection(detection)
+
+    def test_detection(self, detection: Detection):
+        if detection.test is None:
+            print(f"No test(s) found for {detection.name}")
+            return
+
+        for test in detection.test.tests:
+            self.execute_test(detection, test)
+
+    def execute_test(self, detection: Detection, test: UnitTestTest):
+        self.replay_attack_data_files(test.attack_data)
         pass
+
+    def replay_attack_data_files(self, attack_data_files: list[UnitTestAttackData]):
+        with TemporaryDirectory(prefix="contentctl_attack_data") as attack_data_dir:
+            for attack_data_file in attack_data_files:
+                self.replay_attack_data_file(attack_data_file, attack_data_dir)
+
+    def replay_attack_data_file(
+        self, attack_data_file: UnitTestAttackData, tmp_dir: str
+    ):
+        tempfile = mktemp(dir=tmp_dir)
+
+        if not (
+            attack_data_file.data.startswith("https://")
+            or attack_data_file.data.startswith("http://")
+        ):
+            if pathlib.Path(attack_data_file.data).is_file():
+                try:
+                    copyfile(attack_data_file.data, tempfile)
+                except Exception as e:
+                    raise (
+                        Exception(
+                            f"Error copying local Attack Data File for [{Detection.name}] - [{attack_data_file.data}]: {str(e)}"
+                        )
+                    )
+            else:
+                raise (
+                    Exception(
+                        f"Attack Data File for [{Detection.name}] is local [{attack_data_file.data}], but does not exist."
+                    )
+                )
+
+        else:
+            # Download the file
+            # We need to overwrite the file - mkstemp will create an empty file with the
+            # given name
+            try:
+                # In case the path is a local file, try to get it
+                Utils.download_file_from_http(
+                    attack_data_file.data, tempfile, overwrite_file=True
+                )
+            except Exception as e:
+                raise (
+                    Exception(
+                        f"Attack Data File for [{Detection.name}] is remote [{attack_data_file.data}], but could not download: :{str(e)}"
+                    )
+                )
+
+        # Update timestamps before replay
+        if attack_data_file.update_timestamp:
+            data_manipulation = DataManipulation()
+            data_manipulation.manipulate_timestamp(
+                tempfile, attack_data_file.sourcetype, attack_data_file.source
+            )
+
+        # Upload the data
+        self.hec_raw_replay(tempfile, attack_data_file)
+
+        return attack_data_file.custom_index or self.sync_obj.replay_index
+
+    def hec_raw_replay(self, tempfile: str, attack_data_file: UnitTestAttackData):
+        raise (Exception("not yet implemented"))
 
     def status(self):
         pass
+
+    def finish(self):
+        print("FINISHING...")
 
     def check_health(self):
         pass
@@ -208,6 +333,13 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
     def start(self):
         self.container = self.make_container()
         self.container.start()
+
+    def finish(self):
+        if self.container is not None:
+            try:
+                self.removeContainer()
+            except Exception as e:
+                raise (Exception(f"Error removing container: {str(e)}"))
 
     def get_name(self) -> str:
         return self.config.container_name

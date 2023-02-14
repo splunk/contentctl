@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import time
 from copy import deepcopy
 from splunk_contentctl.objects.enums import DetectionTestingTargetInfrastructure
+import signal
 
 # from queue import Queue
 
@@ -22,21 +23,17 @@ from dataclasses import dataclass
 import ctypes
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
+    DetectionTestingManagerOutputDto,
 )
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewController import (
     DetectionTestingViewController,
 )
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from splunk_contentctl.input.director import DirectorOutputDto
 from splunk_contentctl.objects.detection import Detection
 
-
-def stubRun():
-    print("running container")
-    import time
-
-    time.sleep(120)
+from threading import Event
 
 
 @dataclass(frozen=False)
@@ -45,11 +42,6 @@ class DetectionTestingManagerInputDto:
     testContent: DirectorOutputDto
     views: list[DetectionTestingViewController]
     tick_seconds: float = 1
-
-
-@dataclass
-class DetectionTestingManagerOutputDto:
-    outputQueue: list[Detection]
 
 
 class DetectionTestingManager(BaseModel):
@@ -64,11 +56,15 @@ class DetectionTestingManager(BaseModel):
 
         # for content in self.input_dto.testContent.detections:
         #    self.pending_queue.put(content)
-
-        self.input_dto.config.num_containers = 2
+        self.output_dto.inputQueue = self.input_dto.testContent.detections
         self.create_DetectionTestingInfrastructureObjects()
 
     def execute(self) -> DetectionTestingManagerOutputDto:
+        def sigint_handler(signum, frame):
+            print("SIGINT (Ctrl-C Received.  Shutting down test...)")
+            self.output_dto.terminate = True
+
+        signal.signal(signal.SIGINT, sigint_handler)
 
         # Start all of the threads
         # for obj in self.input_dto.detectionTestingInfrastructureObjects:
@@ -77,25 +73,43 @@ class DetectionTestingManager(BaseModel):
 
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self.input_dto.config.num_containers,
-        ) as instance_runner, concurrent.futures.ThreadPoolExecutor(
+        ) as instance_configurer, concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self.input_dto.views)
-        ) as view_runner:
+        ) as view_runner, concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.input_dto.config.num_containers,
+        ) as instance_runner:
+            # Start all the views
             future_views = {
                 view_runner.submit(view.setup): view for view in self.input_dto.views
             }
-            print("Views started, starting containers")
-            future_instances = {
-                instance_runner.submit(instance.setup): instance
+            # Configure all the instances
+            future_instances_setup = {
+                instance_configurer.submit(instance.setup): instance
                 for instance in self.detectionTestingInfrastructureObjects
             }
-            print("containers started")
-            for future in concurrent.futures.as_completed(future_instances):
-                print(f"Finished running instance {future}")
+
+            # Wait for all instances to be set up
+            for future in concurrent.futures.as_completed(future_instances_setup):
                 try:
                     result = future.result()
                 except Exception as e:
-                    print(f"Error running container: {str(e)}")
-            print("containers exited")
+                    self.output_dto.terminate = True
+                    print(f"Error setting up container: {str(e)}")
+
+            # Start and wait for all tests to run
+            if not self.output_dto.terminate:
+                future_instances_execute = {
+                    instance_configurer.submit(instance.execute): instance
+                    for instance in self.detectionTestingInfrastructureObjects
+                }
+                # What for execution to finish
+                for future in concurrent.futures.as_completed(future_instances_execute):
+                    try:
+                        result = future.result()
+                    except Exception as e:
+                        self.output_dto.terminate = True
+                        print(f"Error running in container: {str(e)}")
+
             with concurrent.futures.ThreadPoolExecutor(
                 max_workers=self.input_dto.config.num_containers,
             ) as view_shutdowner:
@@ -167,7 +181,9 @@ class DetectionTestingManager(BaseModel):
             ):
 
                 self.detectionTestingInfrastructureObjects.append(
-                    DetectionTestingContainer(config=instanceConfig)
+                    DetectionTestingContainer(
+                        config=instanceConfig, sync_obj=self.output_dto
+                    )
                 )
 
             elif (

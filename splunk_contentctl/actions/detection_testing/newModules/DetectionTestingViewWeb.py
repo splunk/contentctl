@@ -25,6 +25,7 @@ class SimpleWebServer(ServerAdapter):
         self.server = make_server(
             "localhost", DEFAULT_WEB_UI_PORT, handler, **self.options
         )
+
         self.server.serve_forever()
 
 
@@ -45,6 +46,10 @@ class DetectionTestingViewWeb(DetectionTestingViewController):
         self.bottleApp.run(server=self.server)
 
     def stop(self):
+        if self.server.server is None:
+            print("Web Server is not running anyway - nothing to shut down")
+            return
+
         self.server.server.shutdown()
 
     def showStatus(self, elapsed_seconds: Union[float, None] = None):

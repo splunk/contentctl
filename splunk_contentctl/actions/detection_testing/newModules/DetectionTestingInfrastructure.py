@@ -33,6 +33,10 @@ from splunk_contentctl.actions.detection_testing.modules.DataManipulation import
     DataManipulation,
 )
 
+from urllib3 import disable_warnings
+import urllib.parse
+import json
+
 
 @dataclass(frozen=False)
 class DetectionTestingManagerOutputDto:
@@ -314,8 +318,110 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         return attack_data_file.custom_index or self.sync_obj.replay_index
 
-    def hec_raw_replay(self, tempfile: str, attack_data_file: UnitTestAttackData):
-        raise (Exception("not yet implemented"))
+    def hec_raw_replay(
+        self,
+        tempfile: str,
+        attack_data_file: UnitTestAttackData,
+        verify_ssl: bool = False,
+    ):
+        if verify_ssl is False:
+            # need this, otherwise every request made with the requests module
+            # and verify=False will print an error to the command line
+            disable_warnings()
+
+        # build the headers
+
+        headers = {
+            "Authorization": f"Splunk {self.hec_token}",  # token must begin with 'Splunk '
+            "X-Splunk-Request-Channel": self.hec_channel,
+        }
+
+        url_params = {
+            "index": attack_data_file.custom_index or self.sync_obj.replay_index,
+            "source": attack_data_file.source,
+            "sourcetype": attack_data_file.sourcetype,
+            "host": attack_data_file.host or self.sync_obj.replay_host,
+        }
+
+        if self.config.test_instance_address.strip().lower().startswith("https://"):
+            address_with_scheme = self.config.test_instance_address.strip().lower()
+        elif self.config.test_instance_address.strip().lower().startswith("http://"):
+            address_with_scheme = (
+                self.config.test_instance_address.strip()
+                .lower()
+                .replace("http://", "https://")
+            )
+        else:
+            address_with_scheme = f"https://{self.config.test_instance_address}"
+
+        # Generate the full URL, including the host, the path, and the params.
+        # We can be a lot smarter about this (and pulling the port from the url, checking
+        # for trailing /, etc, but we leave that for the future)
+        url_with_port = f"{address_with_scheme}:{self.config.hec_port}"
+        url_with_hec_path = urllib.parse.urljoin(
+            url_with_port, "services/collector/raw"
+        )
+        with open(tempfile, "rb") as datafile:
+            try:
+                res = requests.post(
+                    url_with_hec_path,
+                    params=url_params,
+                    data=datafile.read(),
+                    allow_redirects=True,
+                    headers=headers,
+                    verify=verify_ssl,
+                )
+                jsonResponse = json.loads(res.text)
+
+            except Exception as e:
+                raise (
+                    Exception(
+                        f"There was an exception sending attack_data to HEC: {str(e)}"
+                    )
+                )
+
+        if "ackId" not in jsonResponse:
+            raise (
+                Exception(
+                    f"key 'ackID' not present in response from HEC server: {jsonResponse}"
+                )
+            )
+
+        ackId = jsonResponse["ackId"]
+        url_with_hec_ack_path = urllib.parse.urljoin(
+            url_with_port, "services/collector/ack"
+        )
+
+        requested_acks = {"acks": [jsonResponse["ackId"]]}
+        while True:
+            try:
+
+                res = requests.post(
+                    url_with_hec_ack_path,
+                    json=requested_acks,
+                    allow_redirects=True,
+                    headers=headers,
+                    verify=verify_ssl,
+                )
+
+                jsonResponse = json.loads(res.text)
+
+                if "acks" in jsonResponse and str(ackId) in jsonResponse["acks"]:
+                    if jsonResponse["acks"][str(ackId)] is True:
+                        # ackID has been found for our request, we can return as the data has been replayed
+                        return
+                    else:
+                        # ackID is not yet true, we will wait some more
+                        time.sleep(2)
+
+                else:
+                    raise (
+                        Exception(
+                            f"Proper ackID structure not found for ackID {ackId} in {jsonResponse}"
+                        )
+                    )
+            except Exception as e:
+                raise (Exception(f"There was an exception in the post: {str(e)}"))
 
     def status(self):
         pass

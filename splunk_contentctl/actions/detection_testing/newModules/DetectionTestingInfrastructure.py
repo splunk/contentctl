@@ -256,8 +256,24 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         for test in detection.test.tests:
             self.execute_test(detection, test)
 
-    def execute_test(self, detection: Detection, test: UnitTestTest):
+    def execute_test(
+        self, detection: Detection, test: UnitTestTest, FORCE_ALL_TIME: bool = True
+    ):
         self.replay_attack_data_files(test.attack_data)
+
+        # Set the mode and timeframe, if required
+        kwargs = {"exec_mode": "blocking"}
+        if not FORCE_ALL_TIME:
+            if test.earliest_time is not None:
+                kwargs.update({"earliest_time": test.earliest_time})
+            if test.latest_time is not None:
+                kwargs.update({"latest_time": test.latest_time})
+
+        search = f"{detection.search} {test.pass_condition}"
+        print("running search")
+        job = self.get_conn().search(query=search, kwargs=kwargs)
+        res = job.results(output_mode="json")
+
         self.delete_attack_data(test.attack_data)
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):

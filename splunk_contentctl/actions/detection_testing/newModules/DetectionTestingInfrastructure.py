@@ -32,7 +32,7 @@ from splunk_contentctl.helper.utils import Utils
 from splunk_contentctl.actions.detection_testing.modules.DataManipulation import (
     DataManipulation,
 )
-
+import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
 import json
@@ -258,7 +258,26 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def execute_test(self, detection: Detection, test: UnitTestTest):
         self.replay_attack_data_files(test.attack_data)
-        pass
+        self.delete_attack_data(test.attack_data)
+
+    def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
+        for attack_data_file in attack_data_files:
+            index = attack_data_file.custom_index or self.sync_obj.replay_index
+            host = attack_data_file.host or self.sync_obj.replay_host
+            splunk_search = f'search index="{index}" host="{host}" | delete'
+            kwargs = {"exec_mode": "blocking"}
+            try:
+
+                job = self.get_conn().jobs.create(splunk_search, **kwargs)
+                results_stream = job.results(output_mode="json")
+                reader = splunklib.results.JSONResultsReader(results_stream)
+
+            except Exception as e:
+                raise (
+                    Exception(
+                        f"Trouble deleting data using the search {splunk_search}: {str(e)}"
+                    )
+                )
 
     def replay_attack_data_files(self, attack_data_files: list[UnitTestAttackData]):
         with TemporaryDirectory(prefix="contentctl_attack_data") as attack_data_dir:
@@ -314,6 +333,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             )
 
         # Upload the data
+
         self.hec_raw_replay(tempfile, attack_data_file)
 
         return attack_data_file.custom_index or self.sync_obj.replay_index

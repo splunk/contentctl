@@ -14,7 +14,7 @@ from splunk_contentctl.objects.test_config import (
 )
 from shutil import copyfile
 
-from typing import Union
+
 import configparser
 from ssl import SSLEOFError
 import time
@@ -24,8 +24,7 @@ import docker.models
 import docker.models.resource
 import docker.models.containers
 import docker.types
-import os
-import sys
+
 from tempfile import TemporaryDirectory, mktemp
 import pathlib
 from splunk_contentctl.helper.utils import Utils
@@ -44,6 +43,7 @@ class DetectionTestingManagerOutputDto:
     outputQueue: list[Detection] = Field(default_factory=list)
     replay_index: str = "main"
     replay_host: str = "CONTENTCTL_HOST"
+    timeout_seconds: int = 120
     terminate: bool = False
 
 
@@ -51,8 +51,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     # thread: threading.Thread = threading.Thread()
     config: TestConfig
     sync_obj: DetectionTestingManagerOutputDto
-    hec_token: str = None
-    hec_channel: str = None
+    hec_token: str = ""
+    hec_channel: str = ""
     _conn: client.Service = PrivateAttr()
 
     class Config:
@@ -259,6 +259,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def execute_test(
         self, detection: Detection, test: UnitTestTest, FORCE_ALL_TIME: bool = True
     ):
+
         self.replay_attack_data_files(test.attack_data)
 
         # Set the mode and timeframe, if required
@@ -269,12 +270,29 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             if test.latest_time is not None:
                 kwargs.update({"latest_time": test.latest_time})
 
-        search = f"{detection.search} {test.pass_condition}"
-        print("running search")
-        job = self.get_conn().search(query=search, kwargs=kwargs)
-        res = job.results(output_mode="json")
-
+        self.retry_search_until_timeout(detection, test, kwargs)
         self.delete_attack_data(test.attack_data)
+
+    def retry_search_until_timeout(
+        self, detection: Detection, test: UnitTestTest, kwargs: dict
+    ) -> bool:
+        import time
+
+        start_time = time.time()
+
+        if test.pass_condition is None:
+            # we will default to ensuring at least one result exists
+            search = detection.search
+        else:
+            search = f"{detection.search} {test.pass_condition}"
+
+        while (time.time() - start_time) < self.sync_obj.timeout_seconds:
+            job = self.get_conn().search(query=search, kwargs=kwargs)
+            results_stream = job.results(output_mode="json")
+            if int(job.content.get("resultCount", "0")) > 0:
+                return True
+
+        return False
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
         for attack_data_file in attack_data_files:

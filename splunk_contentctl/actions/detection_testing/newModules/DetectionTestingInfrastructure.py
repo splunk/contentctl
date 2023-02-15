@@ -246,7 +246,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 print(f"No more detections to test, shutting down {self.get_name()}")
                 self.finish()
                 return
-            self.test_detection(detection)
+            try:
+                print("test_detection")
+                self.test_detection(detection)
+            except Exception as e:
+                print(f"Error testing detection: {str(e)}")
 
     def test_detection(self, detection: Detection):
         if detection.test is None:
@@ -254,6 +258,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             return
 
         for test in detection.test.tests:
+            print("execute_test")
             self.execute_test(detection, test)
 
     def execute_test(
@@ -270,6 +275,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             if test.latest_time is not None:
                 kwargs.update({"latest_time": test.latest_time})
 
+        print("try_until_timeout")
         self.retry_search_until_timeout(detection, test, kwargs)
         self.delete_attack_data(test.attack_data)
 
@@ -286,12 +292,33 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         else:
             search = f"{detection.search} {test.pass_condition}"
 
+        # exponential backoff for wait time
+        tick = 2
         while (time.time() - start_time) < self.sync_obj.timeout_seconds:
-            job = self.get_conn().search(query=search, kwargs=kwargs)
-            results_stream = job.results(output_mode="json")
+            for _ in range(pow(2, tick - 1)):
+                # This loop allows us to capture shutdown events without being
+                # stuck in an extended sleep. Remember that this raises an exception
+                try:
+                    self.check_for_teardown()
+                except Exception as e:
+                    print(
+                        "Shutdown caught while testing detection. We will not complete this test."
+                    )
+                    return False
+                time.sleep(1)
+
+            job = self.get_conn().search(query=search, **kwargs)
+
+            # the following raises an error if there is an exception in the search
+            _ = job.results(output_mode="json")
+
             if int(job.content.get("resultCount", "0")) > 0:
+                print("success")
                 return True
 
+            tick += 1
+
+        print("fail")
         return False
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):

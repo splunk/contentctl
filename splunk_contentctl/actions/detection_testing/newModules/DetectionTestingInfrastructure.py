@@ -7,6 +7,7 @@ import splunklib.client as client
 from splunk_contentctl.objects.detection import Detection
 from splunk_contentctl.objects.unit_test_test import UnitTestTest
 from splunk_contentctl.objects.unit_test_attack_data import UnitTestAttackData
+from splunk_contentctl.objects.unit_test_result import UnitTestResult
 from splunk_contentctl.objects.test_config import (
     TestConfig,
     CONTAINER_APP_DIR,
@@ -35,12 +36,16 @@ import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
 import json
+from typing import Union
+import datetime
 
 
 @dataclass(frozen=False)
 class DetectionTestingManagerOutputDto:
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
+    currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
+    start_time: datetime.datetime = datetime.datetime.now()
     replay_index: str = "main"
     replay_host: str = "CONTENTCTL_HOST"
     timeout_seconds: int = 120
@@ -242,6 +247,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         while True:
             try:
                 detection = self.sync_obj.inputQueue.pop()
+                self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError as e:
                 print(f"No more detections to test, shutting down {self.get_name()}")
                 self.finish()
@@ -251,6 +257,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.test_detection(detection)
             except Exception as e:
                 print(f"Error testing detection: {str(e)}")
+            self.sync_obj.currentTestingQueue[self.get_name()] = None
 
     def test_detection(self, detection: Detection):
         if detection.test is None:
@@ -264,8 +271,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def execute_test(
         self, detection: Detection, test: UnitTestTest, FORCE_ALL_TIME: bool = True
     ):
-
-        self.replay_attack_data_files(test.attack_data)
+        start_time = time.time()
+        try:
+            self.replay_attack_data_files(test.attack_data)
+        except Exception as e:
+            test.result = UnitTestResult()
+            test.result.set_job_content(e, duration=time.time() - start_time)
 
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
@@ -275,13 +286,17 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             if test.latest_time is not None:
                 kwargs.update({"latest_time": test.latest_time})
 
-        print("try_until_timeout")
-        self.retry_search_until_timeout(detection, test, kwargs)
+        try:
+            self.retry_search_until_timeout(detection, test, kwargs, start_time)
+        except Exception as e:
+            test.result = UnitTestResult()
+            test.result.set_job_content(e, duration=time.time() - start_time)
+
         self.delete_attack_data(test.attack_data)
 
     def retry_search_until_timeout(
-        self, detection: Detection, test: UnitTestTest, kwargs: dict
-    ) -> bool:
+        self, detection: Detection, test: UnitTestTest, kwargs: dict, start_time: float
+    ):
         import time
 
         start_time = time.time()
@@ -298,13 +313,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             for _ in range(pow(2, tick - 1)):
                 # This loop allows us to capture shutdown events without being
                 # stuck in an extended sleep. Remember that this raises an exception
-                try:
-                    self.check_for_teardown()
-                except Exception as e:
-                    print(
-                        "Shutdown caught while testing detection. We will not complete this test."
-                    )
-                    return False
+                self.check_for_teardown()
+
                 time.sleep(1)
 
             job = self.get_conn().search(query=search, **kwargs)
@@ -313,13 +323,17 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             _ = job.results(output_mode="json")
 
             if int(job.content.get("resultCount", "0")) > 0:
-                print("success")
-                return True
+                print(f"success for {test.name}")
+                test.result = UnitTestResult()
+                test.result.set_job_content(
+                    job.content, success=True, duration=time.time() - start_time
+                )
+                return
 
             tick += 1
 
-        print("fail")
-        return False
+        print(f"fail for {test.name}")
+        return
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
         for attack_data_file in attack_data_files:

@@ -12,14 +12,66 @@ class UnitTestResult(BaseModel):
     job_content: Union[Record, None] = None
     missing_observables: list[str] = []
     message: Union[None, str] = None
-    logic: bool = False
-    noise: bool = False
     exception: bool = False
     success: bool = False
+    duration: float = 0
 
     class Config:
         validate_assignment = True
 
+    def get_summary_dict(
+        self,
+        model_fields: list[str] = ["success", "exception", "message"],
+        job_fields: list[str] = ["search", "sid", "resultCount", "runtime"],
+    ) -> dict:
+        results_dict = {}
+        for field in model_fields:
+            results_dict[field] = getattr(self, field)
+
+        for field in job_fields:
+            if self.job_content is not None:
+                results_dict[field] = self.job_content.get(field, None)
+            else:
+                results_dict[field] = None
+        return results_dict
+
+    def set_job_content(
+        self,
+        content: Union[Record, None, Exception],
+        success: bool = False,
+        duration: float = 0,
+    ):
+        self.duration = round(duration, 2)
+        if type(content) is Record:
+            self.job_content = content
+            self.success = success
+            if success:
+                self.message = "TEST PASSED"
+            else:
+                self.message = "TEST FAILED"
+            self.exception = False
+
+        elif type(content) is None:
+            self.job_content = None
+            self.success = False
+            self.exception = True
+            self.message = f"Error during test: unable to run test"
+
+        elif type(content) is Exception:
+            self.job_content = None
+            self.success = False
+            self.exception = True
+            self.message = f"Error during test: {str(content)}"
+        else:
+            msg = f"Error: Unknown type for content in UnitTestResult: {type(content)}"
+            print(msg)
+            self.job_content = None
+            self.success = False
+            self.exception = True
+            self.message = f"Error during test - unable to run test {msg}"
+        return self.success
+
+    """
     def get_summary(self, test_name: str, verbose=False) -> str:
         lines: list[str] = []
         lines.append(f"SEARCH NAME        : '{test_name}'")
@@ -139,3 +191,4 @@ class UnitTestResult(BaseModel):
             return timedelta(float(duration))
         else:
             raise (Exception("runDuration missing from job."))
+    """

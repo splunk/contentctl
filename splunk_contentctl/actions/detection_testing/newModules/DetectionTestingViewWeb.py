@@ -1,6 +1,6 @@
 from bottle import route, run, template, Bottle, ServerAdapter
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewController import (
-    DetectionTestingViewController,
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView import (
+    DetectionTestingView,
 )
 import tabulate
 from typing import Union
@@ -29,7 +29,7 @@ class SimpleWebServer(ServerAdapter):
         self.server.serve_forever()
 
 
-class DetectionTestingViewWeb(DetectionTestingViewController):
+class DetectionTestingViewWeb(DetectionTestingView):
     bottleApp: Bottle = Bottle()
     server: SimpleWebServer = SimpleWebServer()
 
@@ -52,8 +52,7 @@ class DetectionTestingViewWeb(DetectionTestingViewController):
 
         self.server.server.shutdown()
 
-    def showStatus(self, elapsed_seconds: Union[float, None] = None):
-        print("run show status")
+    def showStatus(self, interval: int = 60):
         # Status updated on page load
         headers = ["Varaible Name", "Variable Value"]
         data = [["Some Number", 0], ["Some String", "this is a string"]]

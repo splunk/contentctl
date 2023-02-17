@@ -25,9 +25,11 @@ from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfr
     DetectionTestingInfrastructure,
     DetectionTestingManagerOutputDto,
 )
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewController import (
-    DetectionTestingViewController,
+from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView import (
+    DetectionTestingView,
 )
+
+from splunk_contentctl.objects.enums import PostTestBehavior
 
 from pydantic import BaseModel, Field
 from splunk_contentctl.input.director import DirectorOutputDto
@@ -40,8 +42,7 @@ from threading import Event
 class DetectionTestingManagerInputDto:
     config: TestConfig
     testContent: DirectorOutputDto
-    views: list[DetectionTestingViewController]
-    tick_seconds: float = 1
+    views: list[DetectionTestingView]
 
 
 class DetectionTestingManager(BaseModel):
@@ -63,6 +64,17 @@ class DetectionTestingManager(BaseModel):
         def sigint_handler(signum, frame):
             print("SIGINT (Ctrl-C Received.  Shutting down test...)")
             self.output_dto.terminate = True
+            if self.input_dto.config.post_test_behavior in [
+                PostTestBehavior.always_pause,
+                PostTestBehavior.pause_on_failure,
+            ]:
+                # It is possible that we are stuck waiting at in input() prompt, so inject
+                # a newline '\r\n' which will cause that wait to stop
+                print("*******************************")
+                print(
+                    "If testing is paused and you are debugging a detection, you MUST hit enter at the prompt to complete shutdown."
+                )
+                print("*******************************")
 
         signal.signal(signal.SIGINT, sigint_handler)
 
@@ -110,6 +122,7 @@ class DetectionTestingManager(BaseModel):
                         self.output_dto.terminate = True
                         print(f"Error running in container: {str(e)}")
 
+            self.output_dto.terminate = True
             with concurrent.futures.ThreadPoolExecutor(
                 max_workers=self.input_dto.config.num_containers,
             ) as view_shutdowner:
@@ -156,13 +169,6 @@ class DetectionTestingManager(BaseModel):
 
         sys.exit(0)
         return DetectionTestingManagerOutputDto()
-
-    def status(
-        self,
-        elapsed_time: float,
-    ):
-        for view in self.input_dto.views:
-            view.showStatus(elapsed_time)
 
     def create_DetectionTestingInfrastructureObjects(self):
         import sys

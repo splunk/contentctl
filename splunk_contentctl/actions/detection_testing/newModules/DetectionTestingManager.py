@@ -12,6 +12,7 @@ import time
 from copy import deepcopy
 from splunk_contentctl.objects.enums import DetectionTestingTargetInfrastructure
 import signal
+import datetime
 
 # from queue import Queue
 
@@ -110,6 +111,7 @@ class DetectionTestingManager(BaseModel):
 
             # Start and wait for all tests to run
             if not self.output_dto.terminate:
+                self.output_dto.start_time = datetime.datetime.now()
                 future_instances_execute = {
                     instance_configurer.submit(instance.execute): instance
                     for instance in self.detectionTestingInfrastructureObjects

@@ -40,12 +40,16 @@ from typing import Union
 import datetime
 
 
+class ContainerStoppedException(Exception):
+    pass
+
+
 @dataclass(frozen=False)
 class DetectionTestingManagerOutputDto:
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
-    start_time: datetime.datetime = datetime.datetime.now()
+    start_time: Union[datetime.datetime, None] = None
     replay_index: str = "main"
     replay_host: str = "CONTENTCTL_HOST"
     timeout_seconds: int = 120
@@ -91,8 +95,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.configure_hec,
                 self.wait_for_ui_ready,
             ]:
-                self.check_for_teardown()
                 func()
+                self.check_for_teardown()
         except Exception as e:
             print(e)
             return
@@ -155,7 +159,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Some of these stages can take a long time
         if self.sync_obj.terminate:
             # Exiting in a thread just quits the thread, not the entire process
-            raise (Exception(f"Testing stopped for {self.get_name()}"))
+            raise (ContainerStoppedException(f"Testing stopped for {self.get_name()}"))
 
     def connect_to_api(self):
         while True:
@@ -245,8 +249,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def execute(self):
 
         while True:
-            if self.sync_obj.terminate:
-                return
+            try:
+                self.check_for_teardown()
+            except ContainerStoppedException as e:
+                print(f"Stopped container [{self.get_name()}]")
+
             try:
                 detection = self.sync_obj.inputQueue.pop()
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
@@ -257,10 +264,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             try:
                 print("test_detection")
                 self.test_detection(detection)
+            except ContainerStoppedException as e:
+                print(f"Stopped container [{self.get_name()}]")
+                return
             except Exception as e:
                 print(f"Error testing detection: {str(e)}")
-            self.sync_obj.outputQueue.append(detection)
-            self.sync_obj.currentTestingQueue[self.get_name()] = None
+            finally:
+                self.sync_obj.outputQueue.append(detection)
+                self.sync_obj.currentTestingQueue[self.get_name()] = None
 
     def test_detection(self, detection: Detection):
         if detection.test is None:
@@ -293,6 +304,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         try:
             self.retry_search_until_timeout(detection, test, kwargs, start_time)
+        except ContainerStoppedException as e:
+            raise (e)
         except Exception as e:
             test.result = UnitTestResult()
             test.result.set_job_content(
@@ -567,6 +580,20 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
         except Exception as e:
             raise (Exception(f"Failed to get docker client: {str(e)}"))
 
+    def check_for_teardown(self):
+
+        try:
+            self.get_docker_client().containers.get(self.get_name())
+        except Exception as e:
+            if self.sync_obj.terminate is not True:
+                print(f"Error: could not get container [{self.get_name()}]: {str(e)}")
+                self.sync_obj.terminate = True
+
+        if self.sync_obj.terminate:
+            self.removeContainer()
+
+        super().check_for_teardown()
+
     def make_container(self) -> docker.models.resource.Model:
         # First, make sure that the container has been removed if it already existed
         self.removeContainer()
@@ -620,13 +647,12 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
             # Container does not exist, no need to try and remove it
             return
         try:
-            print("Removing container")
+
             # container was found, so now we try to remove it
             # v also removes volumes linked to the container
             container.remove(v=removeVolumes, force=forceRemove)
             # remove it even if it is running. remove volumes as well
             # No need to print that the container has been removed, it is expected behavior
-            print("Container removed")
 
         except Exception as e:
             raise (

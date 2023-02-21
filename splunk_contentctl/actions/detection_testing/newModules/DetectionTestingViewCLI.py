@@ -3,6 +3,7 @@ from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView
 )
 
 import time
+import datetime
 
 
 class DetectionTestingViewCLI(DetectionTestingView):
@@ -27,27 +28,28 @@ class DetectionTestingViewCLI(DetectionTestingView):
                 ]
             )
             total_num_detections = len_input + len_output + len_current
-            import datetime
 
-            elapsed_timedelta = datetime.datetime.now() - self.sync_obj.start_time
-
-            if len_output == 0:
-                remaining_time = "???"
+            if self.sync_obj.start_time is None:
+                time_string = f"{len(self.sync_obj.outputQueue)} of {total_num_detections} in REMAINING TIME UNKNOWN"
             else:
-                time_per_detection = elapsed_timedelta / len_output
-                remaining_time = (
-                    len_input + len_current / (2 * self.config.num_containers)
-                ) * time_per_detection
-                remaining_time -= datetime.timedelta(
-                    microseconds=remaining_time.microseconds
-                )
+                elapsed_timedelta = datetime.datetime.now() - self.sync_obj.start_time
 
-            elapsed_timedelta -= datetime.timedelta(
-                microseconds=elapsed_timedelta.microseconds
-            )
-            print(
-                f"{len(self.sync_obj.outputQueue)} of {total_num_detections} in {elapsed_timedelta}, {remaining_time} remaining"
-            )
+                if len_output == 0:
+                    remaining_time = "???"
+                else:
+                    time_per_detection = elapsed_timedelta / len_output
+                    remaining_time = (
+                        len_input + len_current / (2 * self.config.num_containers)
+                    ) * time_per_detection
+                    remaining_time -= datetime.timedelta(
+                        microseconds=remaining_time.microseconds
+                    )
+
+                elapsed_timedelta -= datetime.timedelta(
+                    microseconds=elapsed_timedelta.microseconds
+                )
+                time_string = f"{len(self.sync_obj.outputQueue)} of {total_num_detections} in {elapsed_timedelta}, {remaining_time} remaining"
+            print(time_string)
 
     def showResults(self):
         pass

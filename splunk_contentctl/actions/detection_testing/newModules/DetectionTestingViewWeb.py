@@ -18,7 +18,7 @@ STATUS_TEMPLATE = """
     </tr>
     <tr>
         <td>Search</td>
-        <td>{{ detection.search }}</td>
+        <td><code>{{ detection.search }}</code></td>
     </tr>
     <tr><td><i>Tests</i></td></tr>
     {% for test in detection.tests %}

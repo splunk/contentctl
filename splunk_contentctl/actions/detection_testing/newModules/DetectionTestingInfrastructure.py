@@ -253,6 +253,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.check_for_teardown()
             except ContainerStoppedException as e:
                 print(f"Stopped container [{self.get_name()}]")
+                return
 
             try:
                 detection = self.sync_obj.inputQueue.pop()

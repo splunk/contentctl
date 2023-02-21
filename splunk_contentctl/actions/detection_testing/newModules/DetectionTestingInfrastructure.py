@@ -245,6 +245,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def execute(self):
 
         while True:
+            if self.sync_obj.terminate:
+                return
             try:
                 detection = self.sync_obj.inputQueue.pop()
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
@@ -257,6 +259,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.test_detection(detection)
             except Exception as e:
                 print(f"Error testing detection: {str(e)}")
+            self.sync_obj.outputQueue.append(detection)
             self.sync_obj.currentTestingQueue[self.get_name()] = None
 
     def test_detection(self, detection: Detection):
@@ -276,7 +279,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.replay_attack_data_files(test.attack_data)
         except Exception as e:
             test.result = UnitTestResult()
-            test.result.set_job_content(e, duration=time.time() - start_time)
+            test.result.set_job_content(
+                e, self.config, duration=time.time() - start_time
+            )
 
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
@@ -290,14 +295,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.retry_search_until_timeout(detection, test, kwargs, start_time)
         except Exception as e:
             test.result = UnitTestResult()
-            test.result.set_job_content(e, duration=time.time() - start_time)
+            test.result.set_job_content(
+                e, self.config, duration=time.time() - start_time
+            )
 
         self.delete_attack_data(test.attack_data)
 
     def retry_search_until_timeout(
         self, detection: Detection, test: UnitTestTest, kwargs: dict, start_time: float
     ):
-        import time
 
         start_time = time.time()
 
@@ -306,6 +312,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             search = detection.search
         else:
             search = f"{detection.search} {test.pass_condition}"
+
+        # Search that do not begin with '|' must begin with 'search '
+        if not search.strip().startswith("|"):
+            if not search.strip().startswith("search "):
+                search = f"search {search}"
 
         # exponential backoff for wait time
         tick = 2
@@ -326,7 +337,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 print(f"success for {test.name}")
                 test.result = UnitTestResult()
                 test.result.set_job_content(
-                    job.content, success=True, duration=time.time() - start_time
+                    job.content,
+                    self.config,
+                    success=True,
+                    duration=time.time() - start_time,
                 )
                 return
 

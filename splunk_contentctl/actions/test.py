@@ -49,14 +49,14 @@ class Test:
         test_director = input_dto.githubService.get_all_content(
             input_dto.director_output_dto
         )
-
+        input_dto.config.num_containers = 12
         output_dto = DetectionTestingManagerOutputDto()
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,
             testContent=test_director,
             views=[
-                DetectionTestingViewWeb(),
-                DetectionTestingViewCLI(),
+                DetectionTestingViewWeb(config=input_dto.config, sync_obj=output_dto),
+                DetectionTestingViewCLI(config=input_dto.config, sync_obj=output_dto),
                 # DetectionTestingViewFile()
             ],
         )

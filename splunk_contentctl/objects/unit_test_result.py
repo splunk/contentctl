@@ -4,13 +4,17 @@ from pydantic import BaseModel, root_validator, validator
 from typing import Union
 from datetime import timedelta
 from splunklib.data import Record
+from splunk_contentctl.objects.test_config import TestConfig
 
 FORCE_TEST_FAILURE_FOR_MISSING_OBSERVABLE = False
+
+SID_TEMPLATE = "{server}:{web_port}/en-US/app/search/search?sid={sid}"
 
 
 class UnitTestResult(BaseModel):
     job_content: Union[Record, None] = None
     missing_observables: list[str] = []
+    sid_link: Union[None, str] = None
     message: Union[None, str] = None
     exception: bool = False
     success: bool = False
@@ -21,8 +25,8 @@ class UnitTestResult(BaseModel):
 
     def get_summary_dict(
         self,
-        model_fields: list[str] = ["success", "exception", "message"],
-        job_fields: list[str] = ["search", "sid", "resultCount", "runtime"],
+        model_fields: list[str] = ["success", "exception", "message", "sid_link"],
+        job_fields: list[str] = ["search", "resultCount", "runDuration"],
     ) -> dict:
         results_dict = {}
         for field in model_fields:
@@ -33,16 +37,18 @@ class UnitTestResult(BaseModel):
                 results_dict[field] = self.job_content.get(field, None)
             else:
                 results_dict[field] = None
+
         return results_dict
 
     def set_job_content(
         self,
         content: Union[Record, None, Exception],
+        config: TestConfig,
         success: bool = False,
         duration: float = 0,
     ):
         self.duration = round(duration, 2)
-        if type(content) is Record:
+        if isinstance(content, Record):
             self.job_content = content
             self.success = success
             if success:
@@ -51,17 +57,28 @@ class UnitTestResult(BaseModel):
                 self.message = "TEST FAILED"
             self.exception = False
 
-        elif type(content) is None:
+            if not config.test_instance_address.startswith("http://"):
+                sid_template = f"http://{SID_TEMPLATE}"
+            else:
+                sid_template = SID_TEMPLATE
+            self.sid_link = sid_template.format(
+                server=config.test_instance_address,
+                web_port=config.web_ui_port,
+                sid=content.get("sid", None),
+            )
+
+        elif isinstance(content, Exception):
+            self.job_content = None
+            self.success = False
+            self.exception = True
+            self.message = f"Error during test: {str(content)}"
+
+        elif content is None:
             self.job_content = None
             self.success = False
             self.exception = True
             self.message = f"Error during test: unable to run test"
 
-        elif type(content) is Exception:
-            self.job_content = None
-            self.success = False
-            self.exception = True
-            self.message = f"Error during test: {str(content)}"
         else:
             msg = f"Error: Unknown type for content in UnitTestResult: {type(content)}"
             print(msg)

@@ -36,7 +36,8 @@ from pydantic import BaseModel, Field
 from splunk_contentctl.input.director import DirectorOutputDto
 from splunk_contentctl.objects.detection import Detection
 
-from threading import Event
+
+import concurrent.futures
 
 
 @dataclass(frozen=False)
@@ -79,25 +80,20 @@ class DetectionTestingManager(BaseModel):
 
         signal.signal(signal.SIGINT, sigint_handler)
 
-        # Start all of the threads
-        # for obj in self.input_dto.detectionTestingInfrastructureObjects:
-        #    t = threading.Thread(obj.thread.run())
-        import concurrent.futures
-
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self.input_dto.config.num_containers,
-        ) as instance_configurer, concurrent.futures.ThreadPoolExecutor(
+        ) as instance_pool, concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self.input_dto.views)
         ) as view_runner, concurrent.futures.ThreadPoolExecutor(
             max_workers=self.input_dto.config.num_containers,
-        ) as instance_runner:
+        ) as view_shutdowner:
             # Start all the views
             future_views = {
                 view_runner.submit(view.setup): view for view in self.input_dto.views
             }
             # Configure all the instances
             future_instances_setup = {
-                instance_configurer.submit(instance.setup): instance
+                instance_pool.submit(instance.setup): instance
                 for instance in self.detectionTestingInfrastructureObjects
             }
 
@@ -113,7 +109,7 @@ class DetectionTestingManager(BaseModel):
             if not self.output_dto.terminate:
                 self.output_dto.start_time = datetime.datetime.now()
                 future_instances_execute = {
-                    instance_configurer.submit(instance.execute): instance
+                    instance_pool.submit(instance.execute): instance
                     for instance in self.detectionTestingInfrastructureObjects
                 }
                 # What for execution to finish
@@ -125,21 +121,18 @@ class DetectionTestingManager(BaseModel):
                         print(f"Error running in container: {str(e)}")
 
             self.output_dto.terminate = True
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=self.input_dto.config.num_containers,
-            ) as view_shutdowner:
-                print("starting view stopper")
-                future_views_shutdowner = {
-                    view_shutdowner.submit(view.stop): view
-                    for view in self.input_dto.views
-                }
-                for future in concurrent.futures.as_completed(future_views_shutdowner):
-                    print(f"Finished stopping view {future}")
-                    try:
-                        result = future.result()
-                    except Exception as e:
-                        print(f"Error stopping view: {str(e)}")
-                print("view stoppers stopped")
+
+            print("starting view stopper")
+            future_views_shutdowner = {
+                view_shutdowner.submit(view.stop): view for view in self.input_dto.views
+            }
+            for future in concurrent.futures.as_completed(future_views_shutdowner):
+                print(f"Finished stopping view {future}")
+                try:
+                    result = future.result()
+                except Exception as e:
+                    print(f"Error stopping view: {str(e)}")
+            print("view stoppers stopped")
 
             for future in concurrent.futures.as_completed(future_views):
                 print(f"Finished running view {future}")

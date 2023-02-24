@@ -30,7 +30,7 @@ class DetectionTestingViewCLI(DetectionTestingView):
             total_num_detections = len_input + len_output + len_current
 
             if self.sync_obj.start_time is None:
-                time_string = f"{len(self.sync_obj.outputQueue)} of {total_num_detections} in REMAINING TIME UNKNOWN"
+                time_string = f"STATUS UPDATE: {len(self.sync_obj.outputQueue)} of {total_num_detections} in REMAINING TIME UNKNOWN"
             else:
                 elapsed_timedelta = datetime.datetime.now() - self.sync_obj.start_time
 
@@ -48,8 +48,10 @@ class DetectionTestingViewCLI(DetectionTestingView):
                 elapsed_timedelta -= datetime.timedelta(
                     microseconds=elapsed_timedelta.microseconds
                 )
-                time_string = f"{len(self.sync_obj.outputQueue)} of {total_num_detections} in {elapsed_timedelta}, {remaining_time} remaining"
-            print(time_string)
+
+                time_string = f"STATUS UPDATE: {len_output} of {total_num_detections} in {elapsed_timedelta}, {remaining_time} remaining"
+            # Clear the current line - for some reason we nbeed a space
+            print("\x1b[2K" + " " + time_string)
 
     def showResults(self):
         pass

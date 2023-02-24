@@ -122,48 +122,22 @@ class DetectionTestingManager(BaseModel):
 
             self.output_dto.terminate = True
 
-            print("starting view stopper")
             future_views_shutdowner = {
                 view_shutdowner.submit(view.stop): view for view in self.input_dto.views
             }
             for future in concurrent.futures.as_completed(future_views_shutdowner):
-                print(f"Finished stopping view {future}")
                 try:
                     result = future.result()
                 except Exception as e:
                     print(f"Error stopping view: {str(e)}")
-            print("view stoppers stopped")
 
             for future in concurrent.futures.as_completed(future_views):
-                print(f"Finished running view {future}")
                 try:
                     result = future.result()
                 except Exception as e:
                     print(f"Error running container: {str(e)}")
-            print("all views futures stopped")
 
-        """
-        for obj in self.detectionTestingInfrastructureObjects:
-            import threading
-
-            t = threading.Thread(target=obj.setup, daemon=True)
-            t.start()
-
-        start_time = time.time()
-        try:
-            while True:
-                print("status tick")
-                elapsed_time = time.time() - start_time
-                self.status(elapsed_time)
-                time.sleep(self.input_dto.tick_seconds)
-        except Exception as e:
-            print("ERROR EXECUTING TEST")
-        """
-        print("do we get here?")
-        import sys
-
-        sys.exit(0)
-        return DetectionTestingManagerOutputDto()
+        return self.output_dto
 
     def create_DetectionTestingInfrastructureObjects(self):
         import sys

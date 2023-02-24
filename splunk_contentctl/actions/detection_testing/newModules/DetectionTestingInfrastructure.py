@@ -38,6 +38,7 @@ import urllib.parse
 import json
 from typing import Union
 import datetime
+import progressbar
 
 
 class ContainerStoppedException(Exception):
@@ -100,8 +101,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except Exception as e:
             print(e)
             return
-
-        print("Finished and ready!")
 
     def wait_for_ui_ready(self):
         print("waiting for ui...")
@@ -263,7 +262,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.finish()
                 return
             try:
-                print("test_detection")
                 self.test_detection(detection)
             except ContainerStoppedException as e:
                 print(f"Stopped container [{self.get_name()}]")
@@ -280,46 +278,102 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             return
 
         for test in detection.test.tests:
-            print("execute_test")
             self.execute_test(detection, test)
+            """
+            if test.result is not None and test.result.success:
+                print(
+                    f"TEST RESULT: [{test.name}] - PASS ({test.result.duration} seconds)"
+                )
+            elif test.result is not None:
+                print(
+                    f"TEST RESULT: [{test.name}] - FAIL ({test.result.duration} seconds)"
+                )
+            else:
+                print(f"TEST RESULT: [{test.name}] - FAIL (UNKOWN TIME)")
+            """
 
     def execute_test(
         self, detection: Detection, test: UnitTestTest, FORCE_ALL_TIME: bool = True
     ):
         start_time = time.time()
-        try:
-            self.replay_attack_data_files(test.attack_data)
-        except Exception as e:
-            test.result = UnitTestResult()
-            test.result.set_job_content(
-                e, self.config, duration=time.time() - start_time
+
+        len_attacks_and_baselines = len(test.attack_data) * 10 + len(test.baselines)
+        # https://github.com/WoLpH/python-progressbar/issues/164
+        # Use NullBar if there is more than 1 container or we are running
+        # in a non-interactive context
+
+        widgets = [
+            f"{test.name}".ljust(70),
+            progressbar.Timer(),
+        ]
+
+        with progressbar.ProgressBar(
+            widgets=widgets,
+            prefix="{variables.task} >> {variables.subtask}",
+            variables={"task": "--", "subtask": "--"},
+        ) as pbar:
+
+            try:
+                self.replay_attack_data_files(test.attack_data, pbar)
+            except Exception as e:
+                test.result = UnitTestResult()
+                test.result.set_job_content(
+                    e, self.config, duration=time.time() - start_time
+                )
+
+            # Set the mode and timeframe, if required
+            kwargs = {"exec_mode": "blocking"}
+            if not FORCE_ALL_TIME:
+                if test.earliest_time is not None:
+                    kwargs.update({"earliest_time": test.earliest_time})
+                if test.latest_time is not None:
+                    kwargs.update({"latest_time": test.latest_time})
+
+            try:
+                self.retry_search_until_timeout(
+                    detection, test, kwargs, start_time, pbar
+                )
+            except ContainerStoppedException as e:
+                raise (e)
+            except Exception as e:
+                test.result = UnitTestResult()
+                test.result.set_job_content(
+                    e, self.config, duration=time.time() - start_time
+                )
+            pbar.update(
+                pbar.value + 1,
+                task="attack_data".ljust(11),
+                subtask="deleting".ljust(12),
             )
 
-        # Set the mode and timeframe, if required
-        kwargs = {"exec_mode": "blocking"}
-        if not FORCE_ALL_TIME:
-            if test.earliest_time is not None:
-                kwargs.update({"earliest_time": test.earliest_time})
-            if test.latest_time is not None:
-                kwargs.update({"latest_time": test.latest_time})
+            self.delete_attack_data(test.attack_data)
+            if test.result is not None and test.result.success:
+                pbar.update(
+                    pbar.value + 1,
+                    task="completed".ljust(11),
+                    subtask="\x1b[0;30;42m" + "PASS".ljust(12) + "\x1b[0m",
+                )
+            else:
+                pbar.update(
+                    pbar.value + 1,
+                    task="completed".ljust(11),
+                    subtask="\x1b[0;30;41m" + "FAIL".ljust(12) + "\x1b[0m",
+                )
 
-        try:
-            self.retry_search_until_timeout(detection, test, kwargs, start_time)
-        except ContainerStoppedException as e:
-            raise (e)
-        except Exception as e:
-            test.result = UnitTestResult()
-            test.result.set_job_content(
-                e, self.config, duration=time.time() - start_time
-            )
-
-        self.delete_attack_data(test.attack_data)
+            pbar.finish()
+            if test.result is not None:
+                test.result.duration = round(time.time() - start_time, 2)
 
     def retry_search_until_timeout(
-        self, detection: Detection, test: UnitTestTest, kwargs: dict, start_time: float
+        self,
+        detection: Detection,
+        test: UnitTestTest,
+        kwargs: dict,
+        test_start_time: float,
+        pbar: progressbar.ProgressBar,
     ):
-
-        start_time = time.time()
+        search_start_time = time.time()
+        search_stop_time = time.time() + self.sync_obj.timeout_seconds
 
         if test.pass_condition is None:
             # we will default to ensuring at least one result exists
@@ -334,13 +388,26 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # exponential backoff for wait time
         tick = 2
-        while (time.time() - start_time) < self.sync_obj.timeout_seconds:
+        len_attacks_and_baselines = len(test.attack_data) * 2 + len(test.baselines)
+        while time.time() < search_stop_time:
+
             for _ in range(pow(2, tick - 1)):
                 # This loop allows us to capture shutdown events without being
                 # stuck in an extended sleep. Remember that this raises an exception
                 self.check_for_teardown()
+                pbar.update(
+                    time.time() - test_start_time,
+                    task="testing".ljust(11),
+                    subtask="waiting".ljust(12),
+                )
 
                 time.sleep(1)
+
+            pbar.update(
+                len_attacks_and_baselines + (time.time() - test_start_time),
+                task="testing".ljust(11),
+                subtask="executing".ljust(12),
+            )
 
             job = self.get_conn().search(query=search, **kwargs)
 
@@ -348,19 +415,26 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             _ = job.results(output_mode="json")
 
             if int(job.content.get("resultCount", "0")) > 0:
-                print(f"success for {test.name}")
                 test.result = UnitTestResult()
                 test.result.set_job_content(
                     job.content,
                     self.config,
                     success=True,
-                    duration=time.time() - start_time,
+                    duration=time.time() - search_start_time,
                 )
+
                 return
+            else:
+                test.result = UnitTestResult()
+                test.result.set_job_content(
+                    job.content,
+                    self.config,
+                    success=False,
+                    duration=time.time() - search_start_time,
+                )
 
             tick += 1
 
-        print(f"fail for {test.name}")
         return
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
@@ -382,13 +456,18 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     )
                 )
 
-    def replay_attack_data_files(self, attack_data_files: list[UnitTestAttackData]):
+    def replay_attack_data_files(
+        self, attack_data_files: list[UnitTestAttackData], pbar: progressbar.ProgressBar
+    ):
         with TemporaryDirectory(prefix="contentctl_attack_data") as attack_data_dir:
             for attack_data_file in attack_data_files:
-                self.replay_attack_data_file(attack_data_file, attack_data_dir)
+                self.replay_attack_data_file(attack_data_file, attack_data_dir, pbar)
 
     def replay_attack_data_file(
-        self, attack_data_file: UnitTestAttackData, tmp_dir: str
+        self,
+        attack_data_file: UnitTestAttackData,
+        tmp_dir: str,
+        pbar: progressbar.ProgressBar,
     ):
         tempfile = mktemp(dir=tmp_dir)
 
@@ -418,6 +497,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # given name
             try:
                 # In case the path is a local file, try to get it
+                pbar.update(
+                    pbar.value + 5,
+                    task="attack_data".ljust(11),
+                    subtask="downloading".ljust(12),
+                )
                 Utils.download_file_from_http(
                     attack_data_file.data, tempfile, overwrite_file=True
                 )
@@ -436,7 +520,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             )
 
         # Upload the data
-
+        pbar.update(
+            pbar.value + 5,
+            task="attack_data".ljust(11),
+            subtask="replaying".ljust(12),
+        )
         self.hec_raw_replay(tempfile, attack_data_file)
 
         return attack_data_file.custom_index or self.sync_obj.replay_index

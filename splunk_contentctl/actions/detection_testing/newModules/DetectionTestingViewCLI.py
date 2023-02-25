@@ -33,8 +33,9 @@ class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True
         self.pbar = tqdm.tqdm(
             total=len(self.sync_obj.inputQueue),
             initial=0,
-            bar_format="PLACEHOLDER",
+            bar_format=fmt,
         )
+
         self.showStatus()
 
     def showStatus(self, interval: int = 10):

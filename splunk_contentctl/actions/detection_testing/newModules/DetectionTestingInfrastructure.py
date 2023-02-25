@@ -39,6 +39,20 @@ import json
 from typing import Union
 import datetime
 import progressbar
+import tqdm
+
+
+MAX_TEST_NAME_LENGTH = 70
+TESTING_STATES = [
+    "Downloading Data",
+    "Replaying Data",
+    "Waiting for Processing",
+    "Running Search",
+    "Deleting Data",
+]
+
+LONGEST_STATE = max(len(w) for w in TESTING_STATES)
+PBAR_FORMAT_STRING = "{test_name} >> {state} | Time: {time}"
 
 
 class ContainerStoppedException(Exception):
@@ -64,6 +78,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     hec_token: str = ""
     hec_channel: str = ""
     _conn: client.Service = PrivateAttr()
+    pbar: tqdm.tqdm = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -86,26 +101,43 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         )
 
     def setup(self):
+        self.pbar = tqdm.tqdm(
+            total=100,
+            initial=0,
+            bar_format="PLACEHOLDER",
+        )
+        start_time = time.time()
         try:
-            for func in [
-                self.start,
-                self.get_conn,
-                self.configure_imported_roles,
-                self.configure_delete_indexes,
-                self.configure_conf_file_datamodels,
-                self.configure_hec,
-                self.wait_for_ui_ready,
+            for func, msg in [
+                (self.start, "Starting"),
+                (self.get_conn, "Getting API Connection"),
+                (self.configure_imported_roles, "Configuring Roles"),
+                (self.configure_delete_indexes, "Configuring Indexes"),
+                (self.configure_conf_file_datamodels, "Configuring Datamodels"),
+                (self.configure_hec, "Configuring HEC"),
+                (self.wait_for_ui_ready, "Waiting for UI"),
             ]:
+                self.pbar.bar_format = self.format_pbar_string(
+                    self.get_name(), msg, start_time
+                )
+                self.pbar.update()
                 func()
                 self.check_for_teardown()
+
         except Exception as e:
             print(e)
+            self.finish()
             return
 
+        self.pbar.bar_format = self.format_pbar_string(
+            self.get_name(), "Finished Setup!", start_time
+        )
+        self.pbar.update()
+
     def wait_for_ui_ready(self):
-        print("waiting for ui...")
+        # print("waiting for ui...")
         self.get_conn()
-        print("done waiting for ui")
+        # print("done waiting for ui")
 
     def configure_hec(self):
         self.hec_channel = str(uuid.uuid4())
@@ -132,9 +164,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 useACK=True,
             )
             self.hec_token = str(res.token)
-            print(
-                f"Successfully configured HEC Endpoint for [{self.get_name()}] with token [{self.hec_token}] and channel [{self.hec_channel}]"
-            )
+            # print(
+            #     f"Successfully configured HEC Endpoint for [{self.get_name()}] with token [{self.hec_token}] and channel [{self.hec_channel}]"
+            # )
             return
 
         except Exception as e:
@@ -175,7 +207,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                 if conn.restart_required:
                     # we will wait and try again
-                    print("there is a pending restart")
+                    # print("there is a pending restart")
                     continue
                 # Finished setup
                 self._conn = conn
@@ -183,13 +215,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except ConnectionRefusedError as e:
                 raise (e)
             except SSLEOFError as e:
-                print(
-                    "Waiting to connect to Splunk Infrastructure for Configuration..."
-                )
+                pass
+                # print(
+                #     "Waiting to connect to Splunk Infrastructure for Configuration..."
+                # )
             except Exception as e:
                 print(
                     f"Unhandled exception getting connection to splunk server: {str(e)}"
                 )
+                self.sync_obj.terminate = True
 
     def configure_imported_roles(
         self, imported_roles: list[str] = ["user", "power", "can_delete"]
@@ -217,10 +251,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 res = self.get_conn().get(
                     f"configs/conf-{conf_file_name}", app=app_name
                 )
-                print(f"configs/conf-{conf_file_name} exists")
+                # print(f"configs/conf-{conf_file_name} exists")
                 return
             except Exception as e:
-                print(f"Waiting for [{app_name} - {conf_file_name}.conf: {str(e)}")
+                pass
+                # print(f"Waiting for [{app_name} - {conf_file_name}.conf: {str(e)}")
 
     def configure_conf_file_datamodels(self, APP_NAME: str = "Splunk_SA_CIM"):
         self.wait_for_conf_file(APP_NAME, "datamodels")
@@ -246,7 +281,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     )
 
     def execute(self):
-
         while True:
             try:
                 self.check_for_teardown()
@@ -292,85 +326,91 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 print(f"TEST RESULT: [{test.name}] - FAIL (UNKOWN TIME)")
             """
 
+    def format_pbar_string(self, test_name: str, state: str, start_time: float) -> str:
+        test_name = test_name.ljust(MAX_TEST_NAME_LENGTH)
+        state = state.ljust(LONGEST_STATE)
+        runtime = datetime.timedelta(seconds=round(time.time() - start_time))
+        return PBAR_FORMAT_STRING.format(test_name=test_name, state=state, time=runtime)
+
     def execute_test(
         self, detection: Detection, test: UnitTestTest, FORCE_ALL_TIME: bool = True
     ):
+
+        self.pbar.reset()
+
         start_time = time.time()
 
-        len_attacks_and_baselines = len(test.attack_data) * 10 + len(test.baselines)
         # https://github.com/WoLpH/python-progressbar/issues/164
         # Use NullBar if there is more than 1 container or we are running
         # in a non-interactive context
 
-        widgets = [
-            f"{test.name}".ljust(70),
-            progressbar.Timer(),
-        ]
-
-        with progressbar.ProgressBar(
-            widgets=widgets,
-            prefix="{variables.task} >> {variables.subtask}",
-            variables={"task": "--", "subtask": "--"},
-        ) as pbar:
-
-            try:
-                self.replay_attack_data_files(test.attack_data, pbar)
-            except Exception as e:
-                test.result = UnitTestResult()
-                test.result.set_job_content(
-                    e, self.config, duration=time.time() - start_time
+        try:
+            self.replay_attack_data_files(test.attack_data, test, start_time)
+        except Exception as e:
+            test.result = UnitTestResult()
+            test.result.set_job_content(
+                e, self.config, duration=time.time() - start_time
+            )
+            self.pbar.write(
+                self.format_pbar_string(
+                    test.name,
+                    "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
+                    start_time,
                 )
+            )
+            return
 
-            # Set the mode and timeframe, if required
-            kwargs = {"exec_mode": "blocking"}
-            if not FORCE_ALL_TIME:
-                if test.earliest_time is not None:
-                    kwargs.update({"earliest_time": test.earliest_time})
-                if test.latest_time is not None:
-                    kwargs.update({"latest_time": test.latest_time})
+        # Set the mode and timeframe, if required
+        kwargs = {"exec_mode": "blocking"}
+        if not FORCE_ALL_TIME:
+            if test.earliest_time is not None:
+                kwargs.update({"earliest_time": test.earliest_time})
+            if test.latest_time is not None:
+                kwargs.update({"latest_time": test.latest_time})
 
-            try:
-                self.retry_search_until_timeout(
-                    detection, test, kwargs, start_time, pbar
-                )
-            except ContainerStoppedException as e:
-                raise (e)
-            except Exception as e:
-                test.result = UnitTestResult()
-                test.result.set_job_content(
-                    e, self.config, duration=time.time() - start_time
-                )
-            pbar.update(
-                pbar.value + 1,
-                task="attack_data".ljust(11),
-                subtask="deleting".ljust(12),
+        try:
+            self.retry_search_until_timeout(detection, test, kwargs, start_time)
+        except ContainerStoppedException as e:
+            raise (e)
+        except Exception as e:
+            test.result = UnitTestResult()
+            test.result.set_job_content(
+                e, self.config, duration=time.time() - start_time
             )
 
-            self.delete_attack_data(test.attack_data)
-            if test.result is not None and test.result.success:
-                pbar.update(
-                    pbar.value + 1,
-                    task="completed".ljust(11),
-                    subtask="\x1b[0;30;42m" + "PASS".ljust(12) + "\x1b[0m",
-                )
-            else:
-                pbar.update(
-                    pbar.value + 1,
-                    task="completed".ljust(11),
-                    subtask="\x1b[0;30;41m" + "FAIL".ljust(12) + "\x1b[0m",
-                )
+        self.pbar.bar_format = self.format_pbar_string(
+            test.name, "Deleting Data", start_time
+        )
+        self.pbar.update()
+        self.delete_attack_data(test.attack_data)
 
-            pbar.finish()
-            if test.result is not None:
-                test.result.duration = round(time.time() - start_time, 2)
+        if test.result is not None and test.result.success:
+            self.pbar.write(
+                self.format_pbar_string(
+                    test.name,
+                    "\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m",
+                    start_time,
+                )
+            )
+
+        else:
+            self.pbar.write(
+                self.format_pbar_string(
+                    test.name,
+                    "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
+                    start_time,
+                )
+            )
+
+        if test.result is not None:
+            test.result.duration = round(time.time() - start_time, 2)
 
     def retry_search_until_timeout(
         self,
         detection: Detection,
         test: UnitTestTest,
         kwargs: dict,
-        test_start_time: float,
-        pbar: progressbar.ProgressBar,
+        start_time: float,
     ):
         search_start_time = time.time()
         search_stop_time = time.time() + self.sync_obj.timeout_seconds
@@ -388,26 +428,24 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # exponential backoff for wait time
         tick = 2
-        len_attacks_and_baselines = len(test.attack_data) * 2 + len(test.baselines)
+
         while time.time() < search_stop_time:
 
             for _ in range(pow(2, tick - 1)):
                 # This loop allows us to capture shutdown events without being
                 # stuck in an extended sleep. Remember that this raises an exception
                 self.check_for_teardown()
-                pbar.update(
-                    time.time() - test_start_time,
-                    task="testing".ljust(11),
-                    subtask="waiting".ljust(12),
+                self.pbar.bar_format = self.format_pbar_string(
+                    test.name, "Waiting for Processing", start_time
                 )
+                self.pbar.update()
 
                 time.sleep(1)
 
-            pbar.update(
-                len_attacks_and_baselines + (time.time() - test_start_time),
-                task="testing".ljust(11),
-                subtask="executing".ljust(12),
+            self.pbar.bar_format = self.format_pbar_string(
+                test.name, "Running Search", start_time
             )
+            self.pbar.update()
 
             job = self.get_conn().search(query=search, **kwargs)
 
@@ -457,17 +495,23 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 )
 
     def replay_attack_data_files(
-        self, attack_data_files: list[UnitTestAttackData], pbar: progressbar.ProgressBar
+        self,
+        attack_data_files: list[UnitTestAttackData],
+        test: UnitTestTest,
+        start_time: float,
     ):
         with TemporaryDirectory(prefix="contentctl_attack_data") as attack_data_dir:
             for attack_data_file in attack_data_files:
-                self.replay_attack_data_file(attack_data_file, attack_data_dir, pbar)
+                self.replay_attack_data_file(
+                    attack_data_file, attack_data_dir, test, start_time
+                )
 
     def replay_attack_data_file(
         self,
         attack_data_file: UnitTestAttackData,
         tmp_dir: str,
-        pbar: progressbar.ProgressBar,
+        test: UnitTestTest,
+        start_time: float,
     ):
         tempfile = mktemp(dir=tmp_dir)
 
@@ -497,11 +541,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # given name
             try:
                 # In case the path is a local file, try to get it
-                pbar.update(
-                    pbar.value + 5,
-                    task="attack_data".ljust(11),
-                    subtask="downloading".ljust(12),
+                self.pbar.bar_format = self.format_pbar_string(
+                    test.name, "Downloading Data", start_time
                 )
+                self.pbar.update()
                 Utils.download_file_from_http(
                     attack_data_file.data, tempfile, overwrite_file=True
                 )
@@ -520,11 +563,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             )
 
         # Upload the data
-        pbar.update(
-            pbar.value + 5,
-            task="attack_data".ljust(11),
-            subtask="replaying".ljust(12),
+        self.pbar.bar_format = self.format_pbar_string(
+            test.name, "Replaying Data", start_time
         )
+        self.pbar.update()
         self.hec_raw_replay(tempfile, attack_data_file)
 
         return attack_data_file.custom_index or self.sync_obj.replay_index
@@ -638,7 +680,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         pass
 
     def finish(self):
-        print("FINISHING...")
+        self.pbar.close()
 
     def check_health(self):
         pass

@@ -4,20 +4,41 @@ from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView
 
 import time
 import datetime
+import tqdm
 
 
-class DetectionTestingViewCLI(DetectionTestingView):
+class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True):
+    pbar: tqdm.tqdm = None
+    previous_output_queue_length: int = 0
+
+    def format_pbar(
+        self,
+        completed_detections,
+        total_detections,
+        elapsed_time,
+        estimated_time_remaining,
+    ) -> str:
+        ratio = f"{completed_detections}/{total_detections}".ljust(9)
+
+        et = f"{elapsed_time}".ljust(8)
+        etr = f"{estimated_time_remaining}".ljust(8)
+        bar = "{percentage:3.0f}%[{bar:30}]"
+        return f"Completed {ratio} {bar} | Elapsed: {et} | Remaining: {etr}"
+
     def setup(self):
+        self.previous_output_queue_length = len(self.sync_obj.outputQueue)
+        fmt = self.format_pbar(
+            len(self.sync_obj.outputQueue), len(self.sync_obj.inputQueue), "TBD", "TBD"
+        )
+        self.pbar = tqdm.tqdm(
+            total=len(self.sync_obj.inputQueue),
+            initial=0,
+            bar_format="PLACEHOLDER",
+        )
         self.showStatus()
 
-    def showStatus(self, interval: int = 60):
+    def showStatus(self, interval: int = 10):
         while True:
-            for i in range(interval):
-                if self.sync_obj.terminate:
-                    print("Detection Testing Completed")
-                    return
-                time.sleep(1)
-
             len_input = len(self.sync_obj.inputQueue)
             len_output = len(self.sync_obj.outputQueue)
             len_current = len(
@@ -30,7 +51,9 @@ class DetectionTestingViewCLI(DetectionTestingView):
             total_num_detections = len_input + len_output + len_current
 
             if self.sync_obj.start_time is None:
-                time_string = f"STATUS UPDATE: {len(self.sync_obj.outputQueue)} of {total_num_detections} in REMAINING TIME UNKNOWN"
+                time_string = self.format_pbar(
+                    len_output, total_num_detections, "TBD", "TBD"
+                )
             else:
                 elapsed_timedelta = datetime.datetime.now() - self.sync_obj.start_time
 
@@ -49,9 +72,24 @@ class DetectionTestingViewCLI(DetectionTestingView):
                     microseconds=elapsed_timedelta.microseconds
                 )
 
-                time_string = f"STATUS UPDATE: {len_output} of {total_num_detections} in {elapsed_timedelta}, {remaining_time} remaining"
-            # Clear the current line - for some reason we nbeed a space
-            print("\x1b[2K" + " " + time_string)
+                time_string = self.format_pbar(
+                    len_output, total_num_detections, elapsed_timedelta, remaining_time
+                )
+
+            self.pbar.bar_format = time_string
+            if len_output != self.previous_output_queue_length:
+                update_diff = len_output - self.previous_output_queue_length
+                self.previous_output_queue_length = len_output
+                self.pbar.update(update_diff)
+
+            else:
+                self.pbar.update()
+
+            for i in range(interval):
+                if self.sync_obj.terminate:
+                    print("Detection Testing Completed")
+                    return
+                time.sleep(1)
 
     def showResults(self):
         pass
@@ -60,5 +98,5 @@ class DetectionTestingViewCLI(DetectionTestingView):
         pass
 
     def stop(self):
-        print("stopping cli")
+        self.pbar.close()
         pass

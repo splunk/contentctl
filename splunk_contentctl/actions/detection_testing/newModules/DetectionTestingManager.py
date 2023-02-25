@@ -39,6 +39,8 @@ from splunk_contentctl.objects.detection import Detection
 
 import concurrent.futures
 
+import tqdm
+
 
 @dataclass(frozen=False)
 class DetectionTestingManagerInputDto:
@@ -87,6 +89,7 @@ class DetectionTestingManager(BaseModel):
         ) as view_runner, concurrent.futures.ThreadPoolExecutor(
             max_workers=self.input_dto.config.num_containers,
         ) as view_shutdowner:
+
             # Start all the views
             future_views = {
                 view_runner.submit(view.setup): view for view in self.input_dto.views

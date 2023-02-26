@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import abc
 import requests
 import splunklib.client as client
+from splunk_contentctl.objects.enums import PostTestBehavior
 from splunk_contentctl.objects.detection import Detection
 from splunk_contentctl.objects.unit_test_test import UnitTestTest
 from splunk_contentctl.objects.unit_test_attack_data import UnitTestAttackData
@@ -79,6 +80,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     hec_channel: str = ""
     _conn: client.Service = PrivateAttr()
     pbar: tqdm.tqdm = None
+    start_time: float = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -106,7 +108,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             initial=0,
             bar_format="PLACEHOLDER",
         )
-        start_time = time.time()
+        self.start_time = time.time()
         try:
             for func, msg in [
                 (self.start, "Starting"),
@@ -117,10 +119,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 (self.configure_hec, "Configuring HEC"),
                 (self.wait_for_ui_ready, "Waiting for UI"),
             ]:
-                self.pbar.bar_format = self.format_pbar_string(
-                    self.get_name(), msg, start_time
-                )
-                self.pbar.update()
+                self.format_pbar_string(self.get_name(), msg, self.start_time)
                 func()
                 self.check_for_teardown()
 
@@ -129,10 +128,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.finish()
             return
 
-        self.pbar.bar_format = self.format_pbar_string(
-            self.get_name(), "Finished Setup!", start_time
-        )
-        self.pbar.update()
+        self.format_pbar_string(self.get_name(), "Finished Setup!", self.start_time)
 
     def wait_for_ui_ready(self):
         # print("waiting for ui...")
@@ -208,6 +204,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 if conn.restart_required:
                     # we will wait and try again
                     # print("there is a pending restart")
+                    self.format_pbar_string(
+                        self.get_name(), "Waiting for reboot", self.start_time
+                    )
                     continue
                 # Finished setup
                 self._conn = conn
@@ -224,6 +223,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     f"Unhandled exception getting connection to splunk server: {str(e)}"
                 )
                 self.sync_obj.terminate = True
+            self.format_pbar_string(
+                self.get_name(), "Getting API Connection", self.start_time
+            )
 
     def configure_imported_roles(
         self, imported_roles: list[str] = ["user", "power", "can_delete"]
@@ -255,6 +257,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 return
             except Exception as e:
                 pass
+                self.format_pbar_string(
+                    self.get_name(), "Configuring Datamodels", self.start_time
+                )
                 # print(f"Waiting for [{app_name} - {conf_file_name}.conf: {str(e)}")
 
     def configure_conf_file_datamodels(self, APP_NAME: str = "Splunk_SA_CIM"):
@@ -313,33 +318,34 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         for test in detection.test.tests:
             self.execute_test(detection, test)
-            """
-            if test.result is not None and test.result.success:
-                print(
-                    f"TEST RESULT: [{test.name}] - PASS ({test.result.duration} seconds)"
-                )
-            elif test.result is not None:
-                print(
-                    f"TEST RESULT: [{test.name}] - FAIL ({test.result.duration} seconds)"
-                )
-            else:
-                print(f"TEST RESULT: [{test.name}] - FAIL (UNKOWN TIME)")
-            """
 
-    def format_pbar_string(self, test_name: str, state: str, start_time: float) -> str:
-        test_name = test_name.ljust(MAX_TEST_NAME_LENGTH)
-        state = state.ljust(LONGEST_STATE)
-        runtime = datetime.timedelta(seconds=round(time.time() - start_time))
-        return PBAR_FORMAT_STRING.format(test_name=test_name, state=state, time=runtime)
+    def format_pbar_string(self, test_name: str, state: str, start_time: float):
+        field_one = test_name.ljust(MAX_TEST_NAME_LENGTH)
+        field_two = state.ljust(LONGEST_STATE)
+        field_three = datetime.timedelta(seconds=round(time.time() - start_time))
+        new_string = PBAR_FORMAT_STRING.format(
+            test_name=field_one, state=field_two, time=field_three
+        )
+        self.pbar.bar_format = new_string
+
+        self.pbar.update()
+
+    def format_pbar_string_pause(self, detection: Detection, test: UnitTestTest) -> str:
+        if test.result is None:
+            res = "ERROR"
+            link = detection.search
+        else:
+            res = test.result
+            link = test.result.get_summary_dict()["sid_link"]
+
+        return f"{test.name} >> {res} | {link}"
 
     def execute_test(
         self, detection: Detection, test: UnitTestTest, FORCE_ALL_TIME: bool = True
     ):
-
-        self.pbar.reset()
-
         start_time = time.time()
-
+        self.pbar.reset()
+        self.format_pbar_string(test.name, "Beginning Test", start_time)
         # https://github.com/WoLpH/python-progressbar/issues/164
         # Use NullBar if there is more than 1 container or we are running
         # in a non-interactive context
@@ -352,12 +358,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 e, self.config, duration=time.time() - start_time
             )
             self.pbar.write(
-                self.format_pbar_string(
-                    test.name,
-                    "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
-                    start_time,
+                PBAR_FORMAT_STRING.format(
+                    test=test.name,
+                    state="\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
+                    time=time.time() - start_time,
                 )
             )
+
             return
 
         # Set the mode and timeframe, if required
@@ -378,27 +385,38 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 e, self.config, duration=time.time() - start_time
             )
 
-        self.pbar.bar_format = self.format_pbar_string(
-            test.name, "Deleting Data", start_time
-        )
-        self.pbar.update()
+        if self.config.mode == PostTestBehavior.always_pause:
+            self.format_pbar_string(test.name, "INTERACTIVE DEBUG", start_time)
+            self.pbar.write(self.format_pbar_string_pause(detection, test))
+            _ = input()
+
+        elif self.config.mode == PostTestBehavior.pause_on_failure and (
+            test.result is None or test.result.success == False
+        ):
+            self.format_pbar_string(test.name, "INTERACTIVE DEBUG", start_time)
+            self.pbar.write(self.format_pbar_string_pause(detection, test))
+
+            _ = input()
+
+        self.format_pbar_string(test.name, "Deleting Data", start_time)
+
         self.delete_attack_data(test.attack_data)
 
         if test.result is not None and test.result.success:
             self.pbar.write(
-                self.format_pbar_string(
-                    test.name,
-                    "\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m",
-                    start_time,
+                PBAR_FORMAT_STRING.format(
+                    test=test.name,
+                    status="\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m",
+                    time=time.time() - start_time,
                 )
             )
 
         else:
             self.pbar.write(
-                self.format_pbar_string(
-                    test.name,
-                    "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
-                    start_time,
+                PBAR_FORMAT_STRING.format(
+                    test=test.name,
+                    status="\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
+                    time=time.time() - start_time,
                 )
             )
 
@@ -435,17 +453,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 # This loop allows us to capture shutdown events without being
                 # stuck in an extended sleep. Remember that this raises an exception
                 self.check_for_teardown()
-                self.pbar.bar_format = self.format_pbar_string(
-                    test.name, "Waiting for Processing", start_time
-                )
-                self.pbar.update()
+                self.format_pbar_string(test.name, "Waiting for Processing", start_time)
 
                 time.sleep(1)
 
-            self.pbar.bar_format = self.format_pbar_string(
-                test.name, "Running Search", start_time
-            )
-            self.pbar.update()
+            self.format_pbar_string(test.name, "Running Search", start_time)
 
             job = self.get_conn().search(query=search, **kwargs)
 
@@ -520,6 +532,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             or attack_data_file.data.startswith("http://")
         ):
             if pathlib.Path(attack_data_file.data).is_file():
+                self.format_pbar_string(test.name, "Copying Data", start_time)
                 try:
                     copyfile(attack_data_file.data, tempfile)
                 except Exception as e:
@@ -541,10 +554,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # given name
             try:
                 # In case the path is a local file, try to get it
-                self.pbar.bar_format = self.format_pbar_string(
-                    test.name, "Downloading Data", start_time
-                )
-                self.pbar.update()
+
+                self.format_pbar_string(test.name, "Downloading Data", start_time)
+
                 Utils.download_file_from_http(
                     attack_data_file.data, tempfile, overwrite_file=True
                 )
@@ -563,10 +575,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             )
 
         # Upload the data
-        self.pbar.bar_format = self.format_pbar_string(
-            test.name, "Replaying Data", start_time
-        )
-        self.pbar.update()
+        self.format_pbar_string(test.name, "Replaying Data", start_time)
+
         self.hec_raw_replay(tempfile, attack_data_file)
 
         return attack_data_file.custom_index or self.sync_obj.replay_index

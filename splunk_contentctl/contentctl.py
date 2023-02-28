@@ -149,6 +149,7 @@ def test(args: argparse.Namespace) -> TestOutputDto:
         config=test_config,
     )
     test = Test()
+
     test_output_dto = test.execute(test_input_dto)
     return test_output_dto
 

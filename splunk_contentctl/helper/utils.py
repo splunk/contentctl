@@ -274,6 +274,7 @@ class Utils:
         overwrite_file: bool = False,
         verbose_print: bool = False,
     ):
+        verbose_print = False
         global TOTAL_BYTES, TOTAL_DOWNLOAD_TIME
         destinationPath = pathlib.Path(destination_file)
         if verbose_print:
@@ -304,9 +305,22 @@ class Utils:
             bytes_written = 0
             file_to_download = requests.get(file_path, stream=True)
             file_to_download.raise_for_status()
-            with destinationPath.open("wb") as output:
+            content_length = int(file_to_download.headers["Content-length"])
+            import tqdm
+
+            with destinationPath.open("wb") as output, tqdm.tqdm(
+                total=content_length,
+                desc=f"Downloading file",
+                unit="B",
+                unit_scale=True,
+                # bar_format="{l_bar}{bar}| [{n_fmt}/{total_fmt} | ETA:,{remaining}]",
+                bar_format=f"Downloading {destinationPath}".ljust(80)
+                + "{percentage:3.0f}%[{bar:20}]"
+                + "[{n_fmt}/{total_fmt} | ETA:,{remaining}]",
+            ) as pbar:
                 for piece in file_to_download.iter_content(chunk_size=1024 * 8):
                     bytes_written += output.write(piece)
+                    pbar.update(len(piece))
             download_stop_time = default_timer()
             delta = download_stop_time - download_start_time
             TOTAL_BYTES += bytes_written

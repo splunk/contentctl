@@ -319,26 +319,25 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         for test in detection.test.tests:
             self.execute_test(detection, test)
 
-    def format_pbar_string(self, test_name: str, state: str, start_time: float):
+    def format_pbar_string(
+        self,
+        test_name: str,
+        state: str,
+        start_time: Union[float, None],
+        set_pbar: bool = True,
+    ) -> str:
+        if start_time == None:
+            start_time = self.start_time
         field_one = test_name.ljust(MAX_TEST_NAME_LENGTH)
         field_two = state.ljust(LONGEST_STATE)
         field_three = datetime.timedelta(seconds=round(time.time() - start_time))
         new_string = PBAR_FORMAT_STRING.format(
             test_name=field_one, state=field_two, time=field_three
         )
-        self.pbar.bar_format = new_string
-
-        self.pbar.update()
-
-    def format_pbar_string_pause(self, detection: Detection, test: UnitTestTest) -> str:
-        if test.result is None:
-            res = "ERROR"
-            link = detection.search
-        else:
-            res = test.result
-            link = test.result.get_summary_dict()["sid_link"]
-
-        return f"{test.name} >> {res} | {link}"
+        if set_pbar:
+            self.pbar.bar_format = new_string
+            self.pbar.update()
+        return new_string
 
     def execute_test(
         self, detection: Detection, test: UnitTestTest, FORCE_ALL_TIME: bool = True
@@ -358,10 +357,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 e, self.config, duration=time.time() - start_time
             )
             self.pbar.write(
-                PBAR_FORMAT_STRING.format(
-                    test=test.name,
-                    state="\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
-                    time=time.time() - start_time,
+                self.format_pbar_string(
+                    test.name,
+                    "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
+                    start_time=time.time() - start_time,
+                    set_pbar=False,
                 )
             )
 
@@ -385,38 +385,54 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 e, self.config, duration=time.time() - start_time
             )
 
-        if self.config.mode == PostTestBehavior.always_pause:
-            self.format_pbar_string(test.name, "INTERACTIVE DEBUG", start_time)
-            self.pbar.write(self.format_pbar_string_pause(detection, test))
-            _ = input()
+        if (
+            self.config.post_test_behavior == PostTestBehavior.always_pause
+            or (
+                self.config.post_test_behavior == PostTestBehavior.pause_on_failure
+                and (test.result is None or test.result.success == False)
+            )
+        ) and not self.sync_obj.terminate:
+            if test.result is None:
+                res = "ERROR"
+                link = detection.search
+            else:
+                res = test.result.success
+                if res:
+                    res = "PASS"
+                else:
+                    res = "FAIL"
+                link = test.result.get_summary_dict()["sid_link"]
 
-        elif self.config.mode == PostTestBehavior.pause_on_failure and (
-            test.result is None or test.result.success == False
-        ):
-            self.format_pbar_string(test.name, "INTERACTIVE DEBUG", start_time)
-            self.pbar.write(self.format_pbar_string_pause(detection, test))
+            self.format_pbar_string(
+                test.name, f"{res} - {link} (CTRL+D to continue)", start_time
+            )
 
-            _ = input()
+            try:
+                _ = input()
+            except Exception as e:
+                pass
 
-        self.format_pbar_string(test.name, "Deleting Data", start_time)
-
+        self.format_pbar_string(test.name, f"Deleting Data", start_time)
         self.delete_attack_data(test.attack_data)
+        self.format_pbar_string("", f"Preparing Next Test", start_time)
 
         if test.result is not None and test.result.success:
             self.pbar.write(
-                PBAR_FORMAT_STRING.format(
-                    test=test.name,
-                    status="\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m",
-                    time=time.time() - start_time,
+                self.format_pbar_string(
+                    test.name,
+                    "\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m",
+                    start_time=time.time() - start_time,
+                    set_pbar=False,
                 )
             )
 
         else:
             self.pbar.write(
-                PBAR_FORMAT_STRING.format(
-                    test=test.name,
-                    status="\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
-                    time=time.time() - start_time,
+                self.format_pbar_string(
+                    test.name,
+                    "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
+                    start_time=time.time() - start_time,
+                    set_pbar=False,
                 )
             )
 

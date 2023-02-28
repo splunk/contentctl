@@ -76,7 +76,7 @@ class DetectionTestingManager(BaseModel):
                 # a newline '\r\n' which will cause that wait to stop
                 print("*******************************")
                 print(
-                    "If testing is paused and you are debugging a detection, you MUST hit enter at the prompt to complete shutdown."
+                    "If testing is paused and you are debugging a detection, you MUST hit CTRL-D at the prompt to complete shutdown."
                 )
                 print("*******************************")
 

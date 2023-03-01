@@ -8,13 +8,12 @@ from timeit import default_timer
 import pathlib
 import datetime
 from typing import Union
-
+import tqdm
 from splunk_contentctl.objects.security_content_object import SecurityContentObject
+from math import ceil
 
 TOTAL_BYTES = 0
-TOTAL_DOWNLOAD_TIME = 0
 ALWAYS_PULL = True
-import humanize
 
 
 class Utils:
@@ -257,8 +256,6 @@ class Utils:
             else:
                 raise (Exception(f"[{sourcePath}] does not exist"))
         except Exception as e:
-            if verbose_print:
-                print("Error")
             raise (
                 Exception(
                     f"Error: Could not copy local file [{sourcePath}] to [{destPath}]: [{str(e)}]"
@@ -271,21 +268,44 @@ class Utils:
     def download_file_from_http(
         file_path: str,
         destination_file: str,
+        input_pbar: Union[tqdm.tqdm, None] = None,
         overwrite_file: bool = False,
-        verbose_print: bool = False,
     ):
-        verbose_print = False
-        global TOTAL_BYTES, TOTAL_DOWNLOAD_TIME
+        global TOTAL_BYTES
+        sourcePath = pathlib.Path(file_path)
         destinationPath = pathlib.Path(destination_file)
-        if verbose_print:
-            print(
-                f"Downloading [{file_path}] to [{destinationPath}]...",
-                end="",
-                flush=True,
+
+        if input_pbar is None:
+            pbar = tqdm.tqdm(
+                total=100,
+                desc="Downloading File",
+                unit="B",
+                unit_scale=True,
+                bar_format=f"Downloading {sourcePath.name}".ljust(80)
+                + "{percentage:3.0f}%[{bar:20}]"
+                + "[{n_fmt}/{total_fmt} | ETA: {remaining}]",
             )
+        else:
+            pbar = input_pbar
+            pbar.bar_format = (
+                f"Downloading {sourcePath.name}".ljust(80)
+                + "{percentage:3.0f}%[{bar:20}]"
+                + "[{n_fmt}/{total_fmt} | ETA: {remaining}]"
+            )
+            pbar.unit = "B"
+            pbar.unit_scale = True
+
+            pbar.reset()
 
         if destinationPath.is_file() and overwrite_file is False:
-            print(f"Using cached version")
+            pbar.bar_format = (
+                f"Downloading {sourcePath.name}".ljust(80)
+                + "{percentage:3.0f}%[{bar:20}]"
+                + "[PREVIOUSLY CACHED]"
+            )
+            pbar.update(100)
+            if input_pbar is None:
+                pbar.close()
             return
         elif destinationPath.is_file() and overwrite_file is True:
             # Overwrite the file
@@ -293,7 +313,7 @@ class Utils:
         elif destinationPath.exists():
             # The path exists but it is not a file.  This is an issue
             # regardless of whether or not overwrite_file is enabled
-            print("Error")
+
             raise (
                 Exception(
                     f"[{destinationPath}] already exists, but it is not a file. We cannot overwrite it."
@@ -306,29 +326,27 @@ class Utils:
             file_to_download = requests.get(file_path, stream=True)
             file_to_download.raise_for_status()
             content_length = int(file_to_download.headers["Content-length"])
-            import tqdm
 
-            with destinationPath.open("wb") as output, tqdm.tqdm(
-                total=content_length,
-                desc=f"Downloading file",
-                unit="B",
-                unit_scale=True,
-                # bar_format="{l_bar}{bar}| [{n_fmt}/{total_fmt} | ETA:,{remaining}]",
-                bar_format=f"Downloading {destinationPath}".ljust(80)
+            chunk_size = max(1024 * 1024, ceil(content_length / 100))
+            pbar.total = content_length
+            pbar.reset()
+
+            pbar.bar_format = (
+                f"Downloading {sourcePath.name}".ljust(80)
                 + "{percentage:3.0f}%[{bar:20}]"
-                + "[{n_fmt}/{total_fmt} | ETA:,{remaining}]",
-            ) as pbar:
-                for piece in file_to_download.iter_content(chunk_size=1024 * 8):
+                + "[{n_fmt}/{total_fmt} | ETA: {remaining}]"
+            )
+
+            # pbar.update()
+
+            with destinationPath.open("wb") as output:
+                for piece in file_to_download.iter_content(chunk_size=chunk_size):
                     bytes_written += output.write(piece)
                     pbar.update(len(piece))
-            download_stop_time = default_timer()
-            delta = download_stop_time - download_start_time
+
             TOTAL_BYTES += bytes_written
-            TOTAL_DOWNLOAD_TIME += delta
 
         except requests.exceptions.ConnectionError as e:
-            if verbose_print:
-                print("Error")
             raise (
                 Exception(
                     f"Error: Could not download file [{file_path}] to [{destinationPath}] (Unable to connect to server. Are you sure the server exists and you have connectivity to it?): [{str(e)}]"
@@ -336,38 +354,29 @@ class Utils:
             )
 
         except requests.exceptions.HTTPError as e:
-            if verbose_print:
-                print("Error")
             raise (
                 Exception(
                     f"Error: Could not download file [{file_path}] to [{destinationPath}] (The file was probably not found on the server): [{str(e)}]"
                 )
             )
         except requests.exceptions.Timeout as e:
-            if verbose_print:
-                print("Error")
             raise (
                 Exception(
                     f"Error: Could not download file [{file_path}] to [{destinationPath}] (Timeout getting file): [{str(e)}]"
                 )
             )
         except Exception as e:
-            if verbose_print:
-                print("Error")
             raise (
                 Exception(
                     f"Error: Could not download file [{file_path}] to [{destinationPath}] (Unknown Reason): [{str(e)}]"
                 )
             )
-        if verbose_print:
-            if delta < 1:
-                time_string = f"{round(delta, ndigits=1)} seconds"
-            else:
-                time_string = humanize.naturaldelta(round(delta))
-            print(
-                f"Done ({time_string}, {humanize.naturalsize(bytes_written,format='%d')})"
-            )
+        finally:
+            if input_pbar is None:
+                pbar.close()
+            # Otherwise, don't close it because we will keep using it
 
+        pbar.reset()
         return
 
     @staticmethod

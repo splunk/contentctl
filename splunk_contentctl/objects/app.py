@@ -52,6 +52,7 @@ class App(BaseModel, extra=Extra.forbid):
         apps_directory: pathlib.Path,
         container_mount_path: pathlib.Path,
     ):
+
         splunkbase_creds_provided = (
             splunkbase_username is not None and splunkbase_password is not None
         )
@@ -72,9 +73,7 @@ class App(BaseModel, extra=Extra.forbid):
             path_on_server = str(urlparse(self.http_path).path)
             filename = pathlib.Path(path_on_server)
             download_path = str(apps_directory / filename.name)
-            Utils.download_file_from_http(
-                self.http_path, download_path, verbose_print=True
-            )
+            Utils.download_file_from_http(self.http_path, download_path)
             self.environment_path = str(container_mount_path / filename.name)
 
         else:

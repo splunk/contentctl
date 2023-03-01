@@ -104,9 +104,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def setup(self):
         self.pbar = tqdm.tqdm(
-            total=100,
-            initial=0,
-            bar_format="PLACEHOLDER",
+            total=100, initial=0, bar_format="PLACEHOLDER", miniters=0, mininterval=0
         )
         self.start_time = time.time()
         try:
@@ -352,6 +350,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         try:
             self.replay_attack_data_files(test.attack_data, test, start_time)
         except Exception as e:
+
             test.result = UnitTestResult()
             test.result.set_job_content(
                 e, self.config, duration=time.time() - start_time
@@ -574,12 +573,16 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(test.name, "Downloading Data", start_time)
 
                 Utils.download_file_from_http(
-                    attack_data_file.data, tempfile, overwrite_file=True
+                    attack_data_file.data, tempfile, self.pbar, overwrite_file=True
                 )
             except Exception as e:
+                import traceback
+
+                traceback.print_exc()
+                time.sleep(5)
                 raise (
                     Exception(
-                        f"Attack Data File for [{Detection.name}] is remote [{attack_data_file.data}], but could not download: :{str(e)}"
+                        f"Could not download attack data file [{attack_data_file.data}]:{str(e)}"
                     )
                 )
 

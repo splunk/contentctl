@@ -104,7 +104,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def setup(self):
         self.pbar = tqdm.tqdm(
-            total=100, initial=0, bar_format="PLACEHOLDER", miniters=0, mininterval=0
+            total=100,
+            initial=0,
+            bar_format=f"{self.get_name()} starting",
+            miniters=0,
+            mininterval=0,
         )
         self.start_time = time.time()
         try:
@@ -122,16 +126,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.check_for_teardown()
 
         except Exception as e:
-            print(e)
+            self.pbar.write(str(e))
             self.finish()
             return
 
         self.format_pbar_string(self.get_name(), "Finished Setup!", self.start_time)
 
     def wait_for_ui_ready(self):
-        # print("waiting for ui...")
         self.get_conn()
-        # print("done waiting for ui")
 
     def configure_hec(self):
         self.hec_channel = str(uuid.uuid4())
@@ -140,9 +142,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 path="/servicesNS/nobody/splunk_httpinput/data/inputs/http/http:%2F%2FDETECTION_TESTING_HEC"
             )
             self.hec_token = str(res.token)
-            print(
-                f"HEC Endpoint for [{self.get_name()}] already exists with token [{self.hec_token}].  Using channel [{self.hec_channel}]"
-            )
             return
         except Exception as e:
             # HEC input does not exist.  That's okay, we will create it
@@ -158,9 +157,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 useACK=True,
             )
             self.hec_token = str(res.token)
-            # print(
-            #     f"Successfully configured HEC Endpoint for [{self.get_name()}] with token [{self.hec_token}] and channel [{self.hec_channel}]"
-            # )
             return
 
         except Exception as e:
@@ -200,8 +196,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 )
 
                 if conn.restart_required:
-                    # we will wait and try again
-                    # print("there is a pending restart")
                     self.format_pbar_string(
                         self.get_name(), "Waiting for reboot", self.start_time
                     )
@@ -213,11 +207,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 raise (e)
             except SSLEOFError as e:
                 pass
-                # print(
-                #     "Waiting to connect to Splunk Infrastructure for Configuration..."
-                # )
             except Exception as e:
-                print(
+                self.pbar.write(
                     f"Unhandled exception getting connection to splunk server: {str(e)}"
                 )
                 self.sync_obj.terminate = True
@@ -239,7 +230,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         try:
             self.get_conn().post(endpoint, value=indexes_encoded)
         except Exception as e:
-            print(
+            self.pbar.write(
                 f"Error configuring deleteIndexesAllowed with '{indexes_encoded}': [{str(e)}]"
             )
 
@@ -251,14 +242,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 res = self.get_conn().get(
                     f"configs/conf-{conf_file_name}", app=app_name
                 )
-                # print(f"configs/conf-{conf_file_name} exists")
                 return
             except Exception as e:
                 pass
                 self.format_pbar_string(
                     self.get_name(), "Configuring Datamodels", self.start_time
                 )
-                # print(f"Waiting for [{app_name} - {conf_file_name}.conf: {str(e)}")
 
     def configure_conf_file_datamodels(self, APP_NAME: str = "Splunk_SA_CIM"):
         self.wait_for_conf_file(APP_NAME, "datamodels")
@@ -279,7 +268,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     )
 
                 except Exception as e:
-                    print(
+                    self.pbar.write(
                         f"Error creating the conf Datamodel {datamodel_name} key/value {name}/{value}: {str(e)}"
                     )
 
@@ -288,30 +277,30 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             try:
                 self.check_for_teardown()
             except ContainerStoppedException as e:
-                print(f"Stopped container [{self.get_name()}]")
+                self.pbar.write(f"Stopped container [{self.get_name()}]")
                 return
 
             try:
                 detection = self.sync_obj.inputQueue.pop()
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError as e:
-                print(f"No more detections to test, shutting down {self.get_name()}")
+                self.pbar.write(f"No more detections to test, shutting down {self.get_name()}")
                 self.finish()
                 return
             try:
                 self.test_detection(detection)
             except ContainerStoppedException as e:
-                print(f"Stopped container [{self.get_name()}]")
+                self.pbar.write(f"Stopped container [{self.get_name()}]"))
                 return
             except Exception as e:
-                print(f"Error testing detection: {str(e)}")
+                self.pbar.write(f"Error testing detection: {str(e)}")
             finally:
                 self.sync_obj.outputQueue.append(detection)
                 self.sync_obj.currentTestingQueue[self.get_name()] = None
 
     def test_detection(self, detection: Detection):
         if detection.test is None:
-            print(f"No test(s) found for {detection.name}")
+            self.pbar.write(f"No test(s) found for {detection.name}")
             return
 
         for test in detection.test.tests:
@@ -413,14 +402,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         self.format_pbar_string(test.name, f"Deleting Data", start_time)
         self.delete_attack_data(test.attack_data)
-        self.format_pbar_string("", f"Preparing Next Test", start_time)
 
         if test.result is not None and test.result.success:
             self.pbar.write(
                 self.format_pbar_string(
                     test.name,
                     "\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m",
-                    start_time=time.time() - start_time,
+                    start_time,
                     set_pbar=False,
                 )
             )
@@ -430,7 +418,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     test.name,
                     "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
-                    start_time=time.time() - start_time,
+                    start_time,
                     set_pbar=False,
                 )
             )
@@ -576,10 +564,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     attack_data_file.data, tempfile, self.pbar, overwrite_file=True
                 )
             except Exception as e:
-                import traceback
-
-                traceback.print_exc()
-                time.sleep(5)
                 raise (
                     Exception(
                         f"Could not download attack data file [{attack_data_file.data}]:{str(e)}"
@@ -709,6 +693,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         pass
 
     def finish(self):
+        self.format_pbar_string(self.get_name(), "FINISHED", start_time=None)
         self.pbar.close()
 
     def check_health(self):
@@ -717,11 +702,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
 class DetectionTestingServer(DetectionTestingInfrastructure):
     def start(self):
-        # print("Nothing to start for server")
         pass
 
     def finish(self):
-        # print("Nothing to finish for server")
         pass
 
     def get_name(self):
@@ -760,7 +743,7 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
             self.get_docker_client().containers.get(self.get_name())
         except Exception as e:
             if self.sync_obj.terminate is not True:
-                print(f"Error: could not get container [{self.get_name()}]: {str(e)}")
+                self.pbar.write(f"Error: could not get container [{self.get_name()}]: {str(e)}")
                 self.sync_obj.terminate = True
 
         if self.sync_obj.terminate:

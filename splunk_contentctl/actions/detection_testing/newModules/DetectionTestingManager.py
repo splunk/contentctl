@@ -2,6 +2,7 @@ from splunk_contentctl.objects.test_config import TestConfig
 from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
     DetectionTestingContainer,
+    DetectionTestingServer,
 )
 from splunk_contentctl.objects.app import App
 import pathlib
@@ -169,8 +170,12 @@ class DetectionTestingManager(BaseModel):
                 == DetectionTestingTargetInfrastructure.server
             ):
 
-                print("server support not yet implemented")
-                sys.exit(1)
+                self.detectionTestingInfrastructureObjects.append(
+                    DetectionTestingServer(
+                        config=instanceConfig, sync_obj=self.output_dto
+                    )
+                )
+
             else:
 
                 print(

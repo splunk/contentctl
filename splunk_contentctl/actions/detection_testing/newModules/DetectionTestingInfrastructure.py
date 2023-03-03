@@ -715,6 +715,19 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         pass
 
 
+class DetectionTestingServer(DetectionTestingInfrastructure):
+    def start(self):
+        # print("Nothing to start for server")
+        pass
+
+    def finish(self):
+        # print("Nothing to finish for server")
+        pass
+
+    def get_name(self):
+        return self.config.container_name
+
+
 class DetectionTestingContainer(DetectionTestingInfrastructure):
     container: docker.models.resource.Model = None
 
@@ -725,7 +738,8 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
     def finish(self):
         if self.container is not None:
             try:
-                self.removeContainer()
+                # self.removeContainer()
+                pass
             except Exception as e:
                 raise (Exception(f"Error removing container: {str(e)}"))
 

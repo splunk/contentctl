@@ -34,6 +34,14 @@ from splunk_contentctl.objects.app import App
 from splunk_contentctl.objects.test_config import TestConfig
 from splunk_contentctl.actions.test import Test, TestInputDto, TestOutputDto
 
+"""
+import tqdm
+import functools
+# disable all calls to tqdm - this is so that CI/CD contexts don't
+# have a large amount of output due to progress bar updates.
+tqdm.tqdm.__init__ = functools.partialmethod(tqdm.tqdm.__init__, disable=True)
+"""
+
 
 def print_ascii_art():
     print(
@@ -67,12 +75,11 @@ Running Splunk Security Content Control Tool (contentctl)
 
 
 def start(args) -> Config:
-    print_ascii_art()
     return ConfigHandler.read_config(os.path.join(args.path, "contentctl.yml"))
 
 
 def initialize(args) -> None:
-    print_ascii_art()
+
     Initialize().execute(InitializeInputDto(path=os.path.abspath(args.path)))
 
 
@@ -102,6 +109,7 @@ def deploy(args) -> None:
 
 
 def test(args: argparse.Namespace) -> TestOutputDto:
+
     config = start(args)
 
     # set some arguments that are not
@@ -141,6 +149,7 @@ def test(args: argparse.Namespace) -> TestOutputDto:
     # It does not happen the first time since validation does not run for default values
     # unless we use always=True in the validator
     # we always want to keep CIM as the last app installed
+
     test_config.apps = [app] + test_config.apps
 
     test_input_dto = TestInputDto(
@@ -334,5 +343,5 @@ def main():
 
     # parse them
     args = parser.parse_args()
-
-    return args.func(args)
+    print_ascii_art()
+    args.func(args)

@@ -16,7 +16,7 @@ from splunk_contentctl.objects.test_config import (
 )
 from shutil import copyfile
 
-
+import os.path
 import configparser
 from ssl import SSLEOFError
 import time
@@ -253,8 +253,34 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self.wait_for_conf_file(APP_NAME, "datamodels")
 
         parser = configparser.ConfigParser()
-        parser.read("/tmp/datamodels.conf")
+        default_acceleration_datamodels = pathlib.Path(
+            os.path.join(
+                os.path.dirname(__file__), "../../../templates/datamodels.conf"
+            )
+        )
+        custom_acceleration_datamodels = pathlib.Path(
+            os.path.join(
+                os.path.dirname(__file__), "../../../templates/datamodels_custom.conf"
+            )
+        )
+        datamodel_files: list[str] = []
+        if not default_acceleration_datamodels.is_file():
+            self.pbar.write(
+                f"******************************\nDATAMODEL ACCELERATION FILE {str(default_acceleration_datamodels)} FOUND. CIM DATAMODELS NOT ACCELERATED\n******************************\n"
+            )
+        else:
+            datamodel_files.append(str(default_acceleration_datamodels))
+        if custom_acceleration_datamodels.is_file():
+            self.pbar.write(
+                f"******************************\nCUSTOM DATAMODEL ACCELERATION FILE {str(custom_acceleration_datamodels)} FOUND. CUSTOM ACCELERATED ACCELERATED\n******************************\n"
+            )
+            datamodel_files.append(str(custom_acceleration_datamodels))
 
+        if len(datamodel_files) == 0:
+            self.pbar.write("No datamodel acceleration files found.")
+            return
+
+        parser.read(filenames=datamodel_files)
         for datamodel_name in parser:
             if datamodel_name == "DEFAULT":
                 # Skip the DEFAULT section for configparser
@@ -284,13 +310,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 detection = self.sync_obj.inputQueue.pop()
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError as e:
-                self.pbar.write(f"No more detections to test, shutting down {self.get_name()}")
+                self.pbar.write(
+                    f"No more detections to test, shutting down {self.get_name()}"
+                )
                 self.finish()
                 return
             try:
                 self.test_detection(detection)
             except ContainerStoppedException as e:
-                self.pbar.write(f"Stopped container [{self.get_name()}]"))
+                self.pbar.write(f"Stopped container [{self.get_name()}]")
                 return
             except Exception as e:
                 self.pbar.write(f"Error testing detection: {str(e)}")
@@ -357,6 +385,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
+        for baseline in test.baselines:
+
+            self.retry_search_until_timeout(detection, test, kwargs, start_time)
+
         if not FORCE_ALL_TIME:
             if test.earliest_time is not None:
                 kwargs.update({"earliest_time": test.earliest_time})
@@ -743,7 +775,9 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
             self.get_docker_client().containers.get(self.get_name())
         except Exception as e:
             if self.sync_obj.terminate is not True:
-                self.pbar.write(f"Error: could not get container [{self.get_name()}]: {str(e)}")
+                self.pbar.write(
+                    f"Error: could not get container [{self.get_name()}]: {str(e)}"
+                )
                 self.sync_obj.terminate = True
 
         if self.sync_obj.terminate:

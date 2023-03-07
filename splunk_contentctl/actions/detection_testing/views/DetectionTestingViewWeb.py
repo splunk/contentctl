@@ -4,7 +4,6 @@ from splunk_contentctl.actions.detection_testing.views.DetectionTestingView impo
 )
 
 from splunk_contentctl.objects.unit_test_result import UnitTestResult
-from typing import Union
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
 

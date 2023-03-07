@@ -6,7 +6,6 @@ import docker.models.containers
 import docker
 import docker.types
 from splunk_contentctl.objects.test_config import (
-    TestConfig,
     CONTAINER_APP_DIR,
     LOCAL_APP_DIR,
 )

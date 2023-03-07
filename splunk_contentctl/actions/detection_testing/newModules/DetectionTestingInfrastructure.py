@@ -253,34 +253,32 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self.wait_for_conf_file(APP_NAME, "datamodels")
 
         parser = configparser.ConfigParser()
-        default_acceleration_datamodels = pathlib.Path(
+        cim_acceleration_datamodels = pathlib.Path(
             os.path.join(
-                os.path.dirname(__file__), "../../../templates/datamodels.conf"
+                os.path.dirname(__file__), "../../../templates/datamodels_cim.conf"
             )
         )
+
         custom_acceleration_datamodels = pathlib.Path(
             os.path.join(
                 os.path.dirname(__file__), "../../../templates/datamodels_custom.conf"
             )
         )
-        datamodel_files: list[str] = []
-        if not default_acceleration_datamodels.is_file():
+
+        if custom_acceleration_datamodels.is_file():
+            parser.read(custom_acceleration_datamodels)
+            if len(parser.keys()) > 1:
+                self.pbar.write(
+                    f"Read {len(parser)-1} custom datamodels from {str(custom_acceleration_datamodels)}!"
+                )
+
+        if not cim_acceleration_datamodels.is_file():
             self.pbar.write(
-                f"******************************\nDATAMODEL ACCELERATION FILE {str(default_acceleration_datamodels)} FOUND. CIM DATAMODELS NOT ACCELERATED\n******************************\n"
+                f"******************************\nDATAMODEL ACCELERATION FILE {str(cim_acceleration_datamodels)} NOT FOUND. CIM DATAMODELS NOT ACCELERATED\n******************************\n"
             )
         else:
-            datamodel_files.append(str(default_acceleration_datamodels))
-        if custom_acceleration_datamodels.is_file():
-            self.pbar.write(
-                f"******************************\nCUSTOM DATAMODEL ACCELERATION FILE {str(custom_acceleration_datamodels)} FOUND. CUSTOM ACCELERATED ACCELERATED\n******************************\n"
-            )
-            datamodel_files.append(str(custom_acceleration_datamodels))
+            parser.read(cim_acceleration_datamodels)
 
-        if len(datamodel_files) == 0:
-            self.pbar.write("No datamodel acceleration files found.")
-            return
-
-        parser.read(filenames=datamodel_files)
         for datamodel_name in parser:
             if datamodel_name == "DEFAULT":
                 # Skip the DEFAULT section for configparser
@@ -753,7 +751,7 @@ class DetectionTestingContainer(DetectionTestingInfrastructure):
     def finish(self):
         if self.container is not None:
             try:
-                # self.removeContainer()
+                self.removeContainer()
                 pass
             except Exception as e:
                 raise (Exception(f"Error removing container: {str(e)}"))

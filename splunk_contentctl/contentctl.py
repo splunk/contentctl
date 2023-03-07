@@ -119,6 +119,7 @@ def test(args: argparse.Namespace) -> TestOutputDto:
         {
             # "repo_path": args.path,
             "mode": args.mode,
+            "num_containers": 1,
             "post_test_behavior": args.behavior,
             "detections_list": args.detections_list,
         }

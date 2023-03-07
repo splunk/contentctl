@@ -53,7 +53,7 @@ class Test:
         test_director = input_dto.githubService.get_all_content(
             input_dto.director_output_dto
         )
-        input_dto.config.num_containers = 1
+
         output_dto = DetectionTestingManagerOutputDto()
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,

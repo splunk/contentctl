@@ -8,7 +8,7 @@ from wsgiref.simple_server import make_server, WSGIRequestHandler
 
 
 DEFAULT_WEB_UI_PORT = 7999
-STATUS_TEMPLATE = """
+STATUS_TEMPLATE_ONE = """
 {% for detection in detections %}
     <table>
     <tr>
@@ -37,6 +37,52 @@ STATUS_TEMPLATE = """
     {% endfor %}
 </table><br/>
 {% endfor %}
+"""
+
+STATUS_TEMPLATE = """
+<html>
+<head>
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.3/css/jquery.dataTables.min.css">
+<script>
+$(document).ready(function () {
+    $("#results").DataTable();
+});
+</script>
+</head>
+<body>
+<table id="results" class="display" style="width:100%">
+    <thead>
+        <tr>
+            <th>Test Name</th>
+            <th>Test SID</th>
+            <th>Run Duration</th>
+            <th>Test Result</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for detection in detections %}
+        {% for test in detection.tests %}
+        <tr>
+            <td>{{ test.name }}</td>
+            <td><a href="{{test.sid_link}}" />SID</td>
+            <td>{{ test.runDuration }}s</td>
+
+            
+            {% if 'TEST PASSED' in test.message %}
+            <td>{{ test.message }}</td>
+            {% else %}
+            <td style="font-weight: bold;background-color: #ff9999"><b>{{ test.message }}</b></td>
+            {% endif %}
+            
+        </tr>
+        {% endfor %}
+        {% endfor %}
+    </tbody>
+</table>
+</body>
+</hmtl>
 """
 
 

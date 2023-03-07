@@ -2,11 +2,11 @@ from pydantic import BaseModel
 import abc
 from typing import Callable
 from splunk_contentctl.objects.test_config import TestConfig
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
 
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingView import (
     DetectionTestingView,
 )
 import pathlib

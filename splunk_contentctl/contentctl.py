@@ -4,7 +4,7 @@ import os
 
 import yaml
 
-from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
+from splunk_contentctl.actions.detection_testing.GitHubService import (
     GithubService,
 )
 from splunk_contentctl.actions.validate import ValidateInputDto, Validate

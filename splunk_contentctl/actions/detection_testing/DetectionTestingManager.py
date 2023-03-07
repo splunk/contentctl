@@ -1,5 +1,5 @@
 from splunk_contentctl.objects.test_config import TestConfig
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
     DetectionTestingContainer,
     DetectionTestingServer,
@@ -23,11 +23,11 @@ from dataclasses import dataclass
 
 # import threading
 import ctypes
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
     DetectionTestingManagerOutputDto,
 )
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingView import (
     DetectionTestingView,
 )
 

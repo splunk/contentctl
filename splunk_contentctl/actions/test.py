@@ -3,30 +3,30 @@ from dataclasses import dataclass
 from splunk_contentctl.objects.test_config import TestConfig
 
 from splunk_contentctl.input.director import DirectorOutputDto
-from splunk_contentctl.actions.detection_testing.modules.GitHubService import (
+from splunk_contentctl.actions.detection_testing.GitHubService import (
     GithubService,
 )
 
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingManager import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingManager import (
     DetectionTestingManager,
     DetectionTestingManagerInputDto,
 )
 
 
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingInfrastructure import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
 
 
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewWeb import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingViewWeb import (
     DetectionTestingViewWeb,
 )
 
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewCLI import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingViewCLI import (
     DetectionTestingViewCLI,
 )
 
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingViewFile import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingViewFile import (
     DetectionTestingViewFile,
 )
 

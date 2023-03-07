@@ -1,5 +1,5 @@
 from bottle import route, run, template, Bottle, ServerAdapter
-from splunk_contentctl.actions.detection_testing.newModules.DetectionTestingView import (
+from splunk_contentctl.actions.detection_testing.DetectionTestingView import (
     DetectionTestingView,
 )
 

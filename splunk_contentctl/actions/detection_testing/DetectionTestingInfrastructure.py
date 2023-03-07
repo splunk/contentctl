@@ -30,7 +30,7 @@ import docker.types
 from tempfile import TemporaryDirectory, mktemp
 import pathlib
 from splunk_contentctl.helper.utils import Utils
-from splunk_contentctl.actions.detection_testing.modules.DataManipulation import (
+from splunk_contentctl.actions.detection_testing.DataManipulation import (
     DataManipulation,
 )
 import splunklib.results

@@ -13,20 +13,20 @@ from splunk_contentctl.actions.detection_testing.DetectionTestingManager import 
 )
 
 
-from splunk_contentctl.actions.detection_testing.DetectionTestingInfrastructure import (
+from splunk_contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
 
 
-from splunk_contentctl.actions.detection_testing.DetectionTestingViewWeb import (
+from splunk_contentctl.actions.detection_testing.views.DetectionTestingViewWeb import (
     DetectionTestingViewWeb,
 )
 
-from splunk_contentctl.actions.detection_testing.DetectionTestingViewCLI import (
+from splunk_contentctl.actions.detection_testing.views.DetectionTestingViewCLI import (
     DetectionTestingViewCLI,
 )
 
-from splunk_contentctl.actions.detection_testing.DetectionTestingViewFile import (
+from splunk_contentctl.actions.detection_testing.views.DetectionTestingViewFile import (
     DetectionTestingViewFile,
 )
 

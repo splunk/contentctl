@@ -1,4 +1,4 @@
-from splunk_contentctl.actions.detection_testing.DetectionTestingView import (
+from splunk_contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
 
@@ -88,7 +88,7 @@ class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True
 
             for i in range(interval):
                 if self.sync_obj.terminate:
-                    print("Detection Testing Completed")
+                    # print("Detection Testing Completed")
                     return
                 time.sleep(1)
 

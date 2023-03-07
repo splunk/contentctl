@@ -1,9 +1,14 @@
 from splunk_contentctl.objects.test_config import TestConfig
-from splunk_contentctl.actions.detection_testing.DetectionTestingInfrastructure import (
+from splunk_contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
-    DetectionTestingContainer,
-    DetectionTestingServer,
 )
+from splunk_contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import (
+    DetectionTestingInfrastructureContainer,
+)
+from splunk_contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import (
+    DetectionTestingInfrastructureServer,
+)
+
 from splunk_contentctl.objects.app import App
 import pathlib
 import os
@@ -23,11 +28,11 @@ from dataclasses import dataclass
 
 # import threading
 import ctypes
-from splunk_contentctl.actions.detection_testing.DetectionTestingInfrastructure import (
+from splunk_contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
     DetectionTestingManagerOutputDto,
 )
-from splunk_contentctl.actions.detection_testing.DetectionTestingView import (
+from splunk_contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
 
@@ -150,7 +155,7 @@ class DetectionTestingManager(BaseModel):
             instanceConfig = deepcopy(self.input_dto.config)
             instanceConfig.api_port += index * 2
             instanceConfig.hec_port += index * 2
-            instanceConfig.web_ui_port += index + 1
+            instanceConfig.web_ui_port += index
 
             instanceConfig.container_name = instanceConfig.container_name % (index,)
 
@@ -160,7 +165,7 @@ class DetectionTestingManager(BaseModel):
             ):
 
                 self.detectionTestingInfrastructureObjects.append(
-                    DetectionTestingContainer(
+                    DetectionTestingInfrastructureContainer(
                         config=instanceConfig, sync_obj=self.output_dto
                     )
                 )
@@ -171,7 +176,7 @@ class DetectionTestingManager(BaseModel):
             ):
 
                 self.detectionTestingInfrastructureObjects.append(
-                    DetectionTestingServer(
+                    DetectionTestingInfrastructureServer(
                         config=instanceConfig, sync_obj=self.output_dto
                     )
                 )

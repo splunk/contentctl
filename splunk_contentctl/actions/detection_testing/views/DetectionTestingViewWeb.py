@@ -1,5 +1,5 @@
 from bottle import route, run, template, Bottle, ServerAdapter
-from splunk_contentctl.actions.detection_testing.DetectionTestingView import (
+from splunk_contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
 
@@ -8,7 +8,7 @@ from typing import Union
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
 
-DEFAULT_WEB_UI_PORT = 8000
+DEFAULT_WEB_UI_PORT = 7999
 STATUS_TEMPLATE = """
 {% for detection in detections %}
     <table>
@@ -82,9 +82,9 @@ class DetectionTestingViewWeb(DetectionTestingView):
             print("Web Server is not running anyway - nothing to shut down")
             return
 
-        print("called web server shutdown")
+        # print("called web server shutdown")
         self.server.server.shutdown()
-        print("finished calling web server shutdown")
+        # print("finished calling web server shutdown")
 
     def showStatus(self, interval: int = 60):
         # Status updated on page load

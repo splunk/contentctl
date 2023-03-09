@@ -5,6 +5,7 @@ from typing import Union
 from datetime import timedelta
 from splunklib.data import Record
 from splunk_contentctl.objects.test_config import TestConfig
+from splunk_contentctl.helper.utils import Utils
 
 FORCE_TEST_FAILURE_FOR_MISSING_OBSERVABLE = False
 
@@ -30,11 +31,18 @@ class UnitTestResult(BaseModel):
     ) -> dict:
         results_dict = {}
         for field in model_fields:
+            value = getattr(self, field)
             results_dict[field] = getattr(self, field)
 
         for field in job_fields:
             if self.job_content is not None:
-                results_dict[field] = self.job_content.get(field, None)
+                value = self.job_content.get(field, None)
+                if field == "runDuration":
+                    try:
+                        value = Utils.getFixedWidth(float(value), 3)
+                    except Exception as e:
+                        value = Utils.getFixedWidth(0, 3)
+                results_dict[field] = value
             else:
                 results_dict[field] = None
 

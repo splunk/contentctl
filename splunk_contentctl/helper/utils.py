@@ -379,16 +379,6 @@ class Utils:
         pbar.reset()
         return
 
-    @staticmethod
-    def print_total_download_stats() -> None:
-
-        time_string = datetime.timedelta(seconds=round(TOTAL_DOWNLOAD_TIME))
-        print(
-            f"Download statistics:\n"
-            f"\tTotal MB     :{(TOTAL_BYTES/(1024*1024)):.0f}MB\n"
-            f"\tTotal Seconds:{time_string}s"
-        )
-
     # taken from attack_range
     @staticmethod
     def get_random_password(
@@ -413,3 +403,16 @@ class Utils:
     ):
         if not suppress:
             print(f"{prefix}: {msg}")
+
+    @staticmethod
+    def getFixedWidth(num: float, decimal_places: int) -> str:
+        fstring = "{:." + str(decimal_places) + "f}"
+        return fstring.format(num)
+
+    @staticmethod
+    def getPercent(numerator: float, denominator: float, decimal_places: int) -> str:
+        if denominator == 0:
+            return "UKNOWN"
+        ratio = numerator / denominator
+        percent = ratio * 100
+        return Utils.getFixedWidth(percent, decimal_places) + "%"

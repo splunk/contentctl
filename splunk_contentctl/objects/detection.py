@@ -156,9 +156,14 @@ class Detection(BaseModel, SecurityContentObject):
                 return False
         return True
 
-    def get_summary(self, fields: list[str] = ["name", "search"]) -> dict:
+    def get_summary(
+        self,
+        detection_fields: list[str] = ["name", "search"],
+        test_model_fields: list[str] = ["success", "message"],
+        test_job_fields: list[str] = ["resultCount", "runDuration"],
+    ) -> dict:
         summary_dict = {}
-        for field in fields:
+        for field in detection_fields:
             summary_dict[field] = getattr(self, field)
         summary_dict["success"] = self.all_tests_successful()
         summary_dict["tests"] = []
@@ -168,8 +173,8 @@ class Detection(BaseModel, SecurityContentObject):
                 if test.result is not None:
                     result.update(
                         test.result.get_summary_dict(
-                            model_fields=["success", "message"],
-                            job_fields=["resultCount", "runDuration"],
+                            model_fields=test_model_fields,
+                            job_fields=test_job_fields,
                         )
                     )
                 else:

@@ -5,43 +5,16 @@ from splunk_contentctl.actions.detection_testing.views.DetectionTestingView impo
 
 from splunk_contentctl.objects.unit_test_result import UnitTestResult
 from wsgiref.simple_server import make_server, WSGIRequestHandler
-
+import jinja2
+import webbrowser
+from threading import Thread
 
 DEFAULT_WEB_UI_PORT = 7999
-STATUS_TEMPLATE_ONE = """
-{% for detection in detections %}
-    <table>
-    <tr>
-        <td><b>Name</b></td>
-        <td>{{ detection.name }}</td>
-    </tr>
-    <tr>
-        <td>Search</td>
-        <td><code>{{ detection.search }}</code></td>
-    </tr>
-    <tr><td><i>Tests</i></td></tr>
-    {% for test in detection.tests %}
-    <tr>
-        <td>{{ test.name }}</td>
-        <td>{{ test.message }}</td>
-    </tr>
-    
-    <tr>
-        <td>SID</td>
-        <td><a href="{{ test.sid_link }}" />{{ test.sid_link }}</td>
-    </tr>
-    <tr>
-        <td>Duration</td>
-        <td>{{ test.runDuration }} seconds</td>
-    </tr>
-    {% endfor %}
-</table><br/>
-{% endfor %}
-"""
 
 STATUS_TEMPLATE = """
 <html>
 <head>
+<title>contentctl Test {{ percent_complete }}</title>
 <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
 <script src="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.3/css/jquery.dataTables.min.css">
@@ -58,7 +31,8 @@ $(document).ready(function () {
             <th>Test Name</th>
             <th>Test SID</th>
             <th>Run Duration</th>
-            <th>Test Result</th>
+            <th>Message</th>
+            <th>Success</th>
         </tr>
     </thead>
     <tbody>
@@ -66,14 +40,13 @@ $(document).ready(function () {
         {% for test in detection.tests %}
         <tr>
             <td>{{ test.name }}</td>
-            <td><a href="{{test.sid_link}}" />SID</td>
-            <td>{{ test.runDuration }}s</td>
-
-            
-            {% if 'TEST PASSED' in test.message %}
+            <td><a href="{{test.sid_link}}" target="_blank"/>SID</td>
+            <td>{{ test.runDuration }}</td>
             <td>{{ test.message }}</td>
+            {% if test.success %}
+            <td>True</td>
             {% else %}
-            <td style="font-weight: bold;background-color: #ff9999"><b>{{ test.message }}</b></td>
+            <td style="font-weight: bold;background-color: #ff9999"><b>False</b></td>
             {% endif %}
             
         </tr>
@@ -118,8 +91,15 @@ class DetectionTestingViewWeb(DetectionTestingView):
         self.bottleApp.route("/results", callback=self.showResults)
         self.bottleApp.route("/report", callback=self.createReport)
 
-        print("Start bottle app")
-        self.bottleApp.run(server=self.server)
+        t = Thread(
+            target=self.bottleApp.run, daemon=True, kwargs=({"server": self.server})
+        )
+        t.start()
+
+        try:
+            webbrowser.open(f"http://localhost:{DEFAULT_WEB_UI_PORT}")
+        except Exception as e:
+            print(f"Could not open webbrowser for status page: {str(e)}")
 
     def stop(self):
 
@@ -128,41 +108,22 @@ class DetectionTestingViewWeb(DetectionTestingView):
             return
 
         # print("called web server shutdown")
-        self.server.server.shutdown()
+        # self.server.server.shutdown()
         # print("finished calling web server shutdown")
 
     def showStatus(self, interval: int = 60):
         # Status updated on page load
         # get all the finished detections:
-        import jinja2
 
         jinja2_template = jinja2.Environment().from_string(STATUS_TEMPLATE)
-        tables = []
-        finished_detections = self.sync_obj.outputQueue[:]
-        detection_dicts = []
-        import pprint
+        summary_dict = self.getSummaryObject(
+            test_model_fields=["success", "message", "sid_link"]
+        )
 
-        for d in finished_detections:
-            res = {}
-            res["name"] = d.name
-            res["search"] = d.search
-            res["tests"] = []
-            fail = False
-            for t in d.test.tests:
-                try:
-                    test_dict = t.result.get_summary_dict()
-                except Exception as e:
-                    print(f"result is none for detection {d} and test {t}")
-                    faill = True
-                    break
-
-                test_dict["name"] = t.name
-                res["tests"].append(test_dict)
-
-            if not fail:
-                detection_dicts.append(res)
-
-        res = jinja2_template.render(detections=detection_dicts)
+        res = jinja2_template.render(
+            percent_complete=summary_dict.get("percent_complete", 0),
+            detections=summary_dict["tested_detections"],
+        )
 
         return template(res)
 

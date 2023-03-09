@@ -21,7 +21,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
     def finish(self):
         if self.container is not None:
             try:
-                # self.removeContainer()
+                self.removeContainer()
                 pass
             except Exception as e:
                 raise (Exception(f"Error removing container: {str(e)}"))

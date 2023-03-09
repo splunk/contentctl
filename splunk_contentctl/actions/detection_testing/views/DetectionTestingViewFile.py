@@ -25,41 +25,7 @@ class DetectionTestingViewFile(DetectionTestingView):
 
         folder.mkdir(parents=True, exist_ok=True)
 
-        total_untested = len(self.sync_obj.inputQueue)
-
-        tested_detections = []
-        total_pass = 0
-        total_fail = 0
-        for detection in self.sync_obj.outputQueue:
-            summary = detection.get_summary()
-            if summary["success"] == True:
-                total_pass += 1
-            else:
-                total_fail += 1
-            tested_detections.append(summary)
-        # All failures appear first
-        tested_detections.sort(key=lambda x: (x["success"], x["name"]))
-
-        untested_detections = []
-        for detection in self.sync_obj.inputQueue:
-            untested_detections.append(detection.get_summary())
-        # All failures appear first
-        untested_detections.sort(key=lambda x: x["name"])
-
-        if (total_fail + len(untested_detections)) == 0:
-            overall_success = True
-        else:
-            overall_success = False
-        result_dict = {
-            "summary": {
-                "success": overall_success,
-                "total_pass": total_pass,
-                "total_fail_or_untested": total_fail + total_untested,
-                "success_rate": total_pass / (total_pass + total_fail + total_untested),
-            },
-            "tested_detections": tested_detections,
-            "untested_detections": untested_detections,
-        }
+        result_dict = self.getSummaryObject()
 
         # use the yaml writer class
         with open(output_file, "w") as res:

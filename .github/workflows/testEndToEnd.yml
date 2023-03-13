@@ -13,47 +13,45 @@ jobs:
         #python_version: [3.9.16, 3.10.10, 3.11.2]
         #operating_system: [ubuntu-20.04, ubuntu-22.04, macos-11, macos-12]
         python_version: [3.9.16]
-        operating_system: [ubuntu-22.04]
+        operating_system: [ubuntu-20.04]
     runs-on: ${{ matrix.operating_system }}
     steps:
       #Checkout the current branch
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Install poetry
-        run: pipx install poetry
-
       #Install the given version of Python we will test against
       - name: Install Required Python Version
         uses: actions/setup-python@v4
         with:
           python-version: "${{ matrix.python_version }}"
-          cache: "poetry"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
 
       - name: Install contentctl and activate the shell
         run: |
-          poetry install
-
-          # We cannot run 'poetry shell' since it requires an interactive command line. 
-          # We use the following instead to achieve something similar
-          source $(poetry env info --path)/bin/activate
-
-          # Make contentctl available to future steps without needing to reactivate
-          # the environment every time
-          echo $(which contentctl) >> $GITHUB_PATH
+          poetry install --no-interaction
 
       - name: Make a new directory, cd into it, and initialize a new content pack
         run: |
+          source .venv/bin/activate
           mkdir my_demo_app
           cd my_demo_app
           contentctl init
 
       - name: Run contentctl validate
-        run: contentctl validate
+        run: |
+          source $VENV
+          contentctl validate
 
       - name: Run contentctl build
-        run: contentctl build
+        run: |
+          source $VENV
+          contentctl build
 
       #Do not pause on a failed detection
       - name: Run contentctl test
-        run: contentctl test --behavior never_pause
+        run: |
+          source $VENV
+          contentctl test --behavior never_pause

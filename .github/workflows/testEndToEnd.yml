@@ -35,7 +35,7 @@ jobs:
 
       - name: Make a new directory, cd into it, and initialize a new content pack
         run: |
-          source .venv/bin/activate
+          source $VENV
           mkdir my_demo_app
           cd my_demo_app
           contentctl init

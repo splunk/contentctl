@@ -10,10 +10,10 @@ jobs:
   testEverything:
     strategy:
       matrix:
-        #python_version: [3.9, 3.10, 3.11]
+        #python_version: [3.9.16, 3.10.10, 3.11.2]
         #operating_system: [ubuntu-20.04, ubuntu-22.04, macos-11, macos-12]
-        python_version: [3.9]
-        operating_system: [ubuntu-20.04]
+        python_version: [3.9.16]
+        operating_system: [ubuntu-22.04]
     runs-on: ${{ matrix.operating_system }}
     steps:
       #Checkout the current branch
@@ -33,10 +33,14 @@ jobs:
       - name: Install contentctl and activate the shell
         run: |
           poetry install
+
           # We cannot run 'poetry shell' since it requires an interactive command line. 
           # We use the following instead to achieve something similar
           source $(poetry env info --path)/bin/activate
-          contentctl --help
+
+          # Make contentctl available to future steps without needing to reactivate
+          # the environment every time
+          echo $(which contentctl) >> $GITHUB_PATH
 
       - name: Make a new directory, cd into it, and initialize a new content pack
         run: |

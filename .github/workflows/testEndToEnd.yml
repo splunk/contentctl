@@ -31,11 +31,13 @@ jobs:
           cache: "poetry"
 
       - name: Install contentctl and activate the shell
-        run: poetry install
+        run: |
+          poetry install
           poetry shell
 
       - name: Make a new directory, cd into it, and initialize a new content pack
-        run: mkdir my_demo_app
+        run: |
+          mkdir my_demo_app
           cd my_demo_app
           contentctl init
 

@@ -33,7 +33,9 @@ jobs:
       - name: Install contentctl and activate the shell
         run: |
           poetry install
-          poetry shell
+          # We cannot run 'poetry shell' since it requires an interactive command line. 
+          # We use the following instead to achieve something similar
+          source $(poetry env info --path)/bin/activate
 
       - name: Make a new directory, cd into it, and initialize a new content pack
         run: |

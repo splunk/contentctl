@@ -21,10 +21,30 @@ STATUS_TEMPLATE = """
 <script>
 $(document).ready(function () {
     $("#results").DataTable();
+    $("#runningTests").DataTable();
 });
 </script>
 </head>
 <body>
+<table id="runningTests" class="display" style="width:100%">
+    <thead>
+        <tr>
+            <th>Instance Name</th>
+            <th>Current Test</th>
+            <th>Search</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for containerName, data in currentTestingQueue.items() %}
+        <tr>
+            <td>{{ containerName }}</td>
+            <td>{{ data["name"] }}</td>    
+            <td>{{ data["search"] }}</td>    
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
 <table id="results" class="display" style="width:100%">
     <thead>
         <tr>
@@ -121,6 +141,7 @@ class DetectionTestingViewWeb(DetectionTestingView):
         )
 
         res = jinja2_template.render(
+            currentTestingQueue=self.sync_obj.currentTestingQueue,
             percent_complete=summary_dict.get("percent_complete", 0),
             detections=summary_dict["tested_detections"],
         )

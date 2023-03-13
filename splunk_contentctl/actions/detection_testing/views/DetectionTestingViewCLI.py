@@ -45,25 +45,23 @@ class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True
 
         self.showStatus()
 
-    def showStatus(self, interval: int = 10):
-        try:
-            while True:
-                summary = self.getSummaryObject()
+    def showStatus(self, interval: int = 1):
 
-                total = len(
-                    summary.get("tested_detections", [])
-                    + summary.get("untested_detections", [])
-                    + self.getCurrent()
-                )
-                self.format_pbar(len(summary.get("tested_detections", [])), total)
+        while True:
+            summary = self.getSummaryObject()
 
-                for i in range(interval):
-                    if self.sync_obj.terminate:
-                        # print("Detection Testing Completed")
-                        return
-                    time.sleep(1)
-        except Exception as e:
-            self.pbar.write(f"big failure: {str(e)}")
+            total = len(
+                summary.get("tested_detections", [])
+                + summary.get("untested_detections", [])
+                + self.getCurrent()
+            )
+            self.format_pbar(len(summary.get("tested_detections", [])), total)
+
+            for i in range(interval):
+                if self.sync_obj.terminate:
+                    # print("Detection Testing Completed")
+                    return
+                time.sleep(1)
 
     def showResults(self):
         pass

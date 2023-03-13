@@ -111,7 +111,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 (self.configure_hec, "Configuring HEC"),
                 (self.wait_for_ui_ready, "Waiting for UI"),
             ]:
-                self.format_pbar_string(self.get_name(), msg, self.start_time)
+
+                self.format_pbar_string(
+                    self.get_name(), msg, self.start_time, update_sync_status=True
+                )
                 func()
                 self.check_for_teardown()
 
@@ -187,7 +190,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                 if conn.restart_required:
                     self.format_pbar_string(
-                        self.get_name(), "Waiting for reboot", self.start_time
+                        self.get_name(),
+                        "Waiting for reboot",
+                        self.start_time,
+                        update_sync_status=True,
                     )
                     continue
                 # Finished setup
@@ -203,7 +209,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 )
                 self.sync_obj.terminate = True
             self.format_pbar_string(
-                self.get_name(), "Getting API Connection", self.start_time
+                self.get_name(),
+                "Getting API Connection",
+                self.start_time,
+                update_sync_status=True,
             )
 
     def configure_imported_roles(
@@ -329,6 +338,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         state: str,
         start_time: Union[float, None],
         set_pbar: bool = True,
+        update_sync_status: bool = False,
     ) -> str:
         if start_time == None:
             start_time = self.start_time
@@ -341,6 +351,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         if set_pbar:
             self.pbar.bar_format = new_string
             self.pbar.update()
+        if update_sync_status:
+            self.sync_obj.currentTestingQueue[self.get_name()] = {
+                "name": state,
+                "search": "N/A",
+            }
         return new_string
 
     def execute_test(

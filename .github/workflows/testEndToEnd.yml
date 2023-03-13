@@ -18,8 +18,8 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Go into the contentctl directory that we just checked out
-        run: cd contentctl
+      - name: Show contents of directory
+        run: ls
 
       - name: Install poetry
         run: pipx install poetry

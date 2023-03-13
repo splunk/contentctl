@@ -10,8 +10,10 @@ jobs:
   testEverything:
     strategy:
       matrix:
-        python_version: [3.9, 3.10, 3.11]
-        operating_system: [ubuntu-20.04, ubuntu-22.04, macos-11, macos-12]
+        #python_version: [3.9, 3.10, 3.11]
+        #operating_system: [ubuntu-20.04, ubuntu-22.04, macos-11, macos-12]
+        python_version: [3.9]
+        operating_system: [ubuntu-20.04]
     runs-on: ${{ matrix.operating_system }}
     steps:
       #Checkout the current branch

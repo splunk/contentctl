@@ -44,10 +44,9 @@ newContent{new_content} --contentctl new sigma content--> contentPack
 newContent{new_content} --contentctl new spl content--> contentPack
 contentPack --contentctl validate--> ValidatedContent
 ValidatedContent --contentctl build--> SplunkContent
-ValidatedContent --contentctl docgen--> WebsiteDocumentation
-ValidatedContent --contentctl docgen--> MITRE_mapDocumentation
+ValidatedContent --contentctl docs--> WebsiteDocumentation
+ValidatedContent --contentctl docs--> MITRE_mapDocumentation
 SplunkContent --contentctl test via container-->TestResults
-SplunkContent --contentctl test via preconfigured server-->TestResults
 TestResults --contentctl deploy-->SplunkRESTAPI
 TestResults --contentctl deploy-->SplunkbaseApp
 TestResults --contentctl deploy-->SplunkCloudInstance

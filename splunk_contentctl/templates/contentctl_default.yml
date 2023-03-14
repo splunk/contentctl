@@ -1,4 +1,3 @@
-
 detection_configuration:
   scheduling:
     cron_schedule: 0 * * * *
@@ -6,29 +5,28 @@ detection_configuration:
     latest_time: -10m@m
     schedule_window: auto
   notable:
-    rule_description: '%description%'
-    rule_title: '%name%'
+    rule_description: "%description%"
+    rule_title: "%name%"
     nes_fields:
-    - user
-    - dest
-    - src
+      - user
+      - dest
+      - src
 
 deploy:
-  app: my_splunk_content_pack 
-  username: geralt
-  password: geralt123!
-  server: 1.2.3.4
+  app: my_splunk_content_pack
+  username: admin
+  password: password
+  server: 127.0.0.1
 
 build:
   splunk_app:
     path: dist/my_splunk_content_pack
     name: "My Splunk Content Pack"
     prefix: "MSCA"
-    author: "Geralt of Riva"
-    author_email: "geralt@monsterkiller.com"
+    author: "Splunk Content Author"
+    author_email: "you_email@your_domain.com"
 
 enrichments:
-  attack_enrichment: True
-  cve_enrichment: True
-  splunk_app_enrichment: True
-
+  attack_enrichment: False
+  cve_enrichment: False
+  splunk_app_enrichment: False

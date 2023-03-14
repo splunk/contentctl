@@ -121,7 +121,7 @@ def deploy(args) -> None:
 
 
 def test(args: argparse.Namespace) -> TestOutputDto:
-
+    args = configure_unattended(args)
     config = start(args)
 
     # set some arguments that are not
@@ -358,8 +358,6 @@ def main():
 
     # parse them
     args = parser.parse_args()
-    print_ascii_art()
-    args = configure_unattended(args)
 
     print_ascii_art()
     args.func(args)

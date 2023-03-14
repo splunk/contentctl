@@ -8,7 +8,13 @@ on:
 
 jobs:
   testEverything:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        #python_version: [3.9.16, 3.10.10, 3.11.2]
+        #operating_system: [ubuntu-20.04, ubuntu-22.04, macos-11, macos-12]
+        python_version: ["3.10"]
+        operating_system: ["ubuntu-latest"]
+    runs-on: ${{ matrix.operating_system }}
     steps:
       #Checkout the current branch
       - name: Checkout repo
@@ -18,7 +24,7 @@ jobs:
       - name: Install Required Python Version
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python_version }}
           architecture: "x64"
 
       - name: Install Poetry
@@ -37,7 +43,7 @@ jobs:
           # echo "ABOUT TO DO AN INSTALL"
           # ls -lah
           # poetry install --no-interaction --no-root -vvv
-          echo "WOW, DONE WITH INSTALL"
+          # echo "WOW, DONE WITH INSTALL"
 
       # - name: Make a new directory, cd into it, and initialize a new content pack
       #   run: |

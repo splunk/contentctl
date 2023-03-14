@@ -17,10 +17,10 @@ jobs:
     runs-on: ${{ matrix.operating_system }}
     steps:
       - name: Install Docker for macOS
-        if: matrix.operating_system == "macos-latest"
         run: |
           brew install Docker
           colima start
+        if: matrix.operating_system == 'macos-latest'
 
       #Checkout the current branch
       - name: Checkout repo

@@ -37,29 +37,25 @@ jobs:
       - name: Install contentctl and activate the shell
         run: |
           poetry install --no-interaction
-          # echo "DONE"
-          # poetry --help
-          # poetry install --no-interaction
-          # echo "ABOUT TO DO AN INSTALL"
-          # ls -lah
-          # poetry install --no-interaction --no-root -vvv
-          # echo "WOW, DONE WITH INSTALL"
-
-      - name: Make a new directory, cd into it, and initialize a new content pack
-        run: |
           mkdir my_demo_app
+
+      - name: Run contentctl validate
+        run: |
           cd my_demo_app
           poetry run contentctl init
 
       - name: Run contentctl validate
         run: |
+          cd my_demo_app
           poetry run contentctl validate
 
       - name: Run contentctl build
         run: |
+          cd my_demo_app
           poetry run contentctl build
 
       #Do not pause on a failed detection
       - name: Run contentctl test
         run: |
+          cd my_demo_app
           poetry run contentctl test --behavior never_pause

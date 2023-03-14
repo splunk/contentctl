@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Install Docker for macOS
         run: |
-          brew install Docker
+          brew install docker
           colima start
         if: matrix.operating_system == 'macos-latest'
 
@@ -64,4 +64,4 @@ jobs:
       - name: Run contentctl test
         run: |
           cd my_demo_app
-          poetry run contentctl test --behavior never_pause
+          poetry run contentctl test --unattended

@@ -34,13 +34,25 @@ from splunk_contentctl.objects.app import App
 from splunk_contentctl.objects.test_config import TestConfig
 from splunk_contentctl.actions.test import Test, TestInputDto, TestOutputDto
 
-"""
+
 import tqdm
 import functools
-# disable all calls to tqdm - this is so that CI/CD contexts don't
-# have a large amount of output due to progress bar updates.
-tqdm.tqdm.__init__ = functools.partialmethod(tqdm.tqdm.__init__, disable=True)
-"""
+
+
+def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
+    # disable all calls to tqdm - this is so that CI/CD contexts don't
+    # have a large amount of output due to progress bar updates.
+    tqdm.tqdm.__init__ = functools.partialmethod(
+        tqdm.tqdm.__init__, disable=args.unattended
+    )
+    if args.unattended:
+        if args.behavior != PostTestBehavior.never_pause.name:
+            print(
+                f"For unattended mode, --behavior MUST be {PostTestBehavior.never_pause.name}.\nUpdating the behavior from '{args.behavior}' to '{PostTestBehavior.never_pause.name}'"
+            )
+            args.behavior = PostTestBehavior.never_pause.name
+
+    return args
 
 
 def print_ascii_art():
@@ -340,9 +352,14 @@ def main():
         "of detections to test. Their paths should be relative to the app path.",
     )
 
+    test_parser.add_argument("--unattended", action=argparse.BooleanOptionalAction)
+
     test_parser.set_defaults(func=test)
 
     # parse them
     args = parser.parse_args()
+    print_ascii_art()
+    args = configure_unattended(args)
+
     print_ascii_art()
     args.func(args)

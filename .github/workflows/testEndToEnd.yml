@@ -1,57 +1,26 @@
-name: testEndToEnd
+name: nightly-build
 on:
   push:
-  pull_request:
-    types: [opened, reopened]
-  schedule:
-    - cron: "44 4 * * *"
 
 jobs:
-  testEverything:
-    strategy:
-      matrix:
-        #python_version: [3.9.16, 3.10.10, 3.11.2]
-        #operating_system: [ubuntu-20.04, ubuntu-22.04, macos-11, macos-12]
-        python_version: [3.9.16]
-        operating_system: [ubuntu-20.04]
-    runs-on: ${{ matrix.operating_system }}
+  nightly:
+    runs-on: ubuntu-18.04
     steps:
-      #Checkout the current branch
-      - name: Checkout repo
+      - name: checkout security_content_docs
         uses: actions/checkout@v3
 
-      #Install the given version of Python we will test against
-      - name: Install Required Python Version
-        uses: actions/setup-python@v4
+      - name: install python 3.10
+        uses: actions/setup-python@v2
         with:
-          python-version: "${{ matrix.python_version }}"
+          python-version: "3.10"
+          architecture: "x64"
 
-      - name: Install Poetry
+      - name: install poetry
         uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
 
-      - name: Install contentctl and activate the shell
-        run: |
-          poetry install --no-interaction
-
-      - name: Make a new directory, cd into it, and initialize a new content pack
-        run: |
-          source $VENV
-          mkdir my_demo_app
-          cd my_demo_app
-          contentctl init
-
-      - name: Run contentctl validate
-        run: |
-          source $VENV
-          contentctl validate
-
-      - name: Run contentctl build
-        run: |
-          source $VENV
-          contentctl build
-
-      #Do not pause on a failed detection
-      - name: Run contentctl test
-        run: |
-          source $VENV
-          contentctl test --behavior never_pause
+      - name: install dependencies
+        run: poetry install --no-interaction

@@ -12,12 +12,12 @@ jobs:
       fail-fast: false
       matrix:
         python_version: ["3.9", "3.10", "3.11"]
-        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-12"]
+        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
 
     runs-on: ${{ matrix.operating_system }}
     steps:
       - name: Install Docker for macOS
-        if: contains('macos', ${{ matrix.operating_system }})
+        if: matrix.operating_system == "macos-latest"
         run: |
           brew install Docker
           colima start

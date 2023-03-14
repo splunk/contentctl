@@ -9,12 +9,12 @@ on:
 jobs:
   testEverything:
     strategy:
+      fail-fast: false
       matrix:
         python_version: ["3.9", "3.10", "3.11"]
         operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-12"]
 
     runs-on: ${{ matrix.operating_system }}
-    continue-on-error: true
     steps:
       - name: Install Docker for macOS
         if: contains('macos', ${{ matrix.operating_system }})

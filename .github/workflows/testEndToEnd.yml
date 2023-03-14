@@ -1,26 +1,66 @@
-name: nightly-build
+name: testEndToEnd
 on:
   push:
+  pull_request:
+    types: [opened, reopened]
+  schedule:
+    - cron: "44 4 * * *"
 
 jobs:
-  nightly:
-    runs-on: ubuntu-18.04
+  testEverything:
+    runs-on: ubuntu-latest
     steps:
-      - name: checkout security_content_docs
+      #Checkout the current branch
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: install python 3.10
-        uses: actions/setup-python@v2
+      #Install the given version of Python we will test against
+      - name: Install Required Python Version
+        uses: actions/setup-python@v4
         with:
           python-version: "3.10"
           architecture: "x64"
 
-      - name: install poetry
+      - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
 
-      - name: install dependencies
-        run: poetry install --no-interaction
+      - name: Install contentctl and activate the shell
+        run: |
+          poetry install --no-interaction
+          # echo "DONE"
+          # poetry --help
+          # poetry install --no-interaction
+          # echo "ABOUT TO DO AN INSTALL"
+          # ls -lah
+          # poetry install --no-interaction --no-root -vvv
+          echo "WOW, DONE WITH INSTALL"
+
+      # - name: Make a new directory, cd into it, and initialize a new content pack
+      #   run: |
+      #     ls -lah
+      #     echo $VENV
+
+      #     source $VENV
+      #     mkdir my_demo_app
+      #     cd my_demo_app
+      #     contentctl init
+
+      # - name: Run contentctl validate
+      #   run: |
+      #     source $VENV
+      #     contentctl validate
+
+      # - name: Run contentctl build
+      #   run: |
+      #     source $VENV
+      #     contentctl build
+
+      # #Do not pause on a failed detection
+      # - name: Run contentctl test
+      #   run: |
+      #     source $VENV
+      #     contentctl test --behavior never_pause

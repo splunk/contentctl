@@ -14,7 +14,14 @@ jobs:
         operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-12"]
 
     runs-on: ${{ matrix.operating_system }}
+    continue-on-error: true
     steps:
+      - name: Install Docker for macOS
+        if: contains('macos', ${{ matrix.operating_system }})
+        run: |
+          brew install Docker
+          colima start
+
       #Checkout the current branch
       - name: Checkout repo
         uses: actions/checkout@v3

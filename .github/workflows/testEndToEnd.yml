@@ -39,7 +39,7 @@ jobs:
           poetry install --no-interaction
           mkdir my_demo_app
 
-      - name: Run contentctl validate
+      - name: Run contentctl init
         run: |
           cd my_demo_app
           poetry run contentctl init

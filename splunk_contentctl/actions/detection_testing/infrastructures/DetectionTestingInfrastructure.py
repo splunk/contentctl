@@ -13,7 +13,7 @@ from shutil import copyfile
 
 import os.path
 import configparser
-from ssl import SSLEOFError
+from ssl import SSLEOFError, SSLZeroReturnError
 import time
 import uuid
 
@@ -202,6 +202,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except ConnectionRefusedError as e:
                 raise (e)
             except SSLEOFError as e:
+                pass
+            except SSLZeroReturnError as e:
                 pass
             except Exception as e:
                 self.pbar.write(

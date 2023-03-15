@@ -11,10 +11,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # python_version: ["3.9", "3.10", "3.11"]
-        # operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
-        python_version: ["3.9"]
-        operating_system: ["macos-latest"]
+        python_version: ["3.9", "3.10", "3.11"]
+        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
+        # python_version: ["3.9"]
+        # operating_system: ["macos-latest"]
 
     runs-on: ${{ matrix.operating_system }}
     steps:

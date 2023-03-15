@@ -1,0 +1,71 @@
+name: testEndToEnd
+on:
+  push:
+  pull_request:
+    types: [opened, reopened]
+  schedule:
+    - cron: "44 4 * * *"
+
+jobs:
+  testEverything:
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ["3.9", "3.10", "3.11"]
+        operating_system: ["ubuntu-20.04", "ubuntu-22.04"]
+        # python_version: ["3.9"]
+        # operating_system: ["macos-latest"]
+
+    runs-on: ${{ matrix.operating_system }}
+    steps:
+      - name: Install Docker for macOS
+        run: |
+          brew install docker
+          colima start
+          # Mapping below is required to get the Python docker library working
+          sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
+        if: matrix.operating_system == 'macos-latest'
+
+      #Checkout the current branch
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      #Install the given version of Python we will test against
+      - name: Install Required Python Version
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python_version }}
+          architecture: "x64"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Install contentctl and activate the shell
+        run: |
+          poetry install --no-interaction
+          mkdir my_demo_app
+
+      - name: Run contentctl init
+        run: |
+          cd my_demo_app
+          poetry run contentctl init
+
+      - name: Run contentctl validate
+        run: |
+          cd my_demo_app
+          poetry run contentctl validate
+
+      - name: Run contentctl build
+        run: |
+          cd my_demo_app
+          poetry run contentctl build
+
+      #Do not pause on a failed detection
+      - name: Run contentctl test
+        run: |
+          cd my_demo_app
+          poetry run contentctl test

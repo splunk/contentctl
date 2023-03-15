@@ -4,11 +4,9 @@ import requests
 import time
 import sys
 
-from pydantic import BaseModel, validator, root_validator
+from pydantic import BaseModel, validator, root_validator, Extra
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-
-
 
 
 from splunk_contentctl.objects.security_content_object import SecurityContentObject
@@ -24,11 +22,7 @@ from splunk_contentctl.objects.playbook import Playbook
 from splunk_contentctl.helper.link_validator import LinkValidator
 
 
-
 from typing import Union
-
-
-from splunk_contentctl.objects.unit_test_result import UnitTestResult
 
 
 class Detection(BaseModel, SecurityContentObject):
@@ -44,10 +38,11 @@ class Detection(BaseModel, SecurityContentObject):
     search: str
     how_to_implement: str
     known_false_positives: str
-    check_references: bool = False #Validation is done in order, this field must be defined first
+    check_references: bool = (
+        False  # Validation is done in order, this field must be defined first
+    )
     references: list
     tags: DetectionTags
-    
 
     # enrichments
     deprecated: bool = None
@@ -68,120 +63,124 @@ class Detection(BaseModel, SecurityContentObject):
     nes_fields: str = None
     providing_technologies: list = None
 
-
     # @validator('name')
-    # def name_max_length(cls, v, values):      
+    # def name_max_length(cls, v, values):
     #     if len(v) > 67:
     #         raise ValueError('name is longer then 67 chars: ' + v)
     #     return v
 
-    @validator('name')
+    @validator("name")
     def name_invalid_chars(cls, v):
         invalidChars = set(string.punctuation.replace("-", ""))
         if any(char in invalidChars for char in v):
-            raise ValueError('invalid chars used in name: ' + v)
+            raise ValueError("invalid chars used in name: " + v)
         return v
 
-    @validator('id')
+    @validator("id")
     def id_check(cls, v, values):
         try:
             uuid.UUID(str(v))
         except:
-            raise ValueError('uuid is not valid: ' + values["name"])
+            raise ValueError("uuid is not valid: " + values["name"])
         return v
 
-    @validator('date')
+    @validator("date")
     def date_valid(cls, v, values):
         try:
             datetime.strptime(v, "%Y-%m-%d")
         except:
-            raise ValueError('date is not in format YYYY-MM-DD: ' + values["name"])
+            raise ValueError("date is not in format YYYY-MM-DD: " + values["name"])
         return v
 
-    @validator('type')
+    @validator("type")
     def type_valid(cls, v, values):
         if v.lower() not in [el.name.lower() for el in AnalyticsType]:
-            raise ValueError('not valid analytics type: ' + values["name"])
+            raise ValueError("not valid analytics type: " + values["name"])
         return v
 
-    @validator('datamodel')
+    @validator("datamodel")
     def datamodel_valid(cls, v, values):
         for datamodel in v:
             if datamodel not in [el.name for el in DataModel]:
-                raise ValueError('not valid data model: ' + values["name"])
+                raise ValueError("not valid data model: " + values["name"])
         return v
 
-    @validator('description', 'how_to_implement')
+    @validator("description", "how_to_implement")
     def encode_error(cls, v, values, field):
         try:
-            v.encode('ascii')
+            v.encode("ascii")
         except UnicodeEncodeError:
-            raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
+            raise ValueError("encoding error in " + field.name + ": " + values["name"])
         return v
 
     @root_validator
     def search_validation(cls, values):
-        if 'ssa_' not in values['file_path']:
-            if not '_filter' in values['search']:
-                raise ValueError('filter macro missing in: ' + values["name"])
-            if any(x in values['search'] for x in ['eventtype=', 'sourcetype=', ' source=', 'index=']):
-                if not 'index=_internal' in values['search']:
-                    raise ValueError('Use source macro instead of eventtype, sourcetype, source or index in detection: ' + values["name"])
+        if "ssa_" not in values["file_path"]:
+            if not "_filter" in values["search"]:
+                raise ValueError("filter macro missing in: " + values["name"])
+            if any(
+                x in values["search"]
+                for x in ["eventtype=", "sourcetype=", " source=", "index="]
+            ):
+                if not "index=_internal" in values["search"]:
+                    raise ValueError(
+                        "Use source macro instead of eventtype, sourcetype, source or index in detection: "
+                        + values["name"]
+                    )
         return values
 
     @root_validator
     def name_max_length(cls, values):
         # Check max length only for ESCU searches, SSA does not have that constraint
-        if 'ssa_' not in values['file_path']:
+        if "ssa_" not in values["file_path"]:
             if len(values["name"]) > 67:
-                raise ValueError('name is longer then 67 chars: ' + values["name"])
+                raise ValueError("name is longer then 67 chars: " + values["name"])
         return values
 
-# disable it because of performance reasons
+    # disable it because of performance reasons
     # @validator('references')
     # def references_check(cls, v, values):
     #     LinkValidator.check_references(v, values["name"])
     #     return v
 
-    @validator('search')
+    @validator("search")
     def search_validate(cls, v, values):
         # write search validator
         return v
 
- 
-
-
- 
-    def get_all_unit_test_results(self)->list[Union[None, UnitTestResult]]:
-        
-        if self.test is None:
-            return []
-        
-        all_results = []
+    def all_tests_successful(self) -> bool:
+        if self.test is None or len(self.test.tests) == 0:
+            return False
         for test in self.test.tests:
-            all_results.append(test.result)
-        return all_results
-    
+            if test.result is None or test.result.success == False:
+                return False
+        return True
 
-    def get_total_time(self)->timedelta:
-        runtimes = [result for result in self.get_all_unit_test_results() if result is not None]
-        total_time = timedelta(0)
-        for res in runtimes:
-            total_time += res.get_time()
-        return total_time
-    
-    def get_success(self)->bool:
-        if self.get_num_tests() > 0 and (self.get_num_tests() == self.get_num_successful_tests()):
-            #If there have been no successful tests, then we cannot say anything was successful
-            return True
-        #Returns false if there are any failures AND if there were no tests for the detection!
-        return False
+    def get_summary(
+        self,
+        detection_fields: list[str] = ["name", "search"],
+        test_model_fields: list[str] = ["success", "message"],
+        test_job_fields: list[str] = ["resultCount", "runDuration"],
+    ) -> dict:
+        summary_dict = {}
+        for field in detection_fields:
+            summary_dict[field] = getattr(self, field)
+        summary_dict["success"] = self.all_tests_successful()
+        summary_dict["tests"] = []
+        if self.test is not None:
+            for test in self.test.tests:
+                result: dict[str, Union[str, bool]] = {"name": test.name}
+                if test.result is not None:
+                    result.update(
+                        test.result.get_summary_dict(
+                            model_fields=test_model_fields,
+                            job_fields=test_job_fields,
+                        )
+                    )
+                else:
+                    result["success"] = False
+                    result["message"] = "RESULT WAS NONE"
 
-    def get_num_tests(self)->int:
-        return len(self.get_all_unit_test_results())
+                summary_dict["tests"].append(result)
 
-    def get_num_failed_tests(self)->int:
-        return len([result for result in self.get_all_unit_test_results() if result is None or result.success == False])
-
-    def get_num_successful_tests(self)->int:
-        return len([result for result in self.get_all_unit_test_results() if result is not None and result.success == True])
+        return summary_dict

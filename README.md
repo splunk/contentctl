@@ -1,6 +1,8 @@
 
-# Splunk Contentctl
-=====
+# contentctl
+<p align="center">
+<img src="docs/contentctl_logo_white.png" alt="contentctl logo (in case you're wondering, it's a capybara)" width="250" height="250"></p>
+
 
 
 

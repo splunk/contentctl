@@ -10,7 +10,7 @@ from splunk_contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from splunk_contentctl.objects.unit_test_result import UnitTestResult
 from splunk_contentctl.objects.test_config import TestConfig
 from shutil import copyfile
-
+from splunklib.binding import HTTPError
 import os.path
 import configparser
 from ssl import SSLEOFError, SSLZeroReturnError
@@ -56,7 +56,7 @@ class DetectionTestingManagerOutputDto:
     outputQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
     start_time: Union[datetime.datetime, None] = None
-    replay_index: str = "main"
+    replay_index: str = "CONTENTCTL_TESTING_INDEX"
     replay_host: str = "CONTENTCTL_HOST"
     timeout_seconds: int = 120
     terminate: bool = False
@@ -105,6 +105,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             for func, msg in [
                 (self.start, "Starting"),
                 (self.get_conn, "Getting API Connection"),
+                (
+                    self.create_replay_index,
+                    f"Create index '{self.sync_obj.replay_index}'",
+                ),
                 (self.configure_imported_roles, "Configuring Roles"),
                 (self.configure_delete_indexes, "Configuring Indexes"),
                 (self.configure_conf_file_datamodels, "Configuring Datamodels"),
@@ -145,8 +149,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             res = self.get_conn().inputs.create(
                 name="DETECTION_TESTING_HEC",
                 kind="http",
-                index="main",
-                indexes="main,_internal,_audit",
+                index=self.sync_obj.replay_index,
+                indexes=f"{self.sync_obj.replay_index},_internal,_audit",
                 useACK=True,
             )
             self.hec_token = str(res.token)
@@ -175,10 +179,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # Exiting in a thread just quits the thread, not the entire process
             raise (ContainerStoppedException(f"Testing stopped for {self.get_name()}"))
 
-    def connect_to_api(self):
+    def connect_to_api(self, sleep_seconds: int = 5):
         while True:
             self.check_for_teardown()
-            time.sleep(5)
             try:
 
                 conn = client.connect(
@@ -195,10 +198,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         self.start_time,
                         update_sync_status=True,
                     )
-                    continue
-                # Finished setup
-                self._conn = conn
-                return
+                else:
+                    # Finished setup
+                    self._conn = conn
+                    return
+
             except ConnectionRefusedError as e:
                 raise (e)
             except SSLEOFError as e:
@@ -207,25 +211,50 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 pass
             except Exception as e:
                 self.pbar.write(
-                    f"Unhandled exception getting connection to splunk server: {str(e)}"
+                    f"Error getting API connection (not quitting) '{type(e).__name__}': {str(e)}"
                 )
-                self.sync_obj.terminate = True
-            self.format_pbar_string(
-                self.get_name(),
-                "Getting API Connection",
-                self.start_time,
-                update_sync_status=True,
-            )
+                # self.pbar.write(
+                #     f"Unhandled exception getting connection to splunk server: {str(e)}"
+                # )
+                # self.sync_obj.terminate = True
+
+            for _ in range(sleep_seconds):
+                self.format_pbar_string(
+                    self.get_name(),
+                    "Getting API Connection",
+                    self.start_time,
+                    update_sync_status=True,
+                )
+                time.sleep(1)
+
+    def create_replay_index(self):
+
+        try:
+            self.get_conn().indexes.create(name=self.sync_obj.replay_index)
+        except HTTPError as e:
+            if b"already exists" in e.body:
+                pass
+            else:
+                raise Exception(
+                    f"Error creating index {self.sync_obj.replay_index} - {str(e)}"
+                )
 
     def configure_imported_roles(
-        self, imported_roles: list[str] = ["user", "power", "can_delete"]
+        self,
+        imported_roles: list[str] = ["user", "power", "can_delete"],
+        indexes: list[str] = ["_*", "*"],
     ):
-
+        indexes.append(self.sync_obj.replay_index)
+        indexes_encoded = ";".join(indexes)
         self.get_conn().roles.post(
-            self.config.splunk_app_username, imported_roles=imported_roles
+            self.config.splunk_app_username,
+            imported_roles=imported_roles,
+            srchIndexesAllowed=indexes_encoded,
+            srchIndexesDefault=self.sync_obj.replay_index,
         )
 
-    def configure_delete_indexes(self, indexes: list[str] = ["_*", "*", "main"]):
+    def configure_delete_indexes(self, indexes: list[str] = ["_*", "*"]):
+        indexes.append(self.sync_obj.replay_index)
         endpoint = "/services/properties/authorize/default/deleteIndexesAllowed"
         indexes_encoded = ";".join(indexes)
         try:

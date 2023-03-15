@@ -57,9 +57,8 @@ class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True
             )
             self.format_pbar(len(summary.get("tested_detections", [])), total)
 
-            for i in range(interval):
+            for _ in range(interval):
                 if self.sync_obj.terminate:
-                    # print("Detection Testing Completed")
                     return
                 time.sleep(1)
 

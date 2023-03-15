@@ -330,7 +330,7 @@ def main():
     test_parser.add_argument(
         "--behavior",
         required=False,
-        default=PostTestBehavior.never_pause.name,
+        default=PostTestBehavior.pause_on_failure.name,
         type=str,
         choices=PostTestBehavior._member_names_,
         help="Controls what to do when a test completes. 'always_pause' means that the state of "

@@ -209,6 +209,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 pass
             except SSLZeroReturnError as e:
                 pass
+            except ConnectionResetError:
+                pass
             except Exception as e:
                 self.pbar.write(
                     f"Error getting API connection (not quitting) '{type(e).__name__}': {str(e)}"

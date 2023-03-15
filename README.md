@@ -79,7 +79,7 @@ Testing is run using [GitHub Hosted Runners](https://docs.github.com/en/actions/
 
 **Because contentctl uses a large number of dependencies, it's recommended to install it in a virtual environment. The instructions below follow this recommendation.**
 
-#### Install via pip (recommended): 
+#### Install via pip (coming soon): 
 ```
 python3.9 -m venv .venv
 source .venv/bin/activate
@@ -90,9 +90,7 @@ pip install splunk-contentctl
 ```
 git clone git@github.com:splunk/contentctl.git
 cd contentctl
-python3.9 -m venv .venv
-source .venv/bin/activate
-python -m pip install poetry
+python3.9 -m pip install poetry
 poetry install
 poetry shell
 contentctl --help

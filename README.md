@@ -59,25 +59,25 @@ TestResults --contentctl deploy-->SplunkCloudInstance
 Testing is run using [GitHub Hosted Runners](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners).  Ubuntu22.04 is the recommended configuration.
 | Operating System | Supported | Passing Intregration Tests | 
 | ---------------- | --------- | ------ |
-| Windows 10       | Yes       | [windows10TestBadge](Windows10TestBadge)  |
-| Windows 11       | Yes       | [windows11TestBadge](Windows11TestBadge)  |
-| Ununtu 20.04 LTS | Yes       | [ubuntu2004TestBadge](ubuntu2004TestBadge)|
-| *Ubuntu 22.04 LTS| Yes       | [ubuntu2204TestBadge](ubuntu2204TestBadge)|
-| macOS Big Sur 11       | Yes       | [macOS11TestBadge](macOS11TestBadge)|
-| macOS Montery 12       | Yes       | [macOS12TestBadge](macOS12TestBadge)|
+| Windows 10       | Yes       | Not tested yet |
+| Windows 11       | Yes       | Not tested yet |
+| Ununtu 20.04 LTS | Yes       | YES (locally + GitHub Actions) |
+| *Ubuntu 22.04 LTS| Yes       | YES (locally + GitHub Actions) |
+| macOS Montery 12       | Yes       | Not tested yet |
+| macOS Ventura 13       | Yes       | Yes (locally) |
+
+| Requirement | Required | Description |  Passing Integration Tests |
+| --------------------- | ----- | ---- | ------ |
+| Python <3.9 | Not Supported | No support planned.  contentctl tool uses modern language constructs not supported ion Python3.8 and below | N/A |
+| Python 3.9 | Required | contentctl tool is written in Python | Yes (locally + GitHub Actions) |
+| Python 3.10 | Not Supported (yet) | Will be supported | Yes (in GitHub Actions) |
+| Python 3.11 | Not Supported (yet) | Will be supported | Yes (in GitHub Actions)  |
+| Docker (local or remote) | Recommended | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test. | (locally + GitHub Actions) |
 
 
-| Requirement | Required | Description | 
-| --------------------- | ----- | ---- |
-| Python <3.9 | Not Supported | No support planned.  contentctl tool uses modern language constructs not supported ion Python3.8 and below |
-| Python 3.9 | Required | contentctl tool is written in Python |
-| Python 3.10 | Not Supported (yet) | Will be supported |
-| Python 3.11 | Not Supported (yet) | Will be supported |
-| Docker (local or remote) | Recommended | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test.  This is the easiest, and recommended, testing method.  Alternatively, you may specify the address and credentials for a preconfigured server for testing or choose to skip dynamic testing. Please see the page [Dynamic Testing with Docker](testingWithDocker) for important information about performance on macOS |
-
-
-
-**Because contentctl uses a large number of dependencies, it's recommended to install it in a virtual environment. The instructions below follow this recommendation.**
+**Because contentctl uses a large number of dependencies, it's recommended to install contentctl in a virtual environment. 
+The instructions below use "poetry" and follow this recommendation.  Poetry will automatically create a new virtual environment for you.  
+It is typically recommended to install poetry to the Global Python Environment.**
 
 #### Install via pip (coming soon): 
 ```

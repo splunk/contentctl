@@ -48,21 +48,22 @@ class TestOutputDto:
 
 
 class Test:
-    def execute(self, input_dto: TestInputDto) -> TestOutputDto:
+    def execute(self, input_dto: TestInputDto) -> bool:
 
         test_director = input_dto.githubService.get_all_content(
             input_dto.director_output_dto
         )
 
         output_dto = DetectionTestingManagerOutputDto()
+
+        web = DetectionTestingViewWeb(config=input_dto.config, sync_obj=output_dto)
+        cli = DetectionTestingViewCLI(config=input_dto.config, sync_obj=output_dto)
+        file = DetectionTestingViewFile(config=input_dto.config, sync_obj=output_dto)
+
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,
             testContent=test_director,
-            views=[
-                DetectionTestingViewWeb(config=input_dto.config, sync_obj=output_dto),
-                DetectionTestingViewCLI(config=input_dto.config, sync_obj=output_dto),
-                DetectionTestingViewFile(config=input_dto.config, sync_obj=output_dto),
-            ],
+            views=[web, cli, file],
         )
         manager = DetectionTestingManager(
             input_dto=manager_input_dto, output_dto=output_dto
@@ -71,7 +72,27 @@ class Test:
         manager.setup()
         manager.execute()
 
-        t = TestOutputDto()
+        try:
+            summary_results = file.getSummaryObject()
+            summary = summary_results.get("summary", {})
 
-        return t
-        # main(input_dto.config, test_director)
+            print("Test Summary")
+            print(f"\tSuccess                      : {summary.get('success',False)}")
+            print(
+                f"\tSuccess Rate                 : {summary.get('success_rate','ERROR')}"
+            )
+            print(
+                f"\tTotal Detections             : {summary.get('total_detections','ERROR')}"
+            )
+            print(
+                f"\tPassed Detections            : {summary.get('total_pass','ERROR')}"
+            )
+            print(
+                f"\tFailed or Untested Detections: {summary.get('total_fail_or_untested','ERROR')}"
+            )
+            print(f"\tTest Results File            : {file.getOutputFilePath()}")
+            return summary_results.get("summary", {}).get("success", False)
+
+        except Exception as e:
+            print(f"Error determining if whole test was successful: {str(e)}")
+            return False

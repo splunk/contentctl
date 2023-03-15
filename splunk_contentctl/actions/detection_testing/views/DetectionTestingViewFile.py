@@ -13,17 +13,28 @@ import pathlib
 import yaml
 
 OUTPUT_FOLDER = "test_results"
+OUTPUT_FILENAME = "summary.yml"
 
 
 class DetectionTestingViewFile(DetectionTestingView):
+    output_folder: str = OUTPUT_FOLDER
+    output_filename: str = OUTPUT_FILENAME
+
+    def getOutputFilePath(self) -> pathlib.Path:
+
+        folder_path = pathlib.Path(self.config.repo_path) / self.output_folder
+        output_file = folder_path / self.output_filename
+
+        return output_file
+
     def setup(self):
         pass
 
-    def stop(self, summary_file_name: str = "summary.yml"):
-        folder = pathlib.Path(self.config.repo_path) / OUTPUT_FOLDER
-        output_file = folder / "summary.yml"
+    def stop(self):
+        folder_path = pathlib.Path(self.config.repo_path) / OUTPUT_FOLDER
+        output_file = self.getOutputFilePath()
 
-        folder.mkdir(parents=True, exist_ok=True)
+        folder_path.mkdir(parents=True, exist_ok=True)
 
         result_dict = self.getSummaryObject()
 

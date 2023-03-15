@@ -120,7 +120,7 @@ def deploy(args) -> None:
     deploy.execute(deploy_input_dto)
 
 
-def test(args: argparse.Namespace) -> TestOutputDto:
+def test(args: argparse.Namespace):
     args = configure_unattended(args)
     config = start(args)
 
@@ -172,8 +172,19 @@ def test(args: argparse.Namespace) -> TestOutputDto:
     )
     test = Test()
 
-    test_output_dto = test.execute(test_input_dto)
-    return test_output_dto
+    try:
+        result = test.execute(test_input_dto)
+        # This return code is important.  Even if testing
+        # fully completes, if everything does not pass then
+        # we want to return a nonzero status code
+        if result:
+            sys.exit(0)
+        else:
+            sys.exit(1)
+
+    except Exception as e:
+        print("Error running contentctl test: {str(e)}")
+        sys.exit(1)
 
 
 def validate(args) -> None:

@@ -1,4 +1,4 @@
-from splunk_contentctl import __version__
+from contentctl import __version__
 
 
 def test_version():

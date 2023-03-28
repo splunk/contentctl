@@ -72,7 +72,12 @@ jobs:
       
       - uses: actions/upload-artifact@v3
         with:
+          name: content_pack_${{ matrix.python_version }}_${{ matrix.operating_system }}
+          path: |
+            my_splunk_content_pack/dist/my_splunk_content_pack.tar.gz
+      
+      - uses: actions/upload-artifact@v3
+        with:
           name: test_results_${{ matrix.python_version }}_${{ matrix.operating_system }}
           path: |
             my_splunk_content_pack/test_results/results.yml
-            my_splunk_content_pack/dist/my_splunk_content_pack.tar.gz

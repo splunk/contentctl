@@ -68,16 +68,21 @@ jobs:
       - name: Run contentctl test
         run: |
           cd my_splunk_content_pack
-          poetry run contentctl test
+          poetry run contentctl test --unattended
       
       - uses: actions/upload-artifact@v3
         with:
           name: content_pack_${{ matrix.python_version }}_${{ matrix.operating_system }}
-          path: |
-            my_splunk_content_pack/dist/my_splunk_content_pack.tar.gz
+          path: my_splunk_content_pack/dist/my_splunk_content_pack.tar.gz
       
+      - name: show files
+        run: |
+          pwd
+          ls -lahR
+          cd my_splunk_content_pack
+          ls -lahR
+          cd test_results
       - uses: actions/upload-artifact@v3
         with:
           name: test_results_${{ matrix.python_version }}_${{ matrix.operating_system }}
-          path: |
-            my_splunk_content_pack/test_results/results.yml
+          path: my_splunk_content_pack/test_results/results.yml

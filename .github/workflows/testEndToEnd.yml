@@ -47,25 +47,32 @@ jobs:
       - name: Install contentctl and activate the shell
         run: |
           poetry install --no-interaction
-          mkdir my_demo_app
+          mkdir my_splunk_content_pack
 
       - name: Run contentctl init
         run: |
-          cd my_demo_app
+          cd my_splunk_content_pack
           poetry run contentctl init
 
       - name: Run contentctl validate
         run: |
-          cd my_demo_app
+          cd my_splunk_content_pack
           poetry run contentctl validate
 
       - name: Run contentctl build
         run: |
-          cd my_demo_app
+          cd my_splunk_content_pack
           poetry run contentctl build
 
       #Do not pause on a failed detection
       - name: Run contentctl test
         run: |
-          cd my_demo_app
+          cd my_splunk_content_pack
           poetry run contentctl test
+      
+      - uses: actions/upload-artifact@v3
+        with:
+          name: test_results_${{ matrix.python_version }}_${{ matrix.operating_system }}
+          path: |
+            my_splunk_content_pack/test_results/results.yml
+            my_splunk_content_pack/dist/my_splunk_content_pack.tar.gz

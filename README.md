@@ -63,13 +63,15 @@ Testing is run using [GitHub Hosted Runners](https://docs.github.com/en/actions/
 | macOS Montery 12       | Yes       | Not tested yet |
 | macOS Ventura 13       | Yes       | Yes (locally) |
 
-| Requirement | Required | Description |  Passing Integration Tests |
+| Requirement | Supported | Description |  Passing Integration Tests |
 | --------------------- | ----- | ---- | ------ |
-| Python <3.9 | Not Supported | No support planned.  contentctl tool uses modern language constructs not supported ion Python3.8 and below | N/A |
-| Python 3.9 | Required | contentctl tool is written in Python | Yes (locally + GitHub Actions) |
-| Python 3.10 | Not Supported (yet) | Will be supported | Yes (in GitHub Actions) |
-| Python 3.11 | Not Supported (yet) | Will be supported | Yes (in GitHub Actions)  |
-| Docker (local or remote) | Recommended | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test. | (locally + GitHub Actions) |
+| Python <3.9 | No | No support planned.  contentctl tool uses modern language constructs not supported ion Python3.8 and below | N/A |
+| Python 3.9 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions) |
+| Python 3.10 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions) |
+| Python 3.11 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions)  |
+| Docker (local) | Yes | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test. | (locally + GitHub Actions) |
+| Docker (remote) | Planned | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test. | No |
+
 
 
 **Because contentctl uses a large number of dependencies, it's recommended to install contentctl in a virtual environment. 

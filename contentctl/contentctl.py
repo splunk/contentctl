@@ -1,7 +1,8 @@
 import sys
 import argparse
 import os
-
+import sys
+import subprocess
 import yaml
 
 from contentctl.actions.detection_testing.GitHubService import (
@@ -21,6 +22,7 @@ from contentctl.actions.deploy import Deploy, DeployInputDto
 from contentctl.input.director import DirectorInputDto
 from contentctl.objects.enums import (
     SecurityContentType,
+    SecurityContentMode,
     SecurityContentProduct,
     DetectionTestingMode,
     PostTestBehavior,
@@ -211,14 +213,17 @@ def doc_gen(args) -> None:
 
 
 def new_content(args) -> None:
-
     if args.type == "detection":
         contentType = SecurityContentType.detections
+        if args.interactive == "interactive":
+            subprocess.Popen(["streamlit", "run", os.getcwd()+"/contentctl_gui/_🏠_Contentctl_GUI.py"])
+            sys.exit()
     elif args.type == "story":
         contentType = SecurityContentType.stories
     else:
         print("ERROR: type " + args.type + " not supported")
         sys.exit(1)
+             
 
     new_content_generator_input_dto = NewContentGeneratorInputDto(type=contentType)
     new_content_input_dto = NewContentInputDto(
@@ -310,8 +315,16 @@ def main():
         "--type",
         required=True,
         type=str,
-        help="Type of security content object, choose between `detection`, `story`",
+        help="Type of security content object, choose between `detection`, `story`\n choose --interactive to use the GUI",
     )
+    new_content_parser.add_argument(
+        "-i",
+        "--interactive",
+        required=False,
+        type=str,
+        help="I",
+    )
+
     new_content_parser.set_defaults(func=new_content)
 
     reporting_parser.set_defaults(func=reporting)

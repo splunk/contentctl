@@ -47,7 +47,8 @@ class SecurityContentProduct(enum.Enum):
     ba_objects = "ba_objects"
     json_objects = "json_objects"
 
-
+class SecurityContentMode(enum.Enum):
+    interactive = 1
 class LogLevel(enum.Enum):
     NONE = "NONE"
     ERROR = "ERROR"

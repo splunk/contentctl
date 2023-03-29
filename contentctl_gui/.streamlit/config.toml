@@ -1,0 +1,5 @@
+[theme]
+base="dark"
+
+[server]
+port = 8501

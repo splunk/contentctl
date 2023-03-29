@@ -8,7 +8,6 @@ from wsgiref.simple_server import make_server, WSGIRequestHandler
 import jinja2
 import webbrowser
 from threading import Thread
-import json, websocket
 
 DEFAULT_WEB_UI_PORT = 7999
 
@@ -21,57 +20,59 @@ STATUS_TEMPLATE = """
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.3/css/jquery.dataTables.min.css">
 <script>
 $(document).ready(function () {
-$("#results").DataTable();
-$("#runningTests").DataTable();
+    $("#results").DataTable();
+    $("#runningTests").DataTable();
 });
 </script>
 </head>
 <body>
 <table id="runningTests" class="display" style="width:100%">
-<thead>
-<tr>
-<th>Instance Name</th>
-<th>Current Test</th>
-<th>Search</th>
-</tr>
-</thead>
-<tbody>
-{% for containerName, data in currentTestingQueue.items() %}
-<tr>
-<td>{{ containerName }}</td>
-<td>{{ data["name"] }}</td>    
-<td>{{ data["search"] }}</td>    
-</tr>
-{% endfor %}
-</tbody>
+    <thead>
+        <tr>
+            <th>Instance Name</th>
+            <th>Current Test</th>
+            <th>Search</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for containerName, data in currentTestingQueue.items() %}
+        <tr>
+            <td>{{ containerName }}</td>
+            <td>{{ data["name"] }}</td>    
+            <td>{{ data["search"] }}</td>    
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
+
 <table id="results" class="display" style="width:100%">
-<thead>
-<tr>
-<th>Test Name</th>
-<th>Test SID</th>
-<th>Run Duration</th>
-<th>Message</th>
-<th>Success</th>
-</tr>
-</thead>
-<tbody>
-{% for detection in detections %}
-{% for test in detection.tests %}
-<tr>
-<td>{{ test.name }}</td>
-<td><a href="{{test.sid_link}}" target="_blank"/>SID</td>
-<td>{{ test.runDuration }}</td>
-<td>{{ test.message }}</td>
-{% if test.success %}
-<td>True</td>
-{% else %}
-<td style="font-weight: bold;background-color: #ff9999"><b>False</b></td>
-{% endif %}
-</tr>
-{% endfor %}
-{% endfor %}
-</tbody>
+    <thead>
+        <tr>
+            <th>Test Name</th>
+            <th>Test SID</th>
+            <th>Run Duration</th>
+            <th>Message</th>
+            <th>Success</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for detection in detections %}
+        {% for test in detection.tests %}
+        <tr>
+            <td>{{ test.name }}</td>
+            <td><a href="{{test.sid_link}}" target="_blank"/>SID</td>
+            <td>{{ test.runDuration }}</td>
+            <td>{{ test.message }}</td>
+            {% if test.success %}
+            <td>True</td>
+            {% else %}
+            <td style="font-weight: bold;background-color: #ff9999"><b>False</b></td>
+            {% endif %}
+            
+        </tr>
+        {% endfor %}
+        {% endfor %}
+    </tbody>
 </table>
 </body>
 </hmtl>
@@ -105,29 +106,20 @@ class DetectionTestingViewWeb(DetectionTestingView):
         arbitrary_types_allowed = True
 
     def setup(self):
-        WS_URL = "ws://localhost:8000"
+        self.bottleApp.route("/", callback=self.showStatus)
+        self.bottleApp.route("/data", callback=self.txdata)
+        self.bottleApp.route("/results", callback=self.showResults)
+        self.bottleApp.route("/report", callback=self.createReport)
 
-        # Define the data you want to send to the Streamlit app
-        summary_dict = self.getSummaryObject(
-            test_model_fields=["success", "message", "sid_link"]
+        t = Thread(
+            target=self.bottleApp.run, daemon=True, kwargs=({"server": self.server})
         )
+        t.start()
 
-        currentTestingQueue=self.sync_obj.currentTestingQueue,
-        percent_complete=summary_dict.get("percent_complete", 0),
-        detections=summary_dict["tested_detections"],
-        
-        x = {"currentTestingQueue": currentTestingQueue, 
-            "percent_complete": percent_complete,
-            "detections": detections}
-
-        data = json.dumps(x)
-
-        # Create the WebSocket client
-        ws = websocket.WebSocket()
-        ws.connect(WS_URL)
-
-        # Send the data to the Streamlit app
-        ws.send(json.dumps(data))
+        try:
+            webbrowser.open(f"http://localhost:{DEFAULT_WEB_UI_PORT}")
+        except Exception as e:
+            print(f"Could not open webbrowser for status page: {str(e)}")
 
     def stop(self):
 
@@ -138,6 +130,17 @@ class DetectionTestingViewWeb(DetectionTestingView):
         # print("called web server shutdown")
         # self.server.server.shutdown()
         # print("finished calling web server shutdown")
+
+    def txdata (self):
+        summary_dict = self.getSummaryObject(
+            test_model_fields=["success", "message", "sid_link"]
+        )
+
+        currentTestingQueue=self.sync_obj.currentTestingQueue,
+        percent_complete=summary_dict.get("percent_complete", 0),
+        detections=summary_dict["tested_detections"],
+        return {currentTestingQueue, percent_complete, detections}
+
 
     def showStatus(self, interval: int = 60):
         # Status updated on page load
@@ -155,13 +158,6 @@ class DetectionTestingViewWeb(DetectionTestingView):
         )
 
         return template(res)
-   
-    def txdata(self):
-        # Status updated on page load
-        # get all the finished detections:
-         # Define the WebSocket server URL
-       pass
-
 
     def showResults(self):
         # Results generated on page load

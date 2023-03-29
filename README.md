@@ -8,19 +8,17 @@
 
 # Introduction
 #### Security Is Hard 
-Anyone who has managed a [SOC](acronym) will tell you it's hard work.  SOC Managers, Detection Engineers, and Cybersecurity Professionals must understand and manage countless tools and data sources while ensuring the reliability and security of their network and applications.  At the same time, they must be able to detect and react to data breeches, vulnerabilities, and performance degradation in minutes - not seconds or hours.
+Anyone who has managed a [SOC](#acronyms) will tell you it's hard work.  SOC Managers, Detection Engineers, and Cybersecurity Professionals must understand and manage countless tools and data sources while ensuring the reliability and security of their network and applications.  At the same time, they must be able to detect and react to data breeches, vulnerabilities, and performance degradation in minutes - not seconds or hours.
 These responsibilities leave little time for writing new content - let alone documentation, maintenance, and testing of legacy content.  Existing solutions like Wikis, JIRA tickets, Excel Spreadsheets, and "asking that one team member who knows everything" don't scale and spread information across various systems.       
 #### contentctl Makes It ~~Easy~~ Less Hard 
 contentctl is a single application that support the full cycle of security content development (each of the links below will redirect to the appropriate section of the README/Wiki):
 
-- [Create Content Packs](contentctl-init) - Version-Controlled collections of searches, documentation, and test data
-- [Add New Content](contentctl-new-content) - searches, macros, lookups, and other content
-- [Statically Validate](contentctl-validate) Content Against a Well-Defined Baseline
-- [Building](contentctl-build) a Content Pack for your target - Use a supported output format or design your own
-- [Generate](contentctl-generate) documentation, MITRE Maps, and a website that makes your Content Pack searchable and easy to understand  
-- [Test](contentctl-test) your Content Pack on a running Splunk Instance
-- [Deploy](contentctl-deploy) your Content Pack to Splunk Cloud Instance, via REST API, or create a Splunkbase Application for manual deployment   
- 
+- [Create Content Packs](#contentctl-init) - Version-Controlled collections of searches, documentation, and test data
+- [Add New Content](#contentctl-new---type-type) - searches, macros, lookups, and other content
+- [Statically Validate](#contentctl-validate) Content Against a Well-Defined Baseline
+- [Building](#contentctl-build) a Content Pack for your target - Use a supported output format or design your own
+- [Test](#contentctl-test) your Content Pack on a running Splunk Instance
+- [Deploy](#contentctl-deploy) your Content Pack to Splunk Cloud Instance, via REST API, or create a Splunkbase Application for manual deployment   
  
  
  # Ecosystem
@@ -33,7 +31,6 @@ contentctl is a single application that support the full cycle of security conte
 | [Splunk Security Content](https://github.com/splunk/security_content)          | Splunk Threat Research Team's Content included in the [Enterprise Security Content Update App (ESCU)](https://splunkbase.splunk.com/app/3449)|
 | [Splunk contentctl](https://github.com/splunk/contentctl)          | Generate, validate, build, test, and deploy custom Security Content|
 | [SigmaHQ Sigma Rules](https://github.com/SigmaHQ/sigma) | Official Repository for Sigma Rules. These rules are an excellent starting point for new content. |
-| [Other Important Project(s)](https://github.com/otherorg/projectname)          | Additional projects that STRT uses or contributes to|
 
 
 
@@ -100,16 +97,13 @@ contentctl --help
 # Usage
 
 ### contentctl init
-Creates a new Content Pack in the current directory as well as a configuration file called [contentctl.yml](contentctl.yml) which contains a number of important configuration options.
+Creates a new Content Pack in the current directory as well as a configuration file called [contentctl.yml](/contentctl/templates/contentctl_default.yml) which contains a number of important configuration options.
 The content pack contains a wide variety of content types:
-- [detections](detection)
-- [baselines](baseline)
-- [lookups](lookup)
-- [macros](macro)
-- [stories](story)
-
-### contentctl new [--type TYPE]
-Choose TYPE {detection, story} to create new content for the Content Pack.  The tool will interactively ask a series of questions required for generating a basic piece of content and automatically add it to the Content Pack.
+- [detections](/contentctl/objects/detection.py) - A piece of content that wraps and enriches a Splunk Search.  [Example Detection](/contentctl/templates/detections/anomalous_usage_of_7zip.yml)
+- [baselines](/contentctl/objects/baseline.py) - This content is not currently supported.
+- [lookups](/contentctl//objects/lookup.py) - Static files, such as CSVs, that can be loaded into Splunk for use in lookup commands.  [Example Lookup](https://github.com/splunk/security_content/blob/develop/lookups/attacker_tools.csv)
+- [macros](/contentctl/objects/macro.py) - Common code that is re-used across a wide set of detections.  [Example Macro](/contentctl/templates/macros/security_content_summariesonly.yml) 
+- [stories](/contentctl/objects/story.py) - Analytic Stories Allow a developer to tie together a group of detections, for example detections that all relate to Ransomware. [Example Analytic Story](/contentctl/templates/stories/cobalt_strike.yml)
 
 ### contentctl validate
 Performs static validation on all of the content in this Content Pack.  Writing validation is extremely complex.  Each piece of content can one or dozens of fields ranging from free text to numbers to references to other content.  contentctl's build in validation ensures that a number of conditions are met:
@@ -120,17 +114,28 @@ Performs static validation on all of the content in this Content Pack.  Writing 
 If any of these conditions are not met, then a descriptive error will be printed and contentctl will return a nonzero exit code.  This makes it suitable for running in an automated workflow or other CICD context.  Instead of exiting on the first error, _contentctl validate_ will continue validating all content so that it can present all relevant error before exiting.
 
 ### contentctl build
-Generates Content Packs in the output format defined in the [contentctl.yml](contentctl.yml) configuration file.  These outputs may include {splunk_app, api, ba}.  When _contentctl build_ runs, it first performs a _contentctl validate_ in order to ensure that a valid app is generated.  Note that it is *NOT* required or recommended to run _contentctl validate_ separately if the intention is to build a Content Pack.
+Generates Content Packs in the output format defined in the [contentctl.yml](/contentctl/templates/contentctl_default.yml) configuration file.  These outputs may include {splunk_app, api, ba}.  When _contentctl build_ runs, it first performs a _contentctl validate_ in order to ensure that a valid app is generated.  Note that it is *NOT* required or recommended to run _contentctl validate_ separately if the intention is to build a Content Pack.
 
-### contentctl report
+### contentctl report 
+This section is under active development.  It will allow you to a [MITRE Map](https://mitremap.splunkresearch.com/) showing your coverage of MITRE Techniques.  The link here shows the generation of that MITRE Map using the content in Splunk's [security_content repo](https://github.com/splunk/security_content).
+
+### contentctl new [--type TYPE]
+Choose TYPE {detection, story} to create new content for the Content Pack.  The tool will interactively ask a series of questions required for generating a basic piece of content and automatically add it to the Content Pack.
+
 ### contentctl inspect
+This section is under development.  It will enable the user to perform an appinspect of the content pack in preparation for deployment onto a Splunk Instance or via Splunk Cloud.
+
 ### contentctl deploy
-The reason to build content is so that it can be deployed to your environment.  However, deploying content to multiple servers and different types of infrastructure can be tricky and time-consuming.  contentctl makes this easy by supporting a number of different deployment mechanisms. Deployment targets can be defined in [contentctl.yml](contentctl.yml).
+The reason to build content is so that it can be deployed to your environment.  However, deploying content to multiple servers and different types of infrastructure can be tricky and time-consuming.  contentctl makes this easy by supporting a number of different deployment mechanisms. Deployment targets can be defined in [contentctl.yml](/contentctl/templates/contentctl_default.yml).
 - Deploy via API - Using the REST API, individual pieces of content are deployed to a running server.  This is a great way to deploy all of the content in a content pack, but can also be used to deploy individual peices of content.
 - Deploy to Splunk Cloud via ACS - Using the Automated Private App Vetting (APAV) Feature of the Admin Config Service (ACS), Splunk Cloud customers can easily deploy custom apps to their environments.   
+
 ### contentctl docs
+This section is under active development.  It will allow you to easily generate verbose [web-based documentation](https://research.splunk.com) from all of your content.  The link here shows the generation of that documentation using the content in Splunk's [security_content repo](https://github.com/splunk/security_content).
+
 ### contentctl test
-The static validation performed by *contentctl validate* can only take you so far.  While it's powerful, and fast, it can only tell determine if the content is *syntactically* correct.  *contentctl test* can test your content on real Splunk Infrastructure to ensure there are no errors in your SPL, raw data can be properly ingested/processed/accelerated on your server, your search finds the event(s) you're looking for in raw data, and even provides high-level runtime performance metrics about your searches.    The following diagram shows this workflow at a high level
+The static validation performed by *contentctl validate* can only take you so far.  While it's powerful, and fast, it can only tell determine if the content is *syntactically* correct.  *contentctl test* can test your content on real Splunk Infrastructure to ensure there are no errors in your SPL, raw data can be properly ingested/processed/accelerated on your server, your search finds the event(s) you're looking for in raw data, and even provides high-level runtime performance metrics about your searches.    As part of this workflow, a large number of apps will be installed by default.  You can see, and edit, the list of apps in the [app_default.yml](/contentctl/templates/app_default.yml) file.  We plan on making this even easier to update in the future, so stay tuned for updates.
+The following diagram shows this workflow at a high level.
 
 ```mermaid
 graph TD
@@ -179,7 +184,7 @@ contentctl test's default mode allows it to quickly test all content with requir
 | SOC | Security Operation Center | Description of a SoC | 
 | DaC | Detection as Code | A systematic approach applying DevOps priciples to Detection Engineering. DaC enables Continuous Integration and Continuous Delivery of Detectionsa via automated validation, testing, and deployment |
 | CICD | Continuous Integration/Continuous Delivery | A modern DevOps practice that encourages users to make small, frequent changes which are automatically tested and deployed. This contrasts with legacy approaches that emphasize large changes which may be manually tested an infrequently deployed. |
-| ACS| Admin Config Service | The [Splunk Admin Configu Service](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2209/Config/ACSIntro) is a cloud-native API that provides programmatic self-service administration capabilities for Splunk Cloud Platform. One of its features, Automated Private App Vetting (APAV) enables the installation of custom app on Splunk Cloud instances. | 
+| ACS| Admin Config Service | The [Splunk Admin Config Service](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2209/Config/ACSIntro) is a cloud-native API that provides programmatic self-service administration capabilities for Splunk Cloud Platform. One of its features, Automated Private App Vetting (APAV) enables the installation of custom app on Splunk Cloud instances. | 
 | APAV | Automated Private App Vetting | [Automated Private App Vetting](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2209/Config/ManageApps) enables admins to use the ACS API to install, upgrade, and uninstall apps directly on your Splunk Cloud Platform deployment without assistance from Splunk Support. |
 
 

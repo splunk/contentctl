@@ -12,8 +12,10 @@ from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfras
     DetectionTestingManagerOutputDto,
 )
 
-test_thread: Union[threading.Thread, None] = None
-output_dto: Union[DetectionTestingManagerOutputDto, None] = None
+if 'test_thread' not in st.session_state:
+    st.session_state['test_thread']: Union[threading.Thread, None] = None
+if 'output_dto' not in st.session_state:
+    st.session_state['output_dto']: Union[DetectionTestingManagerOutputDto, None] = None
 
 st.set_page_config(
     page_title="Splunk Content Creation",
@@ -58,11 +60,11 @@ try:
     elif in_dir == True:
         placeholder.markdown("### Already Initialized 🤙🏽")
         art = contentctl.print_ascii_art()
-        st.code(art)
+        st.text(art)
     elif temp_exist == True:
         placeholder.markdown("### Already Initialized 🤙🏽")
         art = contentctl.print_ascii_art()
-        st.code(art)
+        st.text(art)
         os.chdir(f"{os.getcwd()}/temp")
 
 
@@ -105,58 +107,64 @@ parser.set_defaults(func=contentctl.test)
 
 args = parser.parse_args()
 
-
 def test(args):
-    global test_thread
-    global output_dto
 
     st.text("starting contentctl and testing your detection")
-    output_dto = DetectionTestingManagerOutputDto()
-    test_thread = threading.Thread(target=contentctl.test, args=(args, output_dto))
-    print("starting test thread")
-    test_thread.start()
-    print("started thread")
-    print(
+    st.session_state['output_dto'] = DetectionTestingManagerOutputDto()
+    st.session_state['test_thread'] = threading.Thread(target=contentctl.test, args=(args, st.session_state['output_dto']))
+    st.text("starting test thread")
+    st.session_state['test_thread'].start()
+    st.text("started thread")
+   
+    st.write(
         "Note - even though this is a global variable the value seems to be overwritten. How to set persistent variables/values in Streamlit?"
     )
+    st.write(st.session_state['test_thread'])
     import time
 
     time.sleep(15)
     stop_testing()
 
-
 def stop_testing():
     # Make sure both of these values are not None
-    if test_thread == None:
-        print("Cannot stop testing, it is not running")
+    if st.session_state['test_thread'] == None:
+        st.text("Cannot stop testing, it is not running")
         return
-    elif output_dto == None:
-        print("Weird, testing is running but output_dto was None!")
+    elif st.session_state['output_dto'] == None:
+        st.text("Weird, testing is running but output_dto was None!")
         return
 
-    print("Update the terminate value in the sync object")
-    output_dto.terminate = True
-    print("Wait for the testing thread to complete...")
-    print("*******************************")
-    print(
+    st.text("Update the terminate value in the sync object")
+    st.session_state['output_dto'].terminate = True
+    st.text("Wait for the testing thread to complete...")
+    st.text("*******************************")
+    st.text(
         "If testing is paused and you are debugging a detection, you MUST hit CTRL-D at the prompt to complete shutdown."
     )
-    print("*******************************")
-    test_thread.join()
-    print("test thread joined!")
+    st.text("*******************************")
+    st.session_state['test_thread'].join()
+    st.text("test thread joined!")
+    st.write(st.session_state['test_thread'])
 
 
 st.markdown(
+        """
+    When you click _**Test Detection**_ the test will begin
+    # 👇🏽
     """
-When you click _**Test Detection**_ the test will begin
-# 👇🏽
-"""
-)
-value = st.button("Test Detection", True)
+    )
+
+col1, col2 = st.columns([.1,.7])
+
+with col1:
+   
+    value = st.button("Test Detection")
+
+with col2:
+    # st.markdown("<div style='margin-top:130px;'></div>",unsafe_allow_html=True)
+    stopTestingButton = st.button("Stop Testing")
+    if stopTestingButton:
+        stop_testing()
+
 if value:
-
     test(args)
-
-stopTestingButton = st.button("Stop Testing", key="stopTestingButton")
-if stopTestingButton:
-    stop_testing()

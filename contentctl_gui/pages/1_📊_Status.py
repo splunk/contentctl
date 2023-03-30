@@ -3,8 +3,6 @@ import contentctl.contentctl as contentctl
 import argparse, subprocess
 import os
 from contentctl.objects.enums import (
-    SecurityContentType,
-    SecurityContentProduct,
     DetectionTestingMode,
     PostTestBehavior,
 )

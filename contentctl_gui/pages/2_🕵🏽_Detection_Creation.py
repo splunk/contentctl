@@ -2,9 +2,26 @@ import streamlit as st
 import openai
 import uuid
 import yaml
-import content_fields as content_fields
+import datetime, random, os
+
+st.set_page_config(
+     page_title="Splunk Content Creation",
+     page_icon="🤖",
+     layout="wide",
+     initial_sidebar_state="expanded",
+ )
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+os.chdir(st.session_state['parent_dir'])
+
 import new_content_questions as new_content_questions
-import datetime, random, sys
+import content_fields as content_fields
 
 questions = new_content_questions.NewContentQuestions.get_questions_detection()
 selectField = content_fields.ContentFields.get_content_fields()
@@ -71,7 +88,7 @@ with col1:
     with st.sidebar:
         from PIL import Image
         col5, col6 = st.columns([.2,.8])
-        image = Image.open('contentctl_gui/contentctl_logo_black.png')
+        image = Image.open('contentctl_logo_black.png')
         motds = ["Make content happen! 😎","The best content! 🥰","You are the content! 🤓","Content of the day! 🍻","What content?! 🔥"]
         with col6: 
             st.image(image, caption=motds[random.randint(0,4)], width=175)

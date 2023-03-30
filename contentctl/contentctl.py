@@ -2,8 +2,6 @@ import sys
 import argparse
 import os
 import sys
-import subprocess
-import yaml
 
 from contentctl.actions.detection_testing.GitHubService import (
     GithubService,
@@ -22,7 +20,6 @@ from contentctl.actions.deploy import Deploy, DeployInputDto
 from contentctl.input.director import DirectorInputDto
 from contentctl.objects.enums import (
     SecurityContentType,
-    SecurityContentMode,
     SecurityContentProduct,
     DetectionTestingMode,
     PostTestBehavior,
@@ -58,8 +55,7 @@ def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
 
 
 def print_ascii_art():
-    print(
-        """
+   return ("""
 Running Splunk Security Content Control Tool (contentctl) 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⢶⠛⡇⠀⠀⠀⠀⠀⠀⣠⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -84,8 +80,7 @@ Running Splunk Security Content Control Tool (contentctl)
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠻⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
     By: Splunk Threat Research Team [STRT] - research@splunk.com
-    """
-    )
+    """)
 
 
 def start(args) -> Config:
@@ -184,8 +179,9 @@ def test(args: argparse.Namespace):
         else:
             sys.exit(1)
 
-    except Exception as e:
-        print("Error running contentctl test: {str(e)}")
+    except ValueError as e:
+        # Handle the ValueError exception
+        print("An error occurred: " + str(e))
         sys.exit(1)
 
 
@@ -215,9 +211,6 @@ def doc_gen(args) -> None:
 def new_content(args) -> None:
     if args.type == "detection":
         contentType = SecurityContentType.detections
-        if args.interactive == "interactive":
-            subprocess.Popen(["streamlit", "run", os.getcwd()+"/contentctl_gui/_🏠_Contentctl_GUI.py"])
-            sys.exit()
     elif args.type == "story":
         contentType = SecurityContentType.stories
     else:
@@ -317,14 +310,6 @@ def main():
         type=str,
         help="Type of security content object, choose between `detection`, `story`\n choose --interactive to use the GUI",
     )
-    new_content_parser.add_argument(
-        "-i",
-        "--interactive",
-        required=False,
-        type=str,
-        help="I",
-    )
-
     new_content_parser.set_defaults(func=new_content)
 
     reporting_parser.set_defaults(func=reporting)

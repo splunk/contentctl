@@ -86,7 +86,7 @@ class DetectionTestingManager(BaseModel):
                 )
                 print("*******************************")
 
-        signal.signal(signal.SIGINT, sigint_handler)
+        #signal.signal(signal.SIGINT, sigint_handler)
 
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self.input_dto.config.num_containers,

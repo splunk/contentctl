@@ -48,13 +48,13 @@ class TestOutputDto:
 
 
 class Test:
-    def execute(self, input_dto: TestInputDto) -> bool:
+    def execute(
+        self, input_dto: TestInputDto, output_dto: DetectionTestingManagerOutputDto
+    ) -> bool:
 
         test_director = input_dto.githubService.get_all_content(
             input_dto.director_output_dto
         )
-
-        output_dto = DetectionTestingManagerOutputDto()
 
         web = DetectionTestingViewWeb(config=input_dto.config, sync_obj=output_dto)
         cli = DetectionTestingViewCLI(config=input_dto.config, sync_obj=output_dto)

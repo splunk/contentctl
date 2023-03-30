@@ -4,7 +4,7 @@ import os
 import sys
 import subprocess
 import yaml
-
+import threading
 from contentctl.actions.detection_testing.GitHubService import (
     GithubService,
 )
@@ -36,9 +36,14 @@ from contentctl.objects.app import App
 from contentctl.objects.test_config import TestConfig
 from contentctl.actions.test import Test, TestInputDto, TestOutputDto
 
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
+    DetectionTestingManagerOutputDto,
+)
+
 
 import tqdm
 import functools
+from typing import Union, Tuple
 
 
 def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
@@ -122,7 +127,10 @@ def deploy(args) -> None:
     deploy.execute(deploy_input_dto)
 
 
-def test(args: argparse.Namespace):
+def test(
+    args: argparse.Namespace,
+    output_dto: Union[None, DetectionTestingManagerOutputDto] = None,
+) -> int:
     args = configure_unattended(args)
     config = start(args)
 
@@ -173,20 +181,21 @@ def test(args: argparse.Namespace):
         config=test_config,
     )
     test = Test()
-
+    if output_dto == None:
+        output_dto = DetectionTestingManagerOutputDto()
     try:
-        result = test.execute(test_input_dto)
+        result = test.execute(test_input_dto, output_dto)
         # This return code is important.  Even if testing
         # fully completes, if everything does not pass then
         # we want to return a nonzero status code
         if result:
-            sys.exit(0)
+            return 0
         else:
-            sys.exit(1)
+            return 1
 
     except Exception as e:
-        print("Error running contentctl test: {str(e)}")
-        sys.exit(1)
+        print(f"Error running contentctl test: {str(e)}")
+        return 1
 
 
 def validate(args) -> None:
@@ -216,14 +225,19 @@ def new_content(args) -> None:
     if args.type == "detection":
         contentType = SecurityContentType.detections
         if args.interactive == "interactive":
-            subprocess.Popen(["streamlit", "run", os.getcwd()+"/contentctl_gui/_🏠_Contentctl_GUI.py"])
+            subprocess.Popen(
+                [
+                    "streamlit",
+                    "run",
+                    os.getcwd() + "/contentctl_gui/_🏠_Contentctl_GUI.py",
+                ]
+            )
             sys.exit()
     elif args.type == "story":
         contentType = SecurityContentType.stories
     else:
         print("ERROR: type " + args.type + " not supported")
         sys.exit(1)
-             
 
     new_content_generator_input_dto = NewContentGeneratorInputDto(type=contentType)
     new_content_input_dto = NewContentInputDto(

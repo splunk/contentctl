@@ -103,7 +103,7 @@ def build(args) -> DirectorOutputDto:
     config = start(args)
     product_type = SecurityContentProduct.splunk_app
     director_input_dto = DirectorInputDto(
-        input_path=os.path.abspath(args.path), product=product_type, config=config
+        input_path=os.path.abspath(args.path), product=product_type, config=config,
     )
     generate_input_dto = GenerateInputDto(director_input_dto)
 
@@ -386,5 +386,5 @@ def main():
     # parse them
     args = parser.parse_args()
 
-    print_ascii_art()
+    print(print_ascii_art())
     args.func(args)

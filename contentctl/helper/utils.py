@@ -11,11 +11,13 @@ from typing import Union
 import tqdm
 from contentctl.objects.security_content_object import SecurityContentObject
 from math import ceil
+import queue
 
 TOTAL_BYTES = 0
 ALWAYS_PULL = True
 
-
+# Create a queue to pass data between the threads
+update_queue_path = queue.Queue()
 class Utils:
     @staticmethod
     def get_all_yml_files_from_directory(path: str) -> list:
@@ -304,9 +306,10 @@ class Utils:
                 + "[PREVIOUSLY CACHED]"
             )
             pbar.update(100)
+            update_queue_path.put(sourcePath.name)
             if input_pbar is None:
                 pbar.close()
-            return
+            return update_queue_path
         elif destinationPath.is_file() and overwrite_file is True:
             # Overwrite the file
             pass

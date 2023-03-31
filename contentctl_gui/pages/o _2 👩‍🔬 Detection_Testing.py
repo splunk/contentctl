@@ -1,4 +1,8 @@
+from io import StringIO
+import sys
+import time
 import streamlit as st
+import tqdm
 import contentctl.contentctl as contentctl
 import argparse, subprocess
 import os
@@ -7,15 +11,14 @@ from contentctl.objects.enums import (
     PostTestBehavior,
 )
 from typing import Union
-import threading
+import threading, queue
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
-
-if 'test_thread' not in st.session_state:
-    st.session_state['test_thread']: Union[threading.Thread, None] = None
-if 'output_dto' not in st.session_state:
-    st.session_state['output_dto']: Union[DetectionTestingManagerOutputDto, None] = None
+from contentctl.input.director import update_queue 
+# from contentctl.helper.utils import update_queue_download
+from contentctl.helper.utils import update_queue_path
+# from contentctl.helper.utils import update_queue_status
 
 st.set_page_config(
     page_title="Splunk Content Creation",
@@ -30,6 +33,11 @@ hide_streamlit_style = """
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+if 'test_thread' not in st.session_state:
+    st.session_state['test_thread']: Union[threading.Thread, None] = None
+if 'output_dto' not in st.session_state:
+    st.session_state['output_dto']: Union[DetectionTestingManagerOutputDto, None] = None
 
 placeholder = st.empty()
 placeholder.markdown("""#### Contentctl initializing in temp folder""")
@@ -107,23 +115,45 @@ parser.set_defaults(func=contentctl.test)
 
 args = parser.parse_args()
 
+# Define a callback function to handle updates
+def handle_update(update_value, update_path_value):
+    col3,col4,col5 = st.columns(3)
+    for update_path in update_path_value:
+        st.write(update_path)
+        st.progress(100)
+        st.write("[PREVIOUSLY CACHED]")
+    st.markdown(
+    """
+        ---
+        ### Validating 🤖
+        ---
+    """
+)
+    for update in update_value:
+        st.write(update)
+    st.markdown("""--- """)
+
 def test(args):
 
     st.text("starting contentctl and testing your detection")
     st.session_state['output_dto'] = DetectionTestingManagerOutputDto()
     st.session_state['test_thread'] = threading.Thread(target=contentctl.test, args=(args, st.session_state['output_dto']))
-    st.text("starting test thread")
     st.session_state['test_thread'].start()
-    st.text("started thread")
-   
-    st.write(
-        "Note - even though this is a global variable the value seems to be overwritten. How to set persistent variables/values in Streamlit?"
-    )
-    st.write(st.session_state['test_thread'])
-    import time
+    # Check for updates while the worker thread is running
+    update_value = []
+    update_path_value = []
+    while st.session_state['test_thread'].is_alive():
+        try:
+            update_value.append(update_queue.get(block=False))
+            update_path_value.append(update_queue_path.get(block=True))
+            if len(update_path_value) == 13:
+                handle_update(update_value, update_path_value)
+        except queue.Empty:
+            pass
+    # import time
 
-    time.sleep(15)
-    stop_testing()
+    # time.sleep(15)
+    # stop_testing()
 
 def stop_testing():
     # Make sure both of these values are not None

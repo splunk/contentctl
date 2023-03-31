@@ -1,8 +1,9 @@
 import os
 import sys
-
+import streamlit as st
 from dataclasses import dataclass
 from pydantic import ValidationError
+import queue
 
 
 
@@ -30,7 +31,8 @@ from contentctl.objects.config import Config
 
 from contentctl.objects.config import Config
 
-
+# Create a queue to pass data between the threads
+update_queue = queue.Queue()
 
 @dataclass(frozen=True)
 class DirectorInputDto:
@@ -175,15 +177,14 @@ class Director():
                 
                 if (sys.stdout.isatty() and sys.stdin.isatty() and sys.stderr.isatty()) or not already_ran:
                         already_ran = True
-                        print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
+                        update_queue.put(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...")
             
             except ValidationError as e:
-                print('\nValidation Error for file ' + file)
-                print(e)
+                update_queue.put('\nValidation Error for file ' + file)
+                update_queue.put(e)
                 validation_error_found = True
 
-        print(f"\r{f'{type.name} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
-        print("Done!")
+        update_queue.put(f"\r{f'{type.name} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...Done!")
 
         if validation_error_found:
             sys.exit(1)

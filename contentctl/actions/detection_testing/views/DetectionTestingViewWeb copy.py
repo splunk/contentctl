@@ -107,7 +107,7 @@ class DetectionTestingViewWeb(DetectionTestingView):
 
     def setup(self):
         self.bottleApp.route("/", callback=self.showStatus)
-        self.bottleApp.route("/data", callback=self.txdata)
+        self.bottleApp.route("/status", callback=self.showStatus)
         self.bottleApp.route("/results", callback=self.showResults)
         self.bottleApp.route("/report", callback=self.createReport)
 
@@ -130,17 +130,6 @@ class DetectionTestingViewWeb(DetectionTestingView):
         # print("called web server shutdown")
         # self.server.server.shutdown()
         # print("finished calling web server shutdown")
-
-    def txdata (self):
-        summary_dict = self.getSummaryObject(
-            test_model_fields=["success", "message", "sid_link"]
-        )
-
-        currentTestingQueue=self.sync_obj.currentTestingQueue,
-        percent_complete=summary_dict.get("percent_complete", 0),
-        detections=summary_dict["tested_detections"],
-        return {currentTestingQueue, percent_complete, detections}
-
 
     def showStatus(self, interval: int = 60):
         # Status updated on page load

@@ -18,7 +18,10 @@ hide_streamlit_style = """
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-os.chdir(st.session_state['parent_dir'])
+if 'parent_dir' not in st.session_state:
+   pass
+else:
+    os.chdir(st.session_state['parent_dir'])
 
 import new_content_questions as new_content_questions
 import content_fields as content_fields

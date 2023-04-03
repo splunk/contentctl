@@ -15,10 +15,9 @@ import threading, queue
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
-from contentctl.input.director import update_queue 
-# from contentctl.helper.utils import update_queue_download
-from contentctl.helper.utils import update_queue_path
-# from contentctl.helper.utils import update_queue_status
+from contentctl.input.director import update_queue as module1_queue
+from contentctl.helper.utils import update_queue_downloads as module2_queue
+
 
 st.set_page_config(
     page_title="Splunk Content Creation",
@@ -38,6 +37,8 @@ if 'test_thread' not in st.session_state:
     st.session_state['test_thread']: Union[threading.Thread, None] = None
 if 'output_dto' not in st.session_state:
     st.session_state['output_dto']: Union[DetectionTestingManagerOutputDto, None] = None
+if 'dl_status' not in st.session_state:
+    st.session_state['dl_status'] = None
 
 placeholder = st.empty()
 placeholder.markdown("""#### Contentctl initializing in temp folder""")
@@ -115,23 +116,36 @@ parser.set_defaults(func=contentctl.test)
 
 args = parser.parse_args()
 
+
 # Define a callback function to handle updates
-def handle_update(update_value, update_path_value):
-    col3,col4,col5 = st.columns(3)
-    for update_path in update_path_value:
-        st.write(update_path)
-        st.progress(100)
-        st.write("[PREVIOUSLY CACHED]")
-    st.markdown(
-    """
-        ---
-        ### Validating 🤖
-        ---
-    """
-)
-    for update in update_value:
-        st.write(update)
-    st.markdown("""--- """)
+def handle_validation_update(update_value, update_dl_value, pbar):
+    if len(update_value) >= 13:
+
+        st.markdown(
+        """
+            ---
+            ### Validating 🤖
+            ---
+        """
+        )
+        for update in update_value:
+            st.write(update)
+        st.markdown(
+        """
+            ---
+            ### Validation Completed 🤖
+            ---
+        """
+        )
+   
+def handle_download_update(update_value, update_dl_value, pbar):
+    if pbar != None:
+        status = "" 
+    if update_dl_value['status'] == 1:
+        status = "[PREVIOUSLY CACHED] "
+    else:
+        status = "Downloading "
+    pbar.progress(int(update_dl_value['update']), text=f"{status} {update_dl_value['path']} ...{int(update_dl_value['update'])}%")
 
 def test(args):
 
@@ -141,18 +155,25 @@ def test(args):
     st.session_state['test_thread'].start()
     # Check for updates while the worker thread is running
     update_value = []
-    update_path_value = []
-    while st.session_state['test_thread'].is_alive():
+    update_dl_value = {}
+    pbar = st.empty()
+    
+    # Process updates from module1 queue
+    time.sleep(3)
+    module1_empty = True
+    while module1_empty:
         try:
-            update_value.append(update_queue.get(block=False))
-            update_path_value.append(update_queue_path.get(block=True))
-            if len(update_path_value) == 13:
-                handle_update(update_value, update_path_value)
+            update_value.append(module1_queue.get(block=False))
+            handle_validation_update(update_value, update_dl_value, pbar)
         except queue.Empty:
-            pass
-    # import time
-
-    # time.sleep(15)
+            module1_empty = False
+    # Process updates from module2 queue
+    while True:
+        try:
+            update_dl_value.update(module2_queue.get(block=False))
+            handle_download_update(update_value, update_dl_value, pbar)
+        except queue.Empty:
+            pass 
     # stop_testing()
 
 def stop_testing():

@@ -17,8 +17,10 @@ TOTAL_BYTES = 0
 ALWAYS_PULL = True
 
 # Create a queue to pass data between the threads
-update_queue_path = queue.Queue()
+update_queue_downloads = queue.Queue()
+
 class Utils:
+    
     @staticmethod
     def get_all_yml_files_from_directory(path: str) -> list:
         listOfFiles = list()
@@ -306,10 +308,10 @@ class Utils:
                 + "[PREVIOUSLY CACHED]"
             )
             pbar.update(100)
-            update_queue_path.put(sourcePath.name)
+            update_queue_downloads.put({'path': sourcePath.name, 'status': 1, 'update': 100 * pbar.n / pbar.total})
             if input_pbar is None:
                 pbar.close()
-            return update_queue_path
+            return 
         elif destinationPath.is_file() and overwrite_file is True:
             # Overwrite the file
             pass
@@ -346,7 +348,7 @@ class Utils:
                 for piece in file_to_download.iter_content(chunk_size=chunk_size):
                     bytes_written += output.write(piece)
                     pbar.update(len(piece))
-
+                    update_queue_downloads.put({'path': sourcePath.name, 'status': 0, 'update': 100 * pbar.n / pbar.total})
             TOTAL_BYTES += bytes_written
 
         except requests.exceptions.ConnectionError as e:

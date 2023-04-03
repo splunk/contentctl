@@ -70,7 +70,6 @@ class Director():
         self.output_dto = output_dto
         self.attack_enrichment = dict()
 
-
     def execute(self, input_dto: DirectorInputDto) -> None:
         self.input_dto = input_dto
         

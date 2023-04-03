@@ -116,27 +116,28 @@ parser.set_defaults(func=contentctl.test)
 
 args = parser.parse_args()
 
+validation_text = st.empty()
 
 # Define a callback function to handle updates
 def handle_validation_update(update_value, update_dl_value, pbar):
     if len(update_value) >= 13:
-
-        st.markdown(
-        """
-            ---
-            ### Validating 🤖
-            ---
-        """
-        )
-        for update in update_value:
-            st.write(update)
-        st.markdown(
-        """
-            ---
-            ### Validation Completed 🤖
-            ---
-        """
-        )
+        with validation_text.container():
+            st.markdown(
+            """
+                ---
+                ### Validating 🤖
+                ---
+            """
+            )
+            for update in update_value:
+                st.write(f"{str(update)}\n")
+            st.markdown(
+            """
+                ---
+                ### Validation Completed 🤖
+                ---
+            """
+            )
    
 def handle_download_update(update_value, update_dl_value, pbar):
     if pbar != None:

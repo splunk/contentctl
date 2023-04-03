@@ -33,10 +33,13 @@ if 'test_thread' not in st.session_state:
     st.session_state['test_thread']: Union[threading.Thread, None] = None
 if 'output_dto' not in st.session_state:
     st.session_state['output_dto']: Union[DetectionTestingManagerOutputDto, None] = None
-if 'dl_status' not in st.session_state:
-    st.session_state['dl_status'] = None
+if 'cwd' not in st.session_state:
+    st.session_state['cwd'] = None
+
+
 
 placeholder = st.empty()
+result_placeholder = st.empty()
 placeholder.markdown("""#### Contentctl initializing in temp folder""")
 try:
     cwd = os.getcwd()
@@ -59,26 +62,31 @@ try:
         result = subprocess.run(
             "cd temp && contentctl init", shell=True, capture_output=True, text=True
         )
-        st.text(result.stdout)
+        result_placeholder.text(result.stdout)
         os.chdir(f"{os.getcwd()}/temp")
+        st.session_state['cwd'] = os.getcwd()
         placeholder.markdown("""### Initialization was successful 🙌🏽""")
     elif in_dir == True:
         placeholder.markdown("### Already Initialized 🤙🏽")
         art = contentctl.print_ascii_art()
-        st.text(art)
+        result_placeholder.text(art)
+        st.session_state['cwd'] = os.getcwd()
     elif temp_exist == True:
         placeholder.markdown("### Already Initialized 🤙🏽")
         art = contentctl.print_ascii_art()
-        st.text(art)
+        result_placeholder.text(art)
         os.chdir(f"{os.getcwd()}/temp")
+        st.session_state['cwd'] = os.getcwd()
+    time.sleep(3)
+    result_placeholder.empty()
 
 
 except ValueError as e:
     placeholder.markdown(f"### Failed: {e} 🫥")
 
 
-st.text(f"Current Working Directory: {os.getcwd()}")
-st.write(os.listdir(os.getcwd()))
+st.success(f"Current Working Directory: {st.session_state['cwd']}")
+#st.write(os.listdir(st.session_state['cwd']))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path", default=".", help="Path to directory")
@@ -113,12 +121,12 @@ parser.set_defaults(func=contentctl.test)
 args = parser.parse_args()
 
 validation_text = st.empty()
+pbarTitle = st.empty()
 download_container = st.empty()
-instance_placeholder = st.empty() 
+instance_placeholder = st.empty()
 
 # Define a callback function to handle updates
 def handle_validation_update(update_value, update_dl_value, pbar):
-    if len(update_value) >= 13:
         with validation_text.container():
             st.markdown(
             """
@@ -138,7 +146,7 @@ def handle_validation_update(update_value, update_dl_value, pbar):
             )
 
 
-def handle_download_update(update_value, update_dl_value, pbar):
+def handle_download_update(update_value, update_dl_value, pbar, pbarTitle):
     with download_container.container():
         if pbar != None:
             status = "" 
@@ -146,12 +154,11 @@ def handle_download_update(update_value, update_dl_value, pbar):
             status = "[PREVIOUSLY CACHED] "
         else:
             status = "Downloading "
+        pbarTitle.markdown("### Setting up environment... 🌎")
         pbar.progress(int(update_dl_value['update']), text=f"{status} {update_dl_value['path']} ...{int(update_dl_value['update'])}%")
 
 
 def handle_container_update(update_container_value):
-    # statusPage = contentctl_gui.contentctl_widgets.status_page.StatusPage.statusPageContainer(update_container_value)
-    # st.write(statusPage, unsafe_allow_html=True)
     instance_list = list(update_container_value['currentTestingQueue'].keys())
     instance_name = instance_list[0]
     test = update_container_value['currentTestingQueue'][instance_name]["name"]
@@ -164,17 +171,17 @@ def handle_container_update(update_container_value):
     instance_placeholder.table(df)
 
 
-def test(args):
-
-    st.text("starting contentctl and testing your detection")
+def test(args, dl_container, pbarTitle):
+    st.success("Testing your detection!", icon="✅")
     st.session_state['output_dto'] = DetectionTestingManagerOutputDto()
-    st.session_state['test_thread'] = threading.Thread(target=contentctl.test, args=(args, st.session_state['output_dto']))
+    st.session_state['test_thread']= threading.Thread(target=contentctl.test, args=(args, st.session_state['output_dto']))
     st.session_state['test_thread'].start()
     # Check for updates while the worker thread is running
     update_value = []
     update_dl_value = {}
     update_container_value = {}
-    pbar = st.empty()
+    pbar = dl_container
+    timeout = 30
     # Process updates from module1 queue
     module1_empty = True
     while module1_empty:
@@ -183,14 +190,34 @@ def test(args):
             handle_validation_update(update_value, update_dl_value, pbar)
         except queue.Empty:
             module1_empty = False
+            time.sleep(2)
+            validation_text.success(
+            """
+                ---
+                #### Validation Completed 🤖
+                ---
+            """
+            )
+            time.sleep(1)
+            validation_text.empty()
     # Process updates from module2 queue
     module2_empty = True
     while module2_empty:
         try:
-            update_dl_value.update(module2_queue.get(block=True, timeout=3))
-            handle_download_update(update_value, update_dl_value, pbar)
+            update_dl_value.update(module2_queue.get(block=True, timeout=timeout))
+            if update_dl_value['status'] == 1:
+                timeout = 1
+            handle_download_update(update_value, update_dl_value, pbar, pbarTitle)
         except queue.Empty:
             module2_empty = False
+            pbarTitle.success(""" 
+                               --- 
+                               #### Environment Setup Successfully! 🌎
+                               ---
+                               """)
+            time.sleep(2)
+            pbarTitle.empty()
+            pbar.empty()
     # Process updates from module3 queue
     module3_empty = True
     while module3_empty:
@@ -199,7 +226,6 @@ def test(args):
             handle_container_update(update_container_value)
         except queue.Empty:
             module3_empty = False
-    
     # stop_testing()
 
 def stop_testing():
@@ -210,38 +236,37 @@ def stop_testing():
     elif st.session_state['output_dto'] == None:
         st.text("Weird, testing is running but output_dto was None!")
         return
-
-    st.text("Update the terminate value in the sync object")
+    #stop the instance from sending data from webview   
+    # st.text("Update the terminate value in the sync object")
     st.session_state['output_dto'].terminate = True
-    st.text("Wait for the testing thread to complete...")
-    st.text("*******************************")
-    st.text(
-        "If testing is paused and you are debugging a detection, you MUST hit CTRL-D at the prompt to complete shutdown."
-    )
-    st.text("*******************************")
+    time.sleep(1)
     st.session_state['test_thread'].join()
-    st.text("test thread joined!")
-    st.write(st.session_state['test_thread'])
+    stop_ph = st.empty()
+    stop_ph.warning(f"Testing has stopped!", icon="🛑")
+    time.sleep(3)
+    stop_ph.empty()
+    st.stop() 
 
+with st.sidebar:
+    #get current working directory
+    cwd = st.session_state['cwd']
+    options = os.listdir(f"{cwd}")
+    for file in options:
+        if file == "detections":
+            options = os.listdir(f"{os.getcwd()}/{file}")
+            st.selectbox("select a detection", options)
+    col1, col2 = st.columns([.5,.7])
 
-st.markdown(
-        """
-    When you click _**Test Detection**_ the test will begin
-    # 👇🏽
-    """
-    )
+    with col1:
+    
+        value = st.button("Start Test")
 
-col1, col2 = st.columns([.1,.7])
+    with col2:
+        # st.markdown("<div style='margin-top:130px;'></div>",unsafe_allow_html=True)
+        stopTestingButton = st.button("Stop Test")
+        if stopTestingButton:
+            stop_testing()
 
-with col1:
-   
-    value = st.button("Test Detection")
-
-with col2:
-    # st.markdown("<div style='margin-top:130px;'></div>",unsafe_allow_html=True)
-    stopTestingButton = st.button("Stop Testing")
-    if stopTestingButton:
-        stop_testing()
-
-if value:
-    test(args)
+    if value:
+        test(args, download_container, pbarTitle)
+    

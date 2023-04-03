@@ -388,6 +388,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.sync_obj.currentTestingQueue[self.get_name()] = {
                 "name": state,
                 "search": "N/A",
+                "time": datetime.timedelta(seconds=round(time.time() - start_time))
             }
         return new_string
 

@@ -1,11 +1,7 @@
-from io import StringIO
-import sys
-import time
 import streamlit as st
-import tqdm
+import time, os, pandas as pd
 import contentctl.contentctl as contentctl
 import argparse, subprocess
-import os
 from contentctl.objects.enums import (
     DetectionTestingMode,
     PostTestBehavior,
@@ -17,7 +13,7 @@ from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfras
 )
 from contentctl.input.director import update_queue as module1_queue
 from contentctl.helper.utils import update_queue_downloads as module2_queue
-
+from contentctl.actions.detection_testing.views.DetectionTestingViewWeb import container_data as module3_queue
 
 st.set_page_config(
     page_title="Splunk Content Creation",
@@ -117,6 +113,8 @@ parser.set_defaults(func=contentctl.test)
 args = parser.parse_args()
 
 validation_text = st.empty()
+download_container = st.empty()
+instance_placeholder = st.empty() 
 
 # Define a callback function to handle updates
 def handle_validation_update(update_value, update_dl_value, pbar):
@@ -138,15 +136,33 @@ def handle_validation_update(update_value, update_dl_value, pbar):
                 ---
             """
             )
-   
+
+
 def handle_download_update(update_value, update_dl_value, pbar):
-    if pbar != None:
-        status = "" 
-    if update_dl_value['status'] == 1:
-        status = "[PREVIOUSLY CACHED] "
-    else:
-        status = "Downloading "
-    pbar.progress(int(update_dl_value['update']), text=f"{status} {update_dl_value['path']} ...{int(update_dl_value['update'])}%")
+    with download_container.container():
+        if pbar != None:
+            status = "" 
+        if update_dl_value['status'] == 1:
+            status = "[PREVIOUSLY CACHED] "
+        else:
+            status = "Downloading "
+        pbar.progress(int(update_dl_value['update']), text=f"{status} {update_dl_value['path']} ...{int(update_dl_value['update'])}%")
+
+
+def handle_container_update(update_container_value):
+    # statusPage = contentctl_gui.contentctl_widgets.status_page.StatusPage.statusPageContainer(update_container_value)
+    # st.write(statusPage, unsafe_allow_html=True)
+    instance_list = list(update_container_value['currentTestingQueue'].keys())
+    instance_name = instance_list[0]
+    test = update_container_value['currentTestingQueue'][instance_name]["name"]
+    search = update_container_value['currentTestingQueue'][instance_name]["search"]
+    time = update_container_value['currentTestingQueue'][instance_name]["time"]
+    complete = update_container_value['percent_complete']
+    data = {'Instance Name': str(instance_name),'Current Test': str(test),'Search': str(search),'Time': str(time),'Complete': str(complete)}
+    columns = ['Instance Name', 'Current Test', 'Search', 'Time', 'Complete']
+    df = pd.DataFrame(data,index=[0],columns=columns)
+    instance_placeholder.table(df)
+
 
 def test(args):
 
@@ -157,24 +173,33 @@ def test(args):
     # Check for updates while the worker thread is running
     update_value = []
     update_dl_value = {}
+    update_container_value = {}
     pbar = st.empty()
-    
     # Process updates from module1 queue
-    time.sleep(3)
     module1_empty = True
     while module1_empty:
         try:
-            update_value.append(module1_queue.get(block=False))
+            update_value.append(module1_queue.get(block=True, timeout=3))
             handle_validation_update(update_value, update_dl_value, pbar)
         except queue.Empty:
             module1_empty = False
     # Process updates from module2 queue
-    while True:
+    module2_empty = True
+    while module2_empty:
         try:
-            update_dl_value.update(module2_queue.get(block=False))
+            update_dl_value.update(module2_queue.get(block=True, timeout=3))
             handle_download_update(update_value, update_dl_value, pbar)
         except queue.Empty:
-            pass 
+            module2_empty = False
+    # Process updates from module3 queue
+    module3_empty = True
+    while module3_empty:
+        try:
+            update_container_value.update(module3_queue.get(block=True, timeout=3))
+            handle_container_update(update_container_value)
+        except queue.Empty:
+            module3_empty = False
+    
     # stop_testing()
 
 def stop_testing():

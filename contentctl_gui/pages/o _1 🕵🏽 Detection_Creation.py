@@ -142,7 +142,7 @@ with col1:
     with col4:
         if st.session_state['apikey'] != "":
             st.button("OPENAI GENERATE FIELDS", on_click=openAI)
-            st.warning('Please enter API Key', icon="🫤")
+            # st.warning('Please enter API Key', icon="🫤")
 
 with col2:
     st.write('<h1>Detection Yaml Template</h1>', unsafe_allow_html=True)

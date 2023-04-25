@@ -62,7 +62,7 @@ class Detection(BaseModel, SecurityContentObject):
     source: str = None
     nes_fields: str = None
     providing_technologies: list = None
-
+    scheduling: str = "default_schedule"
     # @validator('name')
     # def name_max_length(cls, v, values):
     #     if len(v) > 67:

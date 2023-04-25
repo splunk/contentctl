@@ -1,5 +1,3 @@
-
-
 ### {{APP_NAME}} BASELINES ###
 
 {% for detection in objects %}
@@ -18,12 +16,12 @@ action.{{APP_NAME|lower}}.analytic_story = {{ detection.tags.analytic_story | to
 action.{{APP_NAME|lower}}.analytic_story = []
 {% endif %}
 action.{{APP_NAME|lower}}.data_models = {{ detection.datamodel | tojson }}
-cron_schedule = {{ detection.deployment.scheduling.cron_schedule }}
+cron_schedule = {{ detection.deployment.scheduling[0].cron_schedule }}
 enableSched = 1
-dispatch.earliest_time = {{ detection.deployment.scheduling.earliest_time }}
-dispatch.latest_time = {{ detection.deployment.scheduling.latest_time }}
-{% if detection.deployment.scheduling.schedule_window is defined %}
-schedule_window = {{ detection.deployment.scheduling.schedule_window }}
+dispatch.earliest_time = {{ detection.deployment.scheduling[0].earliest_time }}
+dispatch.latest_time = {{ detection.deployment.scheduling[0].latest_time }}
+{% if detection.deployment.scheduling[0].schedule_window is defined %}
+schedule_window = {{ detection.deployment.scheduling[0].schedule_window }}
 {% endif %}
 {% if detection.providing_technologies is defined %}
 action.{{APP_NAME|lower}}.providing_technologies = {{ detection.providing_technologies | tojson }}
@@ -46,4 +44,3 @@ search = {{ detection.search }}
 
 {% endif %}
 {% endfor %}
-

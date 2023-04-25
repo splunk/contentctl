@@ -166,10 +166,26 @@ class ConfOutput:
                     )
                 )
 
+            import pathlib
+
+            lookup_folder_path = pathlib.Path(self.output_path) / "lookups"
+            if not lookup_folder_path.is_dir():
+                if lookup_folder_path.exists():
+                    raise Exception(
+                        f"The app lookup path {lookup_folder_path} exists, but it is not a folder"
+                    )
+                else:
+                    lookup_folder_path.mkdir()
+
             files = glob.iglob(os.path.join(self.input_path, "lookups", "*.csv"))
+
             for file in files:
+                file = pathlib.Path(file)
                 if os.path.isfile(file):
-                    shutil.copy(file, os.path.join(self.output_path, "lookups"))
+                    shutil.copy(
+                        file,
+                        os.path.join(self.output_path, "lookups", file.name),
+                    )
 
         elif type == SecurityContentType.macros:
             ConfWriter.writeConfFile(

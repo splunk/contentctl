@@ -87,7 +87,7 @@ pip install splunk-contentctl
 
 #### From Source (advanced)
 ```
-git clone git@github.com:splunk/contentctl.git
+git clone https://github.com/splunk/contentctl
 cd contentctl
 python3.9 -m pip install poetry
 poetry install

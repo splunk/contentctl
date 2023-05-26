@@ -61,7 +61,7 @@ Testing is run using [GitHub Hosted Runners](https://docs.github.com/en/actions/
 | Ununtu 20.04 LTS | Yes       | YES (locally + GitHub Actions) |
 | *Ubuntu 22.04 LTS| Yes       | YES (locally + GitHub Actions) |
 | macOS Montery 12       | Yes       | Not tested yet |
-| macOS Ventura 13       | Yes       | Yes (locally) |
+| macOS Ventura 13       | Yes (Intel and Apple Silicon)      | Yes (locally) |
 
 | Requirement | Supported | Description |  Passing Integration Tests |
 | --------------------- | ----- | ---- | ------ |
@@ -87,7 +87,7 @@ pip install splunk-contentctl
 
 #### From Source (advanced)
 ```
-git clone git@github.com:splunk/contentctl.git
+git clone https://github.com/splunk/contentctl
 cd contentctl
 python3.9 -m pip install poetry
 poetry install

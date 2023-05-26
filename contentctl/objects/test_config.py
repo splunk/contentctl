@@ -277,7 +277,7 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
                     end="",
                     flush=True,
                 )
-                client.images.pull(v)
+                client.images.pull(v, platform="linux/amd64")
                 print("done")
             except docker.errors.APIError as e:
                 print("error")

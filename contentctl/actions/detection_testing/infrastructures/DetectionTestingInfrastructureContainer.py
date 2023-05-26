@@ -93,6 +93,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             name=self.get_name(),
             mounts=mounts,
             detach=True,
+            platform="linux/amd64"
         )
 
         return container

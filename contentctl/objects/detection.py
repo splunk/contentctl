@@ -38,9 +38,7 @@ class Detection(BaseModel, SecurityContentObject):
     search: Union[str, dict]
     how_to_implement: str
     known_false_positives: str
-    check_references: bool = (
-        False  # Validation is done in order, this field must be defined first
-    )
+    check_references: bool = False  
     references: list
     tags: DetectionTags
     tests: list[UnitTest] = None
@@ -112,21 +110,15 @@ class Detection(BaseModel, SecurityContentObject):
             raise ValueError("encoding error in " + field.name + ": " + values["name"])
         return v
 
-    @root_validator
-    def search_validation(cls, values):
-        if "ssa_" not in values["file_path"]:
-            if not "_filter" in values["search"]:
-                raise ValueError("filter macro missing in: " + values["name"])
-            if any(
-                x in values["search"]
-                for x in ["eventtype=", "sourcetype=", " source=", "index="]
-            ):
-                if not "index=_internal" in values["search"]:
-                    raise ValueError(
-                        "Use source macro instead of eventtype, sourcetype, source or index in detection: "
-                        + values["name"]
-                    )
-        return values
+    # @root_validator
+    # def search_validation(cls, values):
+    #     if 'ssa_' not in values['file_path']:
+    #         if not '_filter' in values['search']:
+    #             raise ValueError('filter macro missing in: ' + values["name"])
+    #         if any(x in values['search'] for x in ['eventtype=', 'sourcetype=', ' source=', 'index=']):
+    #             if not 'index=_internal' in values['search']:
+    #                 raise ValueError('Use source macro instead of eventtype, sourcetype, source or index in detection: ' + values["name"])
+    #     return values
 
     @root_validator
     def name_max_length(cls, values):
@@ -139,14 +131,9 @@ class Detection(BaseModel, SecurityContentObject):
     # disable it because of performance reasons
     # @validator('references')
     # def references_check(cls, v, values):
-    #     LinkValidator.check_references(v, values["name"])
+    #     return LinkValidator.check_references(v, values["name"])
     #     return v
-    @validator("datamodel")
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError("not valid data model: " + values["name"])
-        return v
+    
 
     @validator("search")
     def search_validate(cls, v, values):
@@ -161,6 +148,25 @@ class Detection(BaseModel, SecurityContentObject):
             )
         return v
 
+    @validator("experimental", always=True)
+    def experimental_validate(cls, v, values):
+        if DetectionStatus(values["status"]) == DetectionStatus.experimental:
+            return True
+        return False
+
+    @validator("deprecated", always=True)
+    def deprecated_validate(cls, v, values):
+        if DetectionStatus(values["status"]) == DetectionStatus.deprecated:
+            return True
+        return False
+    
+    @validator("datamodel")
+    def datamodel_valid(cls, v, values):
+        for datamodel in v:
+            if datamodel not in [el.name for el in DataModel]:
+                raise ValueError("not valid data model: " + values["name"])
+        return v
+    
     def all_tests_successful(self) -> bool:
         if self.test is None or len(self.test.tests) == 0:
             return False

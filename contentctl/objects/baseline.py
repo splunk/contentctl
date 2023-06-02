@@ -10,6 +10,7 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
 from contentctl.objects.baseline_tags import BaselineTags
 from contentctl.objects.deployment import Deployment
+#from bin.contentctl_project.contentctl_core.domain.entities.link_validator import LinkValidator
 
 
 class Baseline(BaseModel, SecurityContentObject):
@@ -82,7 +83,9 @@ class Baseline(BaseModel, SecurityContentObject):
         except UnicodeEncodeError:
             raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
         return v
-
+    # @validator('references')
+    # def references_check(cls, v, values):
+    #     return LinkValidator.SecurityContentObject_validate_references(v, values)
     @validator('search')
     def search_validate(cls, v, values):
         # write search validator

@@ -13,19 +13,19 @@ from contentctl.objects.deployment_rba import DeploymentRBA
 from contentctl.objects.deployment_slack import DeploymentSlack
 from contentctl.objects.deployment_phantom import DeploymentPhantom
 
-class Deployment(BaseModel, SecurityContentObject):
-    name: str
-    id: str
-    date: str
-    author: str
-    description: str
+class Deployment(BaseModel):
+    name: str = None
+    id: str = None
+    date: str = None
+    author: str = None
+    description: str = None
     scheduling: DeploymentScheduling = None
     email: DeploymentEmail = None
     notable: DeploymentNotable = None
     rba: DeploymentRBA = None
     slack: DeploymentSlack = None
     phantom: DeploymentPhantom = None
-    tags: dict
+    tags: dict = None
     
 
     @validator('name')

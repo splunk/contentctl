@@ -39,14 +39,30 @@ class SecurityContentType(enum.Enum):
     investigations = 8
     unit_tests = 9
 
-
+# Bringing these changes back in line will take some time after
+# the initial merge is complete
+# class SecurityContentProduct(enum.Enum):
+#     # This covers ESCU as well as other apps initialized
+#     # by splunk_security_content_builder
+#     splunk_app = "splunk_app"
+#     ba_objects = "ba_objects"
+#     json_objects = "json_objects"
 class SecurityContentProduct(enum.Enum):
-    # This covers ESCU as well as other apps initialized
-    # by splunk_security_content_builder
-    splunk_app = "splunk_app"
-    ba_objects = "ba_objects"
-    json_objects = "json_objects"
+    ESCU = 1
+    SSA = 2
+    API = 3
+    CUSTOM = 4
 
+class SigmaConverterTarget(enum.Enum):
+    CIM = 1
+    RAW = 2
+    OCSF = 3
+    ALL = 4
+
+class DetectionStatus(enum.Enum):
+    production = "production"
+    deprecated = "deprecated"
+    experimental = "experimental"
 
 class LogLevel(enum.Enum):
     NONE = "NONE"

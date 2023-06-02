@@ -7,6 +7,7 @@ from datetime import datetime
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.story_tags import StoryTags
+from bin.contentctl_project.contentctl_core.domain.entities.link_validator import LinkValidator
 
 class Story(BaseModel, SecurityContentObject):
     # story spec
@@ -17,6 +18,7 @@ class Story(BaseModel, SecurityContentObject):
     author: str
     description: str
     narrative: str
+    check_references: bool = False #Validation is done in order, this field must be defined first
     references: list
     tags: StoryTags
 
@@ -60,3 +62,7 @@ class Story(BaseModel, SecurityContentObject):
         except UnicodeEncodeError:
             raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
         return v
+
+    @validator('references')
+    def references_check(cls, v, values):
+        return LinkValidator.SecurityContentObject_validate_references(v, values)

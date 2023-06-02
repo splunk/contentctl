@@ -6,6 +6,7 @@ import sys
 
 from pydantic import BaseModel, validator, root_validator, Extra
 from dataclasses import dataclass
+from typing import Union
 from datetime import datetime, timedelta
 
 
@@ -22,8 +23,6 @@ from contentctl.objects.playbook import Playbook
 from contentctl.helper.link_validator import LinkValidator
 
 
-from typing import Union
-
 
 class Detection(BaseModel, SecurityContentObject):
     # detection spec
@@ -33,9 +32,10 @@ class Detection(BaseModel, SecurityContentObject):
     date: str
     author: str
     type: str
-    datamodel: list
+    status: DetectionStatus
     description: str
-    search: str
+    data_source: list[str]
+    search: Union[str, dict]
     how_to_implement: str
     known_false_positives: str
     check_references: bool = (
@@ -43,8 +43,10 @@ class Detection(BaseModel, SecurityContentObject):
     )
     references: list
     tags: DetectionTags
+    tests: list[UnitTest] = None
 
     # enrichments
+    datamodel: list = None
     deprecated: bool = None
     experimental: bool = None
     deployment: ConfigDetectionConfiguration = None
@@ -53,7 +55,7 @@ class Detection(BaseModel, SecurityContentObject):
     playbooks: list[Playbook] = None
     baselines: list[Baseline] = None
     mappings: dict = None
-    test: UnitTest = None
+    test: Union[UnitTest, dict] = None
     macros: list[Macro] = None
     lookups: list[Lookup] = None
     cve_enrichment: list = None
@@ -62,12 +64,16 @@ class Detection(BaseModel, SecurityContentObject):
     source: str = None
     nes_fields: str = None
     providing_technologies: list = None
+    runtime: str = None
 
     # @validator('name')
     # def name_max_length(cls, v, values):
     #     if len(v) > 67:
     #         raise ValueError('name is longer then 67 chars: ' + v)
     #     return v
+
+    class Config:
+        use_enum_values = True
 
     @validator("name")
     def name_invalid_chars(cls, v):
@@ -96,13 +102,6 @@ class Detection(BaseModel, SecurityContentObject):
     def type_valid(cls, v, values):
         if v.lower() not in [el.name.lower() for el in AnalyticsType]:
             raise ValueError("not valid analytics type: " + values["name"])
-        return v
-
-    @validator("datamodel")
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError("not valid data model: " + values["name"])
         return v
 
     @validator("description", "how_to_implement")
@@ -142,10 +141,24 @@ class Detection(BaseModel, SecurityContentObject):
     # def references_check(cls, v, values):
     #     LinkValidator.check_references(v, values["name"])
     #     return v
+    @validator("datamodel")
+    def datamodel_valid(cls, v, values):
+        for datamodel in v:
+            if datamodel not in [el.name for el in DataModel]:
+                raise ValueError("not valid data model: " + values["name"])
+        return v
 
     @validator("search")
     def search_validate(cls, v, values):
         # write search validator
+        return v
+
+    @validator("tests")
+    def tests_validate(cls, v, values):
+        if values["status"] != DetectionStatus.production and not v:
+            raise ValueError(
+                "tests value is needed for production detection: " + values["name"]
+            )
         return v
 
     def all_tests_successful(self) -> bool:

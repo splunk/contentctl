@@ -12,12 +12,12 @@ from contentctl.objects.config import Config
 
 
 @dataclass(frozen=True)
-class DeployInputDto:
+class API_DeployInputDto:
     path: str
     config: Config
 
 
-class Deploy:
+class API_Deploy:
     def fix_newlines_in_conf_files(self, conf_path: str) -> RawConfigParser:
         parser = RawConfigParser()
         with open(conf_path, "r") as conf_data_file:
@@ -33,7 +33,7 @@ class Deploy:
         parser.read_string(conf_data)
         return parser
 
-    def execute(self, input_dto: DeployInputDto) -> None:
+    def execute(self, input_dto: API_DeployInputDto) -> None:
 
         splunk_args = {
             "host": input_dto.config.deploy.server,

@@ -17,7 +17,7 @@ from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.new_content import NewContentInputDto, NewContent
 from contentctl.actions.doc_gen import DocGenInputDto, DocGen
 from contentctl.actions.initialize import Initialize, InitializeInputDto
-from contentctl.actions.deploy import Deploy, DeployInputDto
+from contentctl.actions.api_deploy import API_Deploy, API_DeployInputDto
 from contentctl.input.director import DirectorInputDto
 from contentctl.objects.enums import (
     SecurityContentType,
@@ -115,8 +115,8 @@ def inspect(args) -> None:
 
 def deploy(args) -> None:
     config = start(args)
-    deploy_input_dto = DeployInputDto(path=args.path, config=config)
-    deploy = Deploy()
+    deploy_input_dto = API_DeployInputDto(path=args.path, config=config)
+    deploy = API_Deploy()
     deploy.execute(deploy_input_dto)
 
 

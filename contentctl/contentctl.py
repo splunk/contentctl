@@ -97,7 +97,7 @@ def initialize(args) -> None:
 
 def build(args) -> DirectorOutputDto:
     config = start(args)
-    product_type = SecurityContentProduct.splunk_app
+    product_type = SecurityContentProduct.SPLUNK_APP
     director_input_dto = DirectorInputDto(
         input_path=os.path.abspath(args.path), product=product_type, config=config
     )
@@ -189,7 +189,7 @@ def test(args: argparse.Namespace):
 
 def validate(args) -> None:
     config = start(args)
-    product_type = SecurityContentProduct.splunk_app
+    product_type = SecurityContentProduct.SPLUNK_APP
     director_input_dto = DirectorInputDto(
         input_path=os.path.abspath(args.path), product=product_type, config=config
     )
@@ -201,7 +201,7 @@ def validate(args) -> None:
 def doc_gen(args) -> None:
     config = start(args)
     director_input_dto = DirectorInputDto(
-        input_path=args.path, product=SecurityContentProduct.splunk_app, config=config
+        input_path=args.path, product=SecurityContentProduct.SPLUNK_APP, config=config
     )
 
     doc_gen_input_dto = DocGenInputDto(director_input_dto=director_input_dto)
@@ -231,7 +231,7 @@ def new_content(args) -> None:
 def reporting(args) -> None:
     config = start(args)
     director_input_dto = DirectorInputDto(
-        input_path=args.path, product=SecurityContentProduct.splunk_app, config=config
+        input_path=args.path, product=SecurityContentProduct.SPLUNK_APP, config=config
     )
 
     reporting_input_dto = ReportingInputDto(director_input_dto=director_input_dto)

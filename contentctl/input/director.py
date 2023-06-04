@@ -83,7 +83,7 @@ class Director():
         self.story_builder = StoryBuilder()
         self.detection_builder = DetectionBuilder()
 
-        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
+        if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
@@ -93,7 +93,7 @@ class Director():
             self.createSecurityContent(SecurityContentType.detections)
             self.createSecurityContent(SecurityContentType.stories)
 
-        elif self.input_dto.product == SecurityContentProduct.ba_objects:
+        elif self.input_dto.product == SecurityContentProduct.SSA:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.detections)
             
@@ -110,9 +110,9 @@ class Director():
         already_ran = False
         progress_percent = 0
 
-        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
+        if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
             security_content_files = [f for f in files if 'ssa___' not in f]
-        elif self.input_dto.product == SecurityContentProduct.ba_objects:
+        elif self.input_dto.product == SecurityContentProduct.SSA:
             security_content_files = [f for f in files if 'ssa___' in f]
         else:
             raise(Exception(f"Cannot createSecurityContent for unknown product '{self.input_dto.product}'"))

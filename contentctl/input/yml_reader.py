@@ -2,11 +2,12 @@ from typing import Dict
 
 import yaml
 import sys
+import pathlib
 
 class YmlReader():
 
     @staticmethod
-    def load_file(file_path: str) -> Dict:
+    def load_file(file_path: pathlib.Path) -> Dict:
         try:
             file_handler = open(file_path, 'r', encoding="utf-8")
             try:
@@ -18,15 +19,15 @@ class YmlReader():
         except OSError as exc:
             print(exc)
             sys.exit(1)
-
-        yml_obj['file_path'] = file_path
-
-        if 'deprecated' in file_path:
+        
+        yml_obj['file_path'] = str(file_path)
+        
+        if 'deprecated' in [parent.name for parent in file_path.parents]:
             yml_obj['deprecated'] = True
         else:
             yml_obj['deprecated'] = False
 
-        if 'experimental' in file_path:
+        if 'experimental' in [parent.name for parent in file_path.parents]:
             yml_obj['experimental'] = True
         else:
             yml_obj['experimental'] = False

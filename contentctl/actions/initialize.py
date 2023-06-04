@@ -1,13 +1,13 @@
 
 import shutil
 import os
-
+import pathlib
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class InitializeInputDto:
-    path: str
+    path: pathlib.Path
 
 
 class Initialize:

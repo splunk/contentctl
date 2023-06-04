@@ -1,6 +1,6 @@
 import os
 import sys
-
+import pathlib
 from dataclasses import dataclass
 from pydantic import ValidationError
 
@@ -34,7 +34,7 @@ from contentctl.objects.config import Config
 
 @dataclass(frozen=True)
 class DirectorInputDto:
-    input_path: str
+    input_path: pathlib.Path
     product: SecurityContentProduct
     config: Config
 
@@ -111,9 +111,9 @@ class Director():
         progress_percent = 0
 
         if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
-            security_content_files = [f for f in files if 'ssa___' not in f]
+            security_content_files = [f for f in files if not f.name.startswith('ssa___')]
         elif self.input_dto.product == SecurityContentProduct.SSA:
-            security_content_files = [f for f in files if 'ssa___' in f]
+            security_content_files = [f for f in files if f.name.startswith('ssa___')]
         else:
             raise(Exception(f"Cannot createSecurityContent for unknown product '{self.input_dto.product}'"))
 

@@ -9,11 +9,11 @@ from configparser import RawConfigParser
 import splunklib.client as client
 
 from contentctl.objects.config import Config
-
+import pathlib
 
 @dataclass(frozen=True)
 class API_DeployInputDto:
-    path: str
+    path: pathlib.Path
     config: Config
 
 

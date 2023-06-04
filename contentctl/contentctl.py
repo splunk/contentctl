@@ -3,7 +3,7 @@ import argparse
 import os
 
 import yaml
-
+import pathlib
 from contentctl.actions.detection_testing.GitHubService import (
     GithubService,
 )
@@ -87,12 +87,12 @@ Running Splunk Security Content Control Tool (contentctl)
 
 
 def start(args) -> Config:
-    return ConfigHandler.read_config(os.path.join(args.path, "contentctl.yml"))
+    return ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml")
 
 
 def initialize(args) -> None:
 
-    Initialize().execute(InitializeInputDto(path=os.path.abspath(args.path)))
+    Initialize().execute(InitializeInputDto(path=pathlib.Path(args.path)))
 
 
 def build(args) -> DirectorOutputDto:
@@ -115,7 +115,7 @@ def inspect(args) -> None:
 
 def deploy(args) -> None:
     config = start(args)
-    deploy_input_dto = API_DeployInputDto(path=args.path, config=config)
+    deploy_input_dto = API_DeployInputDto(path=pathlib.Path(args.path), config=config)
     deploy = API_Deploy()
     deploy.execute(deploy_input_dto)
 
@@ -151,9 +151,7 @@ def test(args: argparse.Namespace):
         title="my_custom_app",
         release="1.0.0",
         http_path=None,
-        local_path=os.path.join(
-            os.path.abspath(args.path), f"{config.build.splunk_app.path}.tar.gz"
-        ),
+        local_path=str(pathlib.Path(args.path)/f"{config.build.splunk_app.path}.tar.gz"),
         description="some description",
         splunkbase_path=None,
     )
@@ -191,7 +189,7 @@ def validate(args) -> None:
     config = start(args)
     product_type = SecurityContentProduct.SPLUNK_APP
     director_input_dto = DirectorInputDto(
-        input_path=os.path.abspath(args.path), product=product_type, config=config
+        input_path=pathlib.Path(args.path), product=product_type, config=config
     )
     validate_input_dto = ValidateInputDto(director_input_dto=director_input_dto)
     validate = Validate()
@@ -201,7 +199,7 @@ def validate(args) -> None:
 def doc_gen(args) -> None:
     config = start(args)
     director_input_dto = DirectorInputDto(
-        input_path=args.path, product=SecurityContentProduct.SPLUNK_APP, config=config
+        input_path=pathlib.Path(args.path), product=SecurityContentProduct.SPLUNK_APP, config=config
     )
 
     doc_gen_input_dto = DocGenInputDto(director_input_dto=director_input_dto)

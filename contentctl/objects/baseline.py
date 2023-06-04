@@ -10,7 +10,7 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
 from contentctl.objects.baseline_tags import BaselineTags
 from contentctl.objects.deployment import Deployment
-#from bin.contentctl_project.contentctl_core.domain.entities.link_validator import LinkValidator
+from contentctl.helper.link_validator import LinkValidator
 
 
 class Baseline(BaseModel, SecurityContentObject):

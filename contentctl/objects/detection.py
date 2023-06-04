@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
+from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.config import ConfigDetectionConfiguration
 from contentctl.objects.unit_test import UnitTest

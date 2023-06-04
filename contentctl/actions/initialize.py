@@ -19,18 +19,13 @@ class Initialize:
             os.path.join(input_dto.path, 'contentctl.yml')
         )
            
-        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'tests', 'docs', 'reporting']
+        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'docs', 'reporting']
         for folder in folders:
             os.makedirs(os.path.join(input_dto.path, folder))
 
         shutil.copyfile(
             os.path.join(os.path.dirname(__file__), '../templates/detections/anomalous_usage_of_7zip.yml'), 
             os.path.join(input_dto.path, 'detections', 'anomalous_usage_of_7zip.yml')
-        )
-
-        shutil.copyfile(
-            os.path.join(os.path.dirname(__file__), '../templates/tests/anomalous_usage_of_7zip.test.yml'), 
-            os.path.join(input_dto.path, 'tests', 'anomalous_usage_of_7zip.test.yml')
         )
 
         shutil.copyfile(

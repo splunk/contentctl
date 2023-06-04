@@ -7,7 +7,7 @@ from datetime import datetime
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.story_tags import StoryTags
-from bin.contentctl_project.contentctl_core.domain.entities.link_validator import LinkValidator
+from contentctl.helper.link_validator import LinkValidator
 
 class Story(BaseModel, SecurityContentObject):
     # story spec

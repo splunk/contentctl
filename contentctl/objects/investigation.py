@@ -12,7 +12,7 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
 from contentctl.objects.investigation_tags import InvestigationTags
-from bin.contentctl_project.contentctl_core.domain.entities.link_validator import LinkValidator
+from contentctl.helper.link_validator import LinkValidator
 
 
 class Investigation(BaseModel, SecurityContentObject):

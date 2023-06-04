@@ -147,11 +147,9 @@ class DetectionBuilder():
 
     def addUnitTest(self, tests: list) -> None:
         if self.security_content_obj:
-            for test in tests:
-                if test.name == f"{self.security_content_obj.name} Unit Test":
-                    self.security_content_obj.test = test
-                    return
-            if self.security_content_obj.type not in ["Correlation"] and \
+            if self.security_content_obj.tests and len(self.security_content_obj.tests) > 0: 
+                return
+            elif self.security_content_obj.type not in ["Correlation"] and \
                self.security_content_obj.deprecated == False and \
                self.security_content_obj.experimental == False:
                 raise(Exception(f"No tests found found {self.security_content_obj.file_path}"))

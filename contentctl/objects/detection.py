@@ -54,7 +54,6 @@ class Detection(BaseModel, SecurityContentObject):
     playbooks: list[Playbook] = None
     baselines: list[Baseline] = None
     mappings: dict = None
-    test: Union[UnitTest, dict] = None
     macros: list[Macro] = None
     lookups: list[Lookup] = None
     cve_enrichment: list = None
@@ -169,9 +168,9 @@ class Detection(BaseModel, SecurityContentObject):
         return v
     
     def all_tests_successful(self) -> bool:
-        if self.test is None or len(self.test.tests) == 0:
+        if len(self.tests) == 0:
             return False
-        for test in self.test.tests:
+        for test in self.tests:
             if test.result is None or test.result.success == False:
                 return False
         return True
@@ -187,20 +186,19 @@ class Detection(BaseModel, SecurityContentObject):
             summary_dict[field] = getattr(self, field)
         summary_dict["success"] = self.all_tests_successful()
         summary_dict["tests"] = []
-        if self.test is not None:
-            for test in self.test.tests:
-                result: dict[str, Union[str, bool]] = {"name": test.name}
-                if test.result is not None:
-                    result.update(
-                        test.result.get_summary_dict(
-                            model_fields=test_model_fields,
-                            job_fields=test_job_fields,
-                        )
+        for test in self.tests:
+            result: dict[str, Union[str, bool]] = {"name": test.name}
+            if test.result is not None:
+                result.update(
+                    test.result.get_summary_dict(
+                        model_fields=test_model_fields,
+                        job_fields=test_job_fields,
                     )
-                else:
-                    result["success"] = False
-                    result["message"] = "RESULT WAS NONE"
+                )
+            else:
+                result["success"] = False
+                result["message"] = "RESULT WAS NONE"
 
-                summary_dict["tests"].append(result)
+            summary_dict["tests"].append(result)
 
         return summary_dict

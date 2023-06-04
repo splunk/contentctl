@@ -9,6 +9,7 @@ class UnitTestAttackData(BaseModel):
     sourcetype: str = None
     update_timestamp: bool = None
     custom_index: str = None
+    host: str = None
 
     @validator("data", always=True)
     def validate_data(cls, v, values):

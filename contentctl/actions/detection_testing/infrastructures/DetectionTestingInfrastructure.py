@@ -358,11 +358,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.sync_obj.currentTestingQueue[self.get_name()] = None
 
     def test_detection(self, detection: Detection):
-        if detection.test is None:
+        if detection.tests is None:
             self.pbar.write(f"No test(s) found for {detection.name}")
             return
 
-        for test in detection.test.tests:
+        for test in detection.tests:
             self.execute_test(detection, test)
 
     def format_pbar_string(

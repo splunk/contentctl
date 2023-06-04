@@ -48,7 +48,7 @@ class SecurityContentType(enum.Enum):
 #     ba_objects = "ba_objects"
 #     json_objects = "json_objects"
 class SecurityContentProduct(enum.Enum):
-    ESCU = 1
+    SPLUNK_APP = 1
     SSA = 2
     API = 3
     CUSTOM = 4

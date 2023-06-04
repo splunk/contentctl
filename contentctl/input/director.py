@@ -121,7 +121,7 @@ class Director():
         for index,file in enumerate(security_content_files):
             progress_percent = ((index+1)/len(security_content_files)) * 100
             try:
-                type_string = "UNKNOWN TYPE"
+                type_string = type.name.upper()
                 if type == SecurityContentType.lookups:
                         self.constructLookup(self.basic_builder, file)
                         lookup = self.basic_builder.getObject()
@@ -143,7 +143,6 @@ class Director():
                         self.output_dto.playbooks.append(playbook)                    
                 
                 elif type == SecurityContentType.baselines:
-                        type_string = "Baselines"
                         self.constructBaseline(self.baseline_builder, file)
                         baseline = self.baseline_builder.getObject()
                         self.output_dto.baselines.append(baseline)
@@ -154,13 +153,11 @@ class Director():
                         self.output_dto.investigations.append(investigation)
 
                 elif type == SecurityContentType.stories:
-                        type_string = "Stories"
                         self.constructStory(self.story_builder, file)
                         story = self.story_builder.getObject()
                         self.output_dto.stories.append(story)
             
                 elif type == SecurityContentType.detections:
-                        type_string = "Detections"
                         self.constructDetection(self.detection_builder, file)
                         detection = self.detection_builder.getObject()
                         self.output_dto.detections.append(detection)
@@ -182,7 +179,7 @@ class Director():
                 print(e)
                 validation_error_found = True
 
-        print(f"\r{f'{type.name} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
+        print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
         print("Done!")
 
         if validation_error_found:

@@ -35,7 +35,7 @@ class SecurityContentObject(BaseModel, abc.ABC):
         except:
             print(f"Generating missing uuid for {values['name']}")
             return uuid.uuid4()
-            return ValueError('uuid is not valid: ' + values["name"])
+            raise ValueError('uuid is not valid: ' + values["name"])
         return v
 
     @validator('date')

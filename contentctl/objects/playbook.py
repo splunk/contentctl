@@ -7,17 +7,18 @@ from pydantic import BaseModel, validator, ValidationError
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.playbook_tags import PlaybookTag
 from contentctl.helper.link_validator import LinkValidator
+from contentctl.objects.enums import SecurityContentType
 
 
-
-class Playbook(BaseModel, SecurityContentObject):
-    name: str
-    id: str
-    version: int
-    date: str
-    author: str
+class Playbook(SecurityContentObject):
+    #name: str
+    #id: str
+    #version: int
+    #date: str
+    #author: str
+    contentType: SecurityContentType = SecurityContentType.playbooks
     type: str
-    description: str
+    #description: str
     how_to_implement: str
     playbook: str
     check_references: bool = False #Validation is done in order, this field must be defined first

@@ -11,7 +11,7 @@ class SecurityContentObject(BaseModel, abc.ABC):
     name: str
     author: str = "UNKNOWN_AUTHOR"
     date: str = "1990-01-01"
-    version: int = "99999"
+    version: int = 99999
     id: str = None
     description: str = "UNKNOWN_DESCRIPTION"
 
@@ -28,7 +28,7 @@ class SecurityContentObject(BaseModel, abc.ABC):
             raise ValueError('invalid chars used in name: ' + v)
         return v
 
-    @validator('id')
+    @validator('id',always=True)
     def id_check(cls, v, values):
         try:
             uuid.UUID(str(v))

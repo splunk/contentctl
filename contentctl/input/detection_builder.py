@@ -151,7 +151,8 @@ class DetectionBuilder():
                 return
             elif self.security_content_obj.type not in ["Correlation"] and \
                self.security_content_obj.deprecated == False and \
-               self.security_content_obj.experimental == False:
+               self.security_content_obj.experimental == False and \
+               self.security_content_obj.tags.manual_test == None:
                 raise(Exception(f"No tests found found {self.security_content_obj.file_path}"))
                 #print(f"No tests found found {self.security_content_obj.file_path}")
             return None

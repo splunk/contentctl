@@ -19,3 +19,11 @@ class Macro(SecurityContentObject):
     @validator('name',check_fields=False)
     def name_invalid_chars(cls, v):
         return v
+
+
+    # Allow long names for macros
+    @validator('name',check_fields=False)
+    def name_max_length(cls, v):
+        #if len(v) > 67:
+        #    raise ValueError('name is longer then 67 chars: ' + v)
+        return v

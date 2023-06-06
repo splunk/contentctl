@@ -227,6 +227,8 @@ class Director():
     def constructBaseline(self, builder: BaselineBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path)
+        print("skipping deployment for baseline for now...")
+        return
         builder.addDeployment(self.output_dto.deployments)
 
 

@@ -15,3 +15,18 @@ class Lookup(SecurityContentObject):
     match_type: str = None
     min_matches: int = None
     case_sensitive_match: str = None
+
+     # Macro can have different punctuatuation in it,
+    # so redefine the name validator. For now, jsut
+    # allow any characters in the macro
+    @validator('name',check_fields=False)
+    def name_invalid_chars(cls, v):
+        return v
+
+
+    # Allow long names for lookups
+    @validator('name',check_fields=False)
+    def name_max_length(cls, v):
+        #if len(v) > 67:
+        #    raise ValueError('name is longer then 67 chars: ' + v)
+        return v

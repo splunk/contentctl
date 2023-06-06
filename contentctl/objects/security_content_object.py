@@ -18,6 +18,7 @@ class SecurityContentObject(BaseModel, abc.ABC):
     @validator('name')
     def name_max_length(cls, v):
         if len(v) > 67:
+            print("LENGTH ERROR!")
             raise ValueError('name is longer then 67 chars: ' + v)
         return v
 
@@ -33,8 +34,8 @@ class SecurityContentObject(BaseModel, abc.ABC):
         try:
             uuid.UUID(str(v))
         except:
-            print(f"Generating missing uuid for {values['name']}")
-            return uuid.uuid4()
+            #print(f"Generating missing uuid for {values['name']}")
+            return str(uuid.uuid4())
             raise ValueError('uuid is not valid: ' + values["name"])
         return v
 
@@ -47,7 +48,7 @@ class SecurityContentObject(BaseModel, abc.ABC):
         return v
 
     @staticmethod
-    def free_text_field_valid(cls, v, values, field):
+    def free_text_field_valid(input_cls, v, values, field):
         try:
             v.encode('ascii')
         except UnicodeEncodeError:

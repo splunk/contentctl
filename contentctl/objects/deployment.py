@@ -14,7 +14,7 @@ from contentctl.objects.deployment_slack import DeploymentSlack
 from contentctl.objects.deployment_phantom import DeploymentPhantom
 from contentctl.objects.enums import SecurityContentType
 class Deployment(SecurityContentObject):
-    #name: str = None
+    name: str = "PLACEHOLDER_NAME"
     #id: str = None
     #date: str = None
     #author: str = None

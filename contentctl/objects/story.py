@@ -33,6 +33,13 @@ class Story(SecurityContentObject):
     investigations: list = None
     
 
+    # Allow long names for macros
+    @validator('name',check_fields=False)
+    def name_max_length(cls, v):
+        #if len(v) > 67:
+        #    raise ValueError('name is longer then 67 chars: ' + v)
+        return v
+    
     @validator('narrative')
     def encode_error(cls, v, values, field):
         return SecurityContentObject.free_text_field_valid(cls,v,values,field)

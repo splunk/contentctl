@@ -75,6 +75,31 @@ class AlertActions(enum.Enum):
     rba = "rba"
     email = "email"
 
+class StoryCategory(str,enum.Enum):
+    ABUSE = "Abuse"
+    ADVERSARY_TACTICS = "Adversary Tactics"
+    BEST_PRACTICES = "Best Practices"
+    CLOUD_SECURITY = "Cloud Security"
+    COMPLIANCE = "Compliance"
+    MALWARE = "Malware"
+    UNCATEGORIZED = "Uncategorized"
+    VULNERABILITY = "Vulnerability"
+    
+
+    # The following categories are currently used in
+    # security_content stories but do not appear
+    # to have mappings in the current version of ES
+    # Should they be removed and the stories which
+    # reference them updated?
+    print("\n\n****WARNING-ADDED ENUMS TO StoryCategory. Should we remove them?****\n\n")
+    ACCOUNT_COMPROMSE = "Account Compromise"
+    LATERAL_MOVEMENT = "Lateral Movement"
+    PRIVILEDGE_ESCALATION  = "Privilege Escalation"
+    DATA_DESTRUCTION = "Data Destruction"
+    UNAUTHORIZED_SOFTWARE = "Unauthorized Software"
+    RANSOMWARE = "Ransomware"
+  
+  
 
 class PostTestBehavior(str, enum.Enum):
     always_pause = "always_pause"
@@ -99,3 +124,4 @@ class InstanceState(str, enum.Enum):
     error = "error"
     stopping = "stopping"
     stopped = "stopped"
+

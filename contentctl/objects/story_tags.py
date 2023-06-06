@@ -2,13 +2,13 @@
 
 from pydantic import BaseModel, validator, ValidationError
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
-
+from contentctl.objects.enums import StoryCategory
 
 class StoryTags(BaseModel):
     # story spec
     name: str
     analytic_story: str
-    category: list
+    category: list[StoryCategory]
     product: list
     usecase: str
 

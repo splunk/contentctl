@@ -30,3 +30,8 @@ class StoryTags(BaseModel):
             if value not in valid_products:
                 raise ValueError('product is not valid for ' + values['name'] + '. valid products are ' + str(valid_products))
         return v
+
+    @validator('category')
+    def category_validate(cls,v,values):
+        if len(v) == 0:
+            raise ValueError(f"Error for Story '{values['name']}' - at least one 'category' MUST be provided.")

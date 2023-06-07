@@ -43,7 +43,7 @@ class Detection(SecurityContentObject):
     check_references: bool = False  
     references: list
     tags: DetectionTags
-    tests: list[UnitTest] = None
+    tests: list[UnitTest] = []
 
     # enrichments
     datamodel: list = None

@@ -16,11 +16,8 @@ class BaselineBuilder():
         yml_dict["tags"]["name"] = yml_dict["name"]
         
         try:
-            try:
-                self.baseline = Baseline.parse_obj(yml_dict)
-            except Exception as e:
-                import code
-                code.interact(local=locals())
+            self.baseline = Baseline.parse_obj(yml_dict)
+            
         
         except ValidationError as e:
             print('Validation Error for file ' + str(path))

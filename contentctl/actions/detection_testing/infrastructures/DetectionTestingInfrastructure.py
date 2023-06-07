@@ -525,11 +525,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 # This loop allows us to capture shutdown events without being
                 # stuck in an extended sleep. Remember that this raises an exception
                 self.check_for_teardown()
-                self.format_pbar_string(test.name, "Waiting for Processing", start_time)
+                self.format_pbar_string(f"{detection.name}:{test.name}", "Waiting for Processing", start_time)
 
                 time.sleep(1)
 
-            self.format_pbar_string(test.name, "Running Search", start_time)
+            self.format_pbar_string(f"{detection.name}:{test.name}", "Running Search", start_time)
 
             job = self.get_conn().search(query=search, **kwargs)
 

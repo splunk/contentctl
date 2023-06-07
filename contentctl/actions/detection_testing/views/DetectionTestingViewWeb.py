@@ -59,7 +59,7 @@ $(document).ready(function () {
         {% for detection in detections %}
         {% for test in detection.tests %}
         <tr>
-            <td>{{ test.name }}</td>
+            <td>{{ detection.name }}: {{ test.name }}</td>
             <td><a href="{{test.sid_link}}" target="_blank"/>SID</td>
             <td>{{ test.runDuration }}</td>
             <td>{{ test.message }}</td>

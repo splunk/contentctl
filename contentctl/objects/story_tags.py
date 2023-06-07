@@ -35,3 +35,4 @@ class StoryTags(BaseModel):
     def category_validate(cls,v,values):
         if len(v) == 0:
             raise ValueError(f"Error for Story '{values['name']}' - at least one 'category' MUST be provided.")
+        return v

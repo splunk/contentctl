@@ -41,7 +41,7 @@ class StoryBuilder():
             if detection:
                 for detection_analytic_story in detection.tags.analytic_story:
                     if detection_analytic_story == self.story.name:
-                        matched_detection_names.append(str(f'{config.build.splunk_app.prefix} - ' + detection.name + ' - Rule'))
+                        matched_detection_names.append(str(f'{config.build.prefix} - ' + detection.name + ' - Rule'))
                         mitre_attack_enrichments_list = []
                         if (detection.tags.mitre_attack_enrichments):
                             for attack in detection.tags.mitre_attack_enrichments:

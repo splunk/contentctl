@@ -18,7 +18,7 @@ class API_DeployInputDto:
 
 
 class API_Deploy:
-    def fix_newlines_in_conf_files(self, conf_path: str) -> RawConfigParser:
+    def fix_newlines_in_conf_files(self, conf_path: pathlib.Path) -> RawConfigParser:
         parser = RawConfigParser()
         with open(conf_path, "r") as conf_data_file:
             conf_data = conf_data_file.read()
@@ -45,13 +45,9 @@ class API_Deploy:
         }
         service = client.connect(**splunk_args)
 
+            
         macros_parser = self.fix_newlines_in_conf_files(
-            os.path.join(
-                input_dto.path,
-                input_dto.config.build.splunk_app.path,
-                "default",
-                "macros.conf",
-            )
+            pathlib.Path(input_dto.config.build.path_root)/input_dto.config.build.splunk_app.path/"default"/"macros.conf"
         )
         import tqdm
 
@@ -77,12 +73,7 @@ class API_Deploy:
 
         detection_parser = RawConfigParser()
         detection_parser = self.fix_newlines_in_conf_files(
-            os.path.join(
-                input_dto.path,
-                input_dto.config.build.splunk_app.path,
-                "default",
-                "savedsearches.conf",
-            )
+            pathlib.Path(input_dto.config.build.path_root)/input_dto.config.build.splunk_app.path/"default"/"savedsearches.conf",
         )
         try:
             service.delete("saved/searches/MSCA - Anomalous usage of 7zip - Rule")
@@ -93,7 +84,7 @@ class API_Deploy:
             detection_parser.sections(), bar_format=bar_format_detections
         ):
             try:
-                if section.startswith(input_dto.config.build.splunk_app.prefix):
+                if section.startswith(input_dto.config.build.prefix):
                     params = detection_parser[section]
                     params["name"] = section
                     response_actions = []

@@ -1,5 +1,7 @@
-from pydantic import BaseModel, validator, ValidationError
-
+from pydantic import BaseModel, validator, ValidationError, Field
+import semantic_version
+from datetime import datetime
+from typing import Union
 
 class ConfigGlobal(BaseModel):
     log_path: str
@@ -43,12 +45,12 @@ class ConfigRba(BaseModel):
 
 
 class ConfigDetectionConfiguration(BaseModel):
-    scheduling: ConfigScheduling
-    notable: ConfigNotable = None
-    email: ConfigEmail = None
-    slack: ConfigSlack = None
-    phantom: ConfigPhantom = None
-    rba: ConfigRba = None
+    scheduling: ConfigScheduling = ConfigScheduling(cron_schedule="0 * * * *", earliest_time="-70m@m", latest_time="-10m@m", schedule_window="auto")
+    notable: ConfigNotable = ConfigNotable(rule_description="%description%", rule_title="%name%", nes_fields=["user", "dest", "src"])
+    email: Union[ConfigEmail,None] = None
+    slack: Union[ConfigSlack,None] = None
+    phantom: Union[ConfigPhantom,None] = None
+    rba: Union[ConfigRba,None] = None
 
 
 class ConfigAlertAction(BaseModel):
@@ -61,47 +63,95 @@ class ConfigTest(BaseModel):
     assets: str
 
 
+
+
 class ConfigDeploy(BaseModel):
-    app: str
-    username: str
-    password: str
     server: str
+
+CREDENTIAL_MISSING = "PROVIDE_CREDENTIALS_VIA_CMD_LINE_ARGUMENT"
+class ConfigDeployACS(ConfigDeploy):
+    token: str = CREDENTIAL_MISSING
+    
+
+class ConfigDeployRestAPI(ConfigDeploy):
+    username: str = CREDENTIAL_MISSING
+    password: str = CREDENTIAL_MISSING
+    
+
+class Deployments(BaseModel):
+    acs_deployments: list[ConfigDeployACS] = []
+    rest_api_deployments: list[ConfigDeployRestAPI] = []
+
 
 
 class ConfigBuildSplunk(BaseModel):
-    path: str
-    name: str
-    prefix: str
-    author: str
-    author_email: str
-
-
+    path: str = "app"
+    
 class ConfigBuildJson(BaseModel):
-    path: str
-
+    path: str = "json"
 
 class ConfigBuildBa(BaseModel):
-    path: str
+    path: str = "ba"
+
 
 
 class ConfigBuild(BaseModel):
-    splunk_app: ConfigBuildSplunk
-    #json_objects: ConfigBuildJson
-    #ba_objects: ConfigBuildBa
+    # Fields required for app.conf based on
+    # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
+    name: str = Field(default="Custom Splunk Content Pack", title="The name for your Content Pack (app) ")
+    path_root: str = Field(default="dist",title="The root path at which you will build your app.")
+    prefix: str = Field(default="custom_prefix",title="A short prefix to easily identify all your content.")
+    build: int = Field(default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
+                       title="Build number for your app.  This will always be a number that corresponds to the time of the build in the format YYYYMMDDHHMMSS")
+    version: str = Field(default="0.0.1",title="The version of your Content Pack.  This must follow semantic versioning guidelines.")
+    # id has many restrictions:
+    # * Omit this setting for apps that are for internal use only and not intended
+    # for upload to Splunkbase.
+    # * id is required for all new apps that you upload to Splunkbase. Future versions of
+    # Splunk Enterprise will use appid to correlate locally-installed apps and the
+    # same app on Splunkbase (e.g. to notify users about app updates).
+    # * id must be the same as the folder name in which your app lives in
+    # $SPLUNK_HOME/etc/apps.
+    # * id must adhere to these cross-platform folder name restrictions:
+    # * must contain only letters, numbers, "." (dot), and "_" (underscore)
+    # characters.
+    # * must not end with a dot character.
+    # * must not be any of the following names: CON, PRN, AUX, NUL,
+    #   COM1, COM2, COM3, COM4, COM5, COM6, COM7, COM8, COM9,
+    #   LPT1, LPT2, LPT3, LPT4, LPT5, LPT6, LPT7, LPT8, LPT9
+    id: str = Field(default="custom_id",title="Special name required for publishing your app on Splunkbase")
+    label: str = Field(default="custom_label",title="Another label for your content.")
+    author_name: str = Field(default="author name",title="Name of the Content Pack Author.")
+    author_email: str = Field(default="author@contactemailaddress.com",title="Contact email for the Content Pack Author")
+    author_company: str = Field(default="author company",title="Name of the company who has developed the Content Pack")
+    description: str = Field(default="description of app",title="Free text description of the Content Pack.")
+
+    splunk_app: Union[ConfigBuildSplunk,None] = ConfigBuildSplunk()
+    json_objects: Union[ConfigBuildJson,None] = None
+    ba_objects: Union[ConfigBuildBa,None] = None
+
+    @validator('version', always=True)
+    def validate_version(cls, v, values):
+        try:
+            validate_version = semantic_version.Version(v)
+        except Exception as e:
+            raise(ValueError(f"The specified version does not follow the semantic versioning spec (https://semver.org/). {str(e)}"))
+        return v
+
 
 
 class ConfigEnrichments(BaseModel):
-    attack_enrichment: bool
-    cve_enrichment: bool
-    splunk_app_enrichment: bool
+    attack_enrichment: bool = False
+    cve_enrichment: bool = False
+    splunk_app_enrichment: bool = False
 
 
 
 class Config(BaseModel):
-    #general: ConfigGlobal
-    detection_configuration: ConfigDetectionConfiguration
-    test: ConfigTest = None
-    deploy: ConfigDeploy
-    build: ConfigBuild
-    enrichments: ConfigEnrichments
+    #general: ConfigGlobal = ConfigGlobal()
+    detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
+    test: Union[ConfigTest,None] = None
+    deployments: Deployments = Deployments()
+    build: ConfigBuild = ConfigBuild()
+    enrichments: ConfigEnrichments = ConfigEnrichments()
 

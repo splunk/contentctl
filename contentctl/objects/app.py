@@ -25,7 +25,7 @@ class App(BaseModel, extra=Extra.forbid):
     # homemade applications will not have this
     uid: Union[int, None]
 
-    # appid is basically the internal name of you app
+    # appid is basically the internal name of your app
     appid: str
 
     # Title is the human readable name for your application

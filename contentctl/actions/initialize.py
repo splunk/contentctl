@@ -3,7 +3,8 @@ import shutil
 import os
 import pathlib
 from dataclasses import dataclass
-
+from contentctl.objects.config import Config
+from contentctl.output.yml_writer import YmlWriter
 
 @dataclass(frozen=True)
 class InitializeInputDto:
@@ -14,10 +15,8 @@ class Initialize:
 
     def execute(self, input_dto: InitializeInputDto) -> None:
 
-        shutil.copyfile(
-            os.path.join(os.path.dirname(__file__), '../templates/contentctl_default.yml'), 
-            os.path.join(input_dto.path, 'contentctl.yml')
-        )
+        c = Config()
+        YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl.yml'), c.dict())
            
         folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'docs', 'reporting']
         for folder in folders:

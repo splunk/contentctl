@@ -5,34 +5,36 @@ import shutil
 import tarfile
 from typing import Union
 from pathlib import Path
-
+import pathlib
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.config import Config
 
 
 class ConfOutput:
+
     input_path: str
-    output_path: str
-    app_name: str
+    config: Config
+    output_path: pathlib.Path
+    
 
     def __init__(self, input_path: str, config: Config):
         self.input_path = input_path
-        self.app_name = config.build.splunk_app.prefix
-        self.output_path = os.path.join(input_path, config.build.splunk_app.path)
-        Path(self.output_path).mkdir(parents=True, exist_ok=True)
+        self.app_name = config.build.prefix
+        self.output_path = pathlib.Path(self.config.build.path_root) /self.config.build.splunk_app.path
+        self.output_path.mkdir(parents=True, exist_ok=True)
         template_splunk_app_path = os.path.join(os.path.dirname(__file__), '../templates/splunk_app')
         shutil.copytree(template_splunk_app_path, self.output_path, dirs_exist_ok=True)
 
 
     def writeHeaders(self) -> None:
-        ConfWriter.writeConfFileHeader(os.path.join(self.output_path, 'default/analyticstories.conf'))
-        ConfWriter.writeConfFileHeader(os.path.join(self.output_path, 'default/savedsearches.conf'))
-        ConfWriter.writeConfFileHeader(os.path.join(self.output_path, 'default/collections.conf'))
-        ConfWriter.writeConfFileHeader(os.path.join(self.output_path, 'default/es_investigations.conf'))
-        ConfWriter.writeConfFileHeader(os.path.join(self.output_path, 'default/macros.conf'))
-        ConfWriter.writeConfFileHeader(os.path.join(self.output_path, 'default/transforms.conf'))
-        ConfWriter.writeConfFileHeader(os.path.join(self.output_path, 'default/workflow_actions.conf'))
+        ConfWriter.writeConfFileHeader(self.output_path/'default/analyticstories.conf', self.config)
+        ConfWriter.writeConfFileHeader(self.output_path/'default/savedsearches.conf', self.config)
+        ConfWriter.writeConfFileHeader(self.output_path/'default/collections.conf', self.config)
+        ConfWriter.writeConfFileHeader(self.output_path/'default/es_investigations.conf', self.config)
+        ConfWriter.writeConfFileHeader(self.output_path/'default/macros.conf', self.config)
+        ConfWriter.writeConfFileHeader(self.output_path/'default/transforms.conf', self.config)
+        ConfWriter.writeConfFileHeader(self.output_path/'default/workflow_actions.conf', self.config)
 
 
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:

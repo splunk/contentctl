@@ -17,7 +17,7 @@ class ConfWriter():
 
         template = j2_env.get_template('header.j2')
         output = template.render(time=utc_time, author=' - '.join([config.build.author_name,config.build.author_company]), author_email=config.build.author_email)
-        output_path.mkdir(parents=True, exist_ok=True)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'w') as f:
             output = output.encode('ascii', 'ignore').decode('ascii')
             f.write(output)
@@ -25,7 +25,7 @@ class ConfWriter():
 
     @staticmethod
     def writeConfFileHeaderEmpty(output_path:pathlib.Path, config: Config) -> None:
-        output_path.mkdir(parents=True, exist_ok=True)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'w') as f:
             f.write('')
 
@@ -59,7 +59,7 @@ class ConfWriter():
         j2_env.filters['custom_jinja2_enrichment_filter'] = custom_jinja2_enrichment_filter
         template = j2_env.get_template(template_name)
         output = template.render(objects=objects, APP_NAME=config.build.name)
-        output_path.mkdir(parents=True, exist_ok=True)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'a') as f:
             output = output.encode('ascii', 'ignore').decode('ascii')
             f.write(output)

@@ -20,7 +20,7 @@ class ConfOutput:
 
     def __init__(self, input_path: str, config: Config):
         self.input_path = input_path
-        self.app_name = config.build.prefix
+        self.config = config
         self.output_path = pathlib.Path(self.config.build.path_root) /self.config.build.splunk_app.path
         self.output_path.mkdir(parents=True, exist_ok=True)
         template_splunk_app_path = os.path.join(os.path.dirname(__file__), '../templates/splunk_app')
@@ -39,36 +39,36 @@ class ConfOutput:
 
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:
-            ConfWriter.writeConfFile('savedsearches_detections.j2', 
-            os.path.join(self.output_path, 'default/savedsearches.conf'), 
-            objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/savedsearches.conf', 
+                'savedsearches_detections.j2',  
+                self.config, objects)
 
-            ConfWriter.writeConfFile('analyticstories_detections.j2',
-                os.path.join(self.output_path, 'default/analyticstories.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/analyticstories.conf',
+                'analyticstories_detections.j2',
+                self.config, objects)
 
-            ConfWriter.writeConfFile('macros_detections.j2',
-                os.path.join(self.output_path, 'default/macros.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/macros.conf',
+                'macros_detections.j2', 
+                self.config, objects)
         
         elif type == SecurityContentType.stories:
-            ConfWriter.writeConfFile('analyticstories_stories.j2',
-                os.path.join(self.output_path, 'default/analyticstories.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/analyticstories.conf', 
+                'analyticstories_stories.j2',
+                self.config, objects)
 
         elif type == SecurityContentType.baselines:
-            ConfWriter.writeConfFile('savedsearches_baselines.j2', 
-                os.path.join(self.output_path, 'default/savedsearches.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/savedsearches.conf',
+                'savedsearches_baselines.j2', 
+                self.config, objects)
 
         elif type == SecurityContentType.investigations:
-            ConfWriter.writeConfFile('savedsearches_investigations.j2', 
-                os.path.join(self.output_path, 'default/savedsearches.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/savedsearches.conf',
+                'savedsearches_investigations.j2',
+                self.config, objects)
             
-            ConfWriter.writeConfFile('analyticstories_investigations.j2', 
-                os.path.join(self.output_path, 'default/analyticstories.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/analyticstories.conf',
+                'analyticstories_investigations.j2', 
+                self.config, objects)
 
             workbench_panels = []
             for investigation in objects:
@@ -77,29 +77,30 @@ class ConfOutput:
                     workbench_panels.append(investigation)
                     investigation.search = investigation.search.replace(">","&gt;")
                     investigation.search = investigation.search.replace("<","&lt;")
-                    ConfWriter.writeConfFileHeaderEmpty(os.path.join(self.output_path, 
-                        'default/data/ui/panels/', str("workbench_panel_" + response_file_name_xml)))
-                    ConfWriter.writeConfFile('panel.j2', 
-                        os.path.join(self.output_path, 
-                        'default/data/ui/panels/', str("workbench_panel_" + response_file_name_xml)),
-                        [investigation.search],self.app_name)
+                    ConfWriter.writeConfFileHeaderEmpty(
+                        self.output_path/f'default/data/ui/panels/workbench_panel_{response_file_name_xml}', 
+                        self.config)
+                    
+                    ConfWriter.writeConfFile( self.output_path/f'default/data/ui/panels/workbench_panel_{response_file_name_xml}',
+                        'panel.j2',
+                        self.config,[investigation.search])
 
-            ConfWriter.writeConfFile('es_investigations_investigations.j2', 
-                os.path.join(self.output_path, 'default/es_investigations.conf'), 
-                workbench_panels,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/es_investigations.conf',
+                'es_investigations_investigations.j2',  
+                self.config, workbench_panels)
 
-            ConfWriter.writeConfFile('workflow_actions.j2', 
-                os.path.join(self.output_path, 'default/workflow_actions.conf'), 
-                workbench_panels,self.app_name)   
+            ConfWriter.writeConfFile(self.output_path/'default/workflow_actions.conf',
+                'workflow_actions.j2',  
+                self.config, workbench_panels)   
 
         elif type == SecurityContentType.lookups:
-            ConfWriter.writeConfFile('collections.j2', 
-                os.path.join(self.output_path, 'default/collections.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/collections.conf',
+                'collections.j2', 
+                self.config, objects)
 
-            ConfWriter.writeConfFile('transforms.j2', 
-                os.path.join(self.output_path, 'default/transforms.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/transforms.conf',
+                'transforms.j2', 
+                self.config, objects)
 
 
             if self.input_path is None:
@@ -111,13 +112,13 @@ class ConfOutput:
                     shutil.copy(file, os.path.join(self.output_path, 'lookups'))
 
         elif type == SecurityContentType.macros:
-            ConfWriter.writeConfFile('macros.j2', 
-                os.path.join(self.output_path, 'default/macros.conf'), 
-                objects,self.app_name)
+            ConfWriter.writeConfFile(self.output_path/'default/macros.conf',
+                'macros.j2',
+                self.config, objects)
 
 
     def packageApp(self) -> None:
-        name = self.output_path + ".tar.gz"
+        name = self.output_path/".tar.gz"
 
         with tarfile.open(name, "w:gz") as app_archive:
             app_archive.add(self.output_path, arcname=os.path.basename(self.output_path))

@@ -118,7 +118,7 @@ class ConfOutput:
 
 
     def packageApp(self) -> None:
-        name = self.output_path/".tar.gz"
-
+        
+        name = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}.tar.gz"
         with tarfile.open(name, "w:gz") as app_archive:
             app_archive.add(self.output_path, arcname=os.path.basename(self.output_path))

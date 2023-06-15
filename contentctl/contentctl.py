@@ -151,7 +151,7 @@ def test(args: argparse.Namespace):
         title="my_custom_app",
         release="1.0.0",
         http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.splunk_app.path}.tar.gz"),
+        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"),
         description="some description",
         splunkbase_path=None,
     )

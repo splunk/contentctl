@@ -6,6 +6,7 @@ dist/*
 apps*
 test_results*
 attack_data*
+tmp/*
 
 
 # Byte-compiled / optimized / DLL files

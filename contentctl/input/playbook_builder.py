@@ -19,6 +19,7 @@ class PlaybookBuilder():
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
+        yml_dict["file_name"] = Path(path).stem
 
         try:
             self.playbook = Playbook.parse_obj(yml_dict)

@@ -19,7 +19,7 @@ class Initialize:
             os.path.join(input_dto.path, 'contentctl.yml')
         )
            
-        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'tests', 'docs', 'reporting']
+        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'tests', 'docs', 'reporting', 'playbooks']
         for folder in folders:
             os.makedirs(os.path.join(input_dto.path, folder))
 
@@ -46,6 +46,11 @@ class Initialize:
         shutil.copyfile(
             os.path.join(os.path.dirname(__file__), '../templates/macros/security_content_summariesonly.yml'), 
             os.path.join(input_dto.path, 'macros', 'security_content_summariesonly.yml')
+        )
+
+        shutil.copyfile(
+            os.path.join(os.path.dirname(__file__), '../templates/playbooks/VirusTotal_v3_Dynamic_Analysis.yml'), 
+            os.path.join(input_dto.path, 'playbooks', 'VirusTotal_v3_Dynamic_Analysis.yml')
         )
 
         print('The following folders were created: {0} under {1}.\nContent pack has been initialized, please run `new` to create new content.'.format(folders, input_dto.path))

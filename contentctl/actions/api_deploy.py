@@ -46,6 +46,7 @@ class API_Deploy:
                 "port": target.port,
                 "username": target.username,
                 "password": target.password,
+                "splunkToken": target.token,
                 "owner": "nobody",
                 "app": "search",
             }

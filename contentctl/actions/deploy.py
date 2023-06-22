@@ -34,7 +34,6 @@ class Deploy:
         return parser
 
     def execute(self, input_dto: DeployInputDto) -> None:
-
         splunk_args = {
             "host": input_dto.config.deploy.server,
             "port": 8089,
@@ -84,16 +83,22 @@ class Deploy:
                 "savedsearches.conf",
             )
         )
-        try:
-            service.delete("saved/searches/MSCA - Anomalous usage of 7zip - Rule")
-        except Exception as e:
-            pass
 
         for section in tqdm.tqdm(
             detection_parser.sections(), bar_format=bar_format_detections
         ):
             try:
                 if section.startswith(input_dto.config.build.splunk_app.prefix):
+                    # Delete the search if it already exists so that we can update it
+                    try:
+                        delete_path = "saved/searches/" + section
+                        print(f"Trying to delete [{delete_path}]")
+                        service.delete(delete_path)
+                        print("Done!")
+                    except Exception as e:
+                        print(f"Failed")
+                        pass
+
                     params = detection_parser[section]
                     params["name"] = section
                     response_actions = []

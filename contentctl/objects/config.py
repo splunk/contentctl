@@ -7,6 +7,7 @@ class ConfigGlobal(BaseModel):
 
 
 class ConfigScheduling(BaseModel):
+    name: str = "default_schedule"
     cron_schedule: str
     earliest_time: str
     latest_time: str
@@ -43,7 +44,7 @@ class ConfigRba(BaseModel):
 
 
 class ConfigDetectionConfiguration(BaseModel):
-    scheduling: ConfigScheduling
+    scheduling: list[ConfigScheduling] = []
     notable: ConfigNotable = None
     email: ConfigEmail = None
     slack: ConfigSlack = None
@@ -86,8 +87,8 @@ class ConfigBuildBa(BaseModel):
 
 class ConfigBuild(BaseModel):
     splunk_app: ConfigBuildSplunk
-    #json_objects: ConfigBuildJson
-    #ba_objects: ConfigBuildBa
+    # json_objects: ConfigBuildJson
+    # ba_objects: ConfigBuildBa
 
 
 class ConfigEnrichments(BaseModel):
@@ -96,12 +97,10 @@ class ConfigEnrichments(BaseModel):
     splunk_app_enrichment: bool
 
 
-
 class Config(BaseModel):
-    #general: ConfigGlobal
+    # general: ConfigGlobal
     detection_configuration: ConfigDetectionConfiguration
     test: ConfigTest = None
     deploy: ConfigDeploy
     build: ConfigBuild
     enrichments: ConfigEnrichments
-

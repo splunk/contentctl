@@ -44,15 +44,20 @@ class API_Deploy:
             splunk_args = {
                 "host": target.server,
                 "port": target.port,
-                "username": target.username,
-                "password": target.password,
-                "splunkToken": target.token,
                 "owner": "nobody",
                 "app": "search",
             }
             print("Warning - we are currently deploying all content into the 'search' app. "
                   "At this time, this means the user does not have to install the app "
                   "manually, but this will change")
+    
+            splunkToken = target.token
+            if splunkToken:
+                splunk_args['splunkToken'] = splunkToken
+            else:
+                splunk_args['username'] = target.username
+                splunk_args['password'] = target.password
+
             service = client.connect(**splunk_args)
 
                 

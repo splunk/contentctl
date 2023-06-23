@@ -71,7 +71,9 @@ class ConfigDeploy(BaseModel):
 
     @root_validator(pre=True)
     def check_server(cls, values):
-        values.setdefault('server', os.getenv('SPLUNK_SERVER'))
+        server = os.getenv('SPLUNK_SERVER')
+        if server:
+            values['server'] = server
         return values
 
 
@@ -86,15 +88,23 @@ class ConfigDeployRestAPI(ConfigDeploy):
     password: str = PASSWORD
     token: str = None
 
-    @root_validator(pre=True)
+    @root_validator()
     def check_auth(cls, values):
-        token = values.setdefault('token', os.getenv('SPLUNK_TOKEN'))
-        if not token:
-            username = values.setdefault('username', os.getenv('SPLUNK_USERNAME'))
-            password = values.setdefault('password', os.getenv('SPLUNK_PASSWORD'))
-            if not (username and password):
+        token = os.getenv('SPLUNK_TOKEN')
+        if token:
+            values['token'] = token
+
+        if not values.get('token'):
+            username = os.getenv('SPLUNK_USERNAME')
+            if username:
+                values['username'] = username
+            
+            password = os.getenv('SPLUNK_PASSWORD')
+            if password:
+                values['password'] = password
+
+            if not (values.get('username') and values.get('password')):
                 raise ValueError("You must specify username/password, or token.")
-        
         return values
 
 

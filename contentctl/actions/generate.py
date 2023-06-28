@@ -32,6 +32,7 @@ class Generate:
             conf_output.writeObjects(director_output_dto.investigations, SecurityContentType.investigations)
             conf_output.writeObjects(director_output_dto.lookups, SecurityContentType.lookups)
             conf_output.writeObjects(director_output_dto.macros, SecurityContentType.macros)
+            conf_output.writeAppConf()
             conf_output.packageApp()
 
         elif input_dto.director_input_dto.product == SecurityContentProduct.SSA:

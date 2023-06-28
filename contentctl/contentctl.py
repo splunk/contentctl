@@ -17,7 +17,9 @@ from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.new_content import NewContentInputDto, NewContent
 from contentctl.actions.doc_gen import DocGenInputDto, DocGen
 from contentctl.actions.initialize import Initialize, InitializeInputDto
+from contentctl.actions.inspect import InspectInputDto, Inspect
 from contentctl.actions.api_deploy import API_Deploy, API_DeployInputDto
+
 from contentctl.input.director import DirectorInputDto
 from contentctl.objects.enums import (
     SecurityContentType,
@@ -109,8 +111,11 @@ def build(args) -> DirectorOutputDto:
 
 
 def inspect(args) -> None:
-    raise (Exception("WARNING - INSPECT NOT YET IMPLEMENTED"))
-    # Inspect(args)
+    config=start(args)
+    app_path = pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"
+    input_dto = InspectInputDto(path=app_path)
+    i = Inspect()
+    i.execute(input_dto=input_dto)
 
 
 def deploy(args) -> None:

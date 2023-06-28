@@ -23,9 +23,9 @@ class ConfOutput:
         self.config = config
         self.output_path = pathlib.Path(self.config.build.path_root) /self.config.build.splunk_app.path
         self.output_path.mkdir(parents=True, exist_ok=True)
-        template_splunk_app_path = os.path.join(os.path.dirname(__file__), '../templates/splunk_app')
+        template_splunk_app_path = os.path.join(os.path.dirname(__file__), 'templates/splunk_app')
         shutil.copytree(template_splunk_app_path, self.output_path, dirs_exist_ok=True)
-
+        
 
     def writeHeaders(self) -> None:
         ConfWriter.writeConfFileHeader(self.output_path/'default/analyticstories.conf', self.config)
@@ -35,7 +35,12 @@ class ConfOutput:
         ConfWriter.writeConfFileHeader(self.output_path/'default/macros.conf', self.config)
         ConfWriter.writeConfFileHeader(self.output_path/'default/transforms.conf', self.config)
         ConfWriter.writeConfFileHeader(self.output_path/'default/workflow_actions.conf', self.config)
+        ConfWriter.writeConfFileHeader(self.output_path/'default/app.conf', self.config)
+        
 
+
+    def writeAppConf(self):
+        ConfWriter.writeConfFile(self.output_path/"default"/"app.conf", "app.conf.j2", self.config, [self.config.build] )
 
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:
@@ -119,6 +124,12 @@ class ConfOutput:
 
     def packageApp(self) -> None:
         
-        name = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}.tar.gz"
-        with tarfile.open(name, "w:gz") as app_archive:
-            app_archive.add(self.output_path, arcname=os.path.basename(self.output_path))
+
+        input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
+        import slim
+        try:
+            slim.package(source=input_app_path, output_dir=pathlib.Path(self.config.build.path_root))
+        except Exception as e:
+            print(f"Error using slim to package app: {str(e)}")
+        #with tarfile.open(name, "w:gz") as app_archive:
+        #    app_archive.add(self.output_path, arcname=os.path.basename(self.output_path))

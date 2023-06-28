@@ -56,6 +56,7 @@ class ConfWriter():
             trim_blocks=True,
             undefined=StrictUndefined)
 
+
         j2_env.filters['custom_jinja2_enrichment_filter'] = custom_jinja2_enrichment_filter
         template = j2_env.get_template(template_name)
         output = template.render(objects=objects, APP_NAME=config.build.name)

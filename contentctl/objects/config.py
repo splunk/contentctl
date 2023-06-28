@@ -98,7 +98,7 @@ class ConfigBuildBa(BaseModel):
 class ConfigBuild(BaseModel):
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
-    name: str = Field(default="Custom Splunk Content Pack", title="The name for your Content Pack (app) ")
+    name: str = Field(default="Custom_Splunk_Content_Pack", title="The name for your Content Pack (app) ")
     path_root: str = Field(default="dist",title="The root path at which you will build your app.")
     prefix: str = Field(default="custom_prefix",title="A short prefix to easily identify all your content.")
     build: int = Field(default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
@@ -119,7 +119,7 @@ class ConfigBuild(BaseModel):
     # * must not be any of the following names: CON, PRN, AUX, NUL,
     #   COM1, COM2, COM3, COM4, COM5, COM6, COM7, COM8, COM9,
     #   LPT1, LPT2, LPT3, LPT4, LPT5, LPT6, LPT7, LPT8, LPT9
-    id: str = Field(default="custom_id",title="Special name required for publishing your app on Splunkbase")
+    id: str = Field(default="Custom_Splunk_Content_Pack",title="Special name required for publishing your app on Splunkbase")
     label: str = Field(default="custom_label",title="Another label for your content.")
     author_name: str = Field(default="author name",title="Name of the Content Pack Author.")
     author_email: str = Field(default="author@contactemailaddress.com",title="Contact email for the Content Pack Author")

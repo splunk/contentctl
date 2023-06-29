@@ -85,7 +85,7 @@ class Deployments(BaseModel):
 
 
 class ConfigBuildSplunk(BaseModel):
-    path: str = "app"
+    path: str = "Custom_Splunk_Content_Pack"
     
 class ConfigBuildJson(BaseModel):
     path: str = "json"

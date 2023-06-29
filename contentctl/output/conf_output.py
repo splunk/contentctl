@@ -7,7 +7,7 @@ from typing import Union
 from pathlib import Path
 import pathlib
 import slim
-from splunk_appinspect.main import validate
+from splunk_appinspect.main import validate, TEST_MODE, PRECERT_MODE, JSON_DATA_FORMAT, ERROR_LOG_LEVEL
 import shutil
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
@@ -149,4 +149,35 @@ class ConfOutput:
         output_app_expected_name = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}-{self.config.build.version}.tar.gz"
         name_without_version = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}.tar.gz"
         shutil.copy2(output_app_expected_name, name_without_version, follow_symlinks=False)
+        
+        # Note that all tags are available and described here:
+        # https://dev.splunk.com/enterprise/reference/appinspect/appinspecttagreference/ 
+        included_tags = ["appapproval", 
+                         "cloud", 
+                         "packaging_standards", 
+                         "private_app", 
+                         "private_victoria", 
+                         "savedsearches", 
+                         "security", 
+                         "service", 
+                         "splunk_9_0", 
+                         "splunk_appinspect"]
+        included_tags_string =','.join(included_tags)
+        excluded_tags = []
+
+        excluded_tags_string = ','.join(excluded_tags)
+        validate([str(name_without_version)], PRECERT_MODE, included_tags_string, excluded_tags_string)
+        '''
+        validate(name_without_version, 
+                 PRECERT_MODE, 
+                 included_tags,
+                 [],
+                 "output_appinspect", 
+                 JSON_DATA_FORMAT,
+                 "dist",
+                 ERROR_LOG_LEVEL,
+                 "dist/appinspect_output.log",
+                 100,
+                 True)
+        '''
         

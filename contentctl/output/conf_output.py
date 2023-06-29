@@ -24,7 +24,7 @@ class ConfOutput:
     def __init__(self, input_path: str, config: Config):
         self.input_path = input_path
         self.config = config
-        self.output_path = pathlib.Path(self.config.build.path_root) /self.config.build.splunk_app.path
+        self.output_path = pathlib.Path(self.config.build.path_root) /self.config.build.name
         self.output_path.mkdir(parents=True, exist_ok=True)
         template_splunk_app_path = os.path.join(os.path.dirname(__file__), 'templates/splunk_app')
         shutil.copytree(template_splunk_app_path, self.output_path, dirs_exist_ok=True)

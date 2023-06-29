@@ -85,13 +85,13 @@ class Deployments(BaseModel):
 
 
 class ConfigBuildSplunk(BaseModel):
-    path: str = "Custom_Splunk_Content_Pack"
+    pass
     
 class ConfigBuildJson(BaseModel):
-    path: str = "json"
+    pass
 
 class ConfigBuildBa(BaseModel):
-    path: str = "ba"
+    pass
 
 
 

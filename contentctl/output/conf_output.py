@@ -142,7 +142,7 @@ class ConfOutput:
         except Exception as e:
             print(f"Error using slim to package app: {str(e)}")
         '''
-        with tarfile.open(name, "w:gz") as app_archive:
+        with tarfile.open(output_app_expected_name, "w:gz") as app_archive:
             app_archive.add(self.output_path, arcname=os.path.basename(self.output_path))
     
     def inspectApp(self)-> None:

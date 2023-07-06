@@ -6,7 +6,7 @@ import tarfile
 from typing import Union
 from pathlib import Path
 import pathlib
-import slim
+#import slim
 from splunk_appinspect.main import validate, TEST_MODE, PRECERT_MODE, JSON_DATA_FORMAT, ERROR_LOG_LEVEL
 import shutil
 from contentctl.output.conf_writer import ConfWriter
@@ -131,7 +131,7 @@ class ConfOutput:
         input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
         output_app_expected_name = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}-{self.config.build.version}.tar.gz"
         print(f"Expecting that the app we build is at {output_app_expected_name}")
-        
+        '''
         try:
             slim.package(source=input_app_path, output_dir=pathlib.Path(self.config.build.path_root))
             if not output_app_expected_name.exists():
@@ -141,8 +141,9 @@ class ConfOutput:
         
         except Exception as e:
             print(f"Error using slim to package app: {str(e)}")
-        #with tarfile.open(name, "w:gz") as app_archive:
-        #    app_archive.add(self.output_path, arcname=os.path.basename(self.output_path))
+        '''
+        with tarfile.open(name, "w:gz") as app_archive:
+            app_archive.add(self.output_path, arcname=os.path.basename(self.output_path))
     
     def inspectApp(self)-> None:
         

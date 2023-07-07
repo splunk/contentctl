@@ -128,6 +128,11 @@ class ConfOutput:
         
 
         input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
+        
+        readme_file = pathlib.Path("README")
+        if not readme_file.is_file():
+            raise Exception("The README file does not exist in this directory. Cannot build app.")
+        shutil.copyfile(readme_file, input_app_path/readme_file.name)
         output_app_expected_name = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}-{self.config.build.version}.tar.gz"
         print(f"Expecting that the app we build is at {output_app_expected_name}")
         

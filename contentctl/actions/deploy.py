@@ -3,6 +3,7 @@ import sys
 import json
 import requests
 from requests.auth import HTTPBasicAuth
+import re
 
 from dataclasses import dataclass
 from configparser import RawConfigParser
@@ -92,35 +93,39 @@ class Deploy:
         for section in tqdm.tqdm(
             detection_parser.sections(), bar_format=bar_format_detections
         ):
-            try:
-                if section.startswith(input_dto.config.build.splunk_app.prefix):
-                    params = detection_parser[section]
-                    params["name"] = section
-                    response_actions = []
-                    if (
-                        input_dto.config.detection_configuration.notable
-                        and input_dto.config.detection_configuration.notable.rule_description
-                    ):
-                        response_actions.append("notable")
-                    if (
-                        input_dto.config.detection_configuration.rba
-                        and input_dto.config.detection_configuration.rba.enabled
-                    ):
-                        response_actions.append("risk")
-                    params["actions"] = ",".join(response_actions)
-                    params["request.ui_dispatch_app"] = "ES Content Updates"
-                    params["request.ui_dispatch_view"] = "ES Content Updates"
-                    params["alert_type"] = params.pop("counttype")
-                    params["alert_comparator"] = params.pop("relation")
-                    params["alert_threshold"] = params.pop("quantity")
-                    params.pop("enablesched")
-
-                    service.post("saved/searches", **params)
-
-                    # print("Deployed detection: " + params["name"])
-            except Exception as e:
-                tqdm.tqdm.write(f"Error deploying saved search {section}: {str(e)}")
-
+            
+            if section.startswith(input_dto.config.build.splunk_app.prefix):
+                params = detection_parser[section]
+                params["name"] = section
+                response_actions = []
+                if (
+                    input_dto.config.detection_configuration.notable
+                    and input_dto.config.detection_configuration.notable.rule_description
+                ):
+                    response_actions.append("notable")
+                if (
+                    input_dto.config.detection_configuration.rba
+                    and input_dto.config.detection_configuration.rba.enabled
+                ):
+                    response_actions.append("risk")
+                params["actions"] = ",".join(response_actions)
+                params["request.ui_dispatch_app"] = "ES Content Updates"
+                params["request.ui_dispatch_view"] = "ES Content Updates"
+                params["alert_type"] = params.pop("counttype")
+                params["alert_comparator"] = params.pop("relation")
+                params["alert_threshold"] = params.pop("quantity")
+                params.pop("enablesched")
+                
+                try: 
+                    service.post("saved/searches/", **params)
+                except Exception as e: 
+                    if re.search('409',str(e)):
+                        rest_endpoint=str("saved/searches/" + params["name"])
+                        params.pop("name")
+                        service.post(rest_endpoint, **params)
+                    else: 
+                        tqdm.tqdm.write(f"Error deploying saved search {section}: {str(e)}")
+                # print("Deployed detection: " + params["name"])
         # story_parser = RawConfigParser()
         # story_parser.read(os.path.join(input_dto.path, input_dto.config.build.splunk_app.path, "default", "analyticstories.conf"))
 

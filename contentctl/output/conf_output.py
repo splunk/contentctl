@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import os
 import glob
 import shutil
+import sys
 import tarfile
 from typing import Union
 from pathlib import Path
@@ -178,18 +179,17 @@ class ConfOutput:
         excluded_tags = []
 
         excluded_tags_string = ','.join(excluded_tags)
-        validate([str(name_without_version)], PRECERT_MODE, included_tags_string, excluded_tags_string)
-        '''
-        validate(name_without_version, 
-                 PRECERT_MODE, 
-                 included_tags,
-                 [],
-                 "output_appinspect", 
-                 JSON_DATA_FORMAT,
-                 "dist",
-                 ERROR_LOG_LEVEL,
-                 "dist/appinspect_output.log",
-                 100,
-                 True)
-        '''
-        
+        try:
+            validate([str(name_without_version)], PRECERT_MODE, included_tags_string, excluded_tags_string)
+        except SystemExit as e:
+            if e.code == 0:
+                print("AppInspect passed!")
+            else:
+                if sys.version.startswith('3.11') or sys.version.startswith('3.12'):
+                    raise Exception("At this time, AppInspect may fail on valid apps under Python>=3.11 with " 
+                                    "the error 'global flags not at the start of the expression at position 1'. "  
+                                    "If you encounter this error, please run AppInspect on a version of Python "
+                                    "<3.11.  This issue is currently tracked. Please review the appinspect "
+                                    "report output above for errors.")
+                else: 
+                    raise Exception("AppInspect Failure - Please review the appinspect report output above for errors.")        

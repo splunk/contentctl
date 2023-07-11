@@ -92,7 +92,7 @@ class SimpleWebServer(ServerAdapter):
 
         self.options["handler_class"] = DontLog
         self.server = make_server(
-            "localhost", DEFAULT_WEB_UI_PORT, handler, **self.options
+            self.host, DEFAULT_WEB_UI_PORT, handler, **self.options
         )
 
         self.server.serve_forever()
@@ -100,7 +100,7 @@ class SimpleWebServer(ServerAdapter):
 
 class DetectionTestingViewWeb(DetectionTestingView):
     bottleApp: Bottle = Bottle()
-    server: SimpleWebServer = SimpleWebServer()
+    server: SimpleWebServer = SimpleWebServer(host="0.0.0.0", port=DEFAULT_WEB_UI_PORT)
 
     class Config:
         arbitrary_types_allowed = True
@@ -117,7 +117,7 @@ class DetectionTestingViewWeb(DetectionTestingView):
         t.start()
 
         try:
-            webbrowser.open(f"http://localhost:{DEFAULT_WEB_UI_PORT}")
+            webbrowser.open(f"http://{self.server.host}:{DEFAULT_WEB_UI_PORT}")
         except Exception as e:
             print(f"Could not open webbrowser for status page: {str(e)}")
 

@@ -19,7 +19,7 @@ from contentctl.objects.enums import (
     DetectionTestingTargetInfrastructure,
 )
 
-from contentctl.objects.app import App
+from contentctl.objects.app import App, ENVIRONMENT_PATH_NOT_SET
 from contentctl.helper.utils import Utils
 
 
@@ -458,7 +458,7 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
         else:
             return v
 
-    @validator("apps")
+    @validator("apps",)
     def validate_apps(cls, v, values):
         Utils.check_required_fields(
             "repo_url", values, ["splunkbase_username", "splunkbase_password"]
@@ -478,6 +478,10 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
             )
 
         for app in v:
+            if app.environment_path != ENVIRONMENT_PATH_NOT_SET:
+                #Avoid re-configuring the apps that have already been configured.
+                continue
+
             try:
                 app.configure_app_source_for_container(
                     username, password, app_directory, CONTAINER_APP_DIR

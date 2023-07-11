@@ -39,6 +39,7 @@ from contentctl.actions.test import Test, TestInputDto, TestOutputDto
 
 import tqdm
 import functools
+from typing import Union
 
 
 def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
@@ -88,8 +89,8 @@ Running Splunk Security Content Control Tool (contentctl)
     )
 
 
-def start(args) -> Config:
-    return ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml")
+def start(args, validate_test=False) -> Config:
+    return ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml", validate_test)
 
 
 def initialize(args) -> None:
@@ -97,8 +98,9 @@ def initialize(args) -> None:
     Initialize().execute(InitializeInputDto(path=pathlib.Path(args.path)))
 
 
-def build(args) -> DirectorOutputDto:
-    config = start(args)
+def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
+    if config == None:
+        config = start(args)
     product_type = SecurityContentProduct.SPLUNK_APP
     director_input_dto = DirectorInputDto(
         input_path=os.path.abspath(args.path), product=product_type, config=config
@@ -127,7 +129,8 @@ def deploy(args) -> None:
 
 def test(args: argparse.Namespace):
     args = configure_unattended(args)
-    config = start(args)
+    config = start(args, validate_test=True)
+    
 
     # set some arguments that are not
     # yet exposed/written properly in
@@ -136,23 +139,14 @@ def test(args: argparse.Namespace):
     config.test.num_containers=1 
     config.test.post_test_behavior=PostTestBehavior(args.behavior)
     config.test.detections_list=args.detections_list
-    '''
-    test_config = TestConfig.parse_obj(
-        {
-            # "repo_path": args.path,
-            "mode": args.mode,
-            "num_containers": 1,
-            "post_test_behavior": args.behavior,
-            "detections_list": args.detections_list,
-        }
-    )
-    '''
+    
+    
 
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
     githubService = GithubService(config.test)
 
-    director_output_dto = build(args)
+    director_output_dto = build(args, config)
 
     # All this information will later come from the config, so we will
     # be able to do it in Test().execute. For now, we will do it here
@@ -255,7 +249,7 @@ def main():
     :param args: arguments passed by the user on command line while calling the script.
     :return: returns the output of the function called.
     """
-
+    
     # grab arguments
     parser = argparse.ArgumentParser(
         description="Use `contentctl action -h` to get help with any Splunk content action"
@@ -373,7 +367,7 @@ def main():
     )
 
     test_parser.add_argument("--unattended", action=argparse.BooleanOptionalAction)
-
+    
     test_parser.set_defaults(func=test)
 
     # parse them

@@ -10,7 +10,7 @@ from contentctl.objects.config import Config
 class ConfigHandler:
 
     @classmethod
-    def read_config(cls, config_path: pathlib.Path) -> Config:
+    def read_config(cls, config_path: pathlib.Path, validate_test:bool=False) -> Config:
         try:
             yml_dict = YmlReader.load_file(config_path)
         except:
@@ -18,6 +18,8 @@ class ConfigHandler:
             sys.exit(1)
 
         try: 
+            if validate_test == False:
+                yml_dict.pop("test")
             config = Config.parse_obj(yml_dict)
         except Exception as e:
             print(e)

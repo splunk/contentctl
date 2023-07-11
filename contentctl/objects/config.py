@@ -151,7 +151,7 @@ class Config(BaseModel):
     enrichments: ConfigEnrichments = ConfigEnrichments()
     rest_api_deployment_targets: list[ConfigDeployRestAPI] = [ConfigDeployRestAPI()]
     acs_deployment_targets: list[ConfigDeployACS] = []
-    test: TestConfig = TestConfig()
+    test: TestConfig = TestConfig.construct() #Disable validation for default object
 
 
 

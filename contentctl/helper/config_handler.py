@@ -1,7 +1,7 @@
 import os
 import collections
 import sys
-
+import pathlib
 
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.config import Config
@@ -10,7 +10,7 @@ from contentctl.objects.config import Config
 class ConfigHandler:
 
     @classmethod
-    def read_config(cls, config_path: str) -> Config:
+    def read_config(cls, config_path: pathlib.Path) -> Config:
         try:
             yml_dict = YmlReader.load_file(config_path)
         except:

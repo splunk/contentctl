@@ -16,7 +16,14 @@ class Initialize:
     def execute(self, input_dto: InitializeInputDto) -> None:
 
         c = Config()
-        YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl.yml'), c.dict())
+        # This field serialization hack is required to get
+        # enums declared in Pydantic Models serialized properly
+        # without emitting tags that make them hard to read in yml
+        import json
+        j = json.dumps(c.dict(),sort_keys=False)
+        obj=json.loads(j)
+        
+        YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl.yml'), dict(obj))
            
         folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'docs', 'reporting']
         for folder in folders:

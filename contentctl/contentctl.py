@@ -132,6 +132,11 @@ def test(args: argparse.Namespace):
     # set some arguments that are not
     # yet exposed/written properly in
     # the config file
+    config.test.mode=DetectionTestingMode(args.mode) 
+    config.test.num_containers=1 
+    config.test.post_test_behavior=PostTestBehavior(args.behavior)
+    config.test.detections_list=args.detections_list
+    '''
     test_config = TestConfig.parse_obj(
         {
             # "repo_path": args.path,
@@ -141,10 +146,11 @@ def test(args: argparse.Namespace):
             "detections_list": args.detections_list,
         }
     )
+    '''
 
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
-    githubService = GithubService(test_config)
+    githubService = GithubService(config.test)
 
     director_output_dto = build(args)
 
@@ -152,12 +158,12 @@ def test(args: argparse.Namespace):
     # be able to do it in Test().execute. For now, we will do it here
     app = App(
         uid=9999,
-        appid="my_custom_app",
-        title="my_custom_app",
-        release="1.0.0",
+        appid=config.build.name,
+        title=config.build.name,
+        release=config.build.version,
         http_path=None,
         local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"),
-        description="some description",
+        description=config.build.description,
         splunkbase_path=None,
     )
 
@@ -166,12 +172,12 @@ def test(args: argparse.Namespace):
     # unless we use always=True in the validator
     # we always want to keep CIM as the last app installed
 
-    test_config.apps = [app] + test_config.apps
+    config.test.apps = [app] + config.test.apps
 
     test_input_dto = TestInputDto(
         director_output_dto=director_output_dto,
         githubService=githubService,
-        config=test_config,
+        config=config.test,
     )
     test = Test()
 

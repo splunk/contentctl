@@ -2,6 +2,7 @@ from pydantic import BaseModel, validator, ValidationError, Field
 import semantic_version
 from datetime import datetime
 from typing import Union
+from contentctl.objects.test_config import TestConfig
 
 class ConfigGlobal(BaseModel):
     log_path: str
@@ -57,16 +58,10 @@ class ConfigAlertAction(BaseModel):
     notable: ConfigNotable
 
 
-class ConfigTest(BaseModel):
-    docker_image: str
-    apps: list
-    assets: str
-
-
 
 
 class ConfigDeploy(BaseModel):
-    server: str
+    server: str = "127.0.0.1"
 
 CREDENTIAL_MISSING = "PROVIDE_CREDENTIALS_VIA_CMD_LINE_ARGUMENT"
 class ConfigDeployACS(ConfigDeploy):
@@ -74,6 +69,7 @@ class ConfigDeployACS(ConfigDeploy):
     
 
 class ConfigDeployRestAPI(ConfigDeploy):
+    port: int = 8089
     username: str = CREDENTIAL_MISSING
     password: str = CREDENTIAL_MISSING
     
@@ -150,8 +146,12 @@ class ConfigEnrichments(BaseModel):
 class Config(BaseModel):
     #general: ConfigGlobal = ConfigGlobal()
     detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
-    test: Union[ConfigTest,None] = None
     deployments: Deployments = Deployments()
     build: ConfigBuild = ConfigBuild()
     enrichments: ConfigEnrichments = ConfigEnrichments()
+    rest_api_deployment_targets: list[ConfigDeployRestAPI] = [ConfigDeployRestAPI()]
+    acs_deployment_targets: list[ConfigDeployACS] = []
+    test: TestConfig = TestConfig()
+
+
 

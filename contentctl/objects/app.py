@@ -156,11 +156,10 @@ class App(BaseModel, extra=Extra.forbid):
 
         if v is not None:
             try:
-                res = bool(validator.url(v))
-                if res is False:
-                    raise Exception
+                if bool(validators.url(v)) == False:
+                    raise ValueError(f"splunkbase_url {v} is not a valid URL")
             except Exception as e:
-                raise (ValueError(f"splunkbase_url {v} is not a valid URL"))
+                raise (ValueError(f"Error validating the splunkbase_url: {str(e)}"))
 
             if (
                 bool(

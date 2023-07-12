@@ -91,13 +91,12 @@ class StoryCategory(str,enum.Enum):
     # to have mappings in the current version of ES
     # Should they be removed and the stories which
     # reference them updated?
-    print("\n\n****WARNING-ADDED ENUMS TO StoryCategory. Should we remove them?****\n\n")
     ACCOUNT_COMPROMSE = "Account Compromise"
-    LATERAL_MOVEMENT = "Lateral Movement"
-    PRIVILEDGE_ESCALATION  = "Privilege Escalation"
     DATA_DESTRUCTION = "Data Destruction"
-    UNAUTHORIZED_SOFTWARE = "Unauthorized Software"
+    LATERAL_MOVEMENT = "Lateral Movement"
+    PRIVILEGE_ESCALATION  = "Privilege Escalation"
     RANSOMWARE = "Ransomware"
+    UNAUTHORIZED_SOFTWARE = "Unauthorized Software"
   
   
 

@@ -3,7 +3,7 @@ import shutil
 import os
 import pathlib
 from dataclasses import dataclass
-from contentctl.objects.config import Config, TestConfig
+from contentctl.objects.config import Config, TestConfig, PASSWORD
 from contentctl.output.yml_writer import YmlWriter
 
 @dataclass(frozen=True)
@@ -16,7 +16,9 @@ class Initialize:
     def execute(self, input_dto: InitializeInputDto) -> None:
 
         c = Config()
-        t = TestConfig.construct() #Disable validation for default object
+        
+        t = TestConfig.construct(splunk_app_username="admin",
+                                 splunk_app_password= PASSWORD) #Disable validation for default object
 
         config_as_dict = c.dict()
         config_as_dict.pop("test")

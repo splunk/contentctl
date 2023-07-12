@@ -4,6 +4,10 @@ from datetime import datetime
 from typing import Union
 from contentctl.objects.test_config import TestConfig
 
+import string
+import random
+PASSWORD = ''.join([random.choice(string.ascii_letters + string.digits + string.punctuation) for i in range(16)])
+
 class ConfigGlobal(BaseModel):
     log_path: str
     log_level: str
@@ -71,8 +75,8 @@ class ConfigDeployACS(ConfigDeploy):
 
 class ConfigDeployRestAPI(ConfigDeploy):
     port: int = 8089
-    username: str = CREDENTIAL_MISSING
-    password: str = CREDENTIAL_MISSING
+    username: str = "admin"
+    password: str = PASSWORD
     
 
 class Deployments(BaseModel):

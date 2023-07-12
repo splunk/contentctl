@@ -155,8 +155,11 @@ class ConfOutput:
             from slim.utils import SlimLogger
             import logging
             #In order to avoid significant output, only emit FATAL log messages
-            SlimLogger.set_level(logging.FATAL)
-            slim.package(source=input_app_path, output_dir=pathlib.Path(self.config.build.path_root))
+            SlimLogger.set_level(logging.ERROR)
+            try:
+                slim.package(source=input_app_path, output_dir=pathlib.Path(self.config.build.path_root))
+            except SystemExit as e:
+                raise Exception(f"Error building package with slim: {str(e)}")
         else:
             with tarfile.open(output_app_expected_name, "w:gz") as app_archive:
                 app_archive.add(self.output_path, arcname=os.path.basename(self.output_path)) 

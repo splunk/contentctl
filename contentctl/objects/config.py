@@ -61,6 +61,7 @@ class ConfigAlertAction(BaseModel):
 
 
 class ConfigDeploy(BaseModel):
+    description: str = "Description for this deployment target"
     server: str = "127.0.0.1"
 
 CREDENTIAL_MISSING = "PROVIDE_CREDENTIALS_VIA_CMD_LINE_ARGUMENT"
@@ -76,7 +77,7 @@ class ConfigDeployRestAPI(ConfigDeploy):
 
 class Deployments(BaseModel):
     acs_deployments: list[ConfigDeployACS] = []
-    rest_api_deployments: list[ConfigDeployRestAPI] = []
+    rest_api_deployments: list[ConfigDeployRestAPI] = [ConfigDeployRestAPI()]
 
 
 
@@ -94,9 +95,9 @@ class ConfigBuildBa(BaseModel):
 class ConfigBuild(BaseModel):
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
-    name: str = Field(default="Custom_Splunk_Content_Pack", title="The name for your Content Pack (app) ")
+    name: str = Field(default="ContentPack",title="Internal name used by your app.  No spaces or special characters.")
     path_root: str = Field(default="dist",title="The root path at which you will build your app.")
-    prefix: str = Field(default="custom_prefix",title="A short prefix to easily identify all your content.")
+    prefix: str = Field(default="ContentPack",title="A short prefix to easily identify all your content.")
     build: int = Field(default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
                        title="Build number for your app.  This will always be a number that corresponds to the time of the build in the format YYYYMMDDHHMMSS")
     version: str = Field(default="0.0.1",title="The version of your Content Pack.  This must follow semantic versioning guidelines.")
@@ -115,8 +116,8 @@ class ConfigBuild(BaseModel):
     # * must not be any of the following names: CON, PRN, AUX, NUL,
     #   COM1, COM2, COM3, COM4, COM5, COM6, COM7, COM8, COM9,
     #   LPT1, LPT2, LPT3, LPT4, LPT5, LPT6, LPT7, LPT8, LPT9
-    id: str = Field(default="Custom_Splunk_Content_Pack",title="Special name required for publishing your app on Splunkbase")
-    label: str = Field(default="custom_label",title="Another label for your content.")
+    id: str = Field(default="ContentPack",title="Internal name used by your app.  No spaces or special characters.")
+    label: str = Field(default="Custom Splunk Content Pack",title="This is the app name that shows in the launcher.")
     author_name: str = Field(default="author name",title="Name of the Content Pack Author.")
     author_email: str = Field(default="author@contactemailaddress.com",title="Contact email for the Content Pack Author")
     author_company: str = Field(default="author company",title="Name of the company who has developed the Content Pack")

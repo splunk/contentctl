@@ -125,12 +125,16 @@ def inspect(args) -> None:
     i.execute(input_dto=input_dto)
 
 
-def deploy(args) -> None:
+def api_deploy(args) -> None:
     config = start(args)
     deploy_input_dto = API_DeployInputDto(path=pathlib.Path(args.path), config=config)
     deploy = API_Deploy()
+    
     deploy.execute(deploy_input_dto)
 
+def acs_deploy(args) -> None:
+    config = start(args)
+    raise NotImplementedError("ACS Deploy is not yet implemented.")
 
 def test(args: argparse.Namespace):
     args = configure_unattended(args)
@@ -293,8 +297,8 @@ def main():
         "inspect",
         help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.",
     )
-    deploy_parser = actions_parser.add_parser(
-        "deploy", help="install an application on a target Splunk instance."
+    api_deploy_parser = actions_parser.add_parser(
+        "api_deploy", help="Deploy content via API to a target Splunk Instance."
     )
     docs_parser = actions_parser.add_parser(
         "docs", help="create documentation in docs folder"
@@ -334,7 +338,7 @@ def main():
     )
     inspect_parser.set_defaults(func=inspect)
 
-    deploy_parser.set_defaults(func=deploy)
+    api_deploy_parser.set_defaults(func=api_deploy)
 
     test_parser.add_argument(
         "--mode",

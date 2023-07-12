@@ -99,8 +99,7 @@ def start(args, read_test_file:bool = False) -> Config:
 
 
 def initialize(args) -> None:
-
-    Initialize().execute(InitializeInputDto(path=pathlib.Path(args.path)))
+    Initialize().execute(InitializeInputDto(path=pathlib.Path(args.path), demo=args.demo))
 
 
 def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
@@ -310,6 +309,11 @@ def main():
     )
 
     init_parser.set_defaults(func=initialize)
+    init_parser.add_argument("--demo", action=argparse.BooleanOptionalAction, 
+                             help="Use this flag to pre-populate the content pack "
+                             "with one additional detection that will fail 'contentctl validate' "
+                             "and on detection that will fail 'contentctl test'.  This is useful "
+                             "for demonstrating contentctl functionality.")
 
     validate_parser.set_defaults(func=validate)
 

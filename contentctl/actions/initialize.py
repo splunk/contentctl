@@ -9,6 +9,7 @@ from contentctl.output.yml_writer import YmlWriter
 @dataclass(frozen=True)
 class InitializeInputDto:
     path: pathlib.Path
+    demo: bool = False
 
 
 class Initialize:
@@ -41,9 +42,12 @@ class Initialize:
         # Working Detection
         source_path = pathlib.Path(os.path.join(os.path.dirname(__file__), '../templates/detections/'))
         dest_path = pathlib.Path(os.path.join(input_dto.path, 'detections'))
-        for detection_name in ['anomalous_usage_of_7zip.yml', 
-                               'anomalous_usage_of_7zip_validation_fail.yml', 
-                               'anomalous_usage_of_7zip_test_fail.yml']:    
+        detections_to_populate = ['anomalous_usage_of_7zip.yml']
+        if input_dto.demo:
+            detections_to_populate += ['anomalous_usage_of_7zip_validation_fail.yml', 
+                                      'anomalous_usage_of_7zip_test_fail.yml']     
+                
+        for detection_name in detections_to_populate: 
             shutil.copyfile(
                 source_path/detection_name, 
                 dest_path/detection_name)

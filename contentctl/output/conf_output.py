@@ -7,7 +7,10 @@ import tarfile
 from typing import Union
 from pathlib import Path
 import pathlib
-from splunk_appinspect.main import validate, TEST_MODE, PRECERT_MODE, JSON_DATA_FORMAT, ERROR_LOG_LEVEL
+from splunk_appinspect.main import (
+    validate, MODE_OPTION, APP_PACKAGE_ARGUMENT, OUTPUT_FILE_OPTION, 
+    LOG_FILE_OPTION, INCLUDED_TAGS_OPTION, EXCLUDED_TAGS_OPTION, 
+    PRECERT_MODE, TEST_MODE)
 import shutil
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
@@ -142,11 +145,17 @@ class ConfOutput:
             use_slim = True
             
         except Exception as e:
-            print("Failed to import Splunk Packaging Toolkit (slim).  slim requires Python<3.10.  Packaging app with tar instead")
+            print("Failed to import Splunk Packaging Toolkit (slim).  slim requires Python<3.10.  "
+                  "Packaging app with tar instead. This should still work, but appinspect may catch "
+                  "errors that otherwise would have been flagged by slim.")
             use_slim = False
         
         if use_slim:
             import slim
+            from slim.utils import SlimLogger
+            import logging
+            #In order to avoid significant output, only emit FATAL log messages
+            SlimLogger.set_level(logging.FATAL)
             slim.package(source=input_app_path, output_dir=pathlib.Path(self.config.build.path_root))
         else:
             with tarfile.open(output_app_expected_name, "w:gz") as app_archive:
@@ -165,25 +174,35 @@ class ConfOutput:
         
         # Note that all tags are available and described here:
         # https://dev.splunk.com/enterprise/reference/appinspect/appinspecttagreference/ 
-        included_tags = ["appapproval", 
-                         "cloud", 
-                         "packaging_standards", 
-                         "private_app", 
-                         "private_victoria", 
-                         "savedsearches", 
-                         "security", 
-                         "service", 
-                         "splunk_9_0", 
-                         "splunk_appinspect"]
-        included_tags_string =','.join(included_tags)
+        # By default, precert mode will run ALL checks.  Explicitly included or excluding tags will 
+        # change this behavior. To give the most thorough inspection, we leave these empty so that
+        # ALL checks are run
+        included_tags = []
         excluded_tags = []
 
-        excluded_tags_string = ','.join(excluded_tags)
+        appinspect_output = pathlib.Path(self.config.build.path_root)/"appinspect_results.json"
+        appinspect_logging = pathlib.Path(self.config.build.path_root)/"appinspect_logging.log"
         try:
-            validate([str(name_without_version)], PRECERT_MODE, included_tags_string, excluded_tags_string)
+            arguments_list = [(APP_PACKAGE_ARGUMENT, str(name_without_version))]
+            options_list = []
+            options_list += [MODE_OPTION, TEST_MODE]
+            options_list += [OUTPUT_FILE_OPTION, str(appinspect_output)]
+            options_list += [LOG_FILE_OPTION, str(appinspect_logging)]
+            
+            #If there are any tags defined, then include them here
+            for opt in included_tags:
+                options_list += [INCLUDED_TAGS_OPTION, opt]
+            for opt in excluded_tags:
+                options_list += [EXCLUDED_TAGS_OPTION, opt]
+
+            cmdline = options_list + [arg[1] for arg in arguments_list]       
+            print(cmdline)
+            validate(cmdline)
+    
+            #validate([str(name_without_version)], PRECERT_MODE, included_tags_string, excluded_tags_string)
         except SystemExit as e:
             if e.code == 0:
-                print("AppInspect passed!")
+                print(f"AppInspect passed! Please check [ {appinspect_output} , {appinspect_logging} ] for verbose information.")
             else:
                 if sys.version.startswith('3.11') or sys.version.startswith('3.12'):
                     raise Exception("At this time, AppInspect may fail on valid apps under Python>=3.11 with " 
@@ -193,3 +212,18 @@ class ConfOutput:
                                     "report output above for errors.")
                 else: 
                     raise Exception("AppInspect Failure - Please review the appinspect report output above for errors.")        
+        finally:
+                # appinspect outputs the log in json format, but does not format it to be easier
+                # to read (it is all in one line). Read back that file and write it so it
+                # is easier to understand
+                try:
+                    with open(appinspect_output, "r+") as logfile:
+                        import json
+                        j = json.load(logfile)
+                        #Seek back to the beginning of the file. We don't need to clear
+                        #it sice we will always write AT LEAST the same number of characters
+                        #back as we read
+                        logfile.seek(0)
+                        json.dump(j, logfile, indent=3, )
+                except Exception as e:
+                    print(f"Failed to format {appinspect_output}: {str(e)}")

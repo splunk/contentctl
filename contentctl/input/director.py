@@ -72,7 +72,6 @@ class Director():
     def execute(self, input_dto: DirectorInputDto) -> None:
         self.input_dto = input_dto
         
-        
         if self.input_dto.config.enrichments.attack_enrichment:
             self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path)
         
@@ -82,7 +81,6 @@ class Director():
         self.investigation_builder = InvestigationBuilder()
         self.story_builder = StoryBuilder()
         self.detection_builder = DetectionBuilder()
-
         if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
@@ -92,11 +90,10 @@ class Director():
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
             self.createSecurityContent(SecurityContentType.stories)
-
         elif self.input_dto.product == SecurityContentProduct.SSA:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.detections)
-            
+        
 
     def createSecurityContent(self, type: SecurityContentType) -> None:
         objects = []
@@ -175,7 +172,7 @@ class Director():
                         print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
             
             except ValidationError as e:
-                print('\nValidation Error for file ' + file)
+                print(f"\nValidation Error for file '{file}'")
                 print(e)
                 validation_error_found = True
 

@@ -387,5 +387,7 @@ def main():
         args.func(args)
     except Exception as e:
         print(f"Error during contentctl:\n{str(e)}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
     

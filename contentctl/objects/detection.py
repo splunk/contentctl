@@ -102,7 +102,7 @@ class Detection(SecurityContentObject):
 
     @validator("tests")
     def tests_validate(cls, v, values):
-        if values["status"] != DetectionStatus.production and not v:
+        if values.get("status","") != DetectionStatus.production and not v:
             raise ValueError(
                 "tests value is needed for production detection: " + values["name"]
             )
@@ -110,13 +110,13 @@ class Detection(SecurityContentObject):
 
     @validator("experimental", always=True)
     def experimental_validate(cls, v, values):
-        if DetectionStatus(values["status"]) == DetectionStatus.experimental:
+        if DetectionStatus(values.get("status","")) == DetectionStatus.experimental:
             return True
         return False
 
     @validator("deprecated", always=True)
     def deprecated_validate(cls, v, values):
-        if DetectionStatus(values["status"]) == DetectionStatus.deprecated:
+        if DetectionStatus(values.get("status","")) == DetectionStatus.deprecated:
             return True
         return False
     

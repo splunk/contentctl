@@ -38,10 +38,16 @@ class Initialize:
         for folder in folders:
             os.makedirs(os.path.join(input_dto.path, folder))
 
-        shutil.copyfile(
-            os.path.join(os.path.dirname(__file__), '../templates/detections/anomalous_usage_of_7zip.yml'), 
-            os.path.join(input_dto.path, 'detections', 'anomalous_usage_of_7zip.yml')
-        )
+        # Working Detection
+        source_path = pathlib.Path(os.path.join(os.path.dirname(__file__), '../templates/detections/'))
+        dest_path = pathlib.Path(os.path.join(input_dto.path, 'detections'))
+        for detection_name in ['anomalous_usage_of_7zip.yml', 
+                               'anomalous_usage_of_7zip_validation_fail.yml', 
+                               'anomalous_usage_of_7zip_test_fail.yml']:    
+            shutil.copyfile(
+                source_path/detection_name, 
+                dest_path/detection_name)
+        
 
         shutil.copyfile(
             os.path.join(os.path.dirname(__file__), '../templates/stories/cobalt_strike.yml'), 

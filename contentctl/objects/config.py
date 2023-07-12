@@ -6,7 +6,7 @@ from contentctl.objects.test_config import TestConfig
 
 import string
 import random
-PASSWORD = ''.join([random.choice(string.ascii_letters + string.digits + string.punctuation) for i in range(16)])
+PASSWORD = ''.join([random.choice(string.ascii_letters + string.digits) for i in range(16)])
 
 class ConfigGlobal(BaseModel):
     log_path: str

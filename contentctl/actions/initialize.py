@@ -3,7 +3,7 @@ import shutil
 import os
 import pathlib
 from dataclasses import dataclass
-from contentctl.objects.config import Config
+from contentctl.objects.config import Config, TestConfig
 from contentctl.output.yml_writer import YmlWriter
 
 @dataclass(frozen=True)
@@ -16,15 +16,22 @@ class Initialize:
     def execute(self, input_dto: InitializeInputDto) -> None:
 
         c = Config()
+        t = TestConfig.construct() #Disable validation for default object
+
+        config_as_dict = c.dict()
+        config_as_dict.pop("test")
+        YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl.yml'), config_as_dict)
+
+        
         # This field serialization hack is required to get
         # enums declared in Pydantic Models serialized properly
         # without emitting tags that make them hard to read in yml
         import json
-        j = json.dumps(c.dict(),sort_keys=False)
+        j = json.dumps(t.dict(),sort_keys=False)
         obj=json.loads(j)
-        
-        YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl.yml'), dict(obj))
-           
+        YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl_test.yml'), dict(obj))
+
+
         folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'docs', 'reporting']
         for folder in folders:
             os.makedirs(os.path.join(input_dto.path, folder))

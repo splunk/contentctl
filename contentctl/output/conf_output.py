@@ -195,11 +195,9 @@ class ConfOutput:
             for opt in excluded_tags:
                 options_list += [EXCLUDED_TAGS_OPTION, opt]
 
-            cmdline = options_list + [arg[1] for arg in arguments_list]       
-            print(cmdline)
+            cmdline = options_list + [arg[1] for arg in arguments_list]        
             validate(cmdline)
     
-            #validate([str(name_without_version)], PRECERT_MODE, included_tags_string, excluded_tags_string)
         except SystemExit as e:
             if e.code == 0:
                 print(f"AppInspect passed! Please check [ {appinspect_output} , {appinspect_logging} ] for verbose information.")

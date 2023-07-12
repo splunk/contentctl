@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator, ValidationError, Field
+from pydantic import BaseModel, validator, ValidationError, Field, Extra
 import semantic_version
 from datetime import datetime
 from typing import Union
@@ -143,15 +143,13 @@ class ConfigEnrichments(BaseModel):
 
 
 
-class Config(BaseModel):
+class Config(BaseModel, extra=Extra.forbid):
     #general: ConfigGlobal = ConfigGlobal()
     detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
     deployments: Deployments = Deployments()
     build: ConfigBuild = ConfigBuild()
     enrichments: ConfigEnrichments = ConfigEnrichments()
-    rest_api_deployment_targets: list[ConfigDeployRestAPI] = [ConfigDeployRestAPI()]
-    acs_deployment_targets: list[ConfigDeployACS] = []
-    test: TestConfig = TestConfig.construct() #Disable validation for default object
-
+    test: Union[TestConfig,None] = None 
+    
 
 

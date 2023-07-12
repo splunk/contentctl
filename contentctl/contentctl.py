@@ -89,8 +89,13 @@ Running Splunk Security Content Control Tool (contentctl)
     )
 
 
-def start(args, validate_test=False) -> Config:
-    return ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml", validate_test)
+def start(args, read_test_file:bool = False) -> Config:
+    base_config = ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml")
+    if read_test_file:
+        base_config.test = ConfigHandler.read_test_config(pathlib.Path(args.path)/"contentctl_test.yml")
+    return base_config
+
+
 
 
 def initialize(args) -> None:
@@ -129,7 +134,7 @@ def deploy(args) -> None:
 
 def test(args: argparse.Namespace):
     args = configure_unattended(args)
-    config = start(args, validate_test=True)
+    config = start(args, read_test_file=True)
     
 
     # set some arguments that are not
@@ -374,4 +379,9 @@ def main():
     args = parser.parse_args()
 
     print_ascii_art()
-    args.func(args)
+    try:
+        args.func(args)
+    except Exception as e:
+        print(f"Error during contentctl:\n{str(e)}")
+        sys.exit(1)
+    

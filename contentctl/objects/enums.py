@@ -39,14 +39,30 @@ class SecurityContentType(enum.Enum):
     investigations = 8
     unit_tests = 9
 
-
+# Bringing these changes back in line will take some time after
+# the initial merge is complete
+# class SecurityContentProduct(enum.Enum):
+#     # This covers ESCU as well as other apps initialized
+#     # by splunk_security_content_builder
+#     splunk_app = "splunk_app"
+#     ba_objects = "ba_objects"
+#     json_objects = "json_objects"
 class SecurityContentProduct(enum.Enum):
-    # This covers ESCU as well as other apps initialized
-    # by splunk_security_content_builder
-    splunk_app = "splunk_app"
-    ba_objects = "ba_objects"
-    json_objects = "json_objects"
+    SPLUNK_APP = 1
+    SSA = 2
+    API = 3
+    CUSTOM = 4
 
+class SigmaConverterTarget(enum.Enum):
+    CIM = 1
+    RAW = 2
+    OCSF = 3
+    ALL = 4
+
+class DetectionStatus(enum.Enum):
+    production = "production"
+    deprecated = "deprecated"
+    experimental = "experimental"
 
 class LogLevel(enum.Enum):
     NONE = "NONE"
@@ -59,6 +75,30 @@ class AlertActions(enum.Enum):
     rba = "rba"
     email = "email"
 
+class StoryCategory(str,enum.Enum):
+    ABUSE = "Abuse"
+    ADVERSARY_TACTICS = "Adversary Tactics"
+    BEST_PRACTICES = "Best Practices"
+    CLOUD_SECURITY = "Cloud Security"
+    COMPLIANCE = "Compliance"
+    MALWARE = "Malware"
+    UNCATEGORIZED = "Uncategorized"
+    VULNERABILITY = "Vulnerability"
+    
+
+    # The following categories are currently used in
+    # security_content stories but do not appear
+    # to have mappings in the current version of ES
+    # Should they be removed and the stories which
+    # reference them updated?
+    ACCOUNT_COMPROMSE = "Account Compromise"
+    DATA_DESTRUCTION = "Data Destruction"
+    LATERAL_MOVEMENT = "Lateral Movement"
+    PRIVILEGE_ESCALATION  = "Privilege Escalation"
+    RANSOMWARE = "Ransomware"
+    UNAUTHORIZED_SOFTWARE = "Unauthorized Software"
+  
+  
 
 class PostTestBehavior(str, enum.Enum):
     always_pause = "always_pause"
@@ -83,3 +123,4 @@ class InstanceState(str, enum.Enum):
     error = "error"
     stopping = "stopping"
     stopped = "stopped"
+

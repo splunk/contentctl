@@ -5,7 +5,6 @@ from posixpath import split
 from typing import Optional
 import sys
 from attackcti import attack_client
-from functools import cache
 import logging
 logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
 
@@ -13,14 +12,18 @@ logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
 class AttackEnrichment():
 
     @classmethod
-
-    def get_attack_lookup(self, input_path: str) -> dict:
+    def get_attack_lookup(self, input_path: str, store_csv = False, force_cached_or_offline: bool = False, skip_enrichment:bool = False) -> dict:
         print("Getting MITRE Attack Enrichment Data. This may take some time...")
         attack_lookup = dict()
         file_path = os.path.join(input_path, "lookups", "mitre_enrichment.csv")
 
+        if skip_enrichment is True:
+            print("Skipping enrichment")
+            return attack_lookup
         try:
 
+            if force_cached_or_offline is True:
+                raise(Exception("WARNING - Using cached MITRE Attack Enrichment.  Attack Enrichment may be out of date. Only use this setting for offline environments and development purposes."))
             print(f"\r{'Client'.rjust(23)}: [{0:3.0f}%]...", end="", flush=True)
             lift = attack_client()
             print(f"\r{'Client'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
@@ -56,23 +59,24 @@ class AttackEnrichment():
                 if not ('revoked' in technique):
                     attack_lookup[technique['technique_id']] = {'technique': technique['technique'], 'tactics': tactics, 'groups': apt_groups}
 
-            f = open(file_path, 'w')
-            writer = csv.writer(f)
-            writer.writerow(['mitre_id', 'technique', 'tactics' ,'groups'])
-            for key in attack_lookup.keys():
-                if len(attack_lookup[key]['groups']) == 0:
-                    groups = 'no'
-                else:
-                    groups = '|'.join(attack_lookup[key]['groups'])
+            if store_csv:
+                f = open(file_path, 'w')
+                writer = csv.writer(f)
+                writer.writerow(['mitre_id', 'technique', 'tactics' ,'groups'])
+                for key in attack_lookup.keys():
+                    if len(attack_lookup[key]['groups']) == 0:
+                        groups = 'no'
+                    else:
+                        groups = '|'.join(attack_lookup[key]['groups'])
+                    
+                    writer.writerow([
+                        key,
+                        attack_lookup[key]['technique'],
+                        '|'.join(attack_lookup[key]['tactics']),
+                        groups
+                    ])
                 
-                writer.writerow([
-                    key,
-                    attack_lookup[key]['technique'],
-                    '|'.join(attack_lookup[key]['tactics']),
-                    groups
-                ])
-            
-            f.close()
+                f.close()
 
         except Exception as err:
             print('Warning: ' + str(err))

@@ -1,5 +1,5 @@
 import sys
-
+import pathlib
 from pydantic import ValidationError
 
 from contentctl.input.yml_reader import YmlReader
@@ -11,15 +11,16 @@ from contentctl.objects.enums import SecurityContentProduct
 class BaselineBuilder():
     baseline : Baseline
 
-    def setObject(self, path: str) -> None:
+    def setObject(self, path: pathlib.Path) -> None:
         yml_dict = YmlReader.load_file(path)
         yml_dict["tags"]["name"] = yml_dict["name"]
-
+        
         try:
             self.baseline = Baseline.parse_obj(yml_dict)
+            
         
         except ValidationError as e:
-            print('Validation Error for file ' + path)
+            print('Validation Error for file ' + str(path))
             print(e)
             sys.exit(1)
 

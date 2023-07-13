@@ -3,7 +3,7 @@ import argparse
 import os
 
 import yaml
-
+import pathlib
 from contentctl.actions.detection_testing.GitHubService import (
     GithubService,
 )
@@ -17,7 +17,9 @@ from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.new_content import NewContentInputDto, NewContent
 from contentctl.actions.doc_gen import DocGenInputDto, DocGen
 from contentctl.actions.initialize import Initialize, InitializeInputDto
-from contentctl.actions.deploy import Deploy, DeployInputDto
+from contentctl.actions.inspect import InspectInputDto, Inspect
+from contentctl.actions.api_deploy import API_Deploy, API_DeployInputDto
+
 from contentctl.input.director import DirectorInputDto
 from contentctl.objects.enums import (
     SecurityContentType,
@@ -37,6 +39,7 @@ from contentctl.actions.test import Test, TestInputDto, TestOutputDto
 
 import tqdm
 import functools
+from typing import Union
 
 
 def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
@@ -86,18 +89,23 @@ Running Splunk Security Content Control Tool (contentctl)
     )
 
 
-def start(args) -> Config:
-    return ConfigHandler.read_config(os.path.join(args.path, "contentctl.yml"))
+def start(args, read_test_file:bool = False) -> Config:
+    base_config = ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml")
+    if read_test_file:
+        base_config.test = ConfigHandler.read_test_config(pathlib.Path(args.path)/"contentctl_test.yml")
+    return base_config
+
+
 
 
 def initialize(args) -> None:
+    Initialize().execute(InitializeInputDto(path=pathlib.Path(args.path), demo=args.demo))
 
-    Initialize().execute(InitializeInputDto(path=os.path.abspath(args.path)))
 
-
-def build(args) -> DirectorOutputDto:
-    config = start(args)
-    product_type = SecurityContentProduct.splunk_app
+def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
+    if config == None:
+        config = start(args)
+    product_type = SecurityContentProduct.SPLUNK_APP
     director_input_dto = DirectorInputDto(
         input_path=os.path.abspath(args.path), product=product_type, config=config
     )
@@ -109,52 +117,58 @@ def build(args) -> DirectorOutputDto:
 
 
 def inspect(args) -> None:
-    raise (Exception("WARNING - INSPECT NOT YET IMPLEMENTED"))
-    # Inspect(args)
+    config=start(args)
+    app_path = pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"
+    input_dto = InspectInputDto(path=app_path)
+    i = Inspect()
+    i.execute(input_dto=input_dto)
 
 
-def deploy(args) -> None:
+def api_deploy(args) -> None:
     config = start(args)
-    deploy_input_dto = DeployInputDto(path=args.path, config=config)
-    deploy = Deploy()
+    deploy_input_dto = API_DeployInputDto(path=pathlib.Path(args.path), config=config)
+    deploy = API_Deploy()
+    
     deploy.execute(deploy_input_dto)
 
+def acs_deploy(args) -> None:
+    config = start(args)
+    raise NotImplementedError("ACS Deploy is not yet implemented.")
 
 def test(args: argparse.Namespace):
     args = configure_unattended(args)
-    config = start(args)
+    config = start(args, read_test_file=True)
+    
 
     # set some arguments that are not
     # yet exposed/written properly in
     # the config file
-    test_config = TestConfig.parse_obj(
-        {
-            # "repo_path": args.path,
-            "mode": args.mode,
-            "num_containers": 1,
-            "post_test_behavior": args.behavior,
-            "detections_list": args.detections_list,
-        }
-    )
+    config.test.mode=DetectionTestingMode(args.mode) 
+    config.test.num_containers=1 
+    config.test.post_test_behavior=PostTestBehavior(args.behavior)
+    config.test.detections_list=args.detections_list
+    
+    
 
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
-    githubService = GithubService(test_config)
+    githubService = GithubService(config.test)
 
-    director_output_dto = build(args)
+    
+    director_output_dto = build(args, config)
+
+    
 
     # All this information will later come from the config, so we will
     # be able to do it in Test().execute. For now, we will do it here
     app = App(
         uid=9999,
-        appid="my_custom_app",
-        title="my_custom_app",
-        release="1.0.0",
+        appid=config.build.name,
+        title=config.build.name,
+        release=config.build.version,
         http_path=None,
-        local_path=os.path.join(
-            os.path.abspath(args.path), f"{config.build.splunk_app.path}.tar.gz"
-        ),
-        description="some description",
+        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"),
+        description=config.build.description,
         splunkbase_path=None,
     )
 
@@ -163,16 +177,19 @@ def test(args: argparse.Namespace):
     # unless we use always=True in the validator
     # we always want to keep CIM as the last app installed
 
-    test_config.apps = [app] + test_config.apps
+    config.test.apps = [app] + config.test.apps
 
+    
     test_input_dto = TestInputDto(
         director_output_dto=director_output_dto,
         githubService=githubService,
-        config=test_config,
+        config=config.test,
     )
+    
     test = Test()
 
     try:
+        
         result = test.execute(test_input_dto)
         # This return code is important.  Even if testing
         # fully completes, if everything does not pass then
@@ -183,15 +200,15 @@ def test(args: argparse.Namespace):
             sys.exit(1)
 
     except Exception as e:
-        print("Error running contentctl test: {str(e)}")
+        print(f"Error running contentctl test: {str(e)}")
         sys.exit(1)
 
 
 def validate(args) -> None:
     config = start(args)
-    product_type = SecurityContentProduct.splunk_app
+    product_type = SecurityContentProduct.SPLUNK_APP
     director_input_dto = DirectorInputDto(
-        input_path=os.path.abspath(args.path), product=product_type, config=config
+        input_path=pathlib.Path(args.path), product=product_type, config=config
     )
     validate_input_dto = ValidateInputDto(director_input_dto=director_input_dto)
     validate = Validate()
@@ -201,7 +218,7 @@ def validate(args) -> None:
 def doc_gen(args) -> None:
     config = start(args)
     director_input_dto = DirectorInputDto(
-        input_path=args.path, product=SecurityContentProduct.splunk_app, config=config
+        input_path=pathlib.Path(args.path), product=SecurityContentProduct.SPLUNK_APP, config=config
     )
 
     doc_gen_input_dto = DocGenInputDto(director_input_dto=director_input_dto)
@@ -231,7 +248,7 @@ def new_content(args) -> None:
 def reporting(args) -> None:
     config = start(args)
     director_input_dto = DirectorInputDto(
-        input_path=args.path, product=SecurityContentProduct.splunk_app, config=config
+        input_path=args.path, product=SecurityContentProduct.SPLUNK_APP, config=config
     )
 
     reporting_input_dto = ReportingInputDto(director_input_dto=director_input_dto)
@@ -246,7 +263,7 @@ def main():
     :param args: arguments passed by the user on command line while calling the script.
     :return: returns the output of the function called.
     """
-
+    
     # grab arguments
     parser = argparse.ArgumentParser(
         description="Use `contentctl action -h` to get help with any Splunk content action"
@@ -285,8 +302,8 @@ def main():
         "inspect",
         help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.",
     )
-    deploy_parser = actions_parser.add_parser(
-        "deploy", help="install an application on a target Splunk instance."
+    api_deploy_parser = actions_parser.add_parser(
+        "api_deploy", help="Deploy content via API to a target Splunk Instance."
     )
     docs_parser = actions_parser.add_parser(
         "docs", help="create documentation in docs folder"
@@ -298,6 +315,11 @@ def main():
     )
 
     init_parser.set_defaults(func=initialize)
+    init_parser.add_argument("--demo", action=argparse.BooleanOptionalAction, 
+                             help="Use this flag to pre-populate the content pack "
+                             "with one additional detection that will fail 'contentctl validate' "
+                             "and on detection that will fail 'contentctl test'.  This is useful "
+                             "for demonstrating contentctl functionality.")
 
     validate_parser.set_defaults(func=validate)
 
@@ -326,7 +348,7 @@ def main():
     )
     inspect_parser.set_defaults(func=inspect)
 
-    deploy_parser.set_defaults(func=deploy)
+    api_deploy_parser.set_defaults(func=api_deploy)
 
     test_parser.add_argument(
         "--mode",
@@ -364,11 +386,18 @@ def main():
     )
 
     test_parser.add_argument("--unattended", action=argparse.BooleanOptionalAction)
-
+    
     test_parser.set_defaults(func=test)
 
     # parse them
     args = parser.parse_args()
 
     print_ascii_art()
-    args.func(args)
+    try:
+        args.func(args)
+    except Exception as e:
+        print(f"Error during contentctl:\n{str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+    

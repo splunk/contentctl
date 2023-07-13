@@ -17,7 +17,7 @@ from contentctl.helper.utils import Utils
 import yaml
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{release}/download"
-
+ENVIRONMENT_PATH_NOT_SET = "ENVIRONMENT_PATH_NOT_SET"
 
 class App(BaseModel, extra=Extra.forbid):
 
@@ -25,7 +25,7 @@ class App(BaseModel, extra=Extra.forbid):
     # homemade applications will not have this
     uid: Union[int, None]
 
-    # appid is basically the internal name of you app
+    # appid is basically the internal name of your app
     appid: str
 
     # Title is the human readable name for your application
@@ -43,7 +43,7 @@ class App(BaseModel, extra=Extra.forbid):
     # Ultimate source of the app. Can be a local path or a Splunkbase Path.
     # This will be set via a function call and should not be provided in the YML
     # Note that this is the path relative to the container mount
-    environment_path: str = "ENVIRONMENT_PATH_NOT_SET"
+    environment_path: str = ENVIRONMENT_PATH_NOT_SET
 
     def configure_app_source_for_container(
         self,
@@ -156,11 +156,10 @@ class App(BaseModel, extra=Extra.forbid):
 
         if v is not None:
             try:
-                res = bool(validator.url(v))
-                if res is False:
-                    raise Exception
+                if bool(validators.url(v)) == False:
+                    raise ValueError(f"splunkbase_url {v} is not a valid URL")
             except Exception as e:
-                raise (ValueError(f"splunkbase_url {v} is not a valid URL"))
+                raise (ValueError(f"Error validating the splunkbase_url: {str(e)}"))
 
             if (
                 bool(

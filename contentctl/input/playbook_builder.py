@@ -1,7 +1,7 @@
 
 import sys
 import os
-
+import pathlib
 from pydantic import ValidationError
 from pathlib import Path
 
@@ -11,20 +11,20 @@ from contentctl.input.yml_reader import YmlReader
 
 class PlaybookBuilder():
     playbook: Playbook
-    input_path: str
+    input_path: pathlib.Path
     
     
-    def __init__(self, input_path: str):
+    def __init__(self, input_path: pathlib.Path):
         self.input_path = input_path
 
-    def setObject(self, path: str) -> None:
+    def setObject(self, path: pathlib.Path) -> None:
         yml_dict = YmlReader.load_file(path)
 
         try:
             self.playbook = Playbook.parse_obj(yml_dict)
 
         except ValidationError as e:
-            print('Validation Error for file ' + path)
+            print('Validation Error for file ' + str(path))
             print(e)
             sys.exit(1)
 
@@ -65,3 +65,4 @@ class PlaybookBuilder():
             path_components = normalized_path.split(os.sep)
             value_index = path_components.index('detections')
             return "/".join(path_components[value_index:])
+        raise Exception(f"Failed to find detection path for playbook with name '{detection_name}'")

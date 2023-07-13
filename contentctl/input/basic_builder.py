@@ -1,5 +1,5 @@
 import sys
-
+import pathlib
 from pydantic import ValidationError
 
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -16,7 +16,8 @@ class BasicBuilder():
     security_content_obj : SecurityContentObject
 
 
-    def setObject(self, path: str, type: SecurityContentType) -> None:
+    def setObject(self, path: pathlib.Path, type: SecurityContentType) -> None:
+        #print(path)
         yml_dict = YmlReader.load_file(path)
         if type == SecurityContentType.deployments:
             if "alert_action" in yml_dict:
@@ -26,28 +27,28 @@ class BasicBuilder():
             try:
                 self.security_content_obj = Deployment.parse_obj(yml_dict)
             except ValidationError as e:
-                print('Validation Error for file ' + path)
+                print('Validation Error for file ' + str(path))
                 print(e)
                 sys.exit(1)
         elif type == SecurityContentType.macros:
             try:
                 self.security_content_obj = Macro.parse_obj(yml_dict)
             except ValidationError as e:
-                print('Validation Error for file ' + path)
+                print('Validation Error for file ' + str(path))
                 print(e)
                 sys.exit(1)
         elif type == SecurityContentType.lookups:
             try:
                 self.security_content_obj = Lookup.parse_obj(yml_dict)
             except ValidationError as e:
-                print('Validation Error for file ' + path)
+                print('Validation Error for file ' + str(path))
                 print(e)
                 sys.exit(1)
         elif type == SecurityContentType.unit_tests:
             try:
                 self.security_content_obj = UnitTest.parse_obj(yml_dict)
             except ValidationError as e:
-                print('Validation Error for file ' + path)
+                print('Validation Error for file ' + str(path))
                 print(e)
                 sys.exit(1)
     

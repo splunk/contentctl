@@ -23,7 +23,7 @@ class Generate:
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)
 
-        if input_dto.director_input_dto.product == SecurityContentProduct.splunk_app:
+        if input_dto.director_input_dto.product == SecurityContentProduct.SPLUNK_APP:
             conf_output = ConfOutput(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config)
             conf_output.writeHeaders()
             conf_output.writeObjects(director_output_dto.detections, SecurityContentType.detections)
@@ -32,9 +32,11 @@ class Generate:
             conf_output.writeObjects(director_output_dto.investigations, SecurityContentType.investigations)
             conf_output.writeObjects(director_output_dto.lookups, SecurityContentType.lookups)
             conf_output.writeObjects(director_output_dto.macros, SecurityContentType.macros)
+            conf_output.writeAppConf()
             conf_output.packageApp()
+            conf_output.inspectApp()
 
-        elif input_dto.director_input_dto.product == SecurityContentProduct.ba_objects:
+        elif input_dto.director_input_dto.product == SecurityContentProduct.SSA:
             shutil.rmtree(input_dto.output_path + '/srs/', ignore_errors=True)
             shutil.rmtree(input_dto.output_path + '/complex/', ignore_errors=True)
             os.makedirs(input_dto.output_path + '/complex/')
@@ -42,7 +44,7 @@ class Generate:
             ba_yml_output = BAYmlOutput()
             ba_yml_output.writeObjects(director_output_dto.detections, input_dto.output_path)
 
-        elif input_dto.director_input_dto.product == SecurityContentProduct.json_objects:
+        elif input_dto.director_input_dto.product == SecurityContentProduct.API:
             api_json_output = ApiJsonOutput()
             api_json_output.writeObjects(director_output_dto.detections, input_dto.output_path, SecurityContentType.detections)
             api_json_output.writeObjects(director_output_dto.stories, input_dto.output_path, SecurityContentType.stories)

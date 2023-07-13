@@ -4,13 +4,12 @@ from typing import Union
 
 
 class UnitTestAttackData(BaseModel):
-    file_name: str
-    data: str
-    source: str
-    sourcetype: str
-    update_timestamp: bool = False
-    custom_index: Union[str, None] = None
-    host: Union[str, None] = None
+    data: str = None
+    source: str = None
+    sourcetype: str = None
+    update_timestamp: bool = None
+    custom_index: str = None
+    host: str = None
 
     @validator("data", always=True)
     def validate_data(cls, v, values):

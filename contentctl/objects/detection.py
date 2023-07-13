@@ -6,12 +6,14 @@ import sys
 
 from pydantic import BaseModel, validator, root_validator, Extra
 from dataclasses import dataclass
+from typing import Union
 from datetime import datetime, timedelta
 
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
+from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.config import ConfigDetectionConfiguration
 from contentctl.objects.unit_test import UnitTest
@@ -20,31 +22,31 @@ from contentctl.objects.lookup import Lookup
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.playbook import Playbook
 from contentctl.helper.link_validator import LinkValidator
+from contentctl.objects.enums import SecurityContentType
 
 
-from typing import Union
-
-
-class Detection(BaseModel, SecurityContentObject):
+class Detection(SecurityContentObject):
     # detection spec
-    name: str
-    id: str
-    version: int
-    date: str
-    author: str
+    #name: str
+    #id: str
+    #version: int
+    #date: str
+    #author: str
+    contentType: SecurityContentType = SecurityContentType.detections
     type: str
-    datamodel: list
-    description: str
-    search: str
+    status: DetectionStatus
+    #description: str
+    data_source: list[str]
+    search: Union[str, dict]
     how_to_implement: str
     known_false_positives: str
-    check_references: bool = (
-        False  # Validation is done in order, this field must be defined first
-    )
+    check_references: bool = False  
     references: list
     tags: DetectionTags
+    tests: list[UnitTest] = []
 
     # enrichments
+    datamodel: list = None
     deprecated: bool = None
     experimental: bool = None
     deployment: ConfigDetectionConfiguration = None
@@ -53,7 +55,6 @@ class Detection(BaseModel, SecurityContentObject):
     playbooks: list[Playbook] = None
     baselines: list[Baseline] = None
     mappings: dict = None
-    test: UnitTest = None
     macros: list[Macro] = None
     lookups: list[Lookup] = None
     cve_enrichment: list = None
@@ -62,35 +63,10 @@ class Detection(BaseModel, SecurityContentObject):
     source: str = None
     nes_fields: str = None
     providing_technologies: list = None
+    runtime: str = None
 
-    # @validator('name')
-    # def name_max_length(cls, v, values):
-    #     if len(v) > 67:
-    #         raise ValueError('name is longer then 67 chars: ' + v)
-    #     return v
-
-    @validator("name")
-    def name_invalid_chars(cls, v):
-        invalidChars = set(string.punctuation.replace("-", ""))
-        if any(char in invalidChars for char in v):
-            raise ValueError("invalid chars used in name: " + v)
-        return v
-
-    @validator("id")
-    def id_check(cls, v, values):
-        try:
-            uuid.UUID(str(v))
-        except:
-            raise ValueError("uuid is not valid: " + values["name"])
-        return v
-
-    @validator("date")
-    def date_valid(cls, v, values):
-        try:
-            datetime.strptime(v, "%Y-%m-%d")
-        except:
-            raise ValueError("date is not in format YYYY-MM-DD: " + values["name"])
-        return v
+    class Config:
+        use_enum_values = True
 
     @validator("type")
     def type_valid(cls, v, values):
@@ -98,60 +74,63 @@ class Detection(BaseModel, SecurityContentObject):
             raise ValueError("not valid analytics type: " + values["name"])
         return v
 
-    @validator("datamodel")
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError("not valid data model: " + values["name"])
-        return v
-
-    @validator("description", "how_to_implement")
+    @validator('how_to_implement')
     def encode_error(cls, v, values, field):
-        try:
-            v.encode("ascii")
-        except UnicodeEncodeError:
-            raise ValueError("encoding error in " + field.name + ": " + values["name"])
-        return v
+        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
 
-    @root_validator
-    def search_validation(cls, values):
-        if "ssa_" not in values["file_path"]:
-            if not "_filter" in values["search"]:
-                raise ValueError("filter macro missing in: " + values["name"])
-            if any(
-                x in values["search"]
-                for x in ["eventtype=", "sourcetype=", " source=", "index="]
-            ):
-                if not "index=_internal" in values["search"]:
-                    raise ValueError(
-                        "Use source macro instead of eventtype, sourcetype, source or index in detection: "
-                        + values["name"]
-                    )
-        return values
-
-    @root_validator
-    def name_max_length(cls, values):
-        # Check max length only for ESCU searches, SSA does not have that constraint
-        if "ssa_" not in values["file_path"]:
-            if len(values["name"]) > 67:
-                raise ValueError("name is longer then 67 chars: " + values["name"])
-        return values
+    # @root_validator
+    # def search_validation(cls, values):
+    #     if 'ssa_' not in values['file_path']:
+    #         if not '_filter' in values['search']:
+    #             raise ValueError('filter macro missing in: ' + values["name"])
+    #         if any(x in values['search'] for x in ['eventtype=', 'sourcetype=', ' source=', 'index=']):
+    #             if not 'index=_internal' in values['search']:
+    #                 raise ValueError('Use source macro instead of eventtype, sourcetype, source or index in detection: ' + values["name"])
+    #     return values
 
     # disable it because of performance reasons
     # @validator('references')
     # def references_check(cls, v, values):
-    #     LinkValidator.check_references(v, values["name"])
+    #     return LinkValidator.check_references(v, values["name"])
     #     return v
+    
 
     @validator("search")
     def search_validate(cls, v, values):
         # write search validator
         return v
 
+    @validator("tests")
+    def tests_validate(cls, v, values):
+        if values.get("status","") != DetectionStatus.production and not v:
+            raise ValueError(
+                "tests value is needed for production detection: " + values["name"]
+            )
+        return v
+
+    @validator("experimental", always=True)
+    def experimental_validate(cls, v, values):
+        if DetectionStatus(values.get("status","")) == DetectionStatus.experimental:
+            return True
+        return False
+
+    @validator("deprecated", always=True)
+    def deprecated_validate(cls, v, values):
+        if DetectionStatus(values.get("status","")) == DetectionStatus.deprecated:
+            return True
+        return False
+    
+    @validator("datamodel")
+    def datamodel_valid(cls, v, values):
+        for datamodel in v:
+            if datamodel not in [el.name for el in DataModel]:
+                raise ValueError("not valid data model: " + values["name"])
+        return v
+    
     def all_tests_successful(self) -> bool:
-        if self.test is None or len(self.test.tests) == 0:
+        if len(self.tests) == 0:
             return False
-        for test in self.test.tests:
+        for test in self.tests:
             if test.result is None or test.result.success == False:
                 return False
         return True
@@ -167,20 +146,19 @@ class Detection(BaseModel, SecurityContentObject):
             summary_dict[field] = getattr(self, field)
         summary_dict["success"] = self.all_tests_successful()
         summary_dict["tests"] = []
-        if self.test is not None:
-            for test in self.test.tests:
-                result: dict[str, Union[str, bool]] = {"name": test.name}
-                if test.result is not None:
-                    result.update(
-                        test.result.get_summary_dict(
-                            model_fields=test_model_fields,
-                            job_fields=test_job_fields,
-                        )
+        for test in self.tests:
+            result: dict[str, Union[str, bool]] = {"name": test.name}
+            if test.result is not None:
+                result.update(
+                    test.result.get_summary_dict(
+                        model_fields=test_model_fields,
+                        job_fields=test_job_fields,
                     )
-                else:
-                    result["success"] = False
-                    result["message"] = "RESULT WAS NONE"
+                )
+            else:
+                result["success"] = False
+                result["message"] = "RESULT WAS NONE"
 
-                summary_dict["tests"].append(result)
+            summary_dict["tests"].append(result)
 
         return summary_dict

@@ -58,7 +58,7 @@ class DetectionTestingManagerOutputDto:
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
     replay_host: str = "CONTENTCTL_HOST"
-    timeout_seconds: int = 120
+    timeout_seconds: int = 15
     terminate: bool = False
 
 
@@ -358,11 +358,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.sync_obj.currentTestingQueue[self.get_name()] = None
 
     def test_detection(self, detection: Detection):
-        if detection.test is None:
+        if detection.tests is None:
             self.pbar.write(f"No test(s) found for {detection.name}")
             return
 
-        for test in detection.test.tests:
+        for test in detection.tests:
             self.execute_test(detection, test)
 
     def format_pbar_string(
@@ -396,7 +396,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     ):
         start_time = time.time()
         self.pbar.reset()
-        self.format_pbar_string(test.name, "Beginning Test", start_time)
+        self.format_pbar_string(f"{detection.name}:{test.name}", "Beginning Test", start_time)
         # https://github.com/WoLpH/python-progressbar/issues/164
         # Use NullBar if there is more than 1 container or we are running
         # in a non-interactive context
@@ -411,7 +411,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             )
             self.pbar.write(
                 self.format_pbar_string(
-                    test.name,
+                    f"{detection.name}:{test.name}",
                     "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
                     start_time=time.time() - start_time,
                     set_pbar=False,
@@ -461,7 +461,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 link = test.result.get_summary_dict()["sid_link"]
 
             self.format_pbar_string(
-                test.name, f"{res} - {link} (CTRL+D to continue)", start_time
+                f"{detection.name}:{test.name}", f"{res} - {link} (CTRL+D to continue)", start_time
             )
 
             try:
@@ -469,13 +469,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except Exception as e:
                 pass
 
-        self.format_pbar_string(test.name, f"Deleting Data", start_time)
+        self.format_pbar_string(f"{detection.name}:{test.name}", f"Deleting Data", start_time)
         self.delete_attack_data(test.attack_data)
 
         if test.result is not None and test.result.success:
             self.pbar.write(
                 self.format_pbar_string(
-                    test.name,
+                    f"{detection.name}:{test.name}",
                     "\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m",
                     start_time,
                     set_pbar=False,
@@ -485,7 +485,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         else:
             self.pbar.write(
                 self.format_pbar_string(
-                    test.name,
+                    f"{detection.name}:{test.name}",
                     "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m",
                     start_time,
                     set_pbar=False,
@@ -525,11 +525,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 # This loop allows us to capture shutdown events without being
                 # stuck in an extended sleep. Remember that this raises an exception
                 self.check_for_teardown()
-                self.format_pbar_string(test.name, "Waiting for Processing", start_time)
+                self.format_pbar_string(f"{detection.name}:{test.name}", "Waiting for Processing", start_time)
 
                 time.sleep(1)
 
-            self.format_pbar_string(test.name, "Running Search", start_time)
+            self.format_pbar_string(f"{detection.name}:{test.name}", "Running Search", start_time)
 
             job = self.get_conn().search(query=search, **kwargs)
 

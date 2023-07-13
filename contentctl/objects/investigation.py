@@ -11,19 +11,22 @@ from datetime import datetime
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
+from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.investigation_tags import InvestigationTags
+from contentctl.helper.link_validator import LinkValidator
 
 
-class Investigation(BaseModel, SecurityContentObject):
+class Investigation(SecurityContentObject):
     # investigation spec
-    name: str
-    id: str
-    version: int
-    date: str
-    author: str
+    contentType: SecurityContentType = SecurityContentType.investigations
+    #name: str
+    #id: str
+    #version: int
+    #date: str
+    #author: str
     type: str
     datamodel: list
-    description: str
+    #description: str
     search: str
     how_to_implement: str
     known_false_positives: str
@@ -35,34 +38,13 @@ class Investigation(BaseModel, SecurityContentObject):
     # enrichment
     lowercase_name: str = None
 
-
-    @validator('name')
+    # check_fields=False because we want to override the 
+    # name validator in SecurityContentObject 
+    # (since we allow longer than the default length)
+    @validator('name',check_fields=False)
     def name_max_length(cls, v):
         if len(v) > 75:
             raise ValueError('name is longer then 75 chars: ' + v)
-        return v
-
-    @validator('name')
-    def name_invalid_chars(cls, v):
-        invalidChars = set(string.punctuation.replace("-", ""))
-        if any(char in invalidChars for char in v):
-            raise ValueError('invalid chars used in name: ' + v)
-        return v
-
-    @validator('id')
-    def id_check(cls, v, values):
-        try:
-            uuid.UUID(str(v))
-        except:
-            raise ValueError('uuid is not valid: ' + values["name"])
-        return v
-
-    @validator('date')
-    def date_valid(cls, v, values):
-        try:
-            datetime.strptime(v, "%Y-%m-%d")
-        except:
-            raise ValueError('date is not in format YYYY-MM-DD: ' + values["name"])
         return v
 
     @validator('datamodel')
@@ -72,14 +54,13 @@ class Investigation(BaseModel, SecurityContentObject):
                 raise ValueError('not valid data model: ' + values["name"])
         return v
 
-    @validator('description', 'how_to_implement')
+    @validator('how_to_implement')
     def encode_error(cls, v, values, field):
-        try:
-            v.encode('ascii')
-        except UnicodeEncodeError:
-            raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
-        return v
-
+        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+    
+    @validator('references')
+    def references_check(cls, v, values):
+        return LinkValidator.SecurityContentObject_validate_references(v, values)
     @validator('search')
     def search_validate(cls, v, values):
         # write search validator

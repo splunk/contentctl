@@ -1,6 +1,6 @@
 import os
 import sys
-
+import pathlib
 from dataclasses import dataclass
 from pydantic import ValidationError
 
@@ -34,7 +34,7 @@ from contentctl.objects.config import Config
 
 @dataclass(frozen=True)
 class DirectorInputDto:
-    input_path: str
+    input_path: pathlib.Path
     product: SecurityContentProduct
     config: Config
 
@@ -72,7 +72,6 @@ class Director():
     def execute(self, input_dto: DirectorInputDto) -> None:
         self.input_dto = input_dto
         
-        
         if self.input_dto.config.enrichments.attack_enrichment:
             self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path)
         
@@ -82,8 +81,7 @@ class Director():
         self.investigation_builder = InvestigationBuilder()
         self.story_builder = StoryBuilder()
         self.detection_builder = DetectionBuilder()
-
-        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
+        if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
@@ -92,11 +90,10 @@ class Director():
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
             self.createSecurityContent(SecurityContentType.stories)
-
-        elif self.input_dto.product == SecurityContentProduct.ba_objects:
+        elif self.input_dto.product == SecurityContentProduct.SSA:
             self.createSecurityContent(SecurityContentType.unit_tests)
             self.createSecurityContent(SecurityContentType.detections)
-            
+        
 
     def createSecurityContent(self, type: SecurityContentType) -> None:
         objects = []
@@ -110,10 +107,10 @@ class Director():
         already_ran = False
         progress_percent = 0
 
-        if self.input_dto.product == SecurityContentProduct.splunk_app or self.input_dto.product == SecurityContentProduct.json_objects:
-            security_content_files = [f for f in files if 'ssa___' not in f]
-        elif self.input_dto.product == SecurityContentProduct.ba_objects:
-            security_content_files = [f for f in files if 'ssa___' in f]
+        if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
+            security_content_files = [f for f in files if not f.name.startswith('ssa___')]
+        elif self.input_dto.product == SecurityContentProduct.SSA:
+            security_content_files = [f for f in files if f.name.startswith('ssa___')]
         else:
             raise(Exception(f"Cannot createSecurityContent for unknown product '{self.input_dto.product}'"))
 
@@ -121,7 +118,7 @@ class Director():
         for index,file in enumerate(security_content_files):
             progress_percent = ((index+1)/len(security_content_files)) * 100
             try:
-                type_string = "UNKNOWN TYPE"
+                type_string = type.name.upper()
                 if type == SecurityContentType.lookups:
                         self.constructLookup(self.basic_builder, file)
                         lookup = self.basic_builder.getObject()
@@ -143,7 +140,6 @@ class Director():
                         self.output_dto.playbooks.append(playbook)                    
                 
                 elif type == SecurityContentType.baselines:
-                        type_string = "Baselines"
                         self.constructBaseline(self.baseline_builder, file)
                         baseline = self.baseline_builder.getObject()
                         self.output_dto.baselines.append(baseline)
@@ -154,13 +150,11 @@ class Director():
                         self.output_dto.investigations.append(investigation)
 
                 elif type == SecurityContentType.stories:
-                        type_string = "Stories"
                         self.constructStory(self.story_builder, file)
                         story = self.story_builder.getObject()
                         self.output_dto.stories.append(story)
             
                 elif type == SecurityContentType.detections:
-                        type_string = "Detections"
                         self.constructDetection(self.detection_builder, file)
                         detection = self.detection_builder.getObject()
                         self.output_dto.detections.append(detection)
@@ -178,11 +172,11 @@ class Director():
                         print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
             
             except ValidationError as e:
-                print('\nValidation Error for file ' + file)
+                print(f"\nValidation Error for file '{file}'")
                 print(e)
                 validation_error_found = True
 
-        print(f"\r{f'{type.name} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
+        print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
         print("Done!")
 
         if validation_error_found:
@@ -193,6 +187,10 @@ class Director():
         builder.reset()
         builder.setObject(file_path)
         builder.addDeployment(self.input_dto.config.detection_configuration)
+        builder.addKillChainPhase()
+        builder.addCIS()
+        builder.addNist()
+        builder.addDatamodel()
         builder.addRBA()
         builder.addProvidingTechnologies()
         builder.addNesFields()
@@ -226,6 +224,8 @@ class Director():
     def constructBaseline(self, builder: BaselineBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path)
+        print("skipping deployment for baseline for now...")
+        return
         builder.addDeployment(self.output_dto.deployments)
 
 

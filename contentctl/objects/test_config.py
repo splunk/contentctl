@@ -19,7 +19,7 @@ from contentctl.objects.enums import (
     DetectionTestingTargetInfrastructure,
 )
 
-from contentctl.objects.app import App
+from contentctl.objects.app import App, ENVIRONMENT_PATH_NOT_SET
 from contentctl.helper.utils import Utils
 
 
@@ -45,10 +45,6 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
     repo_url: Union[str, None] = Field(
         default=None,
         title="HTTP(s) path to the repo for repo_path.  If this field is blank, it will be inferred from the repo",
-    )
-    mock: bool = Field(
-        default=False,
-        title="Whether or not to actually run the test, or just generate the app and test configuration files",
     )
     # main_branch: Union[str,None] = Field(default=None, title="Main branch of the repo, if applicable.")
     # test_branch: Union[str,None] = Field(default=None, title="Branch of the repo to be tested, if applicable.")
@@ -106,6 +102,7 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
     hec_port: int = Field(default=8088, title="HTTP Event Collector Port")
     web_ui_port: int = Field(default=8000, title="Web UI Port")
     api_port: int = Field(default=8089, title="REST API Port")
+
 
     @validator("hec_port", "web_ui_port", "api_port", each_item=True)
     def validate_ports_range(cls, v):
@@ -461,7 +458,7 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
         else:
             return v
 
-    @validator("apps")
+    @validator("apps",)
     def validate_apps(cls, v, values):
         Utils.check_required_fields(
             "repo_url", values, ["splunkbase_username", "splunkbase_password"]
@@ -481,6 +478,10 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
             )
 
         for app in v:
+            if app.environment_path != ENVIRONMENT_PATH_NOT_SET:
+                #Avoid re-configuring the apps that have already been configured.
+                continue
+
             try:
                 app.configure_app_source_for_container(
                     username, password, app_directory, CONTAINER_APP_DIR
@@ -497,21 +498,20 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
 
     @validator("target_infrastructure", always=True)
     def validate_target_infrastructure(cls, v, values):
-        if v == DetectionTestingTargetInfrastructure.server.value:
+        if v == DetectionTestingTargetInfrastructure.server:
             # No need to validate that the docker client is available
             return v
-        elif v == DetectionTestingTargetInfrastructure.container.value:
-            if values["mock"] is False:
-                # we need to make sure we can actually get the docker client from the environment
-                try:
-                    docker.client.from_env()
-                except Exception as e:
-                    raise (
-                        Exception(
-                            f"Error, failed to get docker client.  Is Docker Installed and running "
-                            f"and are docker environment variables set properly? Error:\n\t{str(e)}"
-                        )
+        elif v == DetectionTestingTargetInfrastructure.container:
+            # we need to make sure we can actually get the docker client from the environment
+            try:
+                docker.client.from_env()
+            except Exception as e:
+                raise (
+                    Exception(
+                        f"Error, failed to get docker client.  Is Docker Installed and running "
+                        f"and are docker environment variables set properly? Error:\n\t{str(e)}"
                     )
+                )
         return v
 
     @validator("test_instance_address", always=True)

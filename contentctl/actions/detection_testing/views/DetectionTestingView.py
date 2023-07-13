@@ -59,7 +59,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
         try:
             runtime = self.getRuntime()
             time_per_detection = runtime / num_tested
-            remaining_time = num_untested * time_per_detection
+            remaining_time = (num_untested+.5) * time_per_detection
             remaining_time -= datetime.timedelta(
                 microseconds=remaining_time.microseconds
             )

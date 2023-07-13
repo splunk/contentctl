@@ -203,6 +203,9 @@ class ConfOutput:
     
         except SystemExit as e:
             if e.code == 0:
+                # The sys.exit called inside of appinspect validate closes stdin.  We need to
+                # reopen it.
+                sys.stdin = open("/dev/stdin","r")
                 print(f"AppInspect passed! Please check [ {appinspect_output} , {appinspect_logging} ] for verbose information.")
             else:
                 if sys.version.startswith('3.11') or sys.version.startswith('3.12'):

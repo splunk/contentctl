@@ -154,7 +154,10 @@ def test(args: argparse.Namespace):
     # For example, if the detection(s) we are trying to test do not exist
     githubService = GithubService(config.test)
 
+    
     director_output_dto = build(args, config)
+
+    
 
     # All this information will later come from the config, so we will
     # be able to do it in Test().execute. For now, we will do it here
@@ -176,14 +179,17 @@ def test(args: argparse.Namespace):
 
     config.test.apps = [app] + config.test.apps
 
+    
     test_input_dto = TestInputDto(
         director_output_dto=director_output_dto,
         githubService=githubService,
         config=config.test,
     )
+    
     test = Test()
 
     try:
+        
         result = test.execute(test_input_dto)
         # This return code is important.  Even if testing
         # fully completes, if everything does not pass then
@@ -194,7 +200,7 @@ def test(args: argparse.Namespace):
             sys.exit(1)
 
     except Exception as e:
-        print("Error running contentctl test: {str(e)}")
+        print(f"Error running contentctl test: {str(e)}")
         sys.exit(1)
 
 

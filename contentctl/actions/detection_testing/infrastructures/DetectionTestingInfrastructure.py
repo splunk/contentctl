@@ -58,7 +58,7 @@ class DetectionTestingManagerOutputDto:
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
     replay_host: str = "CONTENTCTL_HOST"
-    timeout_seconds: int = 30
+    timeout_seconds: int = 15
     terminate: bool = False
 
 
@@ -465,11 +465,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             )
 
             try:
-                self.pbar.write("waiting for input")
                 _ = input()
-                self.pbar.write("got input")
             except Exception as e:
-                self.pbar.write(f"got exception: {str(e)}")
                 pass
 
         self.format_pbar_string(f"{detection.name}:{test.name}", f"Deleting Data", start_time)

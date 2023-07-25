@@ -19,6 +19,8 @@ jobs:
       - name: Install Docker for macOS
         run: |
           brew install docker
+          #import magic fails on macos runner
+          brew install libmagic
           colima start
           # Mapping below is required to get the Python docker library working
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock

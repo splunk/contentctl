@@ -75,14 +75,14 @@ Testing is run using [GitHub Hosted Runners](https://docs.github.com/en/actions/
 
 
 **Because contentctl uses a large number of dependencies, it's recommended to install contentctl in a virtual environment. 
-The instructions below use "poetry" and follow this recommendation.  Poetry will automatically create a new virtual environment for you.  
+The instructions below using "poetry" ALSO follow this recommendation.  Poetry will automatically create a new virtual environment for you.  
 It is typically recommended to install poetry to the Global Python Environment.**
 
-#### Install via pip (coming soon): 
+#### Install via pip (recommended): 
 ```
 python3.9 -m venv .venv
 source .venv/bin/activate
-pip install splunk-contentctl
+pip install contentctl
 ```
 
 #### From Source (advanced)

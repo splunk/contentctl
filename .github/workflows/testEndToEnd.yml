@@ -41,7 +41,7 @@ jobs:
         run:
           # Uses a fixed version of virtualenv due to the issue documented here:
           # https://github.com/python-poetry/poetry/issues/7611#issuecomment-1640599902
-          sudo apt install g++ musl-dev python3-dev
+          sudo apt install g++ musl musl-dev linux-musl-dev python3-dev
           
       - name: Install Poetry
         run: 

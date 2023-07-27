@@ -58,7 +58,7 @@ class DetectionTestingManagerOutputDto:
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
     replay_host: str = "CONTENTCTL_HOST"
-    timeout_seconds: int = 15
+    timeout_seconds: int = 60
     terminate: bool = False
 
 

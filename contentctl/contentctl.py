@@ -170,6 +170,7 @@ def test(args: argparse.Namespace):
         local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"),
         description=config.build.description,
         splunkbase_path=None,
+        force_local=True
     )
 
     # We need to do this instead of appending to retrigger validation.

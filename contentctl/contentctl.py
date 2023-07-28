@@ -17,7 +17,6 @@ from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.new_content import NewContentInputDto, NewContent
 from contentctl.actions.doc_gen import DocGenInputDto, DocGen
 from contentctl.actions.initialize import Initialize, InitializeInputDto
-from contentctl.actions.inspect import InspectInputDto, Inspect
 from contentctl.actions.api_deploy import API_Deploy, API_DeployInputDto
 
 from contentctl.input.director import DirectorInputDto
@@ -116,14 +115,6 @@ def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
     return generate.execute(generate_input_dto)
 
 
-def inspect(args) -> None:
-    config=start(args)
-    app_path = pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"
-    input_dto = InspectInputDto(path=app_path)
-    i = Inspect()
-    i.execute(input_dto=input_dto)
-
-
 def api_deploy(args) -> None:
     config = start(args)
     deploy_input_dto = API_DeployInputDto(path=pathlib.Path(args.path), config=config)
@@ -170,6 +161,7 @@ def test(args: argparse.Namespace):
         local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"),
         description=config.build.description,
         splunkbase_path=None,
+        force_local=True
     )
 
     # We need to do this instead of appending to retrigger validation.
@@ -338,15 +330,7 @@ def main():
 
     reporting_parser.set_defaults(func=reporting)
 
-    inspect_parser.add_argument(
-        "-ap",
-        "--app_path",
-        required=False,
-        type=str,
-        default=None,
-        help="path to the Splunk app to be inspected",
-    )
-    inspect_parser.set_defaults(func=inspect)
+
 
     api_deploy_parser.set_defaults(func=api_deploy)
 

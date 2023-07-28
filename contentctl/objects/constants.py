@@ -103,7 +103,7 @@ SES_OBSERVABLE_TYPE_MAPPING = {
     "File Name": 7,
     "File Hash": 8,
     "Process Name": 9,
-    "Ressource UID": 10,
+    "Resource UID": 10,
     "Endpoint": 20,
     "User": 21,
     "Email": 22,

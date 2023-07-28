@@ -44,6 +44,7 @@ class App(BaseModel, extra=Extra.forbid):
     # This will be set via a function call and should not be provided in the YML
     # Note that this is the path relative to the container mount
     environment_path: str = ENVIRONMENT_PATH_NOT_SET
+    force_local:bool = False
 
     def configure_app_source_for_container(
         self,
@@ -57,7 +58,7 @@ class App(BaseModel, extra=Extra.forbid):
             splunkbase_username is not None and splunkbase_password is not None
         )
 
-        if splunkbase_creds_provided and self.splunkbase_path is not None:
+        if splunkbase_creds_provided and self.splunkbase_path is not None and not self.force_local:
             self.environment_path = self.splunkbase_path
 
         elif self.local_path is not None:

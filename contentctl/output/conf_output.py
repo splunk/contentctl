@@ -178,7 +178,6 @@ class ConfOutput:
                 LOG_FILE_OPTION, INCLUDED_TAGS_OPTION, EXCLUDED_TAGS_OPTION, 
                 PRECERT_MODE, TEST_MODE)
         except Exception as e:
-            import sys
             print("******WARNING******")
             if sys.version_info.major == 3 and sys.version_info.minor == 9:
                 print("The package splunk-appinspect was not installed due to a current issue with the library on Python3.10+.  "

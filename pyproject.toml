@@ -12,7 +12,7 @@ contentctl = 'contentctl.contentctl:main'
 [tool.poetry.dependencies]
 python = "^3.9"
 pydantic = "^1.10.11"
-PyYAML = "<6.0"
+PyYAML = "^6.0"
 requests = "^2.28.1"
 pycvesearch = "^1.2"
 xmltodict = "^0.13.0"
@@ -26,7 +26,7 @@ validators = "^0.20.0"
 semantic-version = "^2.10.0"
 bottle = "^0.12.23"
 tqdm = "^4.65.0"
-splunk-appinspect = "^2.36.0"
+#splunk-appinspect = "^2.36.0"
 splunk-packaging-toolkit = "^1.0.1"
 
 [tool.poetry.dev-dependencies]

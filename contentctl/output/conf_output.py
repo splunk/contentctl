@@ -7,10 +7,7 @@ import tarfile
 from typing import Union
 from pathlib import Path
 import pathlib
-from splunk_appinspect.main import (
-    validate, MODE_OPTION, APP_PACKAGE_ARGUMENT, OUTPUT_FILE_OPTION, 
-    LOG_FILE_OPTION, INCLUDED_TAGS_OPTION, EXCLUDED_TAGS_OPTION, 
-    PRECERT_MODE, TEST_MODE)
+
 import shutil
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
@@ -175,6 +172,24 @@ class ConfOutput:
         name_without_version = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}.tar.gz"
         shutil.copy2(output_app_expected_name, name_without_version, follow_symlinks=False)
         
+        try:
+            from splunk_appinspect.main import (
+                validate, MODE_OPTION, APP_PACKAGE_ARGUMENT, OUTPUT_FILE_OPTION, 
+                LOG_FILE_OPTION, INCLUDED_TAGS_OPTION, EXCLUDED_TAGS_OPTION, 
+                PRECERT_MODE, TEST_MODE)
+        except Exception as e:
+            import sys
+            print("******WARNING******")
+            if sys.version_info.major == 3 and sys.version_info.minor == 9:
+                print("The package splunk-appinspect was not installed due to a current issue with the library on Python3.10+.  "
+                      "Please use the following commands to set up a virtualenvironment in a different folder so you may run appinspect manually:"
+                      f"\n\tpython3.9 -m venv .venv; source .venv/bin/activate; python3 -m pip install splunk-appinspect; splunk-appinspect inspect {name_without_version} --mode precert")    
+                
+            else:
+                print("splunk-appinspect is only compatable with Python3.9 at this time.  Please see the following open issue here: https://github.com/splunk/contentctl/issues/28")
+            print("******WARNING******")
+            return
+
         # Note that all tags are available and described here:
         # https://dev.splunk.com/enterprise/reference/appinspect/appinspecttagreference/ 
         # By default, precert mode will run ALL checks.  Explicitly included or excluding tags will 

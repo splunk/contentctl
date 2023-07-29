@@ -142,7 +142,7 @@ class Detection_Abstract(SecurityContentObject):
     def get_summary(
         self,
         detection_fields: list[str] = ["name", "search"],
-        test_model_fields: list[str] = ["success", "message"],
+        test_model_fields: list[str] = ["success", "message", "exception"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict:
         summary_dict = {}

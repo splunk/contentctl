@@ -69,7 +69,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
 
     def getSummaryObject(
         self,
-        test_model_fields: list[str] = ["success", "message"],
+        test_model_fields: list[str] = ["success", "message", "exception"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict:
         total_untested = len(self.sync_obj.inputQueue)

@@ -24,8 +24,6 @@ class Observable(BaseModel):
     
     @validator('type')
     def check_type(cls, v, values):
-        #import code
-        #code.interact(local=locals())
         if v not in SES_OBSERVABLE_TYPE_MAPPING.keys():
             raise ValueError(f"Invalid type '{v}' provided for observable.  Valid observable types are {SES_OBSERVABLE_TYPE_MAPPING.keys()}")
         return v

@@ -35,9 +35,10 @@ class DetectionTestingViewFile(DetectionTestingView):
         output_file = self.getOutputFilePath()
 
         folder_path.mkdir(parents=True, exist_ok=True)
-
+        
+        
         result_dict = self.getSummaryObject()
-
+        
         # use the yaml writer class
         with open(output_file, "w") as res:
             res.write(yaml.safe_dump(result_dict))

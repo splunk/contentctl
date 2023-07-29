@@ -30,12 +30,13 @@ class Detection_Abstract(SecurityContentObject):
     type: str
     status: DetectionStatus
     data_source: list[str]
+    tags: DetectionTags
     search: Union[str, dict]
     how_to_implement: str
     known_false_positives: str
     check_references: bool = False  
     references: list
-    tags: DetectionTags
+    
     tests: list[UnitTest] = []
 
     # enrichments
@@ -60,6 +61,7 @@ class Detection_Abstract(SecurityContentObject):
 
     class Config:
         use_enum_values = True
+
 
     @validator("type")
     def type_valid(cls, v, values):
@@ -89,8 +91,17 @@ class Detection_Abstract(SecurityContentObject):
     
 
     @validator("search")
-    def search_validate(cls, v, values):
-        # write search validator
+    def search_obsersables_exist_validate(cls, v, values):
+        tags:DetectionTags = values.get("tags")
+        if tags == None:
+            raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
+        
+        observable_names = [ob.name for ob in tags.observable]
+        
+        
+        missing_fields = set([name for name in observable_names if name not in v ])
+        if len(missing_fields) > 0:
+            raise ValueError(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
         return v
 
     @validator("tests")

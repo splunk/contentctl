@@ -153,9 +153,7 @@ class DetectionTags(BaseModel):
             raise ValueError(f"The following observables are referenced in the message, but were not declared as observables: {missing_observables}")
         
         if len(unused_observables) > 0:
-            raise ValueError(f"The following observables were declared, but are not referenced in the message: {unused_observables}")
-        
-
+            raise ValueError(f"The following observables were declared, but are not referenced in the message: {unused_observables}")        
         return v
 
     

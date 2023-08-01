@@ -3,7 +3,7 @@ import string
 import requests
 import time
 import sys
-
+import re
 from pydantic import BaseModel, validator, root_validator, Extra
 from dataclasses import dataclass
 from typing import Union
@@ -92,16 +92,33 @@ class Detection_Abstract(SecurityContentObject):
 
     @validator("search")
     def search_obsersables_exist_validate(cls, v, values):
+        # All observable fields must appear in the search
         tags:DetectionTags = values.get("tags")
         if tags == None:
             raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
         
-        observable_names = [ob.name for ob in tags.observable]
+        observable_fields = [ob.name.lower() for ob in tags.observable]
         
+        #All $field$ fields from the message must appear in the search
+        field_match_regex = r"\$([^\s.]*)\$"
         
-        missing_fields = set([name for name in observable_names if name not in v ])
+        message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
+        missing_fields = set([field for field in observable_fields if field not in v.lower()])
+
+        error_messages = []
         if len(missing_fields) > 0:
-            raise ValueError(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
+            error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
+
+        
+        missing_fields = set([field for field in message_fields if field not in v.lower()])
+        if len(missing_fields) > 0:
+            error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
+        
+        if len(error_messages) > 0:
+            msg = "\n\t".join(error_messages)
+            raise(ValueError(msg))
+        
+        # Found everything
         return v
 
     @validator("tests")

@@ -130,30 +130,31 @@ class DetectionTags(BaseModel):
                              f"\n  Expected risk_score={calculated_risk_score}, found risk_score={int(v)}: {values['name']}")
         return v
     
-    @validator('message')
-    def validate_message(cls,v,values):
+    # The following validator is temporarily disabled pending further discussions
+    # @validator('message')
+    # def validate_message(cls,v,values):
         
-        observables:list[Observable] = values.get("observable",[])
-        observable_names = set([o.name for o in observables])
-        #find all of the observables used in the message by name
-        name_match_regex = r"\$([^\s.]*)\$"
+    #     observables:list[Observable] = values.get("observable",[])
+    #     observable_names = set([o.name for o in observables])
+    #     #find all of the observables used in the message by name
+    #     name_match_regex = r"\$([^\s.]*)\$"
         
-        message_observables = set()
+    #     message_observables = set()
 
-        #Make sure that all observable names in 
-        for match in re.findall(name_match_regex, v):
-            #Remove
-            match_without_dollars = match.replace("$", "")
-            message_observables.add(match_without_dollars)
+    #     #Make sure that all observable names in 
+    #     for match in re.findall(name_match_regex, v):
+    #         #Remove
+    #         match_without_dollars = match.replace("$", "")
+    #         message_observables.add(match_without_dollars)
         
 
-        missing_observables = message_observables - observable_names
-        unused_observables = observable_names - message_observables
-        if len(missing_observables) > 0:
-            raise ValueError(f"The following observables are referenced in the message, but were not declared as observables: {missing_observables}")
+    #     missing_observables = message_observables - observable_names
+    #     unused_observables = observable_names - message_observables
+    #     if len(missing_observables) > 0:
+    #         raise ValueError(f"The following observables are referenced in the message, but were not declared as observables: {missing_observables}")
         
-        if len(unused_observables) > 0:
-            raise ValueError(f"The following observables were declared, but are not referenced in the message: {unused_observables}")        
-        return v
+    #     if len(unused_observables) > 0:
+    #         raise ValueError(f"The following observables were declared, but are not referenced in the message: {unused_observables}")        
+    #     return v
 
     

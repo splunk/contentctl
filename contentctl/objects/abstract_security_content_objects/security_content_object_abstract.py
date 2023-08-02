@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import abc
 import string
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel, validator, ValidationError, Field
 from contentctl.objects.enums import SecurityContentType
+from typing import Tuple
 import uuid
 
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
@@ -12,7 +15,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     author: str = "UNKNOWN_AUTHOR"
     date: str = "1990-01-01"
     version: int = 1
-    id: uuid.UUID = uuid.uuid4() #we set a default here until all content has a uuid
+    id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
     description: str = "UNKNOWN_DESCRIPTION"
 
     @validator('name')
@@ -47,3 +50,12 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     @validator('description')
     def description_valid(cls, v, values, field):
         return SecurityContentObject_Abstract.free_text_field_valid(cls,v,values,field)
+    
+
+    @staticmethod
+    def get_objects_by_name(names_to_find:set[str], objects_to_search:list[SecurityContentObject_Abstract])->Tuple[list[SecurityContentObject_Abstract], set[str]]:
+        found_objects = list(filter(lambda obj: obj.name in names_to_find, objects_to_search))
+        found_names = set([obj.name for obj in found_objects])
+        missing_names = names_to_find - found_names
+        return found_objects,missing_names
+        

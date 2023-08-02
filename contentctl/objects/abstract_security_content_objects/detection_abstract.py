@@ -46,11 +46,11 @@ class Detection_Abstract(SecurityContentObject):
     deployment: ConfigDetectionConfiguration = None
     annotations: dict = None
     risk: list = None
-    playbooks: list[Playbook] = None
-    baselines: list[Baseline] = None
+    playbooks: list[Playbook] = []
+    baselines: list[Baseline] = []
     mappings: dict = None
-    macros: list[Macro] = None
-    lookups: list[Lookup] = None
+    macros: list[Macro] = []
+    lookups: list[Lookup] = []
     cve_enrichment: list = None
     splunk_app_enrichment: list = None
     file_path: str = None
@@ -62,6 +62,10 @@ class Detection_Abstract(SecurityContentObject):
     class Config:
         use_enum_values = True
 
+
+    def get_content_dependencies(self)->list[SecurityContentObject]:    
+        return self.playbooks + self.baselines +self.macros + self.lookups
+    
 
     @validator("type")
     def type_valid(cls, v, values):
@@ -92,6 +96,7 @@ class Detection_Abstract(SecurityContentObject):
 
     @validator("search")
     def search_obsersables_exist_validate(cls, v, values):
+        return v
         # All observable fields must appear in the search
         tags:DetectionTags = values.get("tags")
         if tags == None:

@@ -8,6 +8,7 @@ from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.macro import Macro
+from contentctl.objects.lookup import Lookup
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
@@ -181,37 +182,23 @@ class DetectionBuilder():
 
     def addMacros(self, macros: list) -> None:
         if self.security_content_obj:
-            macros_found = re.findall(r'`([^\s]+)`', self.security_content_obj.search)
-            macros_filtered = set()
-            self.security_content_obj.macros = []
-
-            for macro in macros_found:
-                if not '_filter' in macro and not 'drop_dm_object_name' in macro:
-                    start = macro.find('(')
-                    if start != -1:
-                        macros_filtered.add(macro[:start])
-                    else:
-                        macros_filtered.add(macro)
-
-            for macro_name in macros_filtered:
-                for macro in macros:
-                    if macro_name == macro.name:
-                        self.security_content_obj.macros.append(macro)
-
+            found_macros, missing_macros =  Macro.get_macros(self.security_content_obj.search, macros)
             name = self.security_content_obj.name.replace(' ', '_').replace('-', '_').replace('.', '_').replace('/', '_').lower() + '_filter'
             macro = Macro(name=name, definition='search *', description='Update this macro to limit the output results to filter out false positives.')
+            found_macros.append(macro)
+            self.security_content_obj.macros = found_macros
+            if len(missing_macros) > 0:
+                raise Exception(f"'{self.security_content_obj.name} is missing the following macros: {missing_macros}")
             
-            self.security_content_obj.macros.append(macro)
 
 
     def addLookups(self, lookups: list) -> None:
         if self.security_content_obj:
-            lookups_found = re.findall(r'lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', self.security_content_obj.search)
-            self.security_content_obj.lookups = []
-            for lookup_name in lookups_found:
-                for lookup in lookups:
-                    if lookup.name == lookup_name:
-                        self.security_content_obj.lookups.append(lookup)
+            found_lookups, missing_lookups = Lookup.get_lookups(self.security_content_obj.search, lookups)
+            self.security_content_obj.lookups = found_lookups
+            if len(missing_lookups) > 0:
+                raise Exception(f"'{self.security_content_obj.name} is missing the following lookups: {missing_lookups}")
+            
 
 
     def addCve(self) -> None:

@@ -207,15 +207,16 @@ class Utils:
 
         # Try to make a head request to verify existence of the file
         try:
+            
             req = requests.head(
                 file_path, timeout=timeout_seconds, verify=True, allow_redirects=True
             )
             if req.status_code > 400:
-                raise (Exception(f"Return code {req.status_code}"))
+                raise (Exception(f"Return code={req.status_code}"))
         except Exception as e:
             raise (
                 Exception(
-                    f"Cannot confirm the existence of '{file_path}' - are you sure it exists: {str(e)}"
+                    f"HTTP Resolution Failed: {str(e)}"
                 )
             )
 

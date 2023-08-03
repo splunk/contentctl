@@ -139,14 +139,23 @@ class GithubService:
             )
         
         differences = self.repo.git.diff("--name-status", self.config.main_branch).split("\n")
-        new_content = list(filter(lambda x: x.split('\t')[1].startswith("A") , differences)) 
-        modified_content =  list(filter(lambda x: x.split('\t')[1].startswith("M") , differences))
-        deleted_content =list(filter(lambda x: x.split('\t')[1].startswith("D") , differences)) 
+        new_content = []
+        modified_content =  []
+        deleted_content = []
+        for difference in differences:
+            mode, filename = difference.split("\t")
+            if mode == "A":
+                new_content.append(filename)
+            elif mode == "M":
+                modified_content.append(filename)
+            elif mode == "D":
+                deleted_content.append(filename)
+            else:
+                raise Exception(f"Unknown mode in determining differences: {difference}")
+            
+        
         
         content_to_test = list(filter(lambda x: x.startswith("detections"), new_content+modified_content ))
-
-        import code
-        code.interact(local=locals())
         
         return []
 

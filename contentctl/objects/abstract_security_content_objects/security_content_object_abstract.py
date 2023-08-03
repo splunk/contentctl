@@ -8,7 +8,9 @@ from pydantic import BaseModel, validator, ValidationError, Field
 from contentctl.objects.enums import SecurityContentType
 from typing import Tuple
 import uuid
+import pathlib
 
+NO_FILE_BUILT_AT_RUNTIME = "NO_FILE_BUILT_AT_RUNTIME"
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     contentType: SecurityContentType
     name: str
@@ -17,6 +19,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     version: int = 1
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
     description: str = "UNKNOWN_DESCRIPTION"
+    file_path: str = "NO_FILE_BUILT_AT_RUNTIME"
 
     @validator('name')
     def name_max_length(cls, v):
@@ -58,4 +61,13 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         found_names = set([obj.name for obj in found_objects])
         missing_names = names_to_find - found_names
         return found_objects,missing_names
+    
+    @staticmethod
+    def create_filename_to_content_dict(all_objects:list[SecurityContentObject_Abstract])->dict[str,SecurityContentObject_Abstract]:
+        name_dict:dict[str,SecurityContentObject_Abstract] = dict()
+        
+        for object in all_objects:
+            name_dict[str(pathlib.Path(object.file_path))] = object
+        
+        return name_dict
         

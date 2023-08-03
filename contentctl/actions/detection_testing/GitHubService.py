@@ -153,11 +153,29 @@ class GithubService:
             else:
                 raise Exception(f"Unknown mode in determining differences: {difference}")
             
+        #Changes to detections, macros, and lookups should trigger a re-test for anything which uses them
+        changed_lookups_list = list(filter(lambda x: x.startswith("lookups"), new_content+modified_content))
+        changed_lookups = set()
         
-        
-        content_to_test = list(filter(lambda x: x.startswith("detections"), new_content+modified_content ))
-        
-        return []
+        #We must account for changes to the lookup yml AND for the underlying csv
+        for lookup in changed_lookups_list:
+            if lookup.endswith(".csv"): 
+                lookup = lookup.replace(".csv", ".yml")
+            changed_lookups.add(lookup)
+
+        # At some point we should account for macros which contain other macros...
+        changed_macros = set(filter(lambda x: x.startswith("macros"), new_content+modified_content))
+        changed_macros_and_lookups = set([str(pathlib.Path(filename).absolute()) for filename in changed_lookups.union(changed_macros)])
+
+        changed_detections = set(filter(lambda x: x.startswith("detections"), new_content+modified_content))
+
+        #Check and see if content that has been modified uses any of the changed macros or lookups
+        for detection in director.detections:
+            deps = set([content.file_path for content in detection.get_content_dependencies()])
+            if not deps.isdisjoint(changed_macros_and_lookups):
+                changed_detections.add(detection.file_path)
+
+        return Detection.get_detections_from_filenames(changed_detections, director.detections)
 
     def __init__(self, config: TestConfig):
         self.repo = git.Repo(config.repo_path)

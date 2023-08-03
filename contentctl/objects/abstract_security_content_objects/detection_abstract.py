@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import uuid
 import string
 import requests
 import time
 import sys
 import re
+import pathlib
 from pydantic import BaseModel, validator, root_validator, Extra
 from dataclasses import dataclass
 from typing import Union
@@ -64,8 +67,18 @@ class Detection_Abstract(SecurityContentObject):
 
 
     def get_content_dependencies(self)->list[SecurityContentObject]:    
-        return self.playbooks + self.baselines +self.macros + self.lookups
+        return self.playbooks + self.baselines + self.macros + self.lookups
     
+    @staticmethod
+    def get_detections_from_filenames(detection_filenames:set[str], all_detections:list[Detection_Abstract])->list[Detection_Abstract]:
+        detection_filenames = set(str(pathlib.Path(filename).absolute()) for filename in detection_filenames)
+        detection_dict = SecurityContentObject.create_filename_to_content_dict(all_detections)
+
+        try:
+            return [detection_dict[detection_filename] for detection_filename in detection_filenames]
+        except Exception as e:
+            raise Exception(f"Failed to find detection object for modified detection: {str(e)}")
+        
 
     @validator("type")
     def type_valid(cls, v, values):

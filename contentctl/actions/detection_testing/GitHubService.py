@@ -137,11 +137,21 @@ class GithubService:
                     f"Error: self.repo must be initialized before getting changed detections."
                 )
             )
-        raise (Exception("not implemented"))
+        
+        differences = self.repo.git.diff("--name-status", self.config.main_branch).split("\n")
+        new_content = list(filter(lambda x: x.split('\t')[1].startswith("A") , differences)) 
+        modified_content =  list(filter(lambda x: x.split('\t')[1].startswith("M") , differences))
+        deleted_content =list(filter(lambda x: x.split('\t')[1].startswith("D") , differences)) 
+        
+        content_to_test = list(filter(lambda x: x.startswith("detections"), new_content+modified_content ))
+
+        import code
+        code.interact(local=locals())
+        
         return []
 
     def __init__(self, config: TestConfig):
-        self.repo = None
+        self.repo = git.Repo(config.repo_path)
         self.requested_detections: list[pathlib.Path] = []
         self.config = config
 
@@ -174,39 +184,7 @@ class GithubService:
                     return
 
         elif config.mode == DetectionTestingMode.changes:
-            # Changes is ONLY possible if the app is version controlled
-            # in a github repo.  Ensure that this is the case and, if not
-            # raise an exception
-            raise (Exception("Mode [changes] is not yet supported."))
-            try:
-                repo = git.Repo(config.repo_path)
-            except Exception as e:
-                raise (
-                    Exception(
-                        f"Error: detection mode [{config.mode}] REQUIRES that [{config.repo_path}] is a git repository, but it is not."
-                    )
-                )
-            if config.main_branch == config.test_branch:
-                raise (
-                    Exception(
-                        f"Error: test_branch [{config.test_branch}] is the same as the main_branch [{config.main_branch}]. When using mode [{config.mode}], these two branches MUST be different."
-                    )
-                )
-
-            # Ensure that the test branch is checked out
-            if self.repo.active_branch.name != config.test_branch:
-                raise (
-                    Exception(
-                        f"Error: detection mode [{config.mode}] REQUIRES that the test_branch [{config.test_branch}] be checked out at the beginning of the test, but it is not."
-                    )
-                )
-
-            # Ensure that the base branch exists
-
-            if Utils.validate_git_branch_name(
-                config.repo_path, "NO_URL", config.main_branch
-            ):
-                return
+            return
 
         elif config.mode == DetectionTestingMode.all:
             return

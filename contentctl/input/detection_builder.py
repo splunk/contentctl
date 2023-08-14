@@ -188,7 +188,7 @@ class DetectionBuilder():
             found_macros.append(macro)
             self.security_content_obj.macros = found_macros
             if len(missing_macros) > 0:
-                raise Exception(f"'{self.security_content_obj.name} is missing the following macros: {missing_macros}")
+                raise Exception(f"{self.security_content_obj.name} is missing the following macros: {missing_macros}")
             
 
 
@@ -197,7 +197,7 @@ class DetectionBuilder():
             found_lookups, missing_lookups = Lookup.get_lookups(self.security_content_obj.search, lookups)
             self.security_content_obj.lookups = found_lookups
             if len(missing_lookups) > 0:
-                raise Exception(f"'{self.security_content_obj.name} is missing the following lookups: {missing_lookups}")
+                raise Exception(f"{self.security_content_obj.name} is missing the following lookups: {missing_lookups}")
             
 
 

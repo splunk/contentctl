@@ -54,10 +54,6 @@ class ConfOutput:
             ConfWriter.writeConfFile(self.output_path/'default/analyticstories.conf',
                 'analyticstories_detections.j2',
                 self.config, objects)
-
-            ConfWriter.writeConfFile(self.output_path/'default/macros.conf',
-                'macros_detections.j2', 
-                self.config, objects)
         
         elif type == SecurityContentType.stories:
             ConfWriter.writeConfFile(self.output_path/'default/analyticstories.conf', 

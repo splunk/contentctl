@@ -115,9 +115,14 @@ class ConfOutput:
                 raise(Exception(f"input_path is required for lookups, but received [{self.input_path}]"))
 
             files = glob.iglob(os.path.join(self.input_path, 'lookups', '*.csv'))
+            try:
+                os.makedirs(os.path.join(self.output_path, "lookups"))
+            except FileExistsError:
+                # directory already exists
+                pass
             for file in files:
                 if os.path.isfile(file):
-                    shutil.copy(file, os.path.join(self.output_path, 'lookups'))
+                    shutil.copy(file, os.path.join(self.output_path, 'lookups/'))
 
         elif type == SecurityContentType.macros:
             ConfWriter.writeConfFile(self.output_path/'default/macros.conf',

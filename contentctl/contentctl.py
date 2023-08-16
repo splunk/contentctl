@@ -249,6 +249,18 @@ def reporting(args) -> None:
     reporting.execute(reporting_input_dto)
 
 
+def web_ui(args) -> None:
+    print("We are starting the web ui!")
+
+    config = start(args)
+    director_output_dto = build(args, config)
+
+
+    from contentctl.actions.web_ui import WebUI, WebUIInputDto
+    dto = WebUIInputDto(director_output_dto)
+    ui = WebUI()
+    ui.execute(dto)
+
 def main():
     """
     main function parses the arguments passed to the script and calls the respctive method.
@@ -284,16 +296,17 @@ def main():
     build_parser = actions_parser.add_parser(
         "build", help="builds a Splunk content pack package to be distributed"
     )
-    new_content_parser = actions_parser.add_parser(
-        "new", help="create new Splunk content object (detection, or story)"
+    # new_content_parser = actions_parser.add_parser(
+    #     "new", help="create new Splunk content object (detection, or story)"
+    # )
+    
+    webui = actions_parser.add_parser(
+        "webui", help="Run the WebUI for lifecycle management"
     )
     reporting_parser = actions_parser.add_parser(
         "report", help="create Splunk content report of the current pack"
     )
-    inspect_parser = actions_parser.add_parser(
-        "inspect",
-        help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.",
-    )
+    
     api_deploy_parser = actions_parser.add_parser(
         "api_deploy", help="Deploy content via API to a target Splunk Instance."
     )
@@ -305,6 +318,7 @@ def main():
         "test",
         help="Run a test of the detections against a Splunk Server or Splunk Docker Container",
     )
+    
 
     init_parser.set_defaults(func=initialize)
     init_parser.add_argument("--demo", action=argparse.BooleanOptionalAction, 
@@ -319,14 +333,16 @@ def main():
 
     docs_parser.set_defaults(func=doc_gen)
 
-    new_content_parser.add_argument(
-        "-t",
-        "--type",
-        required=True,
-        type=str,
-        help="Type of security content object, choose between `detection`, `story`",
-    )
-    new_content_parser.set_defaults(func=new_content)
+    # new_content_parser.add_argument(
+    #     "-t",
+    #     "--type",
+    #     required=True,
+    #     type=str,
+    #     help="Type of security content object, choose between `detection`, `story`",
+    # )
+    # new_content_parser.set_defaults(func=new_content)
+
+    webui.set_defaults(func=web_ui)
 
     reporting_parser.set_defaults(func=reporting)
 

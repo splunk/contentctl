@@ -3,7 +3,9 @@ from __future__ import annotations
 import abc
 import string
 import uuid
-from datetime import datetime
+
+import datetime
+
 from pydantic import BaseModel, validator, ValidationError, Field
 from contentctl.objects.enums import SecurityContentType
 from typing import Tuple
@@ -13,9 +15,9 @@ import pathlib
 NO_FILE_BUILT_AT_RUNTIME = "NO_FILE_BUILT_AT_RUNTIME"
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     contentType: SecurityContentType
-    name: str
+    name: str = "UNKNOWN NAME"
     author: str = "UNKNOWN_AUTHOR"
-    date: str = "1990-01-01"
+    date: datetime.date = datetime.date.today()
     version: int = 1
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
     description: str = "UNKNOWN_DESCRIPTION"
@@ -37,9 +39,9 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     @validator('date')
     def date_valid(cls, v, values):
         try:
-            datetime.strptime(v, "%Y-%m-%d")
+            datetime.datetime.strptime(str(v), "%Y-%m-%d")
         except:
-            raise ValueError('date is not in format YYYY-MM-DD: ' + values["name"])
+            raise ValueError(f"'{str(v)}' - date is not in format YYYY-MM-DD: " + values["name"])
         return v
 
     @staticmethod

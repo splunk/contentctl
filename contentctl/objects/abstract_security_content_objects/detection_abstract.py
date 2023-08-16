@@ -72,7 +72,7 @@ class Detection_Abstract(SecurityContentObject):
     @staticmethod
     def get_detections_from_filenames(detection_filenames:set[str], all_detections:list[Detection_Abstract])->list[Detection_Abstract]:
         detection_filenames = set(str(pathlib.Path(filename).absolute()) for filename in detection_filenames)
-        detection_dict = SecurityContentObject.create_filename_to_content_dict(all_detections)
+        detection_dict:dict[str,Detection_Abstract] = Detection_Abstract.create_filename_to_content_dict(all_detections)
 
         try:
             return [detection_dict[detection_filename] for detection_filename in detection_filenames]

@@ -83,6 +83,9 @@ class DetectionBuilder():
             if '`wineventlog_security`' in self.security_content_obj.search or '`powershell`' in self.security_content_obj.search:
                 self.security_content_obj.providing_technologies = ["Microsoft Windows"]
 
+    def addThrottleFields(self) -> None:
+        if self.security_content_obj and self.security_content_obj.throttling:
+            self.security_content_obj.throttling.fields = ",".join(list(self.security_content_obj.throttling.fields))
     
     def addNesFields(self) -> None:
         if self.security_content_obj:

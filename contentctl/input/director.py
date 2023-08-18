@@ -194,6 +194,7 @@ class Director():
         builder.addRBA()
         builder.addProvidingTechnologies()
         builder.addNesFields()
+        builder.addThrottleFields()
         builder.addAnnotations()
         builder.addMappings()
         builder.addBaseline(self.output_dto.baselines)

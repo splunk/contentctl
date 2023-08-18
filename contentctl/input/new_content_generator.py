@@ -3,6 +3,7 @@ import uuid
 import questionary
 from dataclasses import dataclass
 from datetime import datetime
+from contentctl.objects.detection_suppression import DetectionSuppression
 
 from contentctl.objects.enums import SecurityContentType
 from contentctl.input.new_content_questions import NewContentQuestions
@@ -43,6 +44,7 @@ class NewContentGenerator():
             self.output_dto.obj['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
             self.output_dto.obj['known_false_positives'] = 'UPDATE_KNOWN_FALSE_POSITIVES'            
             self.output_dto.obj['references'] = ['REFERENCE']
+            self.output_dto.obj['throttling'] = DetectionSuppression().dict()
             self.output_dto.obj['tags'] = dict()
             self.output_dto.obj['tags']['analytic_story'] = ['UPDATE_STORY_NAME']
             self.output_dto.obj['tags']['asset_type'] = 'UPDATE asset_type'

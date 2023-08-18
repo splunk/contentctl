@@ -8,6 +8,7 @@ from pydantic import BaseModel, validator, root_validator, Extra
 from dataclasses import dataclass
 from typing import Union
 from datetime import datetime, timedelta
+from contentctl.objects.detection_suppression import DetectionSuppression
 
 
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -36,6 +37,7 @@ class Detection_Abstract(SecurityContentObject):
     check_references: bool = False  
     references: list
     tags: DetectionTags
+    throttling: DetectionSuppression = DetectionSuppression()
     tests: list[UnitTest] = []
 
     # enrichments

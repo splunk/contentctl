@@ -220,7 +220,7 @@ def doc_gen(args) -> None:
 
 
 def new_content(args) -> None:
-
+    config = start(args)
     if args.type == "detection":
         contentType = SecurityContentType.detections
     elif args.type == "story":
@@ -229,7 +229,7 @@ def new_content(args) -> None:
         print("ERROR: type " + args.type + " not supported")
         sys.exit(1)
 
-    new_content_generator_input_dto = NewContentGeneratorInputDto(type=contentType)
+    new_content_generator_input_dto = NewContentGeneratorInputDto(type=contentType, config=config)
     new_content_input_dto = NewContentInputDto(
         new_content_generator_input_dto, os.path.abspath(args.path)
     )

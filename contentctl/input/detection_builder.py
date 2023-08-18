@@ -27,7 +27,11 @@ class DetectionBuilder():
 
     def addDeployment(self, detection_configuration: ConfigDetectionConfiguration) -> None:
         if self.security_content_obj:
-            self.security_content_obj.deployment = detection_configuration
+            deployment: ConfigDetectionConfiguration = self.security_content_obj.deployment
+            if not deployment:
+                deployment = detection_configuration
+            else:
+                deployment = detection_configuration.dict() | deployment.dict(exclude_unset=True)
 
 
     def addRBA(self) -> None:

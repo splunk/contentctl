@@ -33,6 +33,7 @@ class DetectionBuilder():
             else:
                 deployment = detection_configuration.dict() | deployment.dict(exclude_unset=True)
 
+            self.security_content_obj.deployment = deployment
 
     def addRBA(self) -> None:
         if self.security_content_obj:

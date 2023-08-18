@@ -179,19 +179,19 @@ class Utils:
 
         return hash
 
-    @staticmethod
-    def check_required_fields(
-        thisField: str, definedFields: dict, requiredFields: list[str]
-    ):
-        missing_fields = [
-            field for field in requiredFields if field not in definedFields
-        ]
-        if len(missing_fields) > 0:
-            raise (
-                ValueError(
-                    f"Could not validate - please resolve other errors resulting in missing fields {missing_fields}"
-                )
-            )
+    # @staticmethod
+    # def check_required_fields(
+    #     thisField: str, definedFields: dict, requiredFields: list[str]
+    # ):
+    #     missing_fields = [
+    #         field for field in requiredFields if field not in definedFields
+    #     ]
+    #     if len(missing_fields) > 0:
+    #         raise (
+    #             ValueError(
+    #                 f"Could not validate - please resolve other errors resulting in missing fields {missing_fields}"
+    #             )
+    #         )
 
     @staticmethod
     def verify_file_exists(

@@ -135,7 +135,6 @@ def test(args: argparse.Namespace):
     # yet exposed/written properly in
     # the config file
     config.test.mode=DetectionTestingMode(args.mode) 
-    config.test.num_containers=1 
     config.test.post_test_behavior=PostTestBehavior(args.behavior)
     config.test.detections_list=args.detections_list
     

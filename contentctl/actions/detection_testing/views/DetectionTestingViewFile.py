@@ -21,8 +21,8 @@ class DetectionTestingViewFile(DetectionTestingView):
     output_filename: str = OUTPUT_FILENAME
 
     def getOutputFilePath(self) -> pathlib.Path:
-
-        folder_path = pathlib.Path(self.config.repo_path) / self.output_folder
+        
+        folder_path = pathlib.Path('.') / self.output_folder
         output_file = folder_path / self.output_filename
 
         return output_file
@@ -31,7 +31,7 @@ class DetectionTestingViewFile(DetectionTestingView):
         pass
 
     def stop(self):
-        folder_path = pathlib.Path(self.config.repo_path) / OUTPUT_FOLDER
+        folder_path = pathlib.Path('.') / self.output_folder
         output_file = self.getOutputFilePath()
 
         folder_path.mkdir(parents=True, exist_ok=True)

@@ -178,11 +178,22 @@ class GithubService:
         return Detection.get_detections_from_filenames(changed_detections, director.detections)
 
     def __init__(self, config: TestConfig):
-        self.repo = git.Repo(config.repo_path)
+        
         self.requested_detections: list[pathlib.Path] = []
         self.config = config
-
-        if config.mode == DetectionTestingMode.selected:
+        if config.version_control_config is not None:
+            self.repo = git.Repo(config.version_control_config.repo_path)
+        else:
+            self.repo = None
+            
+        
+        if config.mode == DetectionTestingMode.changes: 
+            if self.repo is None:
+                raise Exception("You are using detection mode 'changes', but the app does not have a version_control_config in contentctl_test.yml.")
+            return
+        elif config.mode == DetectionTestingMode.all:
+            return
+        elif config.mode == DetectionTestingMode.selected:
             if config.detections_list is None or len(config.detections_list) < 1:
                 raise (
                     Exception(
@@ -208,31 +219,12 @@ class GithubService:
                         pathlib.Path(detection_file_name)
                         for detection_file_name in config.detections_list
                     ]
-                    return
-
-        elif config.mode == DetectionTestingMode.changes:
-            return
-
-        elif config.mode == DetectionTestingMode.all:
-            return
+                    
         else:
-            raise (
-                Exception(
-                    f"Unsupported detection testing mode [{config.mode}].  Supported detection testing modes are [{DetectionTestingMode._member_names_}]"
-                )
-            )
-
-    def __init2__(self, config: TestConfig):
-
-        self.repo = git.Repo(config.repo_path)
-
-        if self.repo.active_branch.name != config.test_branch:
-            print(
-                f"Error - test_branch is '{config.test_branch}', but the current active branch in '{config.repo_path}' is '{self.repo.active_branch}'. Checking out the branch you specified..."
-            )
-            self.repo.git.checkout(config.test_branch)
-
-        self.config = config
+            raise Exception(f"Unsupported detection testing mode [{config.mode}].  "\
+                            "Supported detection testing modes are [{DetectionTestingMode._member_names_}]")
+        return
+            
 
     def clone_project(self, url, project, branch):
         LOGGER.info(f"Clone Security Content Project")

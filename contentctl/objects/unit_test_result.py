@@ -4,7 +4,7 @@ from pydantic import BaseModel, root_validator, validator
 from typing import Union
 from datetime import timedelta
 from splunklib.data import Record
-from contentctl.objects.test_config import TestConfig
+from contentctl.objects.test_config import Infrastructure
 from contentctl.helper.utils import Utils
 
 FORCE_TEST_FAILURE_FOR_MISSING_OBSERVABLE = False
@@ -56,7 +56,7 @@ class UnitTestResult(BaseModel):
     def set_job_content(
         self,
         content: Union[Record, None],
-        config: TestConfig,
+        config: Infrastructure,
         exception: Union[Exception, None] = None,
         success: bool = False,
         duration: float = 0,
@@ -74,12 +74,12 @@ class UnitTestResult(BaseModel):
                 self.message = "TEST FAILED"
             
 
-            if not config.test_instance_address.startswith("http://"):
+            if not config.instance_address.startswith("http://"):
                 sid_template = f"http://{SID_TEMPLATE}"
             else:
                 sid_template = SID_TEMPLATE
             self.sid_link = sid_template.format(
-                server=config.test_instance_address,
+                server=config.instance_address,
                 web_port=config.web_ui_port,
                 sid=content.get("sid", None),
             )

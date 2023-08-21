@@ -99,7 +99,6 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         return container
 
     def removeContainer(self, removeVolumes: bool = True, forceRemove: bool = True):
-        return
         try:
             container: docker.models.containers.Container = (
                 self.get_docker_client().containers.get(self.get_name())

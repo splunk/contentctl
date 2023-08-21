@@ -134,9 +134,13 @@ def test(args: argparse.Namespace):
     # set some arguments that are not
     # yet exposed/written properly in
     # the config file
-    config.test.mode=DetectionTestingMode(args.mode) 
-    config.test.post_test_behavior=PostTestBehavior(args.behavior)
-    config.test.detections_list=args.detections_list
+    if args.mode != None:
+        config.test.mode=DetectionTestingMode(args.mode) 
+    if args.behavior != None:
+        config.test.post_test_behavior=PostTestBehavior(args.behavior)
+    
+    if args.detections_list != None:
+        config.test.detections_list=args.detections_list
     
     
 
@@ -334,7 +338,7 @@ def main():
     test_parser.add_argument(
         "--mode",
         required=False,
-        default=DetectionTestingMode.all.name,
+        default=None,
         type=str,
         choices=DetectionTestingMode._member_names_,
         help="Controls which detections to test. 'all' will test all detections in the repo."
@@ -344,7 +348,7 @@ def main():
     test_parser.add_argument(
         "--behavior",
         required=False,
-        default=PostTestBehavior.pause_on_failure.name,
+        default=None,
         type=str,
         choices=PostTestBehavior._member_names_,
         help="Controls what to do when a test completes. 'always_pause' means that the state of "
@@ -361,6 +365,7 @@ def main():
         "--detections_list",
         required=False,
         nargs="+",
+        default=None,
         type=str,
         help="An explicit list "
         "of detections to test. Their paths should be relative to the app path.",

@@ -31,7 +31,7 @@ class DetectionBuilder():
             if not deployment:
                 deployment = detection_configuration
             else:
-                deployment = detection_configuration.dict() | deployment.dict(exclude_unset=True)
+                deployment = ConfigDetectionConfiguration.parse_obj(detection_configuration.dict() | deployment.dict(exclude_unset=True))
 
             self.security_content_obj.deployment = deployment
 

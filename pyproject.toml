@@ -30,6 +30,7 @@ tqdm = "^4.65.0"
 splunk-packaging-toolkit = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
+pytest = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -155,6 +155,4 @@ class Config(BaseModel, extra=Extra.forbid):
     build: ConfigBuild = ConfigBuild()
     enrichments: ConfigEnrichments = ConfigEnrichments()
     test: Union[TestConfig,None] = None 
-    
-
-
+    custom_deployment: bool = False

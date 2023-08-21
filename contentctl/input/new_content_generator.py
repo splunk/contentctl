@@ -3,6 +3,7 @@ import uuid
 import questionary
 from dataclasses import dataclass
 from datetime import datetime
+from contentctl.objects.config import Config
 
 from contentctl.objects.enums import SecurityContentType
 from contentctl.input.new_content_questions import NewContentQuestions
@@ -11,7 +12,8 @@ from contentctl.input.new_content_questions import NewContentQuestions
 @dataclass(frozen=True)
 class NewContentGeneratorInputDto:
     type: SecurityContentType
-    
+    config: Config
+
 
 @dataclass(frozen=True)
 class NewContentGeneratorOutputDto:
@@ -60,8 +62,9 @@ class NewContentGenerator():
             self.output_dto.obj['tags']['required_fields'] = ['UPDATE']
             self.output_dto.obj['tags']['risk_score'] = 'UPDATE (impact * confidence)/100'
             self.output_dto.obj['tags']['security_domain'] = answers['security_domain']
-            #self.output_dto.obj['source'] = answers['detection_kind']
-        
+
+            if input_dto.config.custom_deployment:
+                self.output_dto.obj['deployment'] = input_dto.config.detection_configuration.dict(exclude_unset=True)
 
         elif input_dto.type == SecurityContentType.stories:
             questions = NewContentQuestions.get_questions_story()

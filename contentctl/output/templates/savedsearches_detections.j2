@@ -71,6 +71,7 @@ action.notable.param.rule_description = {{ detection.deployment.notable.rule_des
 action.notable.param.rule_title = {{ detection.deployment.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}
 action.notable.param.security_domain = {{ detection.tags.security_domain }}
 action.notable.param.severity = high
+action.notable.param.next_steps = {{ detection.tags.next_steps }}
 {% endif %}
 {% if detection.deployment.email.to is defined %}
 action.email.subject.alert = {{ detection.deployment.email.subject | custom_jinja2_enrichment_filter(detection) }}

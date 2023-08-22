@@ -62,6 +62,7 @@ class NewContentGenerator():
             self.output_dto.obj['tags']['security_domain'] = answers['security_domain']
             #self.output_dto.obj['source'] = answers['detection_kind']
         
+            self.output_dto.obj['tags']['next_steps'] = answers['next_steps']
 
         elif input_dto.type == SecurityContentType.stories:
             questions = NewContentQuestions.get_questions_story()

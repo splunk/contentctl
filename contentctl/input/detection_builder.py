@@ -1,3 +1,4 @@
+import json
 import sys
 import re
 import os
@@ -6,6 +7,7 @@ from pydantic import ValidationError
 
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
+from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.macro import Macro
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
@@ -24,6 +26,14 @@ class DetectionBuilder():
         self.security_content_obj = Detection.parse_obj(yml_dict)
         self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
 
+    def addNextSteps(self):
+        if self.security_content_obj:
+            tags: DetectionTags = self.security_content_obj.tags
+            obj = {
+                "version": 1,
+                "data": tags.next_steps,
+            }
+            tags.next_steps = json.dumps(obj)
 
     def addDeployment(self, detection_configuration: ConfigDetectionConfiguration) -> None:
         if self.security_content_obj:

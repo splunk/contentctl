@@ -28,6 +28,7 @@ class DetectionTags(BaseModel):
     atomic_guid: list = None
     drilldown_search: str = None
     manual_test: str = None
+    next_steps: str = None
 
 
     # enrichment

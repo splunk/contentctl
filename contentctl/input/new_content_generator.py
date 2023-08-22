@@ -3,6 +3,7 @@ import uuid
 import questionary
 from dataclasses import dataclass
 from datetime import datetime
+from contentctl.objects.config import ConfigDrilldown
 
 from contentctl.objects.enums import SecurityContentType
 from contentctl.input.new_content_questions import NewContentQuestions
@@ -61,7 +62,11 @@ class NewContentGenerator():
             self.output_dto.obj['tags']['risk_score'] = 'UPDATE (impact * confidence)/100'
             self.output_dto.obj['tags']['security_domain'] = answers['security_domain']
             #self.output_dto.obj['source'] = answers['detection_kind']
-        
+            if answers['use_drilldown']:
+                self.output_dto.obj['drilldown'] = ConfigDrilldown(
+                    name=answers['drilldown_name'],
+                    search=answers['drilldown_search'],
+                ).dict()
 
         elif input_dto.type == SecurityContentType.stories:
             questions = NewContentQuestions.get_questions_story()

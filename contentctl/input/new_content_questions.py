@@ -1,5 +1,8 @@
 
 
+from contentctl.objects.enums import NotableSeverity
+
+
 class NewContentQuestions():
 
     @classmethod
@@ -90,6 +93,13 @@ class NewContentQuestions():
                     'audit'
                 ],
                 'default': 'endpoint'
+            },
+            {
+                'type': 'select',
+                'message': 'Severity',
+                'name': 'severity',
+                'choices': [item.value for item in NotableSeverity],
+                'default': NotableSeverity.Medium.value,
             },
         ]
         return questions

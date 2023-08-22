@@ -61,6 +61,7 @@ class NewContentGenerator():
             self.output_dto.obj['tags']['risk_score'] = 'UPDATE (impact * confidence)/100'
             self.output_dto.obj['tags']['security_domain'] = answers['security_domain']
             #self.output_dto.obj['source'] = answers['detection_kind']
+            self.output_dto.obj['tags']['severity'] = answers['severity']
         
 
         elif input_dto.type == SecurityContentType.stories:

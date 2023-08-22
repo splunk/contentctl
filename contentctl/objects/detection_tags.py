@@ -1,6 +1,7 @@
 import re
 
 from pydantic import BaseModel, validator, ValidationError, root_validator
+from contentctl.objects.enums import NotableSeverity
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 
@@ -13,6 +14,7 @@ class DetectionTags(BaseModel):
     cis20: list = None
     confidence: str
     impact: int
+    severity: NotableSeverity = NotableSeverity.Medium
     kill_chain_phases: list = None
     message: str
     mitre_attack_id: list = None

@@ -8,6 +8,14 @@ class AnalyticsType(enum.Enum):
     correlation = 4
 
 
+class NotableSeverity(enum.Enum):
+    Informational = "informational"
+    Low = "low"
+    Medium = "medium"
+    High = "high"
+    Critical = "critical"
+
+
 class DataModel(enum.Enum):
     Endpoint = 1
     Network_Traffic = 2

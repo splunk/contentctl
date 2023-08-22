@@ -91,6 +91,12 @@ class NewContentQuestions():
                 ],
                 'default': 'endpoint'
             },
+            {
+                'type': 'text',
+                'message': 'Next steps',
+                'name': 'next_steps',
+                'multiline': True,
+            },
         ]
         return questions
 

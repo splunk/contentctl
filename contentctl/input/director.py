@@ -186,6 +186,7 @@ class Director():
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path)
+        builder.addNextSteps()
         builder.addDeployment(self.input_dto.config.detection_configuration)
         builder.addKillChainPhase()
         builder.addCIS()

@@ -9,6 +9,7 @@ from contentctl.helper.utils import Utils
 
 FORCE_TEST_FAILURE_FOR_MISSING_OBSERVABLE = False
 
+NO_SID = "Testing Failed, NO Search ID"
 SID_TEMPLATE = "{server}:{web_port}/en-US/app/search/search?sid={sid}"
 
 
@@ -88,6 +89,7 @@ class UnitTestResult(BaseModel):
             self.job_content = None
             self.success = False
             self.message = f"Error during test: {str(content)}"
+            self.sid_link = NO_SID
 
         return self.success
 

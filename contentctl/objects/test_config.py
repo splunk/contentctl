@@ -194,8 +194,6 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
             try:
                 # connectivity to docker server is validated previously
                 client = docker.from_env()
-                print("SKIPPING PULL FOR SPEED")
-                return v
                 print(
                     f"Getting the latest version of the container image: {v}...",
                     end="",

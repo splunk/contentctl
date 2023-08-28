@@ -132,8 +132,8 @@ class ConfOutput:
             for lookup_name in files:
                 lookup_path = pathlib.Path(lookup_name)
                 if lookup_path.is_file():
-                    lookuo_target_path = self.output_path/"lookups"/lookup_path.name
-                    shutil.copy(lookup_path, lookuo_target_path)
+                    lookup_target_path = self.output_path/"lookups"/lookup_path.name
+                    shutil.copy(lookup_path, lookup_target_path)
 
         elif type == SecurityContentType.macros:
             ConfWriter.writeConfFile(self.output_path/'default/macros.conf',

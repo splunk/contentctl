@@ -25,6 +25,7 @@ from contentctl.objects.enums import (
     SecurityContentProduct,
     DetectionTestingMode,
     PostTestBehavior,
+    DetectionTestingTargetInfrastructure
 )
 from contentctl.input.new_content_generator import NewContentGeneratorInputDto
 from contentctl.helper.config_handler import ConfigHandler
@@ -32,7 +33,7 @@ from contentctl.helper.config_handler import ConfigHandler
 from contentctl.objects.config import Config
 
 from contentctl.objects.app import App
-from contentctl.objects.test_config import TestConfig
+from contentctl.objects.test_config import TestConfig, Infrastructure
 from contentctl.actions.test import Test, TestInputDto, TestOutputDto
 
 
@@ -128,19 +129,52 @@ def acs_deploy(args) -> None:
 
 def test(args: argparse.Namespace):
     args = configure_unattended(args)
+
     config = start(args, read_test_file=True)
     
+    if config.test is None:
+        raise Exception("Error parsing test configuration. Test Object was None.")
 
     # set some arguments that are not
     # yet exposed/written properly in
     # the config file
-    if args.mode != None:
+    if args.infrastructure is not None:
+        config.test.infrastructure_config.infrastructure_type = DetectionTestingTargetInfrastructure(args.infrastructure)
+    if args.mode is not None:
         config.test.mode=DetectionTestingMode(args.mode) 
-    if args.behavior != None:
+    if args.behavior is not None:
         config.test.post_test_behavior=PostTestBehavior(args.behavior)
-    
-    if args.detections_list != None:
+    if args.detections_list is not None:
         config.test.detections_list=args.detections_list
+
+
+    
+    if config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.container:
+        if args.num_containers is None:
+            raise Exception("Error - trying to start a test using container infrastructure but no value for --num_containers was found")
+        config.test.infrastructure_config.infrastructures = Infrastructure.get_infrastructure_containers(args.num_containers)
+    elif config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.server:
+        if args.server_info is None:
+            if len(config.test.infrastructure_config.infrastructures) == 0:
+                raise Exception("Error - trying to start a test using server infrastructure, but server information was not stored "
+                                "in contentctl_test.yml or passed on the command line. Please see the documentation for --server_info "
+                                "at the command line or 'infrastructures' in contentctl.yml.")
+            else:
+                print("Using server configuration from contentctl_test.yml")
+        
+        else:
+            print("Using server configuration from command line")
+            config.test.infrastructure_config.infrastructures = []
+            for server in args.server_info:
+                address,username,password,hec_port,web_ui_port,api_port = server.split(":")
+                config.test.infrastructure_config.infrastructures.append(Infrastructure(splunk_app_username=username,
+                                                                                        splunk_app_password=password,
+                                                                                        instance_address=address, 
+                                                                                        hec_port=hec_port,
+                                                                                        web_ui_port=web_ui_port,
+                                                                                        api_port=api_port))
+            
+        
     
     
 
@@ -371,8 +405,21 @@ def main():
         "of detections to test. Their paths should be relative to the app path.",
     )
 
+
     test_parser.add_argument("--unattended", action=argparse.BooleanOptionalAction)
     
+    
+    test_parser.add_argument("--infrastructure", required=False, type=str, 
+                                                 choices=DetectionTestingTargetInfrastructure._member_names_, default=None, 
+                                                 help="Determines what infrastructure to use for testing. The options are "
+                                                 "container and server.  Container will set up Splunk Container(s) at runtime, "
+                                                 "install all relevant apps, and perform configurations.  Server will use "
+                                                 "preconfigured server(s) either specified on the command line or in "
+                                                 "contentctl_test.yml.")
+    test_parser.add_argument("--num_containers", required=False, default=1, type=int)
+    test_parser.add_argument("--server_info", required=False, default=None, nargs='+')
+
+
     test_parser.set_defaults(func=test)
 
     # parse them

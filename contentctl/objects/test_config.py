@@ -9,6 +9,7 @@ import os
 from pydantic import BaseModel, validator, root_validator, Extra, Field
 from dataclasses import dataclass
 from typing import Union
+import re
 import docker
 import docker.errors
 
@@ -52,15 +53,41 @@ class Infrastructure(BaseModel, extra=Extra.forbid, validate_assignment=True):
     )
     
     instance_name: str = Field(
-        default="splunk_contentctl_%d",
+        default="Splunk_Server_Name",
         title="Template to be used for naming the Splunk Test Containers or referring to Test Servers.",
     )
-
+    
     hec_port: int = Field(default=8088, title="HTTP Event Collector Port")
     web_ui_port: int = Field(default=8000, title="Web UI Port")
     api_port: int = Field(default=8089, title="REST API Port")
 
+    @staticmethod
+    def get_infrastructure_containers(num_containers:int=1, splunk_app_username:str="admin", splunk_app_password:str="password", instance_name_template="splunk_contentctl_{index}")->list[Infrastructure]:
+        containers:list[Infrastructure] = []
+        if num_containers < 0:
+            raise ValueError(f"Error - you must specifiy 1 or more containers, not {num_containers}.")
 
+        #Get the starting ports
+        i = Infrastructure() #Instantiate to get the base port numbers
+        
+        for index in range(0, num_containers):
+            containers.append(Infrastructure(splunk_app_username=splunk_app_username,
+                                             splunk_app_password=splunk_app_password,
+                                             instance_name=instance_name_template.format(index=index),
+                                             hec_port=i.hec_port+(index*2),
+                                             web_ui_port=i.web_ui_port+index,
+                                             api_port=i.api_port+(index*2)))
+
+        
+        return containers
+
+    @validator("instance_name")
+    def validate_instance_name(cls,v,values):
+        if not re.fullmatch("[a-zA-Z0-9][a-zA-Z0-9_.-]*", v):
+            raise ValueError(f"The instance_name '{v}' is not valid.  Please use an instance name which matches the regular expression '[a-zA-Z0-9][a-zA-Z0-9_.-]*'")
+        else:
+            return v
+        
     @validator("instance_address")
     def validate_instance_address(cls, v, values):
         try:
@@ -140,7 +167,7 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
         default="registry.hub.docker.com/splunk/splunk:latest",
         title="Full path to the container image to be used",
     )
-    infrastructures: list[Infrastructure] = [Infrastructure()]
+    infrastructures: list[Infrastructure] = []
 
     
     @validator("infrastructure_type", always=True)
@@ -164,7 +191,7 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
     
 
     
-    @validator("full_image_path", always=True)
+    @validator("full_image_path")
     def validate_full_image_path(cls, v, values):
         if (
             values.get("infrastructure_type", None)
@@ -258,7 +285,9 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
     @validator("infrastructures", always=True)
     def validate_infrastructures(cls, v, values):
         MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING = 2
-        
+        if values.get("infrastructure_type",None) == DetectionTestingTargetInfrastructure.container and len(v) == 0:
+            v = [Infrastructure()]
+
         if len(v) < 1:
             raise (
                 ValueError(
@@ -286,7 +315,7 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
         for infrastructure in v:
             for k in ["hec_port", "web_ui_port", "api_port"]:
                 if getattr(infrastructure, k) in ports:
-                    raise ValueError(f"Port {infrastructure.get(k)} used more than once in container infrastructure ports")
+                    raise ValueError(f"Port {getattr(infrastructure, k)} used more than once in container infrastructure ports")
                 ports.add(getattr(infrastructure, k))
         return v
     
@@ -321,7 +350,6 @@ class VersionControlConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
             if ALWAYS_PULL_REPO:
                 r.remotes.origin.pull()
         except Exception as e:
-            print("exception 3")
             raise ValueError(f"Error pulling git repository {v}: {str(e)}")
         print("repo path looks good")
         return v

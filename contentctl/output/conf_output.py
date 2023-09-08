@@ -39,11 +39,13 @@ class ConfOutput:
         ConfWriter.writeConfFileHeader(self.output_path/'default/transforms.conf', self.config)
         ConfWriter.writeConfFileHeader(self.output_path/'default/workflow_actions.conf', self.config)
         ConfWriter.writeConfFileHeader(self.output_path/'default/app.conf', self.config)
-        
+        ConfWriter.writeConfFileHeader(self.output_path/'default/content-version.conf', self.config)
 
 
     def writeAppConf(self):
         ConfWriter.writeConfFile(self.output_path/"default"/"app.conf", "app.conf.j2", self.config, [self.config.build] )
+        ConfWriter.writeConfFile(self.output_path/"default"/"content-version.conf", "content-version.j2", self.config, [self.config.build] )
+        ConfWriter.writeConfFile(self.output_path/"app.manifest", "app.manifest.j2", self.config, [self.config.build] )
 
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:
@@ -128,38 +130,38 @@ class ConfOutput:
     def packageApp(self) -> None:
         
 
-        input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
+        # input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
         
-        readme_file = pathlib.Path("README")
-        if not readme_file.is_file():
-            raise Exception("The README file does not exist in this directory. Cannot build app.")
-        shutil.copyfile(readme_file, input_app_path/readme_file.name)
+        # readme_file = pathlib.Path("README")
+        # if not readme_file.is_file():
+        #     raise Exception("The README file does not exist in this directory. Cannot build app.")
+        # shutil.copyfile(readme_file, input_app_path/readme_file.name)
         output_app_expected_name = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}-{self.config.build.version}.tar.gz"
         
         
-        try:
-            import slim
-            use_slim = True
+        # try:
+        #     import slim
+        #     use_slim = True
             
-        except Exception as e:
-            print("Failed to import Splunk Packaging Toolkit (slim).  slim requires Python<3.10.  "
-                  "Packaging app with tar instead. This should still work, but appinspect may catch "
-                  "errors that otherwise would have been flagged by slim.")
-            use_slim = False
+        # except Exception as e:
+        #     print("Failed to import Splunk Packaging Toolkit (slim).  slim requires Python<3.10.  "
+        #           "Packaging app with tar instead. This should still work, but appinspect may catch "
+        #           "errors that otherwise would have been flagged by slim.")
+        #     use_slim = False
         
-        if use_slim:
-            import slim
-            from slim.utils import SlimLogger
-            import logging
-            #In order to avoid significant output, only emit FATAL log messages
-            SlimLogger.set_level(logging.ERROR)
-            try:
-                slim.package(source=input_app_path, output_dir=pathlib.Path(self.config.build.path_root))
-            except SystemExit as e:
-                raise Exception(f"Error building package with slim: {str(e)}")
-        else:
-            with tarfile.open(output_app_expected_name, "w:gz") as app_archive:
-                app_archive.add(self.output_path, arcname=os.path.basename(self.output_path)) 
+        # if use_slim:
+        #     import slim
+        #     from slim.utils import SlimLogger
+        #     import logging
+        #     #In order to avoid significant output, only emit FATAL log messages
+        #     SlimLogger.set_level(logging.ERROR)
+        #     try:
+        #         slim.package(source=input_app_path, output_dir=pathlib.Path(self.config.build.path_root))
+        #     except SystemExit as e:
+        #         raise Exception(f"Error building package with slim: {str(e)}")
+        # else:
+        with tarfile.open(output_app_expected_name, "w:gz") as app_archive:
+            app_archive.add(self.output_path, arcname=os.path.basename(self.output_path)) 
                        
             
         

@@ -17,7 +17,6 @@ class BasicBuilder():
 
 
     def setObject(self, path: pathlib.Path, type: SecurityContentType) -> None:
-        #print(path)
         yml_dict = YmlReader.load_file(path)
         if type == SecurityContentType.deployments:
             if "alert_action" in yml_dict:

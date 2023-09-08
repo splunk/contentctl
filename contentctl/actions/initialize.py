@@ -35,7 +35,7 @@ class Initialize:
         YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl_test.yml'), dict(obj))
 
 
-        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'docs', 'reporting']
+        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'docs', 'reporting', 'deployments', 'investigations']
         for folder in folders:
             os.makedirs(os.path.join(input_dto.path, folder))
 

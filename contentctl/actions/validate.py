@@ -35,11 +35,6 @@ class Validate:
             )
             self.validate_duplicate_uuids(security_content_objects)
 
-            # validate tests
-            self.validate_detection_exist_for_test(
-                director_output_dto.tests, director_output_dto.detections
-            )
-
         except ValueError as e:
             print(e)
             sys.exit(1)
@@ -73,14 +68,14 @@ class Validate:
             + "\n".join([obj.name for obj in content_with_duplicate_uuid])
         )
 
-    def validate_detection_exist_for_test(self, tests: list, detections: list):
-        for test in tests:
-            found_detection = False
-            for detection in detections:
-                if test.tests[0].file in detection.file_path:
-                    found_detection = True
+    # def validate_detection_exist_for_test(self, tests: list, detections: list):
+    #     for test in tests:
+    #         found_detection = False
+    #         for detection in detections:
+    #             if test.tests[0].file in detection.file_path:
+    #                 found_detection = True
 
-            if not found_detection:
-                raise ValueError(
-                    "ERROR: detection doesn't exist for test file: " + test.name
-                )
+    #         if not found_detection:
+    #             raise ValueError(
+    #                 "ERROR: detection doesn't exist for test file: " + test.name
+    #             )

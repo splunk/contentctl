@@ -12,6 +12,7 @@ from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.config import ConfigDetectionConfiguration
+from contentctl.helper.constants import *
 
 
 class DetectionBuilder():
@@ -25,9 +26,29 @@ class DetectionBuilder():
         self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
 
 
-    def addDeployment(self, detection_configuration: ConfigDetectionConfiguration) -> None:
+    def addDeployment(self, deployments: list) -> None:
         if self.security_content_obj:
-            self.security_content_obj.deployment = detection_configuration
+            if not self.security_content_obj.deployment:
+                matched_deployments = []
+                for d in deployments:
+                    d_tags = dict(d.tags)
+                    for d_tag in d_tags.keys():
+                        for attr in dir(self.security_content_obj):
+                            if not (attr.startswith('__') or attr.startswith('_')):
+                                if attr == d_tag:
+                                    if type(self.security_content_obj.__getattribute__(attr)) is str:
+                                        attr_values = [self.security_content_obj.__getattribute__(attr)]
+                                    else:
+                                        attr_values = self.security_content_obj.__getattribute__(attr)
+                                    
+                                    for attr_value in attr_values:
+                                        if attr_value == d_tags[d_tag]:
+                                            matched_deployments.append(d)
+
+                if len(matched_deployments) == 0:
+                    self.security_content_obj.deployment = None
+                else:
+                    self.security_content_obj.deployment = matched_deployments[-1]
 
 
     def addRBA(self) -> None:
@@ -145,20 +166,6 @@ class DetectionBuilder():
             self.security_content_obj.baselines = matched_baselines
 
 
-    def addUnitTest(self, tests: list) -> None:
-        if self.security_content_obj:
-            if self.security_content_obj.tests and len(self.security_content_obj.tests) > 0: 
-                return
-            elif self.security_content_obj.type not in ["Correlation"] and \
-               self.security_content_obj.deprecated == False and \
-               self.security_content_obj.experimental == False and \
-               self.security_content_obj.tags.manual_test == None:
-                raise(Exception(f"No tests found found {self.security_content_obj.file_path}"))
-                #print(f"No tests found found {self.security_content_obj.file_path}")
-            return None
-
-
-
     def addMitreAttackEnrichment(self, attack_enrichment: dict) -> None:
         if self.security_content_obj:
             if attack_enrichment:
@@ -221,12 +228,14 @@ class DetectionBuilder():
                 for cve in self.security_content_obj.tags.cve:
                     self.security_content_obj.cve_enrichment.append(CveEnrichment.enrich_cve(cve))
 
+
     def addSplunkApp(self) -> None:
         if self.security_content_obj:
             self.security_content_obj.splunk_app_enrichment = []
             if self.security_content_obj.tags.supported_tas:
                 for splunk_app in self.security_content_obj.tags.supported_tas:
                     self.security_content_obj.splunk_app_enrichment.append(SplunkAppEnrichment.enrich_splunk_app(splunk_app))
+
 
     def addCIS(self) -> None:
         if self.security_content_obj:
@@ -246,12 +255,14 @@ class DetectionBuilder():
                             kill_chain_phases.append(ATTACK_TACTICS_KILLCHAIN_MAPPING[mitre_attack_tactic])
                 self.security_content_obj.tags.kill_chain_phases = list(dict.fromkeys(kill_chain_phases))
 
+
     def addNist(self) -> None:
         if self.security_content_obj:
             if self.security_content_obj.type == "TTP":
                 self.security_content_obj.tags.nist = ["DE.CM"]
             else:
                 self.security_content_obj.tags.nist = ["DE.AE"]
+
 
     def addDatamodel(self) -> None:
         if self.security_content_obj:

@@ -48,7 +48,7 @@ class DirectorOutputDto:
      playbooks: list[Playbook]
      macros: list[Macro]
      lookups: list[Lookup]
-     tests: list[UnitTest]
+     deployments: list[Deployment]
 
 
 class Director():
@@ -82,7 +82,7 @@ class Director():
         self.story_builder = StoryBuilder()
         self.detection_builder = DetectionBuilder()
         if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
-            self.createSecurityContent(SecurityContentType.unit_tests)
+            self.createSecurityContent(SecurityContentType.deployments)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
             self.createSecurityContent(SecurityContentType.baselines)
@@ -158,11 +158,6 @@ class Director():
                         self.constructDetection(self.detection_builder, file)
                         detection = self.detection_builder.getObject()
                         self.output_dto.detections.append(detection)
-            
-                elif type == SecurityContentType.unit_tests:
-                        self.constructTest(self.basic_builder, file)
-                        test = self.basic_builder.getObject()
-                        self.output_dto.tests.append(test)
 
                 else:
                         raise Exception(f"Unsupported type: [{type}]")
@@ -186,7 +181,8 @@ class Director():
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path)
-        builder.addDeployment(self.input_dto.config.detection_configuration)
+        builder.addDeployment(self.output_dto.deployments)
+        builder.addMitreAttackEnrichment(self.attack_enrichment)
         builder.addKillChainPhase()
         builder.addCIS()
         builder.addNist()
@@ -198,7 +194,6 @@ class Director():
         builder.addMappings()
         builder.addBaseline(self.output_dto.baselines)
         builder.addPlaybook(self.output_dto.playbooks)
-        builder.addUnitTest(self.output_dto.tests)
         builder.addMacros(self.output_dto.macros)
         builder.addLookups(self.output_dto.lookups)
         
@@ -224,14 +219,13 @@ class Director():
     def constructBaseline(self, builder: BaselineBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path)
-        print("skipping deployment for baseline for now...")
-        return
         builder.addDeployment(self.output_dto.deployments)
 
 
     def constructDeployment(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path, SecurityContentType.deployments)
+
 
     def constructLookup(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()

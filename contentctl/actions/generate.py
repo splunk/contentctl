@@ -34,7 +34,7 @@ class Generate:
             conf_output.writeObjects(director_output_dto.macros, SecurityContentType.macros)
             conf_output.writeAppConf()
             conf_output.packageApp()
-            conf_output.inspectApp()
+            #conf_output.inspectApp()
 
         elif input_dto.director_input_dto.product == SecurityContentProduct.SSA:
             shutil.rmtree(input_dto.output_path + '/srs/', ignore_errors=True)

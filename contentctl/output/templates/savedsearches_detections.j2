@@ -3,41 +3,41 @@
 {% for detection in objects %}
 {% if (detection.type == 'TTP' or detection.type == 'Anomaly' or detection.type == 'Hunting' or detection.type == 'Correlation') %}
 [{{APP_NAME}} - {{ detection.name }} - Rule]
-action.{{APP_NAME|lower}} = 0
-action.{{APP_NAME|lower}}.enabled = 1
+action.escu = 0
+action.escu.enabled = 1
 {% if detection.deprecated %}
 description = WARNING, this detection has been marked deprecated by the Splunk Threat Research team, this means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
 {% else %}
 description = {{ detection.description }}
 {% endif %}
-action.{{APP_NAME|lower}}.mappings = {{ detection.mappings | tojson }}
-action.{{APP_NAME|lower}}.data_models = {{ detection.datamodel | tojson }}
-action.{{APP_NAME|lower}}.eli5 = {{ detection.description }}
+action.escu.mappings = {{ detection.mappings | tojson }}
+action.escu.data_models = {{ detection.datamodel | tojson }}
+action.escu.eli5 = {{ detection.description }}
 {% if detection.how_to_implement is defined %}
-action.{{APP_NAME|lower}}.how_to_implement = {{ detection.how_to_implement }}
+action.escu.how_to_implement = {{ detection.how_to_implement }}
 {% else %}
-action.{{APP_NAME|lower}}.how_to_implement = none
+action.escu.how_to_implement = none
 {% endif %}
 {% if detection.known_false_positives is defined %}
-action.{{APP_NAME|lower}}.known_false_positives = {{ detection.known_false_positives }}
+action.escu.known_false_positives = {{ detection.known_false_positives }}
 {% else %}
-action.{{APP_NAME|lower}}.known_false_positives = None
+action.escu.known_false_positives = None
 {% endif %}
-action.{{APP_NAME|lower}}.creation_date = {{ detection.date }}
-action.{{APP_NAME|lower}}.modification_date = {{ detection.date }}
-action.{{APP_NAME|lower}}.confidence = high
-action.{{APP_NAME|lower}}.full_search_name = {{APP_NAME}} - {{ detection.name }} - Rule
-action.{{APP_NAME|lower}}.search_type = detection
+action.escu.creation_date = {{ detection.date }}
+action.escu.modification_date = {{ detection.date }}
+action.escu.confidence = high
+action.escu.full_search_name = {{APP_NAME}} - {{ detection.name }} - Rule
+action.escu.search_type = detection
 {% if detection.tags.product is defined %}
-action.{{APP_NAME|lower}}.product = {{ detection.tags.product | tojson }}
+action.escu.product = {{ detection.tags.product | tojson }}
 {% endif %}
 {% if detection.providing_technologies is defined %}
-action.{{APP_NAME|lower}}.providing_technologies = {{ detection.providing_technologies | tojson }}
+action.escu.providing_technologies = {{ detection.providing_technologies | tojson }}
 {% else %}
-action.{{APP_NAME|lower}}.providing_technologies = []
+action.escu.providing_technologies = []
 {% endif %}
 {% if detection.tags.analytic_story is defined %}
-action.{{APP_NAME|lower}}.analytic_story = {{ detection.tags.analytic_story | tojson }}
+action.escu.analytic_story = {{ detection.tags.analytic_story | tojson }}
 {% if detection.deployment.rba.enabled is defined %}
 action.risk = 1
 action.risk.param._risk_message = {{ detection.tags.message }}
@@ -46,7 +46,7 @@ action.risk.param._risk_score = 0
 action.risk.param.verbose = 0
 {% endif %}
 {% else %}
-action.{{APP_NAME|lower}}.analytic_story = []
+action.escu.analytic_story = []
 {% endif %}
 cron_schedule = {{ detection.deployment.scheduling.cron_schedule }}
 dispatch.earliest_time = {{ detection.deployment.scheduling.earliest_time }}
@@ -54,6 +54,8 @@ dispatch.latest_time = {{ detection.deployment.scheduling.latest_time }}
 action.correlationsearch.enabled = 1
 {% if detection.deprecated %}
 action.correlationsearch.label = {{APP_NAME}} - Deprecated - {{ detection.name }} - Rule
+{% elif detection.type | lower == "correlation" %}
+action.correlationsearch.label = {{APP_NAME}} - RIR - {{ detection.name }} - Rule
 {% else %}
 action.correlationsearch.label = {{APP_NAME}} - {{ detection.name }} - Rule
 {% endif %}
@@ -68,7 +70,7 @@ action.notable = 1
 action.notable.param.nes_fields = {{ detection.nes_fields }}
 {% endif %}
 action.notable.param.rule_description = {{ detection.deployment.notable.rule_description | custom_jinja2_enrichment_filter(detection) }}
-action.notable.param.rule_title = {{ detection.deployment.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}
+action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
 action.notable.param.security_domain = {{ detection.tags.security_domain }}
 action.notable.param.severity = high
 {% endif %}

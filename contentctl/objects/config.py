@@ -150,10 +150,10 @@ class ConfigEnrichments(BaseModel):
 
 class Config(BaseModel, extra=Extra.forbid):
     #general: ConfigGlobal = ConfigGlobal()
-    detection_configuration: Union[ConfigDetectionConfiguration,None] = None
-    deployments: Union[Deployments,None] = None 
-    build: Union[ConfigBuild,None] = None 
-    enrichments: Union[ConfigEnrichments,None] = None 
+    #detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
+    deployments: Deployments = Deployments()
+    build: ConfigBuild = ConfigBuild()
+    enrichments: ConfigEnrichments = ConfigEnrichments()
     test: Union[TestConfig,None] = None 
     
 

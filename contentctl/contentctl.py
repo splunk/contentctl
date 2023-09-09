@@ -40,7 +40,7 @@ from contentctl.actions.test import Test, TestInputDto, TestOutputDto
 import tqdm
 import functools
 from typing import Union
-
+SERVER_ARGS_ENV_VARIABLE = "CONTENTCTL_TEST_INFRASTRUCTURES"
 
 def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
     # disable all calls to tqdm - this is so that CI/CD contexts don't
@@ -154,30 +154,38 @@ def test(args: argparse.Namespace):
             raise Exception("Error - trying to start a test using container infrastructure but no value for --num_containers was found")
         config.test.infrastructure_config.infrastructures = Infrastructure.get_infrastructure_containers(args.num_containers)
     elif config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.server:
-        if args.server_info is None:
+        if args.server_info is None and os.environ.get(SERVER_ARGS_ENV_VARIABLE) is None:
             if len(config.test.infrastructure_config.infrastructures) == 0:
                 raise Exception("Error - trying to start a test using server infrastructure, but server information was not stored "
                                 "in contentctl_test.yml or passed on the command line. Please see the documentation for --server_info "
                                 "at the command line or 'infrastructures' in contentctl.yml.")
             else:
-                print("Using server configuration from contentctl_test.yml")
+                print("Using server configuration from: [contentctl_test.yml infrastructures section]")
         
         else:
-            print("Using server configuration from command line")
+            if args.server_info is not None:
+                print("Using server configuration from: [command line]")
+                pass
+            elif os.environ.get(SERVER_ARGS_ENV_VARIABLE) is not None:
+                args.server_info = os.environ.get(SERVER_ARGS_ENV_VARIABLE,"").split(';')
+                print(f"Using server configuration from: [{SERVER_ARGS_ENV_VARIABLE} environment variable]")
+            else:
+                raise Exception(f"Server infrastructure information not passed in contentctl_test.yml file, using --server_info switch on the command line, or in the {SERVER_ARGS_ENV_VARIABLE} environment variable")
+                # if server info was provided on the command line, us that. Otherwise use the env
+            
+            
+            
             config.test.infrastructure_config.infrastructures = []
+            
             for server in args.server_info:
-                address,username,password,hec_port,web_ui_port,api_port = server.split(":")
+                address,username,password,web_ui_port,hec_port,api_port = server.split(",")
                 config.test.infrastructure_config.infrastructures.append(Infrastructure(splunk_app_username=username,
                                                                                         splunk_app_password=password,
                                                                                         instance_address=address, 
-                                                                                        hec_port=hec_port,
-                                                                                        web_ui_port=web_ui_port,
-                                                                                        api_port=api_port))
+                                                                                        hec_port=int(hec_port),
+                                                                                        web_ui_port=int(web_ui_port),
+                                                                                        api_port=int(api_port)))
             
-        
-    
-    
-
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
     githubService = GithubService(config.test)
@@ -417,7 +425,7 @@ def main():
                                                  "preconfigured server(s) either specified on the command line or in "
                                                  "contentctl_test.yml.")
     test_parser.add_argument("--num_containers", required=False, default=1, type=int)
-    test_parser.add_argument("--server_info", required=False, default=None, nargs='+')
+    test_parser.add_argument("--server_info", required=False, default=None, type=str, nargs='+')
 
 
     test_parser.set_defaults(func=test)

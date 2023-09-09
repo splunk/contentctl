@@ -614,7 +614,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 tick += 1
         
             
-        print("\n\n\n\nhere5\n\n\n\n")
+        
         return
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):

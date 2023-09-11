@@ -158,7 +158,7 @@ def test(args: argparse.Namespace):
         title=config.build.name,
         release=config.build.version,
         http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"),
+        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
         description=config.build.description,
         splunkbase_path=None,
         force_local=True

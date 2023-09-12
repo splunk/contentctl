@@ -259,5 +259,29 @@ class ConfOutput:
                         #back as we read
                         logfile.seek(0)
                         json.dump(j, logfile, indent=3, )
+                        bad_stuff = ["error", "failure", "manual_check", "warning"]
+                        reports = j.get("reports", [])
+                        if len(reports) != 1:
+                            raise Exception("Expected to find one appinspect report but found 0")
+                        verbose_errors = []
+                        
+                        for group in reports[0].get("groups", []):
+                            for check in group.get("checks",[]):
+                                if check.get("result","") in bad_stuff:                                    
+                                    verbose_errors.append(f"Result: {check.get('result','')} - [{group.get('name','NONAME')}: {check.get('name', 'NONAME')}]")
+                        verbose_errors.sort()
+                        
+                        summary = j.get("summary", None)
+                        if summary is None:
+                            raise Exception("Missing summary from appinspect report")
+                        msgs = []
+                        for key in bad_stuff:
+                            if summary.get(key,0)>0:
+                                msgs.append(f"{summary.get(key,0)} {key}s")
+                        if len(msgs)>0 or len(verbose_errors):
+                            summary = '\n - '.join(msgs)
+                            details = '\n - '.join(verbose_errors)
+                            raise Exception(f"AppInspect found issue(s) that may prevent automated vetting:\nSummary:\n{summary}\nDetails:\n{details}")
+                        
                 except Exception as e:
                     print(f"Failed to format {appinspect_output}: {str(e)}")

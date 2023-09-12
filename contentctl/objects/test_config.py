@@ -170,7 +170,7 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
     infrastructures: list[Infrastructure] = []
 
     
-    @validator("infrastructure_type", always=True)
+    @validator("infrastructure_type")
     def validate_infrastructure_type(cls, v, values):
         if v == DetectionTestingTargetInfrastructure.server:
             # No need to validate that the docker client is available

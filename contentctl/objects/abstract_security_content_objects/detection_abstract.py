@@ -109,8 +109,6 @@ class Detection_Abstract(SecurityContentObject):
 
     @validator("search")
     def search_obsersables_exist_validate(cls, v, values):
-        return v
-        # All observable fields must appear in the search
         tags:DetectionTags = values.get("tags")
         if tags == None:
             raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
@@ -134,7 +132,8 @@ class Detection_Abstract(SecurityContentObject):
         
         if len(error_messages) > 0:
             msg = "\n\t".join(error_messages)
-            raise(ValueError(msg))
+            print("Errors found in notable validation - skipping for now")
+            #raise(ValueError(msg))
         
         # Found everything
         return v

@@ -371,6 +371,14 @@ def main():
     api_deploy_parser.set_defaults(func=api_deploy)
 
     test_parser.add_argument(
+        "-t",
+        "--type",
+        required=False,
+        type=str,
+        default="app",
+        help="Type of package: app, ssa or api"
+    )
+    test_parser.add_argument(
         "--mode",
         required=False,
         default=DetectionTestingMode.all.name,

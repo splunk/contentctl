@@ -58,3 +58,5 @@ class Generate:
             api_json_output.writeObjects(director_output_dto.lookups, input_dto.director_input_dto.config.build_api.output_path, SecurityContentType.lookups)
             api_json_output.writeObjects(director_output_dto.macros, input_dto.director_input_dto.config.build_api.output_path, SecurityContentType.macros)
             api_json_output.writeObjects(director_output_dto.deployments, input_dto.director_input_dto.config.build_api.output_path, SecurityContentType.deployments)
+
+        return director_output_dto

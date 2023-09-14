@@ -16,7 +16,7 @@ class Playbook(SecurityContentObject):
     #version: int
     #date: str
     #author: str
-    contentType: SecurityContentType = SecurityContentType.playbooks
+    #contentType: SecurityContentType = SecurityContentType.playbooks
     type: str
     #description: str
     how_to_implement: str

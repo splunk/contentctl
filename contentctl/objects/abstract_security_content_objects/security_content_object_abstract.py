@@ -7,7 +7,7 @@ from contentctl.objects.enums import SecurityContentType
 
 
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    contentType: SecurityContentType
+    #contentType: SecurityContentType
     name: str
     author: str = "UNKNOWN_AUTHOR"
     date: str = "1990-01-01"
@@ -15,12 +15,12 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     id: str = None
     description: str = "UNKNOWN_DESCRIPTION"
 
-    @validator('name')
-    def name_max_length(cls, v):
-        if len(v) > 67:
-            print("LENGTH ERROR!")
-            raise ValueError('name is longer then 67 chars: ' + v)
-        return v
+    # @validator('name')
+    # def name_max_length(cls, v):
+    #     if len(v) > 67:
+    #         print("LENGTH ERROR!")
+    #         raise ValueError('name is longer then 67 chars: ' + v)
+    #     return v
 
     @validator('name')
     def name_invalid_chars(cls, v):

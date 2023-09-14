@@ -166,6 +166,12 @@ class DetectionBuilder():
             self.security_content_obj.baselines = matched_baselines
 
 
+    def addUnitTest(self) -> None:
+        if self.security_content_obj:
+            if self.security_content_obj.tests:
+                self.security_content_obj.test = self.security_content_obj.tests[0]
+
+
     def addMitreAttackEnrichment(self, attack_enrichment: dict) -> None:
         if self.security_content_obj:
             if attack_enrichment:

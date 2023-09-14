@@ -1,4 +1,5 @@
 import os
+import json
 
 
 from contentctl.output.json_writer import JsonWriter
@@ -7,7 +8,7 @@ from contentctl.objects.enums import SecurityContentType
 
 class ApiJsonOutput():
 
-    def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
+ def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:
             obj_array = []
             for detection in objects:
@@ -22,11 +23,49 @@ class ApiJsonOutput():
                         "baselines": True,
                         "mappings": True,
                         "test": True,
-                        "deployment": True
+                        "deployment": True,
+                        "type": True,
+                        "status": True,
+                        "data_source": True,
+                        "tests": True,
+                        "cve_enrichment": True,
+                        "tags": 
+                            {
+                                "file_path": True,
+                                "required_fields": True,
+                                "confidence": True,
+                                "impact": True,
+                                "product": True,
+                                "cve": True
+                            }
                     }
                 ))
             
             JsonWriter.writeJsonObject(os.path.join(output_path, 'detections.json'), {'detections': obj_array })
+
+            ### Code to be added to contentctl to ship filter macros to macros.json
+
+            obj_array = []    
+            for detection in objects:
+                detection_dict = detection.dict()
+                if "macros" in detection_dict:
+                    for macro in detection_dict["macros"]:
+                        obj_array.append(macro)
+
+            uniques:set[str] = set()
+            for obj in obj_array:
+                if obj.get("arguments",None) != None:
+                    uniques.add(json.dumps(obj,sort_keys=True))
+                else:
+                    obj.pop("arguments")
+                    uniques.add(json.dumps(obj, sort_keys=True))
+
+            obj_array = []
+            for item in uniques:
+                obj_array.append(json.loads(item))
+
+            JsonWriter.writeJsonObject(os.path.join(output_path, 'macros.json'), {'macros': obj_array})
+
         
         elif type == SecurityContentType.stories:
             obj_array = []
@@ -62,16 +101,12 @@ class ApiJsonOutput():
         elif type == SecurityContentType.lookups:
             obj_array = []
             for lookup in objects:
+
                 obj_array.append(lookup.dict(exclude_none=True))
+
 
             JsonWriter.writeJsonObject(os.path.join(output_path, 'lookups.json'), {'lookups': obj_array })
 
-        elif type == SecurityContentType.macros:      
-            obj_array = []
-            for macro in objects:
-                obj_array.append(macro.dict(exclude_none=True))
-
-            JsonWriter.writeJsonObject(os.path.join(output_path, 'macros.json'), {'macros': obj_array })
 
         elif type == SecurityContentType.deployments:
             obj_array = []
@@ -79,4 +114,3 @@ class ApiJsonOutput():
                 obj_array.append(deployment.dict(exclude_none=True))
 
             JsonWriter.writeJsonObject(os.path.join(output_path, 'deployments.json'), {'deployments': obj_array })
-

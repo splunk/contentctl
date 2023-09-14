@@ -26,7 +26,7 @@ from contentctl.objects.enums import SecurityContentType
 
 
 class Detection_Abstract(SecurityContentObject):
-    contentType: SecurityContentType = SecurityContentType.detections
+    #contentType: SecurityContentType = SecurityContentType.detections
     type: str
     status: DetectionStatus
     data_source: list[str]

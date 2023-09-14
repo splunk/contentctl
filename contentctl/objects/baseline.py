@@ -20,7 +20,7 @@ class Baseline(SecurityContentObject):
     #version: int
     #date: str
     #author: str
-    contentType: SecurityContentType = SecurityContentType.baselines
+    #contentType: SecurityContentType = SecurityContentType.baselines
     type: str
     datamodel: list
     #description: str

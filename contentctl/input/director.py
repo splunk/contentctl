@@ -14,10 +14,11 @@ from contentctl.objects.playbook import Playbook
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
-from contentctl.objects.unit_test import UnitTest
+from contentctl.objects.ssa_detection import SSADetection
 
 from contentctl.input.basic_builder import BasicBuilder
 from contentctl.input.detection_builder import DetectionBuilder
+from contentctl.input.ssa_detection_builder import SSADetectionBuilder
 from contentctl.input.playbook_builder import PlaybookBuilder
 from contentctl.input.baseline_builder import BaselineBuilder
 from contentctl.input.investigation_builder import InvestigationBuilder
@@ -49,6 +50,7 @@ class DirectorOutputDto:
      macros: list[Macro]
      lookups: list[Lookup]
      deployments: list[Deployment]
+     ssa_detections: list[SSADetection]
 
 
 class Director():
@@ -60,6 +62,7 @@ class Director():
     investigation_builder: InvestigationBuilder
     story_builder: StoryBuilder
     detection_builder: DetectionBuilder
+    ssa_detection_builder: SSADetectionBuilder
     attack_enrichment: dict
     config: Config
 
@@ -81,6 +84,7 @@ class Director():
         self.investigation_builder = InvestigationBuilder()
         self.story_builder = StoryBuilder()
         self.detection_builder = DetectionBuilder()
+        self.ssa_detection_builder = SSADetectionBuilder()
         if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
             self.createSecurityContent(SecurityContentType.deployments)
             self.createSecurityContent(SecurityContentType.lookups)
@@ -91,13 +95,14 @@ class Director():
             self.createSecurityContent(SecurityContentType.detections)
             self.createSecurityContent(SecurityContentType.stories)
         elif self.input_dto.product == SecurityContentProduct.SSA:
-            self.createSecurityContent(SecurityContentType.unit_tests)
-            self.createSecurityContent(SecurityContentType.detections)
+            self.createSecurityContent(SecurityContentType.ssa_detections)
         
 
     def createSecurityContent(self, type: SecurityContentType) -> None:
         objects = []
-        if type == SecurityContentType.unit_tests:
+        if type == SecurityContentType.ssa_detections:
+             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
+        elif type == SecurityContentType.unit_tests:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
         else:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
@@ -159,6 +164,12 @@ class Director():
                         detection = self.detection_builder.getObject()
                         self.output_dto.detections.append(detection)
 
+                elif type == SecurityContentType.ssa_detections:
+                        self.constructSSADetection(self.ssa_detection_builder, file)
+                        detection = self.ssa_detection_builder.getObject()
+                        if detection.status == "production" or detection.status == "validated":
+                            self.output_dto.ssa_detections.append(detection)
+
                 else:
                         raise Exception(f"Unsupported type: [{type}]")
                 
@@ -205,6 +216,19 @@ class Director():
     
         if self.input_dto.config.enrichments.splunk_app_enrichment:
             builder.addSplunkApp()
+
+
+    def constructSSADetection(self, builder: DetectionBuilder, file_path: str) -> None:
+        builder.reset()
+        builder.setObject(file_path)
+        builder.addMitreAttackEnrichment(self.attack_enrichment)
+        builder.addKillChainPhase()
+        builder.addCIS()
+        builder.addNist()
+        builder.addAnnotations()
+        builder.addMappings()
+        builder.addUnitTest()
+        builder.addRBA()
 
 
     def constructStory(self, builder: StoryBuilder, file_path: str) -> None:

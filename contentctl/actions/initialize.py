@@ -5,6 +5,7 @@ import pathlib
 from dataclasses import dataclass
 from contentctl.objects.config import Config, TestConfig, PASSWORD
 from contentctl.output.yml_writer import YmlWriter
+import json
 
 @dataclass(frozen=True)
 class InitializeInputDto:
@@ -18,8 +19,7 @@ class Initialize:
 
         c = Config()
         
-        t = TestConfig.construct(splunk_app_username="admin",
-                                 splunk_app_password= PASSWORD) #Disable validation for default object
+        t = TestConfig.construct() #Disable validation for default object
 
         config_as_dict = c.dict()
         config_as_dict.pop("test")
@@ -29,7 +29,7 @@ class Initialize:
         # This field serialization hack is required to get
         # enums declared in Pydantic Models serialized properly
         # without emitting tags that make them hard to read in yml
-        import json
+        
         j = json.dumps(t.dict(),sort_keys=False)
         obj=json.loads(j)
         YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl_test.yml'), dict(obj))

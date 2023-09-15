@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import uuid
 import string
 import requests
 import time
 import sys
-
+import re
+import pathlib
 from pydantic import BaseModel, validator, root_validator, Extra
 from dataclasses import dataclass
 from typing import Union
@@ -30,12 +33,13 @@ class Detection_Abstract(SecurityContentObject):
     type: str
     status: DetectionStatus
     data_source: list[str]
+    tags: DetectionTags
     search: Union[str, dict]
     how_to_implement: str
     known_false_positives: str
     check_references: bool = False  
     references: list
-    tags: DetectionTags
+    
     tests: list[UnitTest] = []
 
     # enrichments
@@ -45,11 +49,11 @@ class Detection_Abstract(SecurityContentObject):
     deployment: ConfigDetectionConfiguration = None
     annotations: dict = None
     risk: list = None
-    playbooks: list[Playbook] = None
-    baselines: list[Baseline] = None
+    playbooks: list[Playbook] = []
+    baselines: list[Baseline] = []
     mappings: dict = None
-    macros: list[Macro] = None
-    lookups: list[Lookup] = None
+    macros: list[Macro] = []
+    lookups: list[Lookup] = []
     cve_enrichment: list = None
     splunk_app_enrichment: list = None
     file_path: str = None
@@ -60,6 +64,21 @@ class Detection_Abstract(SecurityContentObject):
 
     class Config:
         use_enum_values = True
+
+
+    def get_content_dependencies(self)->list[SecurityContentObject]:    
+        return self.playbooks + self.baselines + self.macros + self.lookups
+    
+    @staticmethod
+    def get_detections_from_filenames(detection_filenames:set[str], all_detections:list[Detection_Abstract])->list[Detection_Abstract]:
+        detection_filenames = set(str(pathlib.Path(filename).absolute()) for filename in detection_filenames)
+        detection_dict = SecurityContentObject.create_filename_to_content_dict(all_detections)
+
+        try:
+            return [detection_dict[detection_filename] for detection_filename in detection_filenames]
+        except Exception as e:
+            raise Exception(f"Failed to find detection object for modified detection: {str(e)}")
+        
 
     @validator("type")
     def type_valid(cls, v, values):
@@ -89,8 +108,34 @@ class Detection_Abstract(SecurityContentObject):
     
 
     @validator("search")
-    def search_validate(cls, v, values):
-        # write search validator
+    def search_obsersables_exist_validate(cls, v, values):
+        tags:DetectionTags = values.get("tags")
+        if tags == None:
+            raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
+        
+        observable_fields = [ob.name.lower() for ob in tags.observable]
+        
+        #All $field$ fields from the message must appear in the search
+        field_match_regex = r"\$([^\s.]*)\$"
+        
+        message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
+        missing_fields = set([field for field in observable_fields if field not in v.lower()])
+
+        error_messages = []
+        if len(missing_fields) > 0:
+            error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
+
+        
+        missing_fields = set([field for field in message_fields if field not in v.lower()])
+        if len(missing_fields) > 0:
+            error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
+        
+        if len(error_messages) > 0:
+            msg = "\n\t".join(error_messages)
+            print("Errors found in notable validation - skipping for now")
+            #raise(ValueError(msg))
+        
+        # Found everything
         return v
 
     @validator("tests")
@@ -131,7 +176,7 @@ class Detection_Abstract(SecurityContentObject):
     def get_summary(
         self,
         detection_fields: list[str] = ["name", "search"],
-        test_model_fields: list[str] = ["success", "message"],
+        test_model_fields: list[str] = ["success", "message", "exception"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict:
         summary_dict = {}

@@ -25,6 +25,7 @@ from contentctl.objects.enums import (
     SecurityContentProduct,
     DetectionTestingMode,
     PostTestBehavior,
+    DetectionTestingTargetInfrastructure
 )
 from contentctl.input.new_content_generator import NewContentGeneratorInputDto
 from contentctl.helper.config_handler import ConfigHandler
@@ -32,14 +33,14 @@ from contentctl.helper.config_handler import ConfigHandler
 from contentctl.objects.config import Config
 
 from contentctl.objects.app import App
-from contentctl.objects.test_config import TestConfig
+from contentctl.objects.test_config import TestConfig, Infrastructure
 from contentctl.actions.test import Test, TestInputDto, TestOutputDto
 
 
 import tqdm
 import functools
 from typing import Union
-
+SERVER_ARGS_ENV_VARIABLE = "CONTENTCTL_TEST_INFRASTRUCTURES"
 
 def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
     # disable all calls to tqdm - this is so that CI/CD contexts don't
@@ -128,19 +129,63 @@ def acs_deploy(args) -> None:
 
 def test(args: argparse.Namespace):
     args = configure_unattended(args)
+
     config = start(args, read_test_file=True)
     
+    if config.test is None:
+        raise Exception("Error parsing test configuration. Test Object was None.")
 
     # set some arguments that are not
     # yet exposed/written properly in
     # the config file
-    config.test.mode=DetectionTestingMode(args.mode) 
-    config.test.num_containers=1 
-    config.test.post_test_behavior=PostTestBehavior(args.behavior)
-    config.test.detections_list=args.detections_list
-    
-    
+    if args.infrastructure is not None:
+        config.test.infrastructure_config.infrastructure_type = DetectionTestingTargetInfrastructure(args.infrastructure)
+    if args.mode is not None:
+        config.test.mode=DetectionTestingMode(args.mode) 
+    if args.behavior is not None:
+        config.test.post_test_behavior=PostTestBehavior(args.behavior)
+    if args.detections_list is not None:
+        config.test.detections_list=args.detections_list
 
+
+    
+    if config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.container:
+        if args.num_containers is None:
+            raise Exception("Error - trying to start a test using container infrastructure but no value for --num_containers was found")
+        config.test.infrastructure_config.infrastructures = Infrastructure.get_infrastructure_containers(args.num_containers)
+    elif config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.server:
+        if args.server_info is None and os.environ.get(SERVER_ARGS_ENV_VARIABLE) is None:
+            if len(config.test.infrastructure_config.infrastructures) == 0:
+                raise Exception("Error - trying to start a test using server infrastructure, but server information was not stored "
+                                "in contentctl_test.yml or passed on the command line. Please see the documentation for --server_info "
+                                "at the command line or 'infrastructures' in contentctl.yml.")
+            else:
+                print("Using server configuration from: [contentctl_test.yml infrastructures section]")
+        
+        else:
+            if args.server_info is not None:
+                print("Using server configuration from: [command line]")
+                pass
+            elif os.environ.get(SERVER_ARGS_ENV_VARIABLE) is not None:
+                args.server_info = os.environ.get(SERVER_ARGS_ENV_VARIABLE,"").split(';')
+                print(f"Using server configuration from: [{SERVER_ARGS_ENV_VARIABLE} environment variable]")
+            else:
+                raise Exception(f"Server infrastructure information not passed in contentctl_test.yml file, using --server_info switch on the command line, or in the {SERVER_ARGS_ENV_VARIABLE} environment variable")
+                # if server info was provided on the command line, us that. Otherwise use the env
+            
+            
+            
+            config.test.infrastructure_config.infrastructures = []
+            
+            for server in args.server_info:
+                address,username,password,web_ui_port,hec_port,api_port = server.split(",")
+                config.test.infrastructure_config.infrastructures.append(Infrastructure(splunk_app_username=username,
+                                                                                        splunk_app_password=password,
+                                                                                        instance_address=address, 
+                                                                                        hec_port=int(hec_port),
+                                                                                        web_ui_port=int(web_ui_port),
+                                                                                        api_port=int(api_port)))
+            
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
     githubService = GithubService(config.test)
@@ -180,20 +225,18 @@ def test(args: argparse.Namespace):
     
     test = Test()
 
-    try:
+    
         
-        result = test.execute(test_input_dto)
-        # This return code is important.  Even if testing
-        # fully completes, if everything does not pass then
-        # we want to return a nonzero status code
-        if result:
-            sys.exit(0)
-        else:
-            sys.exit(1)
-
-    except Exception as e:
-        print(f"Error running contentctl test: {str(e)}")
+    result = test.execute(test_input_dto)
+    # This return code is important.  Even if testing
+    # fully completes, if everything does not pass then
+    # we want to return a nonzero status code
+    if result:
+        sys.exit(0)
+    else:
         sys.exit(1)
+
+    
 
 
 def validate(args) -> None:
@@ -337,7 +380,7 @@ def main():
     test_parser.add_argument(
         "--mode",
         required=False,
-        default=DetectionTestingMode.all.name,
+        default=None,
         type=str,
         choices=DetectionTestingMode._member_names_,
         help="Controls which detections to test. 'all' will test all detections in the repo."
@@ -347,7 +390,7 @@ def main():
     test_parser.add_argument(
         "--behavior",
         required=False,
-        default=PostTestBehavior.pause_on_failure.name,
+        default=None,
         type=str,
         choices=PostTestBehavior._member_names_,
         help="Controls what to do when a test completes. 'always_pause' means that the state of "
@@ -364,13 +407,27 @@ def main():
         "--detections_list",
         required=False,
         nargs="+",
+        default=None,
         type=str,
         help="An explicit list "
         "of detections to test. Their paths should be relative to the app path.",
     )
 
+
     test_parser.add_argument("--unattended", action=argparse.BooleanOptionalAction)
     
+    
+    test_parser.add_argument("--infrastructure", required=False, type=str, 
+                                                 choices=DetectionTestingTargetInfrastructure._member_names_, default=None, 
+                                                 help="Determines what infrastructure to use for testing. The options are "
+                                                 "container and server.  Container will set up Splunk Container(s) at runtime, "
+                                                 "install all relevant apps, and perform configurations.  Server will use "
+                                                 "preconfigured server(s) either specified on the command line or in "
+                                                 "contentctl_test.yml.")
+    test_parser.add_argument("--num_containers", required=False, default=1, type=int)
+    test_parser.add_argument("--server_info", required=False, default=None, type=str, nargs='+')
+
+
     test_parser.set_defaults(func=test)
 
     # parse them
@@ -383,5 +440,6 @@ def main():
         print(f"Error during contentctl:\n{str(e)}")
         import traceback
         traceback.print_exc()
+        traceback.print_stack()
         sys.exit(1)
     

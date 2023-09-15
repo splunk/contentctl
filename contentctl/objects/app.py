@@ -102,32 +102,32 @@ class App(BaseModel, extra=Extra.forbid):
                 )
         return True
 
-    @validator("uid", always=True)
+    @validator("uid")
     def validate_uid(cls, v):
         return v
 
-    @validator("appid", always=True)
+    @validator("appid")
     def validate_appid(cls, v):
         # Called function raises exception on failure, so we don't need to raise it here
         cls.validate_string_alphanumeric_with_underscores(v)
         return v
 
-    @validator("title", always=True)
+    @validator("title")
     def validate_title(cls, v):
         # Basically, a title can be any string
         return v
 
-    @validator("description", always=True)
+    @validator("description")
     def validate_description(cls, v):
         # description can be anything
         return v
 
-    @validator("release", always=True)
+    @validator("release")
     def validate_release(cls, v):
         # release can be any string
         return v
 
-    @validator("local_path", always=True)
+    @validator("local_path")
     def validate_local_path(cls, v):
         if v is not None:
             p = pathlib.Path(v)
@@ -139,7 +139,7 @@ class App(BaseModel, extra=Extra.forbid):
         # release can be any string
         return v
 
-    @validator("http_path", always=True)
+    @validator("http_path")
     def validate_http_path(cls, v, values):
         if v is not None:
             try:
@@ -149,11 +149,8 @@ class App(BaseModel, extra=Extra.forbid):
                 raise (ValueError(f"Error validating the http_path: {str(e)}"))
         return v
 
-    @validator("splunkbase_path", always=True)
+    @validator("splunkbase_path")
     def validate_splunkbase_path(cls, v, values):
-        Utils.check_required_fields(
-            "splunkbase_path", values, ["local_path", "http_path", "uid", "title"]
-        )
 
         if v is not None:
             try:

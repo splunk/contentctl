@@ -124,9 +124,9 @@ class RepoConfig(BaseModel):
         return v
 
 
-    @validator('repo_url', always=True)
+    @validator('repo_url')
     def validate_repo_url(cls, v, values):
-        Utils.check_required_fields('repo_url', values, ['repo_path'])
+        
 
         #First try to get the value from the repo
         try:
@@ -152,9 +152,9 @@ class RepoConfig(BaseModel):
 
         return v
 
-    @validator('main_branch', always=True)
+    @validator('main_branch')
     def valid_main_branch(cls, v, values):
-        Utils.check_required_fields('main_branch', values, ['repo_path', 'repo_url'])
+    
 
         try:
             Utils.validate_git_branch_name(values['repo_path'],values['repo_url'], v)

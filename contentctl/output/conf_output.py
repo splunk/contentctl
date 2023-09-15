@@ -110,14 +110,30 @@ class ConfOutput:
                 'transforms.j2', 
                 self.config, objects)
 
-
+            #import code
+            #code.interact(local=locals())
             if self.input_path is None:
                 raise(Exception(f"input_path is required for lookups, but received [{self.input_path}]"))
 
             files = glob.iglob(os.path.join(self.input_path, 'lookups', '*.csv'))
-            for file in files:
-                if os.path.isfile(file):
-                    shutil.copy(file, os.path.join(self.output_path, 'lookups'))
+            lookup_folder = self.output_path/"lookups"
+            if lookup_folder.exists():
+                # Remove it since we want to remove any previous lookups that are not
+                # currently part of the app
+                if lookup_folder.is_dir():
+                    shutil.rmtree(lookup_folder)
+                else:
+                    lookup_folder.unlink()
+            
+            # Make the new folder for the lookups 
+            lookup_folder.mkdir()
+
+            #Copy each lookup into the folder
+            for lookup_name in files:
+                lookup_path = pathlib.Path(lookup_name)
+                if lookup_path.is_file():
+                    lookup_target_path = self.output_path/"lookups"/lookup_path.name
+                    shutil.copy(lookup_path, lookup_target_path)
 
         elif type == SecurityContentType.macros:
             ConfWriter.writeConfFile(self.output_path/'default/macros.conf',
@@ -243,5 +259,29 @@ class ConfOutput:
                         #back as we read
                         logfile.seek(0)
                         json.dump(j, logfile, indent=3, )
+                        bad_stuff = ["error", "failure", "manual_check", "warning"]
+                        reports = j.get("reports", [])
+                        if len(reports) != 1:
+                            raise Exception("Expected to find one appinspect report but found 0")
+                        verbose_errors = []
+                        
+                        for group in reports[0].get("groups", []):
+                            for check in group.get("checks",[]):
+                                if check.get("result","") in bad_stuff:                                    
+                                    verbose_errors.append(f"Result: {check.get('result','')} - [{group.get('name','NONAME')}: {check.get('name', 'NONAME')}]")
+                        verbose_errors.sort()
+                        
+                        summary = j.get("summary", None)
+                        if summary is None:
+                            raise Exception("Missing summary from appinspect report")
+                        msgs = []
+                        for key in bad_stuff:
+                            if summary.get(key,0)>0:
+                                msgs.append(f"{summary.get(key,0)} {key}s")
+                        if len(msgs)>0 or len(verbose_errors):
+                            summary = '\n - '.join(msgs)
+                            details = '\n - '.join(verbose_errors)
+                            raise Exception(f"AppInspect found issue(s) that may prevent automated vetting:\nSummary:\n{summary}\nDetails:\n{details}")
+                        
                 except Exception as e:
                     print(f"Failed to format {appinspect_output}: {str(e)}")

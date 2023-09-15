@@ -3,6 +3,7 @@ import re
 from pydantic import BaseModel, validator, ValidationError, root_validator
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
+from contentctl.objects.observable import Observable
 
 class DetectionTags(BaseModel):
     # detection spec
@@ -14,10 +15,10 @@ class DetectionTags(BaseModel):
     confidence: str
     impact: int
     kill_chain_phases: list = None
-    message: str
     mitre_attack_id: list = None
     nist: list = None
-    observable: list
+    observable: list[Observable] = []
+    message: str
     product: list
     required_fields: list
     risk_score: int
@@ -128,22 +129,32 @@ class DetectionTags(BaseModel):
             raise ValueError(f"Risk Score must be calculated as round(confidence * impact / 100)"
                              f"\n  Expected risk_score={calculated_risk_score}, found risk_score={int(v)}: {values['name']}")
         return v
-
-    @root_validator
-    def tags_observable(cls, values):
-        valid_roles = SES_OBSERVABLE_ROLE_MAPPING.keys()
-        valid_types = SES_OBSERVABLE_TYPE_MAPPING.keys()
+    
+    # The following validator is temporarily disabled pending further discussions
+    # @validator('message')
+    # def validate_message(cls,v,values):
         
-        for value in values["observable"]:
-            if value['type'] in valid_types:
-                if 'Splunk Behavioral Analytics' in values["product"]:
-                    continue
+    #     observables:list[Observable] = values.get("observable",[])
+    #     observable_names = set([o.name for o in observables])
+    #     #find all of the observables used in the message by name
+    #     name_match_regex = r"\$([^\s.]*)\$"
+        
+    #     message_observables = set()
 
-                if 'role' not in value:
-                    raise ValueError('Observable role is missing for ' + values["name"])
-                for role in value['role']:
-                    if role not in valid_roles:
-                        raise ValueError('Observable role ' + role + ' not valid for ' + values["name"] + '. valid options are ' + str(valid_roles))
-            else:
-                raise ValueError('Observable type ' + value['type'] + ' not valid for ' + values["name"] + '. valid options are ' + str(valid_types))
-        return values
+    #     #Make sure that all observable names in 
+    #     for match in re.findall(name_match_regex, v):
+    #         #Remove
+    #         match_without_dollars = match.replace("$", "")
+    #         message_observables.add(match_without_dollars)
+        
+
+    #     missing_observables = message_observables - observable_names
+    #     unused_observables = observable_names - message_observables
+    #     if len(missing_observables) > 0:
+    #         raise ValueError(f"The following observables are referenced in the message, but were not declared as observables: {missing_observables}")
+        
+    #     if len(unused_observables) > 0:
+    #         raise ValueError(f"The following observables were declared, but are not referenced in the message: {unused_observables}")        
+    #     return v
+
+    

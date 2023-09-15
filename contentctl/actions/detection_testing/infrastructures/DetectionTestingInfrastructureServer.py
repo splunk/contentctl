@@ -11,4 +11,4 @@ class DetectionTestingInfrastructureServer(DetectionTestingInfrastructure):
         super().finish()
 
     def get_name(self):
-        return self.config.container_name
+        return self.infrastructure.instance_name

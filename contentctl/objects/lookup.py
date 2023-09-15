@@ -18,10 +18,10 @@ LOOKUPS_TO_IGNORE.add("=")
 LOOKUPS_TO_IGNORE.add("other_lookups") 
 
 
-class Lookup(SecurityContentObject):
-    contentType: SecurityContentType = SecurityContentType.lookups
-    #name: str
-    #description: str
+class Lookup(BaseModel):
+    #contentType: SecurityContentType = SecurityContentType.lookups
+    name: str
+    description: str
     collection: str = None
     fields_list: str = None
     filename: str = None

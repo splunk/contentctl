@@ -12,7 +12,7 @@ import pathlib
 
 NO_FILE_BUILT_AT_RUNTIME = "NO_FILE_BUILT_AT_RUNTIME"
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    contentType: SecurityContentType
+    #contentType: SecurityContentType
     name: str
     author: str = "UNKNOWN_AUTHOR"
     date: str = "1990-01-01"

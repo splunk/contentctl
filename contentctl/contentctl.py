@@ -105,9 +105,19 @@ def initialize(args) -> None:
 def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
     if config == None:
         config = start(args)
-    product_type = SecurityContentProduct.SPLUNK_APP
+    if args.type == "app":
+        product_type = SecurityContentProduct.SPLUNK_APP
+    elif args.type == "ssa":
+        product_type = SecurityContentProduct.SSA
+    elif args.type == "api":
+        product_type = SecurityContentProduct.API
+    else:
+        print(f"Invalid build type. Valid options app, ssa or api")
+        sys.exit(1)
     director_input_dto = DirectorInputDto(
-        input_path=os.path.abspath(args.path), product=product_type, config=config
+        input_path=os.path.abspath(args.path), 
+        product=product_type, 
+        config=config
     )
     generate_input_dto = GenerateInputDto(director_input_dto)
 
@@ -203,7 +213,7 @@ def test(args: argparse.Namespace):
         title=config.build.name,
         release=config.build.version,
         http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}.tar.gz"),
+        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
         description=config.build.description,
         splunkbase_path=None,
         force_local=True
@@ -225,25 +235,36 @@ def test(args: argparse.Namespace):
     
     test = Test()
 
-    
-        
-    result = test.execute(test_input_dto)
-    # This return code is important.  Even if testing
-    # fully completes, if everything does not pass then
-    # we want to return a nonzero status code
-    if result:
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    try:  
+        result = test.execute(test_input_dto)
+        # This return code is important.  Even if testing
+        # fully completes, if everything does not pass then
+        # we want to return a nonzero status code
+        if result:
+            sys.exit(0)
+        else:
+            sys.exit(1)
 
-    
+    except Exception as e:
+        print(f"Error running contentctl test: {str(e)}")
+        sys.exit(1)
 
 
 def validate(args) -> None:
     config = start(args)
-    product_type = SecurityContentProduct.SPLUNK_APP
+    if args.type == "app":
+        product_type = SecurityContentProduct.SPLUNK_APP
+    elif args.type == "ssa":
+        product_type = SecurityContentProduct.SSA
+    elif args.type == "api":
+        product_type = SecurityContentProduct.API
+    else:
+        print(f"Invalid build type. Valid options app, ssa or api")
+        sys.exit(1)
     director_input_dto = DirectorInputDto(
-        input_path=pathlib.Path(args.path), product=product_type, config=config
+        input_path=pathlib.Path(args.path), 
+        product=product_type, 
+        config=config
     )
     validate_input_dto = ValidateInputDto(director_input_dto=director_input_dto)
     validate = Validate()
@@ -356,8 +377,24 @@ def main():
                              "and on detection that will fail 'contentctl test'.  This is useful "
                              "for demonstrating contentctl functionality.")
 
+    validate_parser.add_argument(
+        "-t",
+        "--type",
+        required=False,
+        type=str,
+        default="app",
+        help="Type of package: app, ssa or api"
+    )
     validate_parser.set_defaults(func=validate)
 
+    build_parser.add_argument(
+        "-t",
+        "--type",
+        required=False,
+        type=str,
+        default="app",
+        help="Type of package: app, ssa or api"
+    )
     build_parser.set_defaults(func=build)
 
     docs_parser.set_defaults(func=doc_gen)
@@ -377,6 +414,14 @@ def main():
 
     api_deploy_parser.set_defaults(func=api_deploy)
 
+    test_parser.add_argument(
+        "-t",
+        "--type",
+        required=False,
+        type=str,
+        default="app",
+        help="Type of package: app, ssa or api"
+    )
     test_parser.add_argument(
         "--mode",
         required=False,

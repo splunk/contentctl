@@ -17,11 +17,11 @@ MACROS_TO_IGNORE.add("cim_corporate_web_domain_search")
 MACROS_TO_IGNORE.add("prohibited_processes")
 
 
-class Macro(SecurityContentObject):
-    contentType: SecurityContentType = SecurityContentType.macros
-    #name: str
+class Macro(BaseModel):
+    #contentType: SecurityContentType = SecurityContentType.macros
+    name: str
     definition: str
-    #description: str
+    description: str
     arguments: list = None
 
     # Macro can have different punctuatuation in it,

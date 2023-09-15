@@ -49,6 +49,7 @@ class GithubService:
             self.get_macros(director),
             self.get_lookups(director),
             [],
+            []
         )
 
     def get_stories(self, director: DirectorOutputDto) -> list[Story]:

@@ -147,12 +147,19 @@ class ConfigEnrichments(BaseModel):
     splunk_app_enrichment: bool = False
 
 
+class ConfigBuildSSA(BaseModel):
+    output_path: str
+
+class ConfigBuildApi(BaseModel):
+    output_path: str
 
 class Config(BaseModel, extra=Extra.forbid):
     #general: ConfigGlobal = ConfigGlobal()
-    detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
+    #detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
     deployments: Deployments = Deployments()
     build: ConfigBuild = ConfigBuild()
+    build_ssa: Union[ConfigBuildSSA,None] = None 
+    build_api: Union[ConfigBuildApi,None] = None 
     enrichments: ConfigEnrichments = ConfigEnrichments()
     test: Union[TestConfig,None] = None 
     

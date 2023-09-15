@@ -12,6 +12,7 @@ class ApiJsonOutput():
         if type == SecurityContentType.detections:
             obj_array = []
             for detection in objects:
+                detection.id = str(detection.id)
                 obj_array.append(detection.dict(exclude_none=True, 
                     exclude =
                     {
@@ -70,6 +71,7 @@ class ApiJsonOutput():
         elif type == SecurityContentType.stories:
             obj_array = []
             for story in objects:
+                story.id = str(story.id)
                 obj_array.append(story.dict(exclude_none=True,
                     exclude =
                     {
@@ -82,6 +84,7 @@ class ApiJsonOutput():
         elif type == SecurityContentType.baselines:
             obj_array = []
             for baseline in objects:
+                baseline.id = str(baseline.id)
                 obj_array.append(baseline.dict(
                     exclude =
                     {
@@ -94,6 +97,7 @@ class ApiJsonOutput():
         elif type == SecurityContentType.investigations:
             obj_array = []
             for investigation in objects:
+                investigation.id = str(investigation.id)
                 obj_array.append(investigation.dict(exclude_none=True))
 
             JsonWriter.writeJsonObject(os.path.join(output_path, 'response_tasks.json'), {'response_tasks': obj_array })
@@ -111,6 +115,7 @@ class ApiJsonOutput():
         elif type == SecurityContentType.deployments:
             obj_array = []
             for deployment in objects:
+                deployment.id = str(deployment.id)
                 obj_array.append(deployment.dict(exclude_none=True))
 
             JsonWriter.writeJsonObject(os.path.join(output_path, 'deployments.json'), {'deployments': obj_array })

@@ -537,9 +537,8 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
             )
         for detection in v:
             try:
-                full_path = os.path.join(values['version_control_config'].repo_path, detection)
-                if not pathlib.Path(full_path).exists():
-                    all_errors.append(full_path)
+                if not pathlib.Path(detection).exists():
+                    all_errors.append(detection)
             except Exception as e:
                 all_errors.append(
                     f"Unexpected error validating path '{detection}': {str(e)}"

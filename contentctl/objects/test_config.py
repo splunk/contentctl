@@ -536,7 +536,7 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
             )
         for detection in v:
             try:
-                full_path = os.path.join(values["repo_path"], detection)
+                full_path = os.path.join(values['version_control_config'].repo_path, detection)
                 if not pathlib.Path(full_path).exists():
                     all_errors.append(full_path)
             except Exception as e:

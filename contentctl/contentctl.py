@@ -92,7 +92,7 @@ Running Splunk Security Content Control Tool (contentctl)
 def start(args, read_test_file:bool = False) -> Config:
     base_config = ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml")
     if read_test_file:
-        base_config.test = ConfigHandler.read_test_config(pathlib.Path(args.path)/"contentctl_test.yml")
+        base_config.test = ConfigHandler.read_test_config(pathlib.Path(args.path)/"contentctl_test.yml", args.mode)
     return base_config
 
 
@@ -235,20 +235,17 @@ def test(args: argparse.Namespace):
     
     test = Test()
 
-    try:  
-        result = test.execute(test_input_dto)
-        # This return code is important.  Even if testing
-        # fully completes, if everything does not pass then
-        # we want to return a nonzero status code
-        if result:
-            sys.exit(0)
-        else:
-            sys.exit(1)
-
-    except Exception as e:
-        print(f"Error running contentctl test: {str(e)}")
+    
+    result = test.execute(test_input_dto)
+    # This return code is important.  Even if testing
+    # fully completes, if everything does not pass then
+    # we want to return a nonzero status code
+    if result:
+        sys.exit(0)
+    else:
         sys.exit(1)
 
+    
 
 def validate(args) -> None:
     config = start(args)

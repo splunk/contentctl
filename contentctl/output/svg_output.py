@@ -1,17 +1,19 @@
 import os
-
+import pathlib
 
 from contentctl.objects.enums import SecurityContentType
 from contentctl.output.jinja_writer import JinjaWriter
-
+from contentctl.objects.config import Config
 
 class SvgOutput():
 
-    def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
+    def writeObjects(self, objects: list, path: str, type: SecurityContentType = None) -> None:
         
         detections_tmp = objects
         detection_without_test = 0    
-      
+
+        output_path = pathlib.Path(path)
+
         detections = []
         obj = dict()
 
@@ -19,7 +21,7 @@ class SvgOutput():
             if not detection.deprecated:
                 detections.append(detection)
 
-                if not detection.test and not detection.experimental:
+                if not detection.tests and not detection.experimental:
                     detection_without_test = detection_without_test + 1
 
 

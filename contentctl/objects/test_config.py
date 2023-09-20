@@ -377,13 +377,14 @@ class VersionControlConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
             v = remote_url_from_repo
 
         #Ensure that the url is the proper format
-        try:
-            if bool(validators.url(v)) == False:
-                raise(Exception)
-        except:
-            raise(ValueError(f"Error validating the repo_url. The url is not valid: {v}"))
+        # try:
+        #     if bool(validators.url(v)) == False:
+        #         raise(Exception)
+        # except:
+        #     raise(ValueError(f"Error validating the repo_url. The url is not valid: {v}"))
 
         return v
+    
     @validator('main_branch')
     def valid_main_branch(cls, v, values):
         if v is None:

@@ -17,7 +17,7 @@ import configparser
 from ssl import SSLEOFError, SSLZeroReturnError
 import time
 import uuid
-
+from sys import stdout
 
 from tempfile import TemporaryDirectory, mktemp
 import pathlib
@@ -102,7 +102,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             bar_format=f"{self.get_name()} starting",
             miniters=0,
             mininterval=0,
+            file=stdout
         )
+        
         self.start_time = time.time()
         try:
             for func, msg in [
@@ -505,7 +507,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
-
+        stdout.flush()
         if test.result is not None:
             test.result.duration = round(time.time() - start_time, 2)
 

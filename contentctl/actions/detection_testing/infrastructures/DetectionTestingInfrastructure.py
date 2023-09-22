@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import abc
 import requests
 import splunklib.client as client
-from contentctl.objects.enums import PostTestBehavior
+from contentctl.objects.enums import PostTestBehavior, DetectionStatus
 from contentctl.objects.detection import Detection
 from contentctl.objects.unit_test_test import UnitTestTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
@@ -56,6 +56,7 @@ class ContainerStoppedException(Exception):
 class DetectionTestingManagerOutputDto:
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
+    skippedQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
@@ -354,6 +355,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
             try:
                 detection = self.sync_obj.inputQueue.pop()
+                if detection.status != DetectionStatus.production.value:
+                    self.sync_obj.skippedQueue.append(detection)
+                    self.pbar.write(f"\nSkipping {detection.name} since it is status: {detection.status}\n")
+                    continue
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError as e:
                 # self.pbar.write(

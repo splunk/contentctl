@@ -152,10 +152,6 @@ class DetectionTestingManager(BaseModel):
         import sys
 
         for infrastructure in self.input_dto.config.infrastructure_config.infrastructures:
-            # instanceConfig = deepcopy(self.input_dto.config)
-            # instanceConfig.api_port += index * 2
-            # instanceConfig.hec_port += index * 2
-            # instanceConfig.web_ui_port += index
 
             if (
                 self.input_dto.config.infrastructure_config.infrastructure_type

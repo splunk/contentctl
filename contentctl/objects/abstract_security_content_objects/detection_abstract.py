@@ -130,7 +130,7 @@ class Detection_Abstract(SecurityContentObject):
         if len(missing_fields) > 0:
             error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
         
-        if len(error_messages) > 0:
+        if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
             msg = "\n\t".join(error_messages)
             print("Errors found in notable validation - skipping for now")
             #raise(ValueError(msg))

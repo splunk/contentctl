@@ -44,8 +44,6 @@ class Detection_Abstract(SecurityContentObject):
 
     # enrichments
     datamodel: list = None
-    deprecated: bool = None
-    experimental: bool = None
     deployment: ConfigDetectionConfiguration = None
     annotations: dict = None
     risk: list = None
@@ -107,36 +105,37 @@ class Detection_Abstract(SecurityContentObject):
     #     return v
     
 
-    @validator("search")
-    def search_obsersables_exist_validate(cls, v, values):
-        tags:DetectionTags = values.get("tags")
-        if tags == None:
-            raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
-        
-        observable_fields = [ob.name.lower() for ob in tags.observable]
-        
-        #All $field$ fields from the message must appear in the search
-        field_match_regex = r"\$([^\s.]*)\$"
-        
-        message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
-        missing_fields = set([field for field in observable_fields if field not in v.lower()])
+    # @validator("search")
+    # def search_obsersables_exist_validate(cls, v, values):
+    #     if type(v) is str:
+    #         tags:DetectionTags = values.get("tags")
+    #         if tags == None:
+    #             raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
+            
+    #         observable_fields = [ob.name.lower() for ob in tags.observable]
+            
+    #         #All $field$ fields from the message must appear in the search
+    #         field_match_regex = r"\$([^\s.]*)\$"
+            
+    #         message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
+    #         missing_fields = set([field for field in observable_fields if field not in v.lower()])
 
-        error_messages = []
-        if len(missing_fields) > 0:
-            error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
+    #         error_messages = []
+    #         if len(missing_fields) > 0:
+    #             error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
 
+            
+    #         missing_fields = set([field for field in message_fields if field not in v.lower()])
+    #         if len(missing_fields) > 0:
+    #             error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
+            
+    #         if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
+    #             msg = "\n\t".join(error_messages)
+    #             print("Errors found in notable validation - skipping for now")
+    #             #raise(ValueError(msg))
         
-        missing_fields = set([field for field in message_fields if field not in v.lower()])
-        if len(missing_fields) > 0:
-            error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
-        
-        if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
-            msg = "\n\t".join(error_messages)
-            print("Errors found in notable validation - skipping for now")
-            #raise(ValueError(msg))
-        
-        # Found everything
-        return v
+    #     # Found everything
+    #     return v
 
     @validator("tests")
     def tests_validate(cls, v, values):
@@ -145,18 +144,6 @@ class Detection_Abstract(SecurityContentObject):
                 "tests value is needed for production detection: " + values["name"]
             )
         return v
-
-    @validator("experimental", always=True)
-    def experimental_validate(cls, v, values):
-        if DetectionStatus(values.get("status","")) == DetectionStatus.experimental:
-            return True
-        return False
-
-    @validator("deprecated", always=True)
-    def deprecated_validate(cls, v, values):
-        if DetectionStatus(values.get("status","")) == DetectionStatus.deprecated:
-            return True
-        return False
     
     @validator("datamodel")
     def datamodel_valid(cls, v, values):

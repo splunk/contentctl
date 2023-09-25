@@ -250,7 +250,7 @@ class GithubService:
             ]
         if ignore_deprecated:
             director.detections = [
-                d for d in director.detections if not (d.deprecated == True)
+                d for d in director.detections if not (d.status == "deprecated")
             ]
         if ignore_ssa:
             director.detections = [

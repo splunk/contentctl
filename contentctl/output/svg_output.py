@@ -18,7 +18,7 @@ class SvgOutput():
         obj = dict()
 
         for detection in detections_tmp:
-            if not detection.deprecated:
+            if not detection.status == "deprecated":
                 detections.append(detection)
 
                 if not detection.tests and not detection.experimental:

@@ -1,9 +1,12 @@
 import sys
 import argparse
 import os
-
+import tqdm
+import functools
+from typing import Union
 import yaml
 import pathlib
+
 from contentctl.actions.detection_testing.GitHubService import (
     GithubService,
 )
@@ -35,11 +38,11 @@ from contentctl.objects.config import Config
 from contentctl.objects.app import App
 from contentctl.objects.test_config import TestConfig, Infrastructure
 from contentctl.actions.test import Test, TestInputDto, TestOutputDto
+from contentctl.objects.enums import *
+from contentctl.input.sigma_converter import *
+from contentctl.actions.convert import *
 
 
-import tqdm
-import functools
-from typing import Union
 SERVER_ARGS_ENV_VARIABLE = "CONTENTCTL_TEST_INFRASTRUCTURES"
 
 def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
@@ -310,6 +313,33 @@ def reporting(args) -> None:
     reporting.execute(reporting_input_dto)
 
 
+def convert(args) -> None:
+    if args.data_model == 'cim':
+        data_model = SigmaConverterTarget.CIM
+    elif args.data_model == 'raw':
+        data_model = SigmaConverterTarget.RAW
+    elif args.data_model == 'ocsf':
+        data_model = SigmaConverterTarget.OCSF
+    else:
+        print("ERROR: data model " + args.data_model + " not supported")
+        sys.exit(1)
+
+    sigma_converter_input_dto = SigmaConverterInputDto(
+        data_model = data_model,
+        detection_path = args.detection_path,
+        detection_folder = args.detection_folder, 
+        input_path = args.path,
+        log_source = args.log_source
+    )
+
+    convert_input_dto = ConvertInputDto(
+        sigma_converter_input_dto = sigma_converter_input_dto,
+        output_path = os.path.abspath(args.output)
+    )
+    convert = Convert()
+    convert.execute(convert_input_dto)
+
+
 def main():
     """
     main function parses the arguments passed to the script and calls the respctive method.
@@ -366,6 +396,8 @@ def main():
         "test",
         help="Run a test of the detections against a Splunk Server or Splunk Docker Container",
     )
+
+    convert_parser = actions_parser.add_parser("convert", help="Convert a sigma detection to a Splunk ESCU detection.")
 
     init_parser.set_defaults(func=initialize)
     init_parser.add_argument("--demo", action=argparse.BooleanOptionalAction, 
@@ -468,9 +500,15 @@ def main():
                                                  "contentctl_test.yml.")
     test_parser.add_argument("--num_containers", required=False, default=1, type=int)
     test_parser.add_argument("--server_info", required=False, default=None, type=str, nargs='+')
-
-
     test_parser.set_defaults(func=test)
+
+    convert_parser.add_argument("-dm", "--data_model", required=False, type=str, default="cim", help="converter target, choose between cim, raw, ocsf")
+    convert_parser.add_argument("-lo", "--log_source", required=False, type=str, help="converter log source")
+    convert_parser.add_argument("-dp", "--detection_path", required=False, type=str, help="path to a single detection")
+    convert_parser.add_argument("-df", "--detection_folder", required=False, type=str, help="path to a detection folder")
+    convert_parser.add_argument("-o", "--output", required=True, type=str, help="output path to store the detections")
+    convert_parser.set_defaults(func=convert)
+
 
     # parse them
     args = parser.parse_args()

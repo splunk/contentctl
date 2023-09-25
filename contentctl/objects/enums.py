@@ -125,3 +125,8 @@ class InstanceState(str, enum.Enum):
     stopping = "stopping"
     stopped = "stopped"
 
+class SigmaConverterTarget(enum.Enum):
+    CIM = 1
+    RAW = 2
+    OCSF = 3
+    ALL = 4

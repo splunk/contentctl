@@ -413,7 +413,7 @@ class VersionControlConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
         
         r = git.Repo(values.get("repo_path"))
         try:
-            if r.active_branch != v:
+            if r.active_branch.name != v:
                 print(f"We are trying to test {v} but the current active branch is {r.active_branch}")
                 print(f"Checking out {v}")
                 r.git.checkout(v)

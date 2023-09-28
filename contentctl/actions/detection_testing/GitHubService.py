@@ -139,7 +139,7 @@ class GithubService:
                 )
             )
         
-        differences = self.repo.git.diff("--name-status", self.config.version_control_config.main_branch).split("\n")
+        differences = self.repo.git.diff("--name-status", f"origin/{self.config.version_control_config.main_branch}").split("\n")
         new_content = []
         modified_content =  []
         deleted_content = []

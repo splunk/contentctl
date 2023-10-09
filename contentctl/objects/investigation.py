@@ -18,7 +18,7 @@ from contentctl.helper.link_validator import LinkValidator
 
 class Investigation(SecurityContentObject):
     # investigation spec
-    contentType: SecurityContentType = SecurityContentType.investigations
+    #contentType: SecurityContentType = SecurityContentType.investigations
     #name: str
     #id: str
     #version: int

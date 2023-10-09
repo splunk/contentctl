@@ -6,25 +6,25 @@
 {% if (detection.type == 'Investigation') %}
 {% if detection.search is defined %}
 [{{APP_NAME}} - {{ detection.name }} - Response Task]
-action.{{APP_NAME|lower}} = 0
-action.{{APP_NAME|lower}}.enabled = 1
-action.{{APP_NAME|lower}}.search_type = investigative
-action.{{APP_NAME|lower}}.full_search_name = {{APP_NAME}} - {{ detection.name }} - Response Task
+action.escu = 0
+action.escu.enabled = 1
+action.escu.search_type = investigative
+action.escu.full_search_name = {{APP_NAME}} - {{ detection.name }} - Response Task
 description = {{ detection.description }}
-action.{{APP_NAME|lower}}.creation_date = {{ detection.date }}
-action.{{APP_NAME|lower}}.modification_date = {{ detection.date }}
+action.escu.creation_date = {{ detection.date }}
+action.escu.modification_date = {{ detection.date }}
 {% if detection.tags.analytic_story is defined %}
-action.{{APP_NAME|lower}}.analytic_story = {{ detection.tags.analytic_story | tojson }}
+action.escu.analytic_story = {{ detection.tags.analytic_story | tojson }}
 {% else %}
-action.{{APP_NAME|lower}}.analytic_story = []
+action.escu.analytic_story = []
 {% endif %}
-action.{{APP_NAME|lower}}.earliest_time_offset = 3600
-action.{{APP_NAME|lower}}.latest_time_offset = 86400
-action.{{APP_NAME|lower}}.providing_technologies = []
-action.{{APP_NAME|lower}}.data_models = {{ detection.datamodel | tojson }}
-action.{{APP_NAME|lower}}.eli5 = {{ detection.description }}
-action.{{APP_NAME|lower}}.how_to_implement = none
-action.{{APP_NAME|lower}}.known_false_positives = None at this time
+action.escu.earliest_time_offset = 3600
+action.escu.latest_time_offset = 86400
+action.escu.providing_technologies = []
+action.escu.data_models = {{ detection.datamodel | tojson }}
+action.escu.eli5 = {{ detection.description }}
+action.escu.how_to_implement = none
+action.escu.known_false_positives = None at this time
 disabled = true
 schedule_window = auto
 is_visible = false

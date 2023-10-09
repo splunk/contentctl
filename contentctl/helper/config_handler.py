@@ -5,7 +5,7 @@ import pathlib
 
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.config import Config, TestConfig
-
+from contentctl.objects.enums import DetectionTestingMode
 
 class ConfigHandler:
 
@@ -27,7 +27,7 @@ class ConfigHandler:
         return config
     
     @classmethod
-    def read_test_config(cls, test_config_path: pathlib.Path) -> TestConfig:
+    def read_test_config(cls, test_config_path: pathlib.Path, mode:DetectionTestingMode) -> TestConfig:
         try:
             yml_dict = YmlReader.load_file(test_config_path, add_fields=False)
         except:
@@ -35,6 +35,8 @@ class ConfigHandler:
             sys.exit(1)
 
         try: 
+            if mode != DetectionTestingMode.changes:
+                yml_dict['version_control_config'] = None
             test_config = TestConfig.parse_obj(yml_dict)
         except Exception as e:
             raise Exception(f"Error reading test config file: {str(e)}")

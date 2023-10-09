@@ -4,7 +4,7 @@
 
 {% for story in objects %}
 [analytic_story://{{ story.name }}]
-category = {{ story.tags.category[0] }}
+category = {{ story.tags.category[0].value }}
 last_updated = {{ story.date }}
 version = {{ story.version }}
 references = {{ story.references | tojson }}

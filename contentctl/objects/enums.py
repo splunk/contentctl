@@ -38,6 +38,7 @@ class SecurityContentType(enum.Enum):
     deployments = 7
     investigations = 8
     unit_tests = 9
+    ssa_detections = 10
 
 # Bringing these changes back in line will take some time after
 # the initial merge is complete
@@ -124,3 +125,8 @@ class InstanceState(str, enum.Enum):
     stopping = "stopping"
     stopped = "stopped"
 
+class SigmaConverterTarget(enum.Enum):
+    CIM = 1
+    RAW = 2
+    OCSF = 3
+    ALL = 4

@@ -8,10 +8,12 @@ from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.macro import Macro
+from contentctl.objects.lookup import Lookup
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.config import ConfigDetectionConfiguration
+from contentctl.helper.constants import *
 
 
 class DetectionBuilder():
@@ -25,9 +27,29 @@ class DetectionBuilder():
         self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
 
 
-    def addDeployment(self, detection_configuration: ConfigDetectionConfiguration) -> None:
+    def addDeployment(self, deployments: list) -> None:
         if self.security_content_obj:
-            self.security_content_obj.deployment = detection_configuration
+            if not self.security_content_obj.deployment:
+                matched_deployments = []
+                for d in deployments:
+                    d_tags = dict(d.tags)
+                    for d_tag in d_tags.keys():
+                        for attr in dir(self.security_content_obj):
+                            if not (attr.startswith('__') or attr.startswith('_')):
+                                if attr == d_tag:
+                                    if type(self.security_content_obj.__getattribute__(attr)) is str:
+                                        attr_values = [self.security_content_obj.__getattribute__(attr)]
+                                    else:
+                                        attr_values = self.security_content_obj.__getattribute__(attr)
+                                    
+                                    for attr_value in attr_values:
+                                        if attr_value == d_tags[d_tag]:
+                                            matched_deployments.append(d)
+
+                if len(matched_deployments) == 0:
+                    self.security_content_obj.deployment = None
+                else:
+                    self.security_content_obj.deployment = matched_deployments[-1]
 
 
     def addRBA(self) -> None:
@@ -41,25 +63,25 @@ class DetectionBuilder():
                 for entity in self.security_content_obj.tags.observable:
 
                     risk_object = dict()
-                    if entity['type'].lower() in risk_object_user_types:
+                    if entity.type.lower() in risk_object_user_types:
                         risk_object['risk_object_type'] = 'user'
-                        risk_object['risk_object_field'] = entity['name']
+                        risk_object['risk_object_field'] = entity.name
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
                         risk_objects.append(risk_object)
 
-                    elif entity['type'].lower() in risk_object_system_types:
+                    elif entity.type.lower() in risk_object_system_types:
                         risk_object['risk_object_type'] = 'system'
-                        risk_object['risk_object_field'] = entity['name']
+                        risk_object['risk_object_field'] = entity.name
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
                         risk_objects.append(risk_object)
 
-                    elif 'role' in entity and 'Attacker' in entity['role']:
-                        risk_object['threat_object_field'] = entity['name']
-                        risk_object['threat_object_type'] = entity['type'].lower()
+                    elif 'Attacker' in entity.role:
+                        risk_object['threat_object_field'] = entity.name
+                        risk_object['threat_object_type'] = entity.type.lower()
                         risk_objects.append(risk_object) 
                     else:
                         risk_object['risk_object_type'] = 'other'
-                        risk_object['risk_object_field'] = entity['name']
+                        risk_object['risk_object_field'] = entity.name
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
                         risk_objects.append(risk_object)
                         continue
@@ -145,18 +167,10 @@ class DetectionBuilder():
             self.security_content_obj.baselines = matched_baselines
 
 
-    def addUnitTest(self, tests: list) -> None:
+    def addUnitTest(self) -> None:
         if self.security_content_obj:
-            if self.security_content_obj.tests and len(self.security_content_obj.tests) > 0: 
-                return
-            elif self.security_content_obj.type not in ["Correlation"] and \
-               self.security_content_obj.deprecated == False and \
-               self.security_content_obj.experimental == False and \
-               self.security_content_obj.tags.manual_test == None:
-                raise(Exception(f"No tests found found {self.security_content_obj.file_path}"))
-                #print(f"No tests found found {self.security_content_obj.file_path}")
-            return None
-
+            if self.security_content_obj.tests:
+                self.security_content_obj.test = self.security_content_obj.tests[0]
 
 
     def addMitreAttackEnrichment(self, attack_enrichment: dict) -> None:
@@ -181,37 +195,23 @@ class DetectionBuilder():
 
     def addMacros(self, macros: list) -> None:
         if self.security_content_obj:
-            macros_found = re.findall(r'`([^\s]+)`', self.security_content_obj.search)
-            macros_filtered = set()
-            self.security_content_obj.macros = []
-
-            for macro in macros_found:
-                if not '_filter' in macro and not 'drop_dm_object_name' in macro:
-                    start = macro.find('(')
-                    if start != -1:
-                        macros_filtered.add(macro[:start])
-                    else:
-                        macros_filtered.add(macro)
-
-            for macro_name in macros_filtered:
-                for macro in macros:
-                    if macro_name == macro.name:
-                        self.security_content_obj.macros.append(macro)
-
+            found_macros, missing_macros =  Macro.get_macros(self.security_content_obj.search, macros)
             name = self.security_content_obj.name.replace(' ', '_').replace('-', '_').replace('.', '_').replace('/', '_').lower() + '_filter'
             macro = Macro(name=name, definition='search *', description='Update this macro to limit the output results to filter out false positives.')
+            found_macros.append(macro)
+            self.security_content_obj.macros = found_macros
+            if len(missing_macros) > 0:
+                raise Exception(f"{self.security_content_obj.name} is missing the following macros: {missing_macros}")
             
-            self.security_content_obj.macros.append(macro)
 
 
     def addLookups(self, lookups: list) -> None:
         if self.security_content_obj:
-            lookups_found = re.findall(r'lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', self.security_content_obj.search)
-            self.security_content_obj.lookups = []
-            for lookup_name in lookups_found:
-                for lookup in lookups:
-                    if lookup.name == lookup_name:
-                        self.security_content_obj.lookups.append(lookup)
+            found_lookups, missing_lookups = Lookup.get_lookups(self.security_content_obj.search, lookups)
+            self.security_content_obj.lookups = found_lookups
+            if len(missing_lookups) > 0:
+                raise Exception(f"{self.security_content_obj.name} is missing the following lookups: {missing_lookups}")
+            
 
 
     def addCve(self) -> None:
@@ -221,12 +221,14 @@ class DetectionBuilder():
                 for cve in self.security_content_obj.tags.cve:
                     self.security_content_obj.cve_enrichment.append(CveEnrichment.enrich_cve(cve))
 
+
     def addSplunkApp(self) -> None:
         if self.security_content_obj:
             self.security_content_obj.splunk_app_enrichment = []
             if self.security_content_obj.tags.supported_tas:
                 for splunk_app in self.security_content_obj.tags.supported_tas:
                     self.security_content_obj.splunk_app_enrichment.append(SplunkAppEnrichment.enrich_splunk_app(splunk_app))
+
 
     def addCIS(self) -> None:
         if self.security_content_obj:
@@ -246,12 +248,14 @@ class DetectionBuilder():
                             kill_chain_phases.append(ATTACK_TACTICS_KILLCHAIN_MAPPING[mitre_attack_tactic])
                 self.security_content_obj.tags.kill_chain_phases = list(dict.fromkeys(kill_chain_phases))
 
+
     def addNist(self) -> None:
         if self.security_content_obj:
             if self.security_content_obj.type == "TTP":
                 self.security_content_obj.tags.nist = ["DE.CM"]
             else:
                 self.security_content_obj.tags.nist = ["DE.AE"]
+
 
     def addDatamodel(self) -> None:
         if self.security_content_obj:

@@ -19,7 +19,7 @@ class Deployment(SecurityContentObject):
     #date: str = None
     #author: str = None
     #description: str = None
-    contentType: SecurityContentType = SecurityContentType.deployments
+    #contentType: SecurityContentType = SecurityContentType.deployments
     scheduling: DeploymentScheduling = None
     email: DeploymentEmail = None
     notable: DeploymentNotable = None

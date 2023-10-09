@@ -49,6 +49,7 @@ class GithubService:
             self.get_macros(director),
             self.get_lookups(director),
             [],
+            []
         )
 
     def get_stories(self, director: DirectorOutputDto) -> list[Story]:
@@ -137,15 +138,63 @@ class GithubService:
                     f"Error: self.repo must be initialized before getting changed detections."
                 )
             )
-        raise (Exception("not implemented"))
-        return []
+        
+        differences = self.repo.git.diff("--name-status", f"origin/{self.config.version_control_config.main_branch}").split("\n")
+        new_content = []
+        modified_content =  []
+        deleted_content = []
+        for difference in differences:
+            mode, filename = difference.split("\t")
+            if mode == "A":
+                new_content.append(filename)
+            elif mode == "M":
+                modified_content.append(filename)
+            elif mode == "D":
+                deleted_content.append(filename)
+            else:
+                raise Exception(f"Unknown mode in determining differences: {difference}")
+            
+        #Changes to detections, macros, and lookups should trigger a re-test for anything which uses them
+        changed_lookups_list = list(filter(lambda x: x.startswith("lookups"), new_content+modified_content))
+        changed_lookups = set()
+        
+        #We must account for changes to the lookup yml AND for the underlying csv
+        for lookup in changed_lookups_list:
+            if lookup.endswith(".csv"): 
+                lookup = lookup.replace(".csv", ".yml")
+            changed_lookups.add(lookup)
+
+        # At some point we should account for macros which contain other macros...
+        changed_macros = set(filter(lambda x: x.startswith("macros"), new_content+modified_content))
+        changed_macros_and_lookups = set([str(pathlib.Path(filename).absolute()) for filename in changed_lookups.union(changed_macros)])
+
+        changed_detections = set(filter(lambda x: x.startswith("detections"), new_content+modified_content))
+
+        #Check and see if content that has been modified uses any of the changed macros or lookups
+        for detection in director.detections:
+            deps = set([content.file_path for content in detection.get_content_dependencies()])
+            if not deps.isdisjoint(changed_macros_and_lookups):
+                changed_detections.add(detection.file_path)
+
+        return Detection.get_detections_from_filenames(changed_detections, director.detections)
 
     def __init__(self, config: TestConfig):
-        self.repo = None
+        
         self.requested_detections: list[pathlib.Path] = []
         self.config = config
-
-        if config.mode == DetectionTestingMode.selected:
+        if config.version_control_config is not None:
+            self.repo = git.Repo(config.version_control_config.repo_path)
+        else:
+            self.repo = None
+            
+        
+        if config.mode == DetectionTestingMode.changes: 
+            if self.repo is None:
+                raise Exception("You are using detection mode 'changes', but the app does not have a version_control_config in contentctl_test.yml.")
+            return
+        elif config.mode == DetectionTestingMode.all:
+            return
+        elif config.mode == DetectionTestingMode.selected:
             if config.detections_list is None or len(config.detections_list) < 1:
                 raise (
                     Exception(
@@ -171,63 +220,12 @@ class GithubService:
                         pathlib.Path(detection_file_name)
                         for detection_file_name in config.detections_list
                     ]
-                    return
-
-        elif config.mode == DetectionTestingMode.changes:
-            # Changes is ONLY possible if the app is version controlled
-            # in a github repo.  Ensure that this is the case and, if not
-            # raise an exception
-            raise (Exception("Mode [changes] is not yet supported."))
-            try:
-                repo = git.Repo(config.repo_path)
-            except Exception as e:
-                raise (
-                    Exception(
-                        f"Error: detection mode [{config.mode}] REQUIRES that [{config.repo_path}] is a git repository, but it is not."
-                    )
-                )
-            if config.main_branch == config.test_branch:
-                raise (
-                    Exception(
-                        f"Error: test_branch [{config.test_branch}] is the same as the main_branch [{config.main_branch}]. When using mode [{config.mode}], these two branches MUST be different."
-                    )
-                )
-
-            # Ensure that the test branch is checked out
-            if self.repo.active_branch.name != config.test_branch:
-                raise (
-                    Exception(
-                        f"Error: detection mode [{config.mode}] REQUIRES that the test_branch [{config.test_branch}] be checked out at the beginning of the test, but it is not."
-                    )
-                )
-
-            # Ensure that the base branch exists
-
-            if Utils.validate_git_branch_name(
-                config.repo_path, "NO_URL", config.main_branch
-            ):
-                return
-
-        elif config.mode == DetectionTestingMode.all:
-            return
+                    
         else:
-            raise (
-                Exception(
-                    f"Unsupported detection testing mode [{config.mode}].  Supported detection testing modes are [{DetectionTestingMode._member_names_}]"
-                )
-            )
-
-    def __init2__(self, config: TestConfig):
-
-        self.repo = git.Repo(config.repo_path)
-
-        if self.repo.active_branch.name != config.test_branch:
-            print(
-                f"Error - test_branch is '{config.test_branch}', but the current active branch in '{config.repo_path}' is '{self.repo.active_branch}'. Checking out the branch you specified..."
-            )
-            self.repo.git.checkout(config.test_branch)
-
-        self.config = config
+            raise Exception(f"Unsupported detection testing mode [{config.mode}].  "\
+                            "Supported detection testing modes are [{DetectionTestingMode._member_names_}]")
+        return
+            
 
     def clone_project(self, url, project, branch):
         LOGGER.info(f"Clone Security Content Project")
@@ -252,7 +250,7 @@ class GithubService:
             ]
         if ignore_deprecated:
             director.detections = [
-                d for d in director.detections if not (d.deprecated == True)
+                d for d in director.detections if not (d.status == "deprecated")
             ]
         if ignore_ssa:
             director.detections = [
@@ -352,29 +350,29 @@ class GithubService:
             # Because we have not passed -all as a kwarg, we will have a MAX of one commit returned:
             # https://gitpython.readthedocs.io/en/stable/reference.html?highlight=merge_base#git.repo.base.Repo.merge_base
             base_commits = self.repo.merge_base(
-                self.config.main_branch, self.config.test_branch
+                self.config.version_control_config.main_branch, self.config.version_control_config.test_branch
             )
             if len(base_commits) == 0:
                 raise (
                     Exception(
-                        f"Error, main branch '{self.config.main_branch}' and test branch '{self.config.test_branch}' do not share a common ancestor"
+                        f"Error, main branch '{self.config.version_control_config.main_branch}' and test branch '{self.config.version_control_config.test_branch}' do not share a common ancestor"
                     )
                 )
             base_commit = base_commits[0]
             if base_commit is None:
                 raise (
                     Exception(
-                        f"Error, main branch '{self.config.main_branch}' and test branch '{self.config.test_branch}' common ancestor commit was 'None'"
+                        f"Error, main branch '{self.config.version_control_config.main_branch}' and test branch '{self.config.version_control_config.test_branch}' common ancestor commit was 'None'"
                     )
                 )
 
             all_changes = base_commit.diff(
-                self.config.test_branch, paths=[str(path) for path in paths]
+                self.config.version_control_config.test_branch, paths=[str(path) for path in paths]
             )
 
             # distill changed files down to the paths of added or modified files
             all_changes_paths = [
-                os.path.join(self.config.repo_path, change.b_path)
+                os.path.join(self.config.version_control_config.repo_path, change.b_path)
                 for change in all_changes
                 if change.change_type in ["M", "A"]
             ]

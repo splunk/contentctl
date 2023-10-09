@@ -28,7 +28,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         super().finish()
 
     def get_name(self) -> str:
-        return self.config.container_name
+        return self.infrastructure.instance_name
 
     def get_docker_client(self):
         try:
@@ -59,9 +59,9 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         self.removeContainer()
 
         ports_dict = {
-            "8000/tcp": self.config.web_ui_port,
-            "8088/tcp": self.config.hec_port,
-            "8089/tcp": self.config.api_port,
+            "8000/tcp": self.infrastructure.web_ui_port,
+            "8088/tcp": self.infrastructure.hec_port,
+            "8089/tcp": self.infrastructure.api_port,
         }
 
         mounts = [
@@ -75,19 +75,19 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
 
         environment = {}
         environment["SPLUNK_START_ARGS"] = "--accept-license"
-        environment["SPLUNK_PASSWORD"] = self.config.splunk_app_password
+        environment["SPLUNK_PASSWORD"] = self.infrastructure.splunk_app_password
         environment["SPLUNK_APPS_URL"] = ",".join(
-            p.environment_path for p in self.config.apps
+            p.environment_path for p in self.global_config.apps 
         )
         if (
-            self.config.splunkbase_password is not None
-            and self.config.splunkbase_username is not None
+            self.global_config.splunkbase_password is not None
+            and self.global_config.splunkbase_username is not None
         ):
-            environment["SPLUNKBASE_USERNAME"] = self.config.splunkbase_username
-            environment["SPLUNKBASE_PASSWORD"] = self.config.splunkbase_password
+            environment["SPLUNKBASE_USERNAME"] = self.global_config.splunkbase_username
+            environment["SPLUNKBASE_PASSWORD"] = self.global_config.splunkbase_password
 
         container = self.get_docker_client().containers.create(
-            self.config.full_image_path,
+            self.global_config.infrastructure_config.full_image_path,
             ports=ports_dict,
             environment=environment,
             name=self.get_name(),
@@ -99,7 +99,6 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         return container
 
     def removeContainer(self, removeVolumes: bool = True, forceRemove: bool = True):
-
         try:
             container: docker.models.containers.Container = (
                 self.get_docker_client().containers.get(self.get_name())
@@ -118,6 +117,6 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         except Exception as e:
             raise (
                 Exception(
-                    f"Could not remove Docker Container [{self.config.container_name}]: {str(e)}"
+                    f"Could not remove Docker Container [{self.get_name()}]: {str(e)}"
                 )
             )

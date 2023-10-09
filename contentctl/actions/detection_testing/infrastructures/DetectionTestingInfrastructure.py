@@ -3,20 +3,21 @@ from dataclasses import dataclass
 import abc
 import requests
 import splunklib.client as client
-from contentctl.objects.enums import PostTestBehavior
+from contentctl.objects.enums import PostTestBehavior, DetectionStatus
 from contentctl.objects.detection import Detection
 from contentctl.objects.unit_test_test import UnitTestTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
-from contentctl.objects.test_config import TestConfig
+from contentctl.objects.test_config import TestConfig, Infrastructure
 from shutil import copyfile
 from splunklib.binding import HTTPError
+from splunklib.results import JSONResultsReader, Message
 import os.path
 import configparser
 from ssl import SSLEOFError, SSLZeroReturnError
 import time
 import uuid
-
+from sys import stdout
 
 from tempfile import TemporaryDirectory, mktemp
 import pathlib
@@ -31,6 +32,7 @@ import json
 from typing import Union
 import datetime
 import tqdm
+
 
 
 MAX_TEST_NAME_LENGTH = 70
@@ -54,6 +56,7 @@ class ContainerStoppedException(Exception):
 class DetectionTestingManagerOutputDto:
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
+    skippedQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
@@ -64,7 +67,8 @@ class DetectionTestingManagerOutputDto:
 
 class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     # thread: threading.Thread = threading.Thread()
-    config: TestConfig
+    global_config: TestConfig
+    infrastructure: Infrastructure
     sync_obj: DetectionTestingManagerOutputDto
     hec_token: str = ""
     hec_channel: str = ""
@@ -99,21 +103,20 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             bar_format=f"{self.get_name()} starting",
             miniters=0,
             mininterval=0,
+            file=stdout
         )
+        
         self.start_time = time.time()
         try:
             for func, msg in [
                 (self.start, "Starting"),
-                (self.get_conn, "Getting API Connection"),
-                (
-                    self.create_replay_index,
-                    f"Create index '{self.sync_obj.replay_index}'",
-                ),
+                (self.get_conn, "Waiting for App Installation"),
+                (self.configure_conf_file_datamodels, "Configuring Datamodels"),
+                (self.create_replay_index,f"Create index '{self.sync_obj.replay_index}'"),
                 (self.configure_imported_roles, "Configuring Roles"),
                 (self.configure_delete_indexes, "Configuring Indexes"),
-                (self.configure_conf_file_datamodels, "Configuring Datamodels"),
                 (self.configure_hec, "Configuring HEC"),
-                (self.wait_for_ui_ready, "Waiting for UI"),
+                (self.wait_for_ui_ready, "Finishing Setup")
             ]:
 
                 self.format_pbar_string(
@@ -185,10 +188,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             try:
 
                 conn = client.connect(
-                    host=self.config.test_instance_address,
-                    port=self.config.api_port,
-                    username=self.config.splunk_app_username,
-                    password=self.config.splunk_app_password,
+                    host=self.infrastructure.instance_address,
+                    port=self.infrastructure.api_port,
+                    username=self.infrastructure.splunk_app_username,
+                    password=self.infrastructure.splunk_app_password,
                 )
 
                 if conn.restart_required:
@@ -244,12 +247,26 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def configure_imported_roles(
         self,
         imported_roles: list[str] = ["user", "power", "can_delete"],
+        enterprise_security_roles: list[str]= ["ess_admin", "ess_analyst", "ess_user"],
         indexes: list[str] = ["_*", "*"],
     ):
         indexes.append(self.sync_obj.replay_index)
         indexes_encoded = ";".join(indexes)
+        try:
+            self.get_conn().roles.post(
+                self.infrastructure.splunk_app_username,
+                imported_roles=imported_roles + enterprise_security_roles,
+                srchIndexesAllowed=indexes_encoded,
+                srchIndexesDefault=self.sync_obj.replay_index,
+            )
+            return
+        except Exception as e:
+            self.pbar.write(
+                f"Enterprise Security Roles do not exist:'{enterprise_security_roles}: {str(e)}"
+            )
+    
         self.get_conn().roles.post(
-            self.config.splunk_app_username,
+            self.infrastructure.splunk_app_username,
             imported_roles=imported_roles,
             srchIndexesAllowed=indexes_encoded,
             srchIndexesDefault=self.sync_obj.replay_index,
@@ -338,6 +355,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
             try:
                 detection = self.sync_obj.inputQueue.pop()
+                if detection.status != DetectionStatus.production.value:
+                    self.sync_obj.skippedQueue.append(detection)
+                    self.pbar.write(f"\nSkipping {detection.name} since it is status: {detection.status}\n")
+                    continue
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError as e:
                 # self.pbar.write(
@@ -407,7 +428,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
             test.result = UnitTestResult()
             test.result.set_job_content(
-                e, self.config, duration=time.time() - start_time
+                None, self.infrastructure, exception=e, duration=time.time() - start_time
             )
             self.pbar.write(
                 self.format_pbar_string(
@@ -439,13 +460,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except Exception as e:
             test.result = UnitTestResult()
             test.result.set_job_content(
-                e, self.config, duration=time.time() - start_time
+                None, self.infrastructure, exception=e, duration=time.time() - start_time
             )
 
         if (
-            self.config.post_test_behavior == PostTestBehavior.always_pause
+            self.global_config.post_test_behavior == PostTestBehavior.always_pause
             or (
-                self.config.post_test_behavior == PostTestBehavior.pause_on_failure
+                self.global_config.post_test_behavior == PostTestBehavior.pause_on_failure
                 and (test.result is None or test.result.success == False)
             )
         ) and not self.sync_obj.terminate:
@@ -491,7 +512,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
-
+        stdout.flush()
         if test.result is not None:
             test.result.duration = round(time.time() - start_time, 2)
 
@@ -533,30 +554,85 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
             job = self.get_conn().search(query=search, **kwargs)
 
-            # the following raises an error if there is an exception in the search
-            _ = job.results(output_mode="json")
-
+            results = JSONResultsReader(job.results(output_mode="json"))
+                        
+            observable_fields_set = set([o.name for o in detection.tags.observable])
+        
             if int(job.content.get("resultCount", "0")) > 0:
                 test.result = UnitTestResult()
+                empty_fields = set()
+                for result in results:
+                    if isinstance(result, Message):
+                        continue
+
+                    #otherwise it is a dict and we will process is
+                    results_fields_set = set(result.keys())
+                
+                    missing_fields = observable_fields_set - results_fields_set
+
+                    
+                    if len(missing_fields) > 0:
+                        e = Exception(f"The observable field(s) {missing_fields} are missing in the detection results")
+                        test.result.set_job_content(
+                            job.content,
+                            self.infrastructure,
+                            exception=e,
+                            success=False,
+                            duration=time.time() - search_start_time,
+                            )
+                        
+                        
+                        return
+                
+
+                    
+                    
+                    # If we find one or more fields that contain the string "null" then they were
+                    # not populated and we should throw an error.  This can happen if there is a typo
+                    # on a field.  In this case, the field will appear but will not contain any values
+                    current_empty_fields = set()
+                    for field in observable_fields_set:
+                        if result.get(field,'null') == 'null':
+                            current_empty_fields.add(field)
+
+                    
+                    if len(current_empty_fields) == 0:
+                        test.result.set_job_content(
+                        job.content,
+                        self.infrastructure,
+                        success=True,
+                        duration=time.time() - search_start_time,
+                        )
+                        return
+                    
+                    else:
+                        empty_fields = empty_fields.union(current_empty_fields)
+                    
+                
+                e = Exception(f"One or more required observable fields {empty_fields} contained 'null' values.  Is the data being "
+                               "parsed correctly or is there an error in the naming of a field?")                
                 test.result.set_job_content(
                     job.content,
-                    self.config,
-                    success=True,
+                    self.infrastructure,
+                    exception=e,
+                    success=False,
                     duration=time.time() - search_start_time,
                 )
-
+                
                 return
+                
             else:
                 test.result = UnitTestResult()
                 test.result.set_job_content(
                     job.content,
-                    self.config,
+                    self.infrastructure,
                     success=False,
                     duration=time.time() - search_start_time,
                 )
-
-            tick += 1
-
+                tick += 1
+        
+            
+        
         return
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
@@ -678,21 +754,21 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             "host": attack_data_file.host or self.sync_obj.replay_host,
         }
 
-        if self.config.test_instance_address.strip().lower().startswith("https://"):
-            address_with_scheme = self.config.test_instance_address.strip().lower()
-        elif self.config.test_instance_address.strip().lower().startswith("http://"):
+        if self.infrastructure.instance_address.strip().lower().startswith("https://"):
+            address_with_scheme = self.infrastructure.instance_address.strip().lower()
+        elif self.infrastructure.instance_address.strip().lower().startswith("http://"):
             address_with_scheme = (
-                self.config.test_instance_address.strip()
+                self.infrastructure.instance_address.strip()
                 .lower()
                 .replace("http://", "https://")
             )
         else:
-            address_with_scheme = f"https://{self.config.test_instance_address}"
+            address_with_scheme = f"https://{self.infrastructure.instance_address}"
 
         # Generate the full URL, including the host, the path, and the params.
         # We can be a lot smarter about this (and pulling the port from the url, checking
         # for trailing /, etc, but we leave that for the future)
-        url_with_port = f"{address_with_scheme}:{self.config.hec_port}"
+        url_with_port = f"{address_with_scheme}:{self.infrastructure.hec_port}"
         url_with_hec_path = urllib.parse.urljoin(
             url_with_port, "services/collector/raw"
         )

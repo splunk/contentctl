@@ -19,7 +19,7 @@ class ConfOutput:
     input_path: str
     config: Config
     output_path: pathlib.Path
-    
+
 
     def __init__(self, input_path: str, config: Config):
         self.input_path = input_path
@@ -29,6 +29,11 @@ class ConfOutput:
         template_splunk_app_path = os.path.join(os.path.dirname(__file__), 'templates/splunk_app')
         shutil.copytree(template_splunk_app_path, self.output_path, dirs_exist_ok=True)
         
+    def getPackagePath(self, include_version:bool=False)->pathlib.Path:
+        if include_version:
+            return self.output_path / f"{self.config.build.name}-{self.config.build.version}.tar.gz"
+        else:
+            return self.output_path / f"{self.config.build.name}.tar.gz"
 
     def writeHeaders(self) -> None:
         ConfWriter.writeConfFileHeader(self.output_path/'default/analyticstories.conf', self.config)
@@ -152,7 +157,6 @@ class ConfOutput:
         # if not readme_file.is_file():
         #     raise Exception("The README file does not exist in this directory. Cannot build app.")
         # shutil.copyfile(readme_file, input_app_path/readme_file.name)
-        output_app_expected_name = pathlib.Path(os.path.join(self.input_path, self.config.build.path_root))/f"{self.config.build.name}-{self.config.build.version}.tar.gz"
         
         
         # try:
@@ -176,19 +180,24 @@ class ConfOutput:
         #     except SystemExit as e:
         #         raise Exception(f"Error building package with slim: {str(e)}")
         # else:
-        with tarfile.open(output_app_expected_name, "w:gz") as app_archive:
+        with tarfile.open(self.getPackagePath(include_version=True), "w:gz") as app_archive:
             app_archive.add(self.output_path, arcname=os.path.basename(self.output_path)) 
                        
-            
         
-        if not output_app_expected_name.exists():
-            raise (Exception(f"The expected output app path '{output_app_expected_name}' does not exist"))
+        if not self.output_path.exists():
+            raise (Exception(f"The expected output app path '{self.getPackagePath(include_version=True)}' does not exist"))
+        
+        shutil.copy2(self.getPackagePath(include_version=True), 
+                     self.getPackagePath(include_version=False), 
+                     follow_symlinks=False)
+        
+        
     
-    def inspectApp(self)-> None:
-        
-        output_app_expected_name = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}-{self.config.build.version}.tar.gz"
-        name_without_version = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}.tar.gz"
-        shutil.copy2(output_app_expected_name, name_without_version, follow_symlinks=False)
+    def inspectAppAPI(self, username:str, password:str)->None:
+        print("we would appinspect api now!")
+        return None
+    
+    def inspectAppCLI(self)-> None:
         
         try:
             from splunk_appinspect.main import (
@@ -197,10 +206,13 @@ class ConfOutput:
                 PRECERT_MODE, TEST_MODE)
         except Exception as e:
             print("******WARNING******")
-            if sys.version_info.major == 3 and sys.version_info.minor == 9:
+            if sys.version_info.major == 3 and sys.version_info.minor > 9:
                 print("The package splunk-appinspect was not installed due to a current issue with the library on Python3.10+.  "
-                      "Please use the following commands to set up a virtualenvironment in a different folder so you may run appinspect manually:"
-                      f"\n\tpython3.9 -m venv .venv; source .venv/bin/activate; python3 -m pip install splunk-appinspect; splunk-appinspect inspect {name_without_version} --mode precert")    
+                      "Please use the following commands to set up a virtualenvironment in a different folder so you may run appinspect manually (if desired):"
+                      "\n\tpython3.9 -m venv .venv" 
+                      "\n\tsource .venv/bin/activate"
+                      "\n\tpython3 -m pip install splunk-appinspect"
+                      f"\n\tsplunk-appinspect inspect {self.getPackagePath(include_version=False).relative_to(pathlib.Path('.').absolute())} --mode precert")    
                 
             else:
                 print("splunk-appinspect is only compatable with Python3.9 at this time.  Please see the following open issue here: https://github.com/splunk/contentctl/issues/28")
@@ -218,7 +230,7 @@ class ConfOutput:
         appinspect_output = pathlib.Path(self.config.build.path_root)/"appinspect_results.json"
         appinspect_logging = pathlib.Path(self.config.build.path_root)/"appinspect_logging.log"
         try:
-            arguments_list = [(APP_PACKAGE_ARGUMENT, str(name_without_version))]
+            arguments_list = [(APP_PACKAGE_ARGUMENT, str(self.getPackagePath(include_version=False)))]
             options_list = []
             options_list += [MODE_OPTION, TEST_MODE]
             options_list += [OUTPUT_FILE_OPTION, str(appinspect_output)]
@@ -258,7 +270,7 @@ class ConfOutput:
                         j = json.load(logfile)
                         #Seek back to the beginning of the file. We don't need to clear
                         #it sice we will always write AT LEAST the same number of characters
-                        #back as we read
+                        #back as we read (due to the addition of whitespace)
                         logfile.seek(0)
                         json.dump(j, logfile, indent=3, )
                         bad_stuff = ["error", "failure", "manual_check", "warning"]
@@ -270,7 +282,7 @@ class ConfOutput:
                         for group in reports[0].get("groups", []):
                             for check in group.get("checks",[]):
                                 if check.get("result","") in bad_stuff:                                    
-                                    verbose_errors.append(f"Result: {check.get('result','')} - [{group.get('name','NONAME')}: {check.get('name', 'NONAME')}]")
+                                    verbose_errors.append(f" - {check.get('result','')} [{group.get('name','NONAME')}: {check.get('name', 'NONAME')}]")
                         verbose_errors.sort()
                         
                         summary = j.get("summary", None)
@@ -279,10 +291,10 @@ class ConfOutput:
                         msgs = []
                         for key in bad_stuff:
                             if summary.get(key,0)>0:
-                                msgs.append(f"{summary.get(key,0)} {key}s")
+                                msgs.append(f" - {summary.get(key,0)} {key}s")
                         if len(msgs)>0 or len(verbose_errors):
-                            summary = '\n - '.join(msgs)
-                            details = '\n - '.join(verbose_errors)
+                            summary = '\n'.join(msgs)
+                            details = '\n'.join(verbose_errors)
                             raise Exception(f"AppInspect found issue(s) that may prevent automated vetting:\nSummary:\n{summary}\nDetails:\n{details}")
                         
                 except Exception as e:

@@ -122,7 +122,7 @@ def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
         product=product_type, 
         config=config
     )
-    generate_input_dto = GenerateInputDto(director_input_dto)
+    generate_input_dto = GenerateInputDto(director_input_dto, args.appinspect_api_username, args.appinspect_api_password)
 
     generate = Generate()
 
@@ -424,6 +424,22 @@ def main():
         default="app",
         help="Type of package: app, ssa or api"
     )
+
+    build_parser.add_argument(
+        "--appinspect_api_username",
+        required=False,
+        type=str,
+        default=None,
+        help=f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+    )
+    build_parser.add_argument(
+        "--appinspect_api_password",
+        required=False,
+        type=str,
+        default=None,
+        help=f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+    )
+
     build_parser.set_defaults(func=build)
 
     docs_parser.set_defaults(func=doc_gen)

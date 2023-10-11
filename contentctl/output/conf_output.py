@@ -7,7 +7,9 @@ import tarfile
 from typing import Union
 from pathlib import Path
 import pathlib
-
+import time
+import timeit
+import datetime
 import shutil
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
@@ -24,16 +26,17 @@ class ConfOutput:
     def __init__(self, input_path: str, config: Config):
         self.input_path = input_path
         self.config = config
-        self.output_path = pathlib.Path(os.path.join(self.input_path, self.config.build.path_root)) /self.config.build.name
+        self.dist = pathlib.Path(self.input_path, self.config.build.path_root)
+        self.output_path = self.dist/self.config.build.name
         self.output_path.mkdir(parents=True, exist_ok=True)
         template_splunk_app_path = os.path.join(os.path.dirname(__file__), 'templates/splunk_app')
         shutil.copytree(template_splunk_app_path, self.output_path, dirs_exist_ok=True)
         
     def getPackagePath(self, include_version:bool=False)->pathlib.Path:
         if include_version:
-            return self.output_path / f"{self.config.build.name}-{self.config.build.version}.tar.gz"
+            return self.dist / f"{self.config.build.name}-{self.config.build.version}.tar.gz"
         else:
-            return self.output_path / f"{self.config.build.name}.tar.gz"
+            return self.dist / f"{self.config.build.name}.tar.gz"
 
     def writeHeaders(self) -> None:
         ConfWriter.writeConfFileHeader(self.output_path/'default/analyticstories.conf', self.config)
@@ -192,7 +195,9 @@ class ConfOutput:
                      follow_symlinks=False)
         
         
-    
+    def getElapsedTime(self, startTime:float)->datetime.timedelta:
+        return datetime.timedelta(seconds=round(timeit.default_timer() - startTime))
+        
     def inspectAppAPI(self, username:str, password:str)->None:
         print("we would appinspect api now!")
         from requests import Session, post, get
@@ -225,26 +230,49 @@ class ConfOutput:
         headers = headers = {
             "Authorization": f"bearer {appinspect_token}"
         }
+        startTime = timeit.default_timer()
         while True:
-            import time
-            time.sleep(15)
+            
             res = get(APPINSPECT_API_VALIDATION_STATUS, headers=headers)
             res.raise_for_status()
             status = res.json().get("status",None)
             if status in ["PROCESSING", "PREPARING"]:
-                print(f"Appinspect API is {status}...")
+                print(f"[{self.getElapsedTime(startTime)}] Appinspect API is {status}...")
+                time.sleep(15)
                 continue
             elif status == "SUCCESS":
-                print("Appinspect API has finished")
+                print(f"[{self.getElapsedTime(startTime)}] Appinspect API has finished!")
                 break
             else:
                 raise Exception(f"Error - Unknown Appinspect API status '{status}'")
-
-
+        
         
 
-
-
+        #We have finished running appinspect, so get the report
+        APPINSPECT_API_REPORT = f"https://appinspect.splunk.com/v1/app/report/{request_id}"
+        #Get human-readable HTML report
+        headers = headers = {
+            "Authorization": f"bearer {appinspect_token}",
+            "Content-Type": "text/html"
+        }
+        res = get(APPINSPECT_API_REPORT, headers=headers)
+        res.raise_for_status()
+        report_html = res.content
+        
+        #Get JSON report for processing
+        headers = headers = {
+            "Authorization": f"bearer {appinspect_token}",
+            "Content-Type": "application/json"
+        }
+        res = get(APPINSPECT_API_REPORT, headers=headers)
+        res.raise_for_status()
+        report_json = res.json()
+        import json
+        
+        with open(self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_api_results.html", "wb") as report:
+            report.write(report_html)
+        with open(self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_api_results.json", "w") as report:
+            json.dump(report_json, report,indent=3)
         
         return None
     
@@ -278,8 +306,8 @@ class ConfOutput:
         included_tags = []
         excluded_tags = []
 
-        appinspect_output = pathlib.Path(self.config.build.path_root)/"appinspect_results.json"
-        appinspect_logging = pathlib.Path(self.config.build.path_root)/"appinspect_logging.log"
+        appinspect_output = self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_cli_results.json"
+        appinspect_logging = self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_cli_logging.log"
         try:
             arguments_list = [(APP_PACKAGE_ARGUMENT, str(self.getPackagePath(include_version=False)))]
             options_list = []

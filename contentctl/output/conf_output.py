@@ -195,6 +195,57 @@ class ConfOutput:
     
     def inspectAppAPI(self, username:str, password:str)->None:
         print("we would appinspect api now!")
+        from requests import Session, post, get
+        from requests.auth import HTTPBasicAuth
+        
+        session = Session()
+        session.auth = HTTPBasicAuth(username, password)
+        APPINSPECT_API_LOGIN = "https://api.splunk.com/2.0/rest/login/splunk"
+        res = session.get(APPINSPECT_API_LOGIN)
+        #If login failed or other failure, raise an exception
+        res.raise_for_status()
+        
+        appinspect_token = res.json().get("data",{}).get("token",None)
+        APPINSPECT_API_VALIDATION_REQUEST = "https://appinspect.splunk.com/v1/app/validate"
+        headers = {
+            "Authorization": f"bearer {appinspect_token}",
+            "Cache-Control": "no-cache"
+        }
+        files = {
+            "app_package": open(self.getPackagePath(include_version=False),"rb"),
+            "included_tags":(None,"cloud")
+        } 
+        
+        res = post(APPINSPECT_API_VALIDATION_REQUEST, headers=headers, files=files)
+
+        res.raise_for_status()
+
+        request_id = res.json().get("request_id",None)
+        APPINSPECT_API_VALIDATION_STATUS = f"https://appinspect.splunk.com/v1/app/validate/status/{request_id}"
+        headers = headers = {
+            "Authorization": f"bearer {appinspect_token}"
+        }
+        while True:
+            import time
+            time.sleep(15)
+            res = get(APPINSPECT_API_VALIDATION_STATUS, headers=headers)
+            res.raise_for_status()
+            status = res.json().get("status",None)
+            if status in ["PROCESSING", "PREPARING"]:
+                print(f"Appinspect API is {status}...")
+                continue
+            elif status == "SUCCESS":
+                print("Appinspect API has finished")
+                break
+            else:
+                raise Exception(f"Error - Unknown Appinspect API status '{status}'")
+
+
+        
+
+
+
+        
         return None
     
     def inspectAppCLI(self)-> None:

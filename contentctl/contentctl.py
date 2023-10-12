@@ -212,11 +212,11 @@ def test(args: argparse.Namespace):
     # be able to do it in Test().execute. For now, we will do it here
     app = App(
         uid=9999,
-        appid=config.build.name,
-        title=config.build.name,
+        appid=config.build.title,
+        title=config.build.title,
         release=config.build.version,
         http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
+        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.title}-{config.build.version}.tar.gz"),
         description=config.build.description,
         splunkbase_path=None,
         force_local=True

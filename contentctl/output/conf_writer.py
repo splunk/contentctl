@@ -31,7 +31,7 @@ class ConfWriter():
 
 
     @staticmethod
-    def writeConfFile(output_path:pathlib.Path, template_name : str, config: Config, objects : list) -> None:
+    def writeConfFile(output_path:pathlib.Path, template_name : str, config: Config, objects : list, append:bool=True) -> None:
         def custom_jinja2_enrichment_filter(string, object):
             customized_string = string
 
@@ -61,7 +61,11 @@ class ConfWriter():
         template = j2_env.get_template(template_name)
         output = template.render(objects=objects, APP_NAME=config.build.prefix)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'a') as f:
+        if append:
+            file_mode = 'a'
+        else:
+            file_mode = 'w'
+        with open(output_path, file_mode) as f:
             output = output.encode('ascii', 'ignore').decode('ascii')
             f.write(output)
 

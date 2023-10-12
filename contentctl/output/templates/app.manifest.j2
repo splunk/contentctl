@@ -1,21 +1,21 @@
 {
   "schemaVersion": "1.0.0", 
   "info": {
-    "title": "ES Content Updates", 
+    "title": "{{ objects[0].title }}", 
     "id": {
       "group": null, 
-      "name": "DA-ESS-ContentUpdate", 
+      "name": "{{ objects[0].name }}", 
       "version": "{{ objects[0].version }}"
     }, 
     "author": [
       {
-        "name": "Splunk Security Research Team", 
-        "email": "research@splunk.com", 
-        "company": "Splunk"
+        "name": "{{ objects[0].author_name }}", 
+        "email": "{{ objects[0].author_email }}", 
+        "company": "{{ objects[0].author_company }}"
       }
     ], 
     "releaseDate": null, 
-    "description": "Explore the Analytic Stories included with ES Content Updates.", 
+    "description": "{{ objects[0].description }}", 
     "classification": {
       "intendedAudience": null, 
       "categories": [], 

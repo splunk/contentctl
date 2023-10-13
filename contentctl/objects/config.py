@@ -138,6 +138,12 @@ class ConfigBuild(BaseModel):
         except Exception as e:
             raise(ValueError(f"The specified version does not follow the semantic versioning spec (https://semver.org/). {str(e)}"))
         return v
+    
+    #Build will ALWAYS be the current utc timestamp
+    @validator('build', always=True)
+    def validate_build(cls, v, values):
+        return int(datetime.utcnow().strftime("%Y%m%d%H%M%S"))
+    
 
 
 

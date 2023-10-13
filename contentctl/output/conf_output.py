@@ -28,16 +28,16 @@ class ConfOutput:
         self.input_path = input_path
         self.config = config
         self.dist = pathlib.Path(self.input_path, self.config.build.path_root)
-        self.output_path = self.dist/self.config.build.title
+        self.output_path = self.dist/self.config.build.name
         self.output_path.mkdir(parents=True, exist_ok=True)
         template_splunk_app_path = os.path.join(os.path.dirname(__file__), 'templates/splunk_app')
         shutil.copytree(template_splunk_app_path, self.output_path, dirs_exist_ok=True)
         
     def getPackagePath(self, include_version:bool=False)->pathlib.Path:
         if include_version:
-            return self.dist / f"{self.config.build.title}-{self.config.build.version}.tar.gz"
+            return self.dist / f"{self.config.build.name}-{self.config.build.version}.tar.gz"
         else:
-            return self.dist / f"{self.config.build.title}.tar.gz"
+            return self.dist / f"{self.config.build.name}.tar.gz"
 
     def writeHeaders(self) -> None:
         ConfWriter.writeConfFileHeader(self.output_path/'default/analyticstories.conf', self.config)
@@ -55,7 +55,6 @@ class ConfOutput:
         ConfWriter.writeConfFile(self.output_path/"default"/"app.conf", "app.conf.j2", self.config, [self.config.build] )
         ConfWriter.writeConfFile(self.output_path/"default"/"content-version.conf", "content-version.j2", self.config, [self.config.build] )
         ConfWriter.writeConfFile(self.output_path/"app.manifest", "app.manifest.j2", self.config, [self.config.build],append=False)
-        input(self.output_path/"app.manifest")
 
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:

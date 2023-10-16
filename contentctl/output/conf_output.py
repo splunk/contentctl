@@ -11,6 +11,7 @@ import time
 import timeit
 import datetime
 import shutil
+import json
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.config import Config
@@ -264,15 +265,65 @@ class ConfOutput:
         res = get(APPINSPECT_API_REPORT, headers=headers)
         res.raise_for_status()
         report_json = res.json()
-        import json
+        
         
         with open(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.html", "wb") as report:
             report.write(report_html)
         with open(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.json", "w") as report:
-            json.dump(report_json, report,indent=3)
+            json.dump(report_json, report)
+        
+        
+        self.parseAppinspectJsonLogFile(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.json")
         
         return None
     
+    def parseAppinspectJsonLogFile(self, logfile_path:pathlib.Path, 
+                                   status_types:list[str] = ["error", "failure", "manual_check", "warning"], 
+                                   exception_types = ["error","failure"] )->None:
+        if not set(exception_types).issubset(set(status_types)):
+                raise Exception(f"Error - exception_types {exception_types} MUST be a subset of status_types {status_types}, but it is not")
+        with open(logfile_path, "r+") as logfile:
+            j = json.load(logfile)
+            #Seek back to the beginning of the file. We don't need to clear
+            #it sice we will always write AT LEAST the same number of characters
+            #back as we read (due to the addition of whitespace)
+            logfile.seek(0)
+            json.dump(j, logfile, indent=3, )
+            
+        reports = j.get("reports", [])
+        if len(reports) != 1:
+            raise Exception("Expected to find one appinspect report but found 0")
+        verbose_errors = []
+        
+        for group in reports[0].get("groups", []):
+            for check in group.get("checks",[]):
+                if check.get("result","") in status_types:                                    
+                    verbose_errors.append(f" - {check.get('result','')} [{group.get('name','NONAME')}: {check.get('name', 'NONAME')}]")
+        verbose_errors.sort()
+        
+        summary = j.get("summary", None)
+        if summary is None:
+            raise Exception("Missing summary from appinspect report")
+        msgs = []
+        generated_exception = False
+        for key in status_types:
+            if summary.get(key,0)>0:
+                msgs.append(f" - {summary.get(key,0)} {key}s")
+                if key in exception_types:
+                    generated_exception = True
+        if len(msgs)>0 or len(verbose_errors):
+            summary = '\n'.join(msgs)
+            details = '\n'.join(verbose_errors)
+            summary = f"{summary}\nDetails:\n{details}"
+            if generated_exception:
+                raise Exception(f"AppInspect found [{','.join(exception_types)}] that MUST be addressed to pass AppInspect API:\n{summary}")        
+            else:
+                print(f"AppInspect found [{','.join(status_types)}] that MAY cause a failure during AppInspect API:\n{summary}")            
+        else:
+            print("AppInspect was successful!")
+                
+        return
+
     def inspectAppCLI(self)-> None:
         
         try:
@@ -340,38 +391,7 @@ class ConfOutput:
                 # appinspect outputs the log in json format, but does not format it to be easier
                 # to read (it is all in one line). Read back that file and write it so it
                 # is easier to understand
-                try:
-                    with open(appinspect_output, "r+") as logfile:
-                        import json
-                        j = json.load(logfile)
-                        #Seek back to the beginning of the file. We don't need to clear
-                        #it sice we will always write AT LEAST the same number of characters
-                        #back as we read (due to the addition of whitespace)
-                        logfile.seek(0)
-                        json.dump(j, logfile, indent=3, )
-                        bad_stuff = ["error", "failure", "manual_check", "warning"]
-                        reports = j.get("reports", [])
-                        if len(reports) != 1:
-                            raise Exception("Expected to find one appinspect report but found 0")
-                        verbose_errors = []
-                        
-                        for group in reports[0].get("groups", []):
-                            for check in group.get("checks",[]):
-                                if check.get("result","") in bad_stuff:                                    
-                                    verbose_errors.append(f" - {check.get('result','')} [{group.get('name','NONAME')}: {check.get('name', 'NONAME')}]")
-                        verbose_errors.sort()
-                        
-                        summary = j.get("summary", None)
-                        if summary is None:
-                            raise Exception("Missing summary from appinspect report")
-                        msgs = []
-                        for key in bad_stuff:
-                            if summary.get(key,0)>0:
-                                msgs.append(f" - {summary.get(key,0)} {key}s")
-                        if len(msgs)>0 or len(verbose_errors):
-                            summary = '\n'.join(msgs)
-                            details = '\n'.join(verbose_errors)
-                            raise Exception(f"AppInspect found issue(s) that may prevent automated vetting:\nSummary:\n{summary}\nDetails:\n{details}")
-                        
-                except Exception as e:
-                    print(f"Failed to format {appinspect_output}: {str(e)}")
+                
+                #Note that this may raise an exception itself!
+                self.parseAppinspectJsonLogFile(appinspect_output)
+                

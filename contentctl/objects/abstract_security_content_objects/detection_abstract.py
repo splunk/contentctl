@@ -84,7 +84,7 @@ class Detection_Abstract(SecurityContentObject):
             raise ValueError("not valid analytics type: " + values["name"])
         return v
 
-    @validator('how_to_implement')
+    @validator('how_to_implement', 'search', 'known_false_positives')
     def encode_error(cls, v, values, field):
         return SecurityContentObject.free_text_field_valid(cls,v,values,field)
 

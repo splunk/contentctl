@@ -48,12 +48,12 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         
         try:
             v.encode('ascii')
-        except UnicodeEncodeError:
-            raise ValueError(f"Ascii encoding error in {field.name} : {values['name']} with value '{v}' - {str(e)}")
+        except UnicodeEncodeError as e:
+            raise ValueError(f"Ascii encoding error in {values['name']}:{field.name} - {str(e)}")
         
         
         if bool(re.search(r"[^\\]\n", v)):
-                raise ValueError(f"Unexpected newline(s) in {field.name}.  Newline characters MUST be prefixed with \\: {values['name']} with value '{v}'")
+                raise ValueError(f"Unexpected newline(s) in {values['name']}:{field.name}.  Newline characters MUST be prefixed with \\")
         return v
     
     

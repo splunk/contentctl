@@ -12,7 +12,7 @@ class SSADetectionTags(BaseModel):
     asset_type: str
     automated_detection_testing: str = None
     cis20: list = None
-    confidence: str
+    confidence: int
     impact: int
     kill_chain_phases: list = None
     message: str
@@ -40,7 +40,9 @@ class SSADetectionTags(BaseModel):
     risk_level: str = None
     observable_str: str = None
     evidence_str: str = None
-    kill_chain_phases_id: list = None
+    analytics_story_str: str = None
+    kill_chain_phases_id:dict = None
+    kill_chain_phases_str:str = None
     research_site_url: str = None
     event_schema: str = None
     mappings: list = None

@@ -48,6 +48,7 @@ class SSADetection(BaseModel):
     file_path: str = None
     source: str = None
     runtime: str = None
+    internalVersion: int = None
     test: Union[UnitTest, dict] = None
 
     # @validator('name')v

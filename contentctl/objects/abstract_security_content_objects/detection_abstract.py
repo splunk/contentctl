@@ -88,6 +88,13 @@ class Detection_Abstract(SecurityContentObject):
     def encode_error(cls, v, values, field):
         return SecurityContentObject.free_text_field_valid(cls,v,values,field)
 
+    @root_validator
+    def validation_for_ba_only(cls, values):
+        # Ensure that only a BA detection can have status: validation
+        if values["status"] == DetectionStatus.validation.value:
+            raise ValueError(f"The following is NOT an ssa_ detection, but has 'status: {values['status']} which may ONLY be used for ssa_ detections:' {values['file_path']}")
+        return values
+
     # @root_validator
     # def search_validation(cls, values):
     #     if 'ssa_' not in values['file_path']:

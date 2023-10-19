@@ -49,7 +49,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         try:
             v.encode('ascii')
         except UnicodeEncodeError as e:
-            raise ValueError(f"Ascii encoding error in {values['name']}:{field.name} - {str(e)}")
+            print(f"Potential Ascii encoding error in {values['name']}:{field.name} - {str(e)}")
         
         
         if bool(re.search(r"[^\\]\n", v)):

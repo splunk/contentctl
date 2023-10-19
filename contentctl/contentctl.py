@@ -516,6 +516,24 @@ def main():
                                                  "contentctl_test.yml.")
     test_parser.add_argument("--num_containers", required=False, default=1, type=int)
     test_parser.add_argument("--server_info", required=False, default=None, type=str, nargs='+')
+
+    #Even though these are also options to build, make them available to test_parser
+    #as well to make the tool easier to use
+    test_parser.add_argument(
+        "--appinspect_api_username",
+        required=False,
+        type=str,
+        default=None,
+        help=f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+    )
+    test_parser.add_argument(
+        "--appinspect_api_password",
+        required=False,
+        type=str,
+        default=None,
+        help=f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+    )
+
     test_parser.set_defaults(func=test)
 
     convert_parser.add_argument("-dm", "--data_model", required=False, type=str, default="cim", help="converter target, choose between cim, raw, ocsf")

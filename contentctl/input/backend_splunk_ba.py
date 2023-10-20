@@ -49,9 +49,9 @@ class SplunkBABackend(TextQueryBackend):
 
     field_null_expression : ClassVar[str] = "{field} IS NOT NULL"
 
-    convert_or_as_in : ClassVar[bool] = False
+    convert_or_as_in : ClassVar[bool] = True
     convert_and_as_in : ClassVar[bool] = False
-    in_expressions_allow_wildcards : ClassVar[bool] = True
+    in_expressions_allow_wildcards : ClassVar[bool] = False
     field_in_list_expression : ClassVar[str] = "{field} {op} ({list})"
     or_in_operator : ClassVar[Optional[str]] = "IN"
     list_separator : ClassVar[str] = ", "
@@ -110,7 +110,14 @@ $main = from source
                     parent = new_val
                     i = i + 1
                     continue
-                parser_str = '| eval ' + new_val + ' = ' + parent + '.' + val + ' '
+                
+                new_val_equals = new_val + "="
+                new_val_IN = new_val + " IN"
+                if new_val_equals not in query and new_val_IN not in query:
+                    parser_str = '| eval ' + new_val + ' = ' + parent + '.' + val + ' '
+                else:
+                    parser_str = '| eval ' + new_val + ' = ' + 'lower(' + parent + '.' + val + ') '
+                
                 detection_str = detection_str + parser_str
                 parsed_fields.append(new_val)
                 parent = new_val

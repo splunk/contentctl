@@ -124,6 +124,19 @@ $main = from source
                 i = i + 1
 
         detection_str = detection_str + "| where " + query
+
+        lower_query = ""
+        in_quotes = False
+        for char in query:
+            if char == '"':
+                in_quotes = not in_quotes
+            if in_quotes:
+                lower_query += char.lower()
+            else:
+                lower_query += char
+
+        detection_str = detection_str + "| where " + lower_query
+
         detection_str = detection_str.replace("\\\\\\\\", "\\\\")
         return detection_str
 

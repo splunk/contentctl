@@ -112,12 +112,12 @@ class ConfOutput:
                 'transforms.j2', 
                 self.config, objects)
 
-            #import code
-            #code.interact(local=locals())
+            
             if self.input_path is None:
                 raise(Exception(f"input_path is required for lookups, but received [{self.input_path}]"))
 
-            files = glob.iglob(os.path.join(self.input_path, 'lookups', '*.csv'))
+            #we want to copy all *.mlmodel files as well, not just csvs
+            files = list(glob.iglob(os.path.join(self.input_path, 'lookups', '*.csv'))) + list(glob.iglob(os.path.join(self.input_path, 'lookups', '*.mlmodel')))
             lookup_folder = self.output_path/"lookups"
             if lookup_folder.exists():
                 # Remove it since we want to remove any previous lookups that are not
@@ -125,6 +125,7 @@ class ConfOutput:
                 if lookup_folder.is_dir():
                     shutil.rmtree(lookup_folder)
                 else:
+                    #it's a file, but there should not be a file called lookups
                     lookup_folder.unlink()
             
             # Make the new folder for the lookups 
@@ -136,6 +137,8 @@ class ConfOutput:
                 if lookup_path.is_file():
                     lookup_target_path = self.output_path/"lookups"/lookup_path.name
                     shutil.copy(lookup_path, lookup_target_path)
+                else:
+                    raise(Exception(f"Error copying lookup/mlmodel file.  Path {lookup_path} does not exist or is not a file."))
 
         elif type == SecurityContentType.macros:
             ConfWriter.writeConfFile(self.output_path/'default/macros.conf',

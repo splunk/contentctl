@@ -99,9 +99,8 @@ class Director():
         
 
     def createSecurityContent(self, type: SecurityContentType) -> None:
-        objects = []
         if type == SecurityContentType.ssa_detections:
-             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
         elif type == SecurityContentType.unit_tests:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
         else:

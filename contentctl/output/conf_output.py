@@ -330,7 +330,7 @@ class ConfOutput:
     def inspectAppCLI(self)-> None:
         
         try:
-            raise("Local spunk-appinspect Not Supported at this time (you may use the appinspect api). If you would like to locally inspect your app with"
+            raise Exception("Local spunk-appinspect Not Supported at this time (you may use the appinspect api). If you would like to locally inspect your app with"
                   "Python 3.7, 3.8, or 3.9 (with limited support), please refer to:\n"
                   "\t - https://dev.splunk.com/enterprise/docs/developapps/testvalidate/appinspect/useappinspectclitool/")
             from splunk_appinspect.main import (

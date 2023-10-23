@@ -25,6 +25,7 @@ from contentctl.input.investigation_builder import InvestigationBuilder
 from contentctl.input.story_builder import StoryBuilder
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.enums import SecurityContentProduct
+from contentctl.objects.enums import DetectionStatus 
 from contentctl.helper.utils import Utils
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.objects.config import Config
@@ -166,7 +167,7 @@ class Director():
                 elif type == SecurityContentType.ssa_detections:
                         self.constructSSADetection(self.ssa_detection_builder, file)
                         detection = self.ssa_detection_builder.getObject()
-                        if detection.status == "production" or detection.status == "validated":
+                        if detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
                             self.output_dto.ssa_detections.append(detection)
 
                 else:

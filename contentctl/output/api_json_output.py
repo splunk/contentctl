@@ -88,7 +88,9 @@ class ApiJsonOutput():
                 obj_array.append(baseline.dict(
                     exclude =
                     {
-                        "deployment": True
+                        "deployment": True,
+                        "check_references":True,
+                        "file_path":True,
                     }
                 ))
 
@@ -116,6 +118,9 @@ class ApiJsonOutput():
             obj_array = []
             for deployment in objects:
                 deployment.id = str(deployment.id)
-                obj_array.append(deployment.dict(exclude_none=True))
+                obj_array.append(deployment.dict(exclude_none=True, exclude =
+                    {
+                        "file_path":True,
+                    }))
 
             JsonWriter.writeJsonObject(os.path.join(output_path, 'deployments.json'), {'deployments': obj_array })

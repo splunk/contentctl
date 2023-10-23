@@ -330,23 +330,27 @@ class ConfOutput:
     def inspectAppCLI(self)-> None:
         
         try:
+            raise("Local spunk-appinspect Not Supported at this time (you may use the appinspect api). If you would like to locally inspect your app with"
+                  "Python 3.7, 3.8, or 3.9 (with limited support), please refer to:\n"
+                  "\t - https://dev.splunk.com/enterprise/docs/developapps/testvalidate/appinspect/useappinspectclitool/")
             from splunk_appinspect.main import (
                 validate, MODE_OPTION, APP_PACKAGE_ARGUMENT, OUTPUT_FILE_OPTION, 
                 LOG_FILE_OPTION, INCLUDED_TAGS_OPTION, EXCLUDED_TAGS_OPTION, 
                 PRECERT_MODE, TEST_MODE)
         except Exception as e:
-            print("******WARNING******")
-            if sys.version_info.major == 3 and sys.version_info.minor > 9:
-                print("The package splunk-appinspect was not installed due to a current issue with the library on Python3.10+.  "
-                      "Please use the following commands to set up a virtualenvironment in a different folder so you may run appinspect manually (if desired):"
-                      "\n\tpython3.9 -m venv .venv" 
-                      "\n\tsource .venv/bin/activate"
-                      "\n\tpython3 -m pip install splunk-appinspect"
-                      f"\n\tsplunk-appinspect inspect {self.getPackagePath(include_version=False).relative_to(pathlib.Path('.').absolute())} --mode precert")    
+            print(e)
+            # print("******WARNING******")
+            # if sys.version_info.major == 3 and sys.version_info.minor > 9:
+            #     print("The package splunk-appinspect was not installed due to a current issue with the library on Python3.10+.  "
+            #           "Please use the following commands to set up a virtualenvironment in a different folder so you may run appinspect manually (if desired):"
+            #           "\n\tpython3.9 -m venv .venv" 
+            #           "\n\tsource .venv/bin/activate"
+            #           "\n\tpython3 -m pip install splunk-appinspect"
+            #           f"\n\tsplunk-appinspect inspect {self.getPackagePath(include_version=False).relative_to(pathlib.Path('.').absolute())} --mode precert")    
                 
-            else:
-                print("splunk-appinspect is only compatable with Python3.9 at this time.  Please see the following open issue here: https://github.com/splunk/contentctl/issues/28")
-            print("******WARNING******")
+            # else:
+            #     print("splunk-appinspect is only compatable with Python3.9 at this time.  Please see the following open issue here: https://github.com/splunk/contentctl/issues/28")
+            # print("******WARNING******")
             return
 
         # Note that all tags are available and described here:

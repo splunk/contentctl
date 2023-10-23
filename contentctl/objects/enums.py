@@ -64,6 +64,7 @@ class DetectionStatus(enum.Enum):
     production = "production"
     deprecated = "deprecated"
     experimental = "experimental"
+    validation = "validation"
 
 class LogLevel(enum.Enum):
     NONE = "NONE"

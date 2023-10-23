@@ -154,10 +154,10 @@ class ConfigEnrichments(BaseModel):
 
 
 class ConfigBuildSSA(BaseModel):
-    output_path: str
+    path_root: str
 
 class ConfigBuildApi(BaseModel):
-    output_path: str
+    path_root: str
 
 class Config(BaseModel, extra=Extra.forbid):
     #general: ConfigGlobal = ConfigGlobal()

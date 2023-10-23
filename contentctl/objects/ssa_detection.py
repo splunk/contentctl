@@ -47,8 +47,9 @@ class SSADetection(BaseModel):
     mappings: dict = None
     file_path: str = None
     source: str = None
-    runtime: str = None
     test: Union[UnitTest, dict] = None
+    runtime: str = None
+    internalVersion: int = None
 
     # @validator('name')v
     # def name_max_length(cls, v, values):

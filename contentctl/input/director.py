@@ -25,6 +25,7 @@ from contentctl.input.investigation_builder import InvestigationBuilder
 from contentctl.input.story_builder import StoryBuilder
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.enums import SecurityContentProduct
+from contentctl.objects.enums import DetectionStatus 
 from contentctl.helper.utils import Utils
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.objects.config import Config
@@ -99,9 +100,8 @@ class Director():
         
 
     def createSecurityContent(self, type: SecurityContentType) -> None:
-        objects = []
         if type == SecurityContentType.ssa_detections:
-             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
         elif type == SecurityContentType.unit_tests:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
         else:
@@ -167,7 +167,7 @@ class Director():
                 elif type == SecurityContentType.ssa_detections:
                         self.constructSSADetection(self.ssa_detection_builder, file)
                         detection = self.ssa_detection_builder.getObject()
-                        if detection.status == "production" or detection.status == "validated":
+                        if detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
                             self.output_dto.ssa_detections.append(detection)
 
                 else:

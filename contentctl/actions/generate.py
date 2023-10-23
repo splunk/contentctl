@@ -53,7 +53,7 @@ class Generate:
             return director_output_dto
 
         elif input_dto.director_input_dto.product == SecurityContentProduct.SSA:
-            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_ssa.output_path)
+            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_ssa.path_root)
             shutil.rmtree(output_path + '/srs/', ignore_errors=True)
             shutil.rmtree(output_path + '/complex/', ignore_errors=True)
             os.makedirs(output_path + '/complex/')
@@ -62,7 +62,7 @@ class Generate:
             ba_yml_output.writeObjects(director_output_dto.ssa_detections, output_path)
 
         elif input_dto.director_input_dto.product == SecurityContentProduct.API:
-            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_api.output_path)
+            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_api.path_root)
             shutil.rmtree(output_path, ignore_errors=True)
             os.makedirs(output_path)
             api_json_output = ApiJsonOutput()

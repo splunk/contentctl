@@ -113,10 +113,10 @@ $main = from source
                 
                 new_val_equals = new_val + "="
                 new_val_IN = new_val + " IN"
-                if new_val_equals not in query and new_val_IN not in query:
-                    parser_str = '| eval ' + new_val + ' = ' + parent + '.' + val + ' '
-                else:
+                if new_val_equals in query or new_val_IN in query:
                     parser_str = '| eval ' + new_val + ' = ' + 'lower(' + parent + '.' + val + ') '
+                else:
+                    parser_str = '| eval ' + new_val + ' = ' +  parent + '.' + val + ' '
                 
                 detection_str = detection_str + parser_str
                 parsed_fields.append(new_val)

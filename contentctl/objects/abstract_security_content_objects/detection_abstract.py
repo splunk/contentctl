@@ -84,7 +84,7 @@ class Detection_Abstract(SecurityContentObject):
             raise ValueError("not valid analytics type: " + values["name"])
         return v
 
-    @validator('how_to_implement')
+    @validator('how_to_implement', 'search', 'known_false_positives')
     def encode_error(cls, v, values, field):
         return SecurityContentObject.free_text_field_valid(cls,v,values,field)
 
@@ -112,43 +112,42 @@ class Detection_Abstract(SecurityContentObject):
     #     return v
     
 
-    # @validator("search")
-    # def search_obsersables_exist_validate(cls, v, values):
-    #     if type(v) is str:
-    #         tags:DetectionTags = values.get("tags")
-    #         if tags == None:
-    #             raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
+    @validator("search")
+    def search_obsersables_exist_validate(cls, v, values):
+        if type(v) is str:
+            tags:DetectionTags = values.get("tags")
+            if tags == None:
+                raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
             
-    #         observable_fields = [ob.name.lower() for ob in tags.observable]
+            observable_fields = [ob.name.lower() for ob in tags.observable]
             
-    #         #All $field$ fields from the message must appear in the search
-    #         field_match_regex = r"\$([^\s.]*)\$"
+            #All $field$ fields from the message must appear in the search
+            field_match_regex = r"\$([^\s.]*)\$"
             
-    #         message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
-    #         missing_fields = set([field for field in observable_fields if field not in v.lower()])
+            message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
+            missing_fields = set([field for field in observable_fields if field not in v.lower()])
 
-    #         error_messages = []
-    #         if len(missing_fields) > 0:
-    #             error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
+            error_messages = []
+            if len(missing_fields) > 0:
+                error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
 
             
-    #         missing_fields = set([field for field in message_fields if field not in v.lower()])
-    #         if len(missing_fields) > 0:
-    #             error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
+            missing_fields = set([field for field in message_fields if field not in v.lower()])
+            if len(missing_fields) > 0:
+                error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
             
-    #         if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
-    #             msg = "\n\t".join(error_messages)
-    #             print("Errors found in notable validation - skipping for now")
-    #             #raise(ValueError(msg))
+            if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
+                msg = "\n\t".join(error_messages)
+                raise(ValueError(msg))
         
-    #     # Found everything
-    #     return v
+        # Found everything
+        return v
 
     @validator("tests")
     def tests_validate(cls, v, values):
-        if values.get("status","") != DetectionStatus.production and not v:
+        if values.get("status","") == DetectionStatus.production.value and not v:
             raise ValueError(
-                "tests value is needed for production detection: " + values["name"]
+                "One or more tests is REQUIRED for production detection: " + values["name"]
             )
         return v
     

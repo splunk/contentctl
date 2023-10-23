@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import re
 import abc
 import string
 import uuid
@@ -7,6 +7,7 @@ from datetime import datetime
 from pydantic import BaseModel, validator, ValidationError, Field
 from contentctl.objects.enums import SecurityContentType
 from typing import Tuple
+
 import uuid
 import pathlib
 
@@ -44,14 +45,21 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
     @staticmethod
     def free_text_field_valid(input_cls, v, values, field):
+        
         try:
             v.encode('ascii')
-        except UnicodeEncodeError:
-            raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
+        except UnicodeEncodeError as e:
+            print(f"Potential Ascii encoding error in {values['name']}:{field.name} - {str(e)}")
+        
+        
+        if bool(re.search(r"[^\\]\n", v)):
+                raise ValueError(f"Unexpected newline(s) in {values['name']}:{field.name}.  Newline characters MUST be prefixed with \\")
         return v
     
-    @validator('description')
+    
+    @validator("name", "author", 'description')
     def description_valid(cls, v, values, field):
+        
         return SecurityContentObject_Abstract.free_text_field_valid(cls,v,values,field)
     
 
@@ -70,4 +78,5 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             name_dict[str(pathlib.Path(object.file_path))] = object
         
         return name_dict
-        
+    
+    

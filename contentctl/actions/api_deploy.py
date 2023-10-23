@@ -36,11 +36,11 @@ class API_Deploy:
     def execute(self, input_dto: API_DeployInputDto) -> None:
         if len(input_dto.config.deployments.rest_api_deployments) == 0:
             raise Exception("No rest_api_deployments defined in 'contentctl.yml'")
-        app_path =  pathlib.Path(input_dto.config.build.path_root)/input_dto.config.build.name
+        app_path =  pathlib.Path(input_dto.config.build.path_root)/input_dto.config.build.title
         if not app_path.is_dir():
             raise Exception(f"The unpackaged app does not exist at the path {app_path}. Please run 'contentctl build' to generate the app.")
         for target in input_dto.config.deployments.rest_api_deployments:
-            print(f"Deploying '{input_dto.config.build.name}' to target '{target.server}' [{target.description}]")
+            print(f"Deploying '{input_dto.config.build.title}' to target '{target.server}' [{target.description}]")
             splunk_args = {
                 "host": target.server,
                 "port": target.port,

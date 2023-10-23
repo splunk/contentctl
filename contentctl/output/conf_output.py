@@ -50,12 +50,12 @@ class ConfOutput:
         ConfWriter.writeConfFileHeader(self.output_path/'default/workflow_actions.conf', self.config)
         ConfWriter.writeConfFileHeader(self.output_path/'default/app.conf', self.config)
         ConfWriter.writeConfFileHeader(self.output_path/'default/content-version.conf', self.config)
-
+        ConfWriter.writeConfFileHeader(self.output_path/'app.manifest', self.config)
 
     def writeAppConf(self):
         ConfWriter.writeConfFile(self.output_path/"default"/"app.conf", "app.conf.j2", self.config, [self.config.build] )
         ConfWriter.writeConfFile(self.output_path/"default"/"content-version.conf", "content-version.j2", self.config, [self.config.build] )
-        ConfWriter.writeConfFile(self.output_path/"app.manifest", "app.manifest.j2", self.config, [self.config.build],append=False)
+        ConfWriter.writeConfFile(self.output_path/"app.manifest", "app.manifest.j2", self.config, [self.config.build])
 
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:

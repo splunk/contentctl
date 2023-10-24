@@ -139,7 +139,7 @@ class GithubService:
                 )
             )
         
-        differences = self.repo.git.diff("--name-status", f"origin/{self.config.version_control_config.main_branch}").split("\n")
+        differences = self.repo.git.diff("--name-status", f"origin/{self.config.version_control_config.target_branch}").split("\n")
         new_content = []
         modified_content =  []
         deleted_content = []
@@ -350,19 +350,19 @@ class GithubService:
             # Because we have not passed -all as a kwarg, we will have a MAX of one commit returned:
             # https://gitpython.readthedocs.io/en/stable/reference.html?highlight=merge_base#git.repo.base.Repo.merge_base
             base_commits = self.repo.merge_base(
-                self.config.version_control_config.main_branch, self.config.version_control_config.test_branch
+                self.config.version_control_config.target_branch, self.config.version_control_config.test_branch
             )
             if len(base_commits) == 0:
                 raise (
                     Exception(
-                        f"Error, main branch '{self.config.version_control_config.main_branch}' and test branch '{self.config.version_control_config.test_branch}' do not share a common ancestor"
+                        f"Error, main branch '{self.config.version_control_config.target_branch}' and test branch '{self.config.version_control_config.test_branch}' do not share a common ancestor"
                     )
                 )
             base_commit = base_commits[0]
             if base_commit is None:
                 raise (
                     Exception(
-                        f"Error, main branch '{self.config.version_control_config.main_branch}' and test branch '{self.config.version_control_config.test_branch}' common ancestor commit was 'None'"
+                        f"Error, main branch '{self.config.version_control_config.target_branch}' and test branch '{self.config.version_control_config.test_branch}' common ancestor commit was 'None'"
                     )
                 )
 

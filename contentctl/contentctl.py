@@ -95,7 +95,7 @@ Running Splunk Security Content Control Tool (contentctl)
 def start(args, read_test_file:bool = False) -> Config:
     base_config = ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml")
     if read_test_file:
-        base_config.test = ConfigHandler.read_test_config(pathlib.Path(args.path)/"contentctl_test.yml", args.mode)
+        base_config.test = ConfigHandler.read_test_config(pathlib.Path(args.path)/"contentctl_test.yml", args)
     return base_config
 
 
@@ -148,6 +148,18 @@ def test(args: argparse.Namespace):
     if config.test is None:
         raise Exception("Error parsing test configuration. Test Object was None.")
 
+
+    if args.test_branch is not None:
+        if config.test.version_control_config is not None:
+            config.test.version_control_config.test_branch = args.test_branch
+        else:
+            raise Exception("Test argument 'test_branch' passed on the command line, but 'version_control_config' is not defined in contentctl_test.yml.")
+    if args.target_branch is not None:
+        if config.test.version_control_config is not None:
+            config.test.version_control_config.target_branch = args.target_branch
+        else:
+            raise Exception("Test argument 'target_branch' passed on the command line, but 'version_control_config' is not defined in contentctl_test.yml.")
+        
     # set some arguments that are not
     # yet exposed/written properly in
     # the config file
@@ -216,7 +228,7 @@ def test(args: argparse.Namespace):
         title=config.build.title,
         release=config.build.version,
         http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.title}-{config.build.version}.tar.gz"),
+        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
         description=config.build.description,
         splunkbase_path=None,
         force_local=True
@@ -516,7 +528,10 @@ def main():
                                                  "contentctl_test.yml.")
     test_parser.add_argument("--num_containers", required=False, default=1, type=int)
     test_parser.add_argument("--server_info", required=False, default=None, type=str, nargs='+')
-
+    
+    test_parser.add_argument("--target_branch", required=False, default=None, type=str)
+    test_parser.add_argument("--test_branch", required=False, default=None, type=str)
+    
     #Even though these are also options to build, make them available to test_parser
     #as well to make the tool easier to use
     test_parser.add_argument(
@@ -546,6 +561,7 @@ def main():
 
     # parse them
     args = parser.parse_args()
+    
 
     print_ascii_art()
     try:

@@ -17,7 +17,7 @@ class Story(SecurityContentObject):
     #date: str
     #author: str
     #description: str
-    contentType: SecurityContentType = SecurityContentType.stories
+    #contentType: SecurityContentType = SecurityContentType.stories
     narrative: str
     check_references: bool = False #Validation is done in order, this field must be defined first
     references: list

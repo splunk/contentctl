@@ -5,6 +5,7 @@ import pathlib
 from dataclasses import dataclass
 from contentctl.objects.config import Config, TestConfig, PASSWORD
 from contentctl.output.yml_writer import YmlWriter
+import json
 
 @dataclass(frozen=True)
 class InitializeInputDto:
@@ -18,8 +19,7 @@ class Initialize:
 
         c = Config()
         
-        t = TestConfig.construct(splunk_app_username="admin",
-                                 splunk_app_password= PASSWORD) #Disable validation for default object
+        t = TestConfig.construct() #Disable validation for default object
 
         config_as_dict = c.dict()
         config_as_dict.pop("test")
@@ -29,13 +29,13 @@ class Initialize:
         # This field serialization hack is required to get
         # enums declared in Pydantic Models serialized properly
         # without emitting tags that make them hard to read in yml
-        import json
+        
         j = json.dumps(t.dict(),sort_keys=False)
         obj=json.loads(j)
         YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl_test.yml'), dict(obj))
 
 
-        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'docs', 'reporting']
+        folders = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist', 'docs', 'reporting', 'investigations']
         for folder in folders:
             os.makedirs(os.path.join(input_dto.path, folder))
 
@@ -52,6 +52,11 @@ class Initialize:
                 source_path/detection_name, 
                 dest_path/detection_name)
         
+
+        shutil.copytree(
+            os.path.join(os.path.dirname(__file__), '../templates/deployments'), 
+            os.path.join(input_dto.path, 'deployments')
+        )
 
         shutil.copyfile(
             os.path.join(os.path.dirname(__file__), '../templates/stories/cobalt_strike.yml'), 

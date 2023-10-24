@@ -24,15 +24,5 @@ class YmlReader():
             return yml_obj
         
         yml_obj['file_path'] = str(file_path)
-        
-        if 'deprecated' in [parent.name for parent in file_path.parents]:
-            yml_obj['deprecated'] = True
-        else:
-            yml_obj['deprecated'] = False
-
-        if 'experimental' in [parent.name for parent in file_path.parents]:
-            yml_obj['experimental'] = True
-        else:
-            yml_obj['experimental'] = False
 
         return yml_obj

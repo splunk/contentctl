@@ -2,14 +2,14 @@ import os
 import re
 from jinja2 import Environment, FileSystemLoader
 
-from contentctl.objects.detection import Detection
+from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.constants import *
 
 class FindingReportObject():
 
     @staticmethod
-    def writeFindingReport(detection : Detection) -> None:
-    
+    def writeFindingReport(detection : SSADetection) -> None:
+
         if detection.tags.confidence < 33:
             detection.tags.confidence_id = 1
         elif detection.tags.confidence < 66:
@@ -17,10 +17,6 @@ class FindingReportObject():
         else:
             detection.tags.confidence_id = 3
 
-        detection.tags.context_ids = list()
-        for context in detection.tags.context:
-            detection.tags.context_ids.append(SES_CONTEXT_MAPPING[context])
-        
         if detection.tags.impact < 20:
             detection.tags.impact_id = 1
         elif detection.tags.impact < 40:
@@ -30,11 +26,21 @@ class FindingReportObject():
         elif detection.tags.impact < 80:
             detection.tags.impact_id = 4
         else:
-            detection.tags.impact_id = 5                 
+            detection.tags.impact_id = 5  
 
-        detection.tags.kill_chain_phases_id = list()
+        detection.tags.kill_chain_phases_id = dict()
         for kill_chain_phase in detection.tags.kill_chain_phases:
-            detection.tags.kill_chain_phases_id.append(SES_KILL_CHAIN_MAPPINGS[kill_chain_phase]) 
+            detection.tags.kill_chain_phases_id[kill_chain_phase] = SES_KILL_CHAIN_MAPPINGS[kill_chain_phase]
+
+        kill_chain_phase_str = "["
+        i = 0
+        for kill_chain_phase in detection.tags.kill_chain_phases_id.keys():
+            kill_chain_phase_str = kill_chain_phase_str + '{"phase": "' + kill_chain_phase + '", "phase_id": ' + str(detection.tags.kill_chain_phases_id[kill_chain_phase]) + "}"
+            if not i == (len(detection.tags.kill_chain_phases_id.keys()) - 1):
+                kill_chain_phase_str = kill_chain_phase_str + ', '
+                i = i + 1
+        kill_chain_phase_str = kill_chain_phase_str + ']'
+        detection.tags.kill_chain_phases_str = kill_chain_phase_str
 
         if detection.tags.risk_score < 20:
             detection.tags.risk_level_id = 0
@@ -52,23 +58,32 @@ class FindingReportObject():
             detection.tags.risk_level_id = 4
             detection.tags.risk_level = "Critical"  
 
-        observable_str = "["
-        for i in range(len(detection.tags.observable)):
-            role_list = []
-            for role in detection.tags.observable[i]["role"]:
-                role_list.append(str(SES_OBSERVABLE_ROLE_MAPPING[role]))
-            
-            observable_str = observable_str + 'create_map("name", "' + detection.tags.observable[i]["name"] + '", "role_ids", [' + ",".join(role_list) + '], "type_id", ' + str(SES_OBSERVABLE_TYPE_MAPPING[detection.tags.observable[i]["type"]]) + ', "value", ' + detection.tags.observable[i]["name"] + ')'
-            if not i == len(detection.tags.observable):
-                observable_str = observable_str + ', '
-        observable_str = observable_str + ']'
+        evidence_str = "{"
+        for i in range(len(detection.tags.observable)):            
+            evidence_str = evidence_str + '"' + detection.tags.observable[i]["name"] + '": ' + detection.tags.observable[i]["name"].replace(".", "_")
+            if not i == (len(detection.tags.observable) - 1):
+                evidence_str = evidence_str + ', '
+        evidence_str = evidence_str + '}'        
 
-        detection.tags.observable_str = observable_str
+        detection.tags.evidence_str = evidence_str
+
+        analytics_story_str = "["
+        for i in range(len(detection.tags.analytic_story)):
+            analytics_story_str = analytics_story_str + '"' + detection.tags.analytic_story[i] + '"'
+            if not i == (len(detection.tags.analytic_story) - 1):
+                analytics_story_str = analytics_story_str + ', '
+        analytics_story_str = analytics_story_str + ']'
+        detection.tags.analytics_story_str = analytics_story_str
+
+        if "actor.user.name" in detection.tags.required_fields:
+            actor_user_name = "actor_user_name"
+        else:
+            actor_user_name = "\"Unknown\""
 
         j2_env = Environment(
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')), 
             trim_blocks=True)
         template = j2_env.get_template('finding_report.j2')
-        body = template.render(detection=detection)
+        body = template.render(detection=detection, attack_tactics_id_mapping=SES_ATTACK_TACTICS_ID_MAPPING, actor_user_name=actor_user_name)
 
         return body

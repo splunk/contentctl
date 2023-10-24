@@ -1,30 +1,10 @@
-
-
 ## Splunk app configuration file
-## For verbose documenation please see:
-## https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
-{% for conf in objects %}
-[author={{ conf.author_name }}]
-email = {{ conf.author_email }}
-company = {{ conf.author_company }}
-
-[id]
-name = {{ conf.name }}
-version = {{ conf.version }}
-
-[launcher]
-author = {{ conf.author_company }} ({{ conf.author_name }})
-version = {{ conf.version }} 
-description = {{ conf.description }}
-
-[package]
-id = {{ conf.id }}
 
 [install]
 is_configured = false
 state = enabled
 state_change_requires_restart = false
-build = {{ conf.build }}
+build = {{ objects[0].build }}
 
 [triggers]
 reload.analytic_stories = simple
@@ -38,11 +18,18 @@ reload.postprocess = simple
 reload.content-version = simple
 reload.es_investigations = simple
 
-
+[launcher]
+author = {{ objects[0].author_company }}
+version = {{ objects[0].version }} 
+description = {{ objects[0].description }}
 
 [ui]
 is_visible = true
-label = {{ conf.label }}
-{% endfor %}
+label = {{ objects[0].title }}
+
+[package]
+id = {{ objects[0].name }}
+
+
 
 

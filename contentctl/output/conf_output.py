@@ -276,6 +276,7 @@ class ConfOutput:
             json.dump(report_json, report)
         
         
+
         self.parseAppinspectJsonLogFile(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.json",exception_types =["error","failure","manual_check"])
         
         return None

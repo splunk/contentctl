@@ -99,7 +99,7 @@ class ConfigBuildBa(BaseModel):
 class ConfigBuild(BaseModel):
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
-    name: str = Field(default="ContentPack",title="Internal name used by your app.  No spaces or special characters.")
+    title: str = Field(default="ContentPack",title="Internal name used by your app.  No spaces or special characters.")
     path_root: str = Field(default="dist",title="The root path at which you will build your app.")
     prefix: str = Field(default="ContentPack",title="A short prefix to easily identify all your content.")
     build: int = Field(default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
@@ -120,7 +120,7 @@ class ConfigBuild(BaseModel):
     # * must not be any of the following names: CON, PRN, AUX, NUL,
     #   COM1, COM2, COM3, COM4, COM5, COM6, COM7, COM8, COM9,
     #   LPT1, LPT2, LPT3, LPT4, LPT5, LPT6, LPT7, LPT8, LPT9
-    id: str = Field(default="ContentPack",title="Internal name used by your app.  No spaces or special characters.")
+    name: str = Field(default="ContentPack",title="Internal name used by your app.  No spaces or special characters.")
     label: str = Field(default="Custom Splunk Content Pack",title="This is the app name that shows in the launcher.")
     author_name: str = Field(default="author name",title="Name of the Content Pack Author.")
     author_email: str = Field(default="author@contactemailaddress.com",title="Contact email for the Content Pack Author")
@@ -138,6 +138,12 @@ class ConfigBuild(BaseModel):
         except Exception as e:
             raise(ValueError(f"The specified version does not follow the semantic versioning spec (https://semver.org/). {str(e)}"))
         return v
+    
+    #Build will ALWAYS be the current utc timestamp
+    @validator('build', always=True)
+    def validate_build(cls, v, values):
+        return int(datetime.utcnow().strftime("%Y%m%d%H%M%S"))
+    
 
 
 
@@ -147,12 +153,19 @@ class ConfigEnrichments(BaseModel):
     splunk_app_enrichment: bool = False
 
 
+class ConfigBuildSSA(BaseModel):
+    path_root: str
+
+class ConfigBuildApi(BaseModel):
+    path_root: str
 
 class Config(BaseModel, extra=Extra.forbid):
     #general: ConfigGlobal = ConfigGlobal()
-    detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
+    #detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
     deployments: Deployments = Deployments()
     build: ConfigBuild = ConfigBuild()
+    build_ssa: Union[ConfigBuildSSA,None] = None 
+    build_api: Union[ConfigBuildApi,None] = None 
     enrichments: ConfigEnrichments = ConfigEnrichments()
     test: Union[TestConfig,None] = None 
     

@@ -89,11 +89,11 @@ class DetectionTestingManager(BaseModel):
         signal.signal(signal.SIGINT, sigint_handler)
 
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.input_dto.config.num_containers,
+            max_workers=len(self.input_dto.config.infrastructure_config.infrastructures),
         ) as instance_pool, concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self.input_dto.views)
         ) as view_runner, concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.input_dto.config.num_containers,
+            max_workers=len(self.input_dto.config.infrastructure_config.infrastructures),
         ) as view_shutdowner:
 
             # Start all the views
@@ -151,39 +151,33 @@ class DetectionTestingManager(BaseModel):
     def create_DetectionTestingInfrastructureObjects(self):
         import sys
 
-        for index in range(self.input_dto.config.num_containers):
-            instanceConfig = deepcopy(self.input_dto.config)
-            instanceConfig.api_port += index * 2
-            instanceConfig.hec_port += index * 2
-            instanceConfig.web_ui_port += index
-
-            instanceConfig.container_name = instanceConfig.container_name % (index,)
+        for infrastructure in self.input_dto.config.infrastructure_config.infrastructures:
 
             if (
-                self.input_dto.config.target_infrastructure
+                self.input_dto.config.infrastructure_config.infrastructure_type
                 == DetectionTestingTargetInfrastructure.container
             ):
 
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureContainer(
-                        config=instanceConfig, sync_obj=self.output_dto
+                        global_config=self.input_dto.config, infrastructure=infrastructure, sync_obj=self.output_dto
                     )
                 )
 
             elif (
-                self.input_dto.config.target_infrastructure
+                self.input_dto.config.infrastructure_config.infrastructure_type
                 == DetectionTestingTargetInfrastructure.server
             ):
 
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureServer(
-                        config=instanceConfig, sync_obj=self.output_dto
+                        global_config=self.input_dto.config, infrastructure=infrastructure, sync_obj=self.output_dto
                     )
                 )
 
             else:
 
                 print(
-                    f"Unsupported target infrastructure '{self.input_dto.config.target_infrastructure}'"
+                    f"Unsupported target infrastructure '{self.input_dto.config.infrastructure_config.infrastructure_type}'"
                 )
                 sys.exit(1)

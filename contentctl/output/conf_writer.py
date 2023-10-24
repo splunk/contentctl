@@ -59,7 +59,7 @@ class ConfWriter():
 
         j2_env.filters['custom_jinja2_enrichment_filter'] = custom_jinja2_enrichment_filter
         template = j2_env.get_template(template_name)
-        output = template.render(objects=objects, APP_NAME=config.build.name)
+        output = template.render(objects=objects, APP_NAME=config.build.prefix)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'a') as f:
             output = output.encode('ascii', 'ignore').decode('ascii')

@@ -1,6 +1,0 @@
-[]
-access = read : [ * ], write : [ admin ]
-export = system
-
-[savedsearches]
-owner = admin

@@ -277,12 +277,12 @@ class ConfOutput:
         
         
         self.parseAppinspectJsonLogFile(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.json")
-        
+      
         return None
     
     def parseAppinspectJsonLogFile(self, logfile_path:pathlib.Path, 
                                    status_types:list[str] = ["error", "failure", "manual_check", "warning"], 
-                                   exception_types = ["error","failure"] )->None:
+                                   exception_types = ["error","failure","manual_check"] )->None:
         if not set(exception_types).issubset(set(status_types)):
                 raise Exception(f"Error - exception_types {exception_types} MUST be a subset of status_types {status_types}, but it is not")
         with open(logfile_path, "r+") as logfile:

@@ -38,7 +38,7 @@ class ConfOutput:
         if include_version:
             return self.dist / f"{self.config.build.name}-{self.config.build.version}.tar.gz"
         else:
-            return self.dist / f"{self.config.build.name}.tar.gz"
+            return self.dist / f"{self.config.build.name}-latest.tar.gz"
 
     def writeHeaders(self) -> None:
         ConfWriter.writeConfFileHeader(self.output_path/'default/analyticstories.conf', self.config)

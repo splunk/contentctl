@@ -86,6 +86,17 @@ class Detection_Abstract(SecurityContentObject):
 
     @validator('how_to_implement', 'search', 'known_false_positives')
     def encode_error(cls, v, values, field):
+        if not isinstance(v,str):
+            if isinstance(v,dict) and field.name == "search":
+                #This is a special case of the search field.  It can be a dict, containing
+                #a sigma search, if we are running the converter. So we will not
+                #validate the field further. Additional validation will be done
+                #during conversion phase later on
+                return v
+            else:
+                #No other fields should contain a non-str type:
+                raise ValueError(f"Error validating field '{field.name}'. Field MUST be be a string, not type '{type(v)}' ")
+
         return SecurityContentObject.free_text_field_valid(cls,v,values,field)
 
     @root_validator

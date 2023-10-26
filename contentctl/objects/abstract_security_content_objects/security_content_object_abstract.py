@@ -45,11 +45,12 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
     @staticmethod
     def free_text_field_valid(input_cls, v, values, field):
-        
         try:
             v.encode('ascii')
         except UnicodeEncodeError as e:
             print(f"Potential Ascii encoding error in {values['name']}:{field.name} - {str(e)}")
+        except Exception as e:
+            print(f"Unknown encoding error in {values['name']}:{field.name} - {str(e)}")
         
         
         if bool(re.search(r"[^\\]\n", v)):

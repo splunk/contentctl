@@ -165,7 +165,7 @@ class Detection_Abstract(SecurityContentObject):
     def tests_validate(cls, v, values):
         if values.get("status","") == DetectionStatus.production.value and not v:
             raise ValueError(
-                "One or more tests is REQUIRED for production detection: " + values["name"]
+                "At least one test is REQUIRED for production detection: " + values["name"]
             )
         return v
     

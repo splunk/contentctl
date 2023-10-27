@@ -31,7 +31,7 @@ class SSADetection(BaseModel):
     date: str
     author: str
     type: str
-    status: DetectionStatus
+    status: DetectionStatus = ...
     description: str
     data_source: list[str]
     search: Union[str, dict]
@@ -136,12 +136,6 @@ class SSADetection(BaseModel):
     # def references_check(cls, v, values):
     #     return LinkValidator.SecurityContentObject_validate_references(v, values)
 
-    @root_validator
-    def missing_test_file(cls, values):
-        if values["status"] == DetectionStatus.production:
-            if "tests" not in values:
-                raise ValueError("Missing test file for detection: " + values["name"])
-        return values
 
     @validator("search")
     def search_validate(cls, v, values):
@@ -150,8 +144,8 @@ class SSADetection(BaseModel):
 
     @validator("tests")
     def tests_validate(cls, v, values):
-        if values["status"] != DetectionStatus.production and not v:
+        if (values.get("status","") in [DetectionStatus.production.value, DetectionStatus.validation.value]) and not v:
             raise ValueError(
-                "tests value is needed for production detection: " + values["name"]
+                "At least one test is required for a production or validation detection: " + values["name"]
             )
         return v

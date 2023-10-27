@@ -204,18 +204,16 @@ class SigmaConverter():
                 self.output_dto.detections.append(detection)
 
             except Exception as e:
-                print(e)
-                errors.append("ERROR: Converting detection " + detection.name)
+                errors.append(f"ERROR: Converting detection file '{detection_file}': {str(e)}")
 
-        print()
-        for error in errors:
-            print(error)
-        
-        print()
+        if len(errors) > 0:
+            errors_string = '\n\t'.join(errors)
+            raise Exception(f"The following errors were encountered during conversion:\n\t{errors_string}")
 
     def read_detection(self, detection_path : str) -> Detection:
         yml_dict = YmlReader.load_file(detection_path)
         yml_dict["tags"]["name"] = yml_dict["name"]
+        
         detection = Detection.parse_obj(yml_dict)
         detection.source = os.path.split(os.path.dirname(detection_path))[-1]  
         return detection 

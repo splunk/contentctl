@@ -31,7 +31,9 @@ from contentctl.objects.enums import SecurityContentType
 class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
     type: str
-    status: DetectionStatus
+    file_path: str = None
+    #status field is REQUIRED (the way to denote this with pydantic is ...)
+    status: DetectionStatus = ...
     data_source: list[str]
     tags: DetectionTags
     search: Union[str, dict]
@@ -54,7 +56,7 @@ class Detection_Abstract(SecurityContentObject):
     lookups: list[Lookup] = []
     cve_enrichment: list = None
     splunk_app_enrichment: list = None
-    file_path: str = None
+    
     source: str = None
     nes_fields: str = None
     providing_technologies: list = None
@@ -99,11 +101,16 @@ class Detection_Abstract(SecurityContentObject):
 
         return SecurityContentObject.free_text_field_valid(cls,v,values,field)
 
-    @root_validator
-    def validation_for_ba_only(cls, values):
+    @validator("status")
+    def validation_for_ba_only(cls, v, values):
         # Ensure that only a BA detection can have status: validation
-        if values["status"] == DetectionStatus.validation.value:
-            raise ValueError(f"The following is NOT an ssa_ detection, but has 'status: {values['status']} which may ONLY be used for ssa_ detections:' {values['file_path']}")
+        p = pathlib.Path(values['file_path'])
+        if v == DetectionStatus.validation.value:
+            if p.name.startswith("ssa___"): 
+                pass
+            else:
+                raise ValueError(f"The following is NOT an ssa_ detection, but has 'status: {v}' which may ONLY be used for ssa_ detections: {values['file_path']}")
+        
         return values
 
     # @root_validator

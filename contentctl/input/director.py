@@ -107,7 +107,7 @@ class Director():
         else:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
 
-        validation_error_found = False
+        validation_errors = []
                 
         already_ran = False
         progress_percent = 0
@@ -177,16 +177,15 @@ class Director():
                         already_ran = True
                         print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
             
-            except ValidationError as e:
-                print(f"\nValidation Error for file '{file}'")
-                print(e)
-                validation_error_found = True
+            except (ValidationError, ValueError) as e:
+                validation_errors.append(e)
 
         print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
         print("Done!")
 
-        if validation_error_found:
-            sys.exit(1)
+        if len(validation_errors) > 0:
+            errors_string = '\n\n - '.join([str(e) for e in validation_errors])
+            raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n - {errors_string}\n\nVALIDATION FAILED")
 
 
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:

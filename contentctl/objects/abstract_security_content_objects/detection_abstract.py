@@ -111,7 +111,7 @@ class Detection_Abstract(SecurityContentObject):
             else:
                 raise ValueError(f"The following is NOT an ssa_ detection, but has 'status: {v}' which may ONLY be used for ssa_ detections: {values['file_path']}")
         
-        return values
+        return v
 
     # @root_validator
     # def search_validation(cls, values):

@@ -215,9 +215,12 @@ def test(args: argparse.Namespace):
     # For example, if the detection(s) we are trying to test do not exist
     githubService = GithubService(config.test)
 
+
     
     director_output_dto = build(args, config)
-
+    if len(githubService.get_detections(director_output_dto)) == 0:
+        print(f"With Detection Testing Mode {config.test.mode}, there were detections found to test.")
+    
     
 
     # All this information will later come from the config, so we will
@@ -256,7 +259,7 @@ def test(args: argparse.Namespace):
     # fully completes, if everything does not pass then
     # we want to return a nonzero status code
     if result:
-        sys.exit(0)
+        return
     else:
         sys.exit(1)
 

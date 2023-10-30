@@ -118,7 +118,7 @@ def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
         print(f"Invalid build type. Valid options app, ssa or api")
         sys.exit(1)
     director_input_dto = DirectorInputDto(
-        input_path=os.path.abspath(args.path), 
+        input_path=pathlib.Path(os.path.abspath(args.path)), 
         product=product_type, 
         config=config
     )

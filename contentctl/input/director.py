@@ -119,7 +119,7 @@ class Director():
         else:
             raise(Exception(f"Cannot createSecurityContent for unknown product '{self.input_dto.product}'"))
 
-
+        
         for index,file in enumerate(security_content_files):
             progress_percent = ((index+1)/len(security_content_files)) * 100
             try:
@@ -178,14 +178,15 @@ class Director():
                         print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
             
             except (ValidationError, ValueError) as e:
-                validation_errors.append(e)
+                relative_path = file.relative_to(self.input_dto.input_path.absolute())
+                validation_errors.append((relative_path,e))
 
         print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
         print("Done!")
 
         if len(validation_errors) > 0:
-            errors_string = '\n\n - '.join([str(e) for e in validation_errors])
-            raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n - {errors_string}\n\nVALIDATION FAILED")
+            errors_string = '\n\n'.join([f"{e_tuple[0]}\n{str(e_tuple[1])}" for e_tuple in validation_errors])
+            raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
 
 
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:

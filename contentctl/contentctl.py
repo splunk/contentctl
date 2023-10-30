@@ -573,6 +573,6 @@ def main():
         print(f"Error during contentctl:\n{str(e)}")
         import traceback
         traceback.print_exc()
-        traceback.print_stack()
+        #traceback.print_stack()
         sys.exit(1)
     

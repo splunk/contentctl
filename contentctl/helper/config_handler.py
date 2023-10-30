@@ -43,6 +43,8 @@ class ConfigHandler:
                 #If they have been passed, override the target and test branch. If not, keep the defaults
                 yml_dict.get("version_control_config", None)['target_branch'] = args.target_branch or yml_dict.get("version_control_config", None)['target_branch']
                 yml_dict.get("version_control_config", None)['test_branch'] = args.test_branch or yml_dict.get("version_control_config", None)['test_branch']
+            if yml_dict.get("infrastructure_config", None) is not None:
+                yml_dict.get("infrastructure_config", None)['infrastructure_type'] = args.infrastructure or yml_dict.get("infrastructure_config", None)['infrastructure_type']
             test_config = TestConfig.parse_obj(yml_dict)
         except Exception as e:
             raise Exception(f"Error reading test config file: {str(e)}")

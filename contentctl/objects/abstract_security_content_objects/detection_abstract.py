@@ -206,7 +206,7 @@ class Detection_Abstract(SecurityContentObject):
                 )
             else:
                 result["success"] = False
-                result["message"] = "RESULT WAS NONE"
+                result["message"] = "NO RESULT - Test not run"
 
             summary_dict["tests"].append(result)
 

@@ -9,11 +9,13 @@ from contentctl.input.director import Director, DirectorInputDto, DirectorOutput
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.ba_yml_output import BAYmlOutput
 from contentctl.output.api_json_output import ApiJsonOutput
-
+from typing import Union
 
 @dataclass(frozen=True)
 class GenerateInputDto:
     director_input_dto: DirectorInputDto
+    appinspect_api_username: Union[str,None] = None
+    appinspect_api_password: Union[str,None] = None
 
 
 class Generate:
@@ -24,6 +26,14 @@ class Generate:
         director.execute(input_dto.director_input_dto)
 
         if input_dto.director_input_dto.product == SecurityContentProduct.SPLUNK_APP:
+            if input_dto.appinspect_api_username and input_dto.appinspect_api_password:
+                pass
+            elif input_dto.appinspect_api_username or input_dto.appinspect_api_password:
+                if input_dto.appinspect_api_password:
+                    raise Exception("appinspect_api_password was provided, but appinspect_api_username was not. Please provide both or neither")
+                else:
+                    raise Exception("appinspect_api_username was provided, but appinspect_api_password was not. Please provide both or neither")            
+            
             conf_output = ConfOutput(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config)
             conf_output.writeHeaders()
             conf_output.writeObjects(director_output_dto.detections, SecurityContentType.detections)
@@ -34,13 +44,16 @@ class Generate:
             conf_output.writeObjects(director_output_dto.macros, SecurityContentType.macros)
             conf_output.writeAppConf()
             conf_output.packageApp()
-            #conf_output.inspectApp()
 
+            conf_output.inspectAppCLI()
+            if input_dto.appinspect_api_username and input_dto.appinspect_api_password:
+                conf_output.inspectAppAPI(input_dto.appinspect_api_username, input_dto.appinspect_api_password)
+            
             print(f'Generate of security content successful to {conf_output.output_path}')
             return director_output_dto
 
         elif input_dto.director_input_dto.product == SecurityContentProduct.SSA:
-            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_ssa.output_path)
+            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_ssa.path_root)
             shutil.rmtree(output_path + '/srs/', ignore_errors=True)
             shutil.rmtree(output_path + '/complex/', ignore_errors=True)
             os.makedirs(output_path + '/complex/')
@@ -49,7 +62,7 @@ class Generate:
             ba_yml_output.writeObjects(director_output_dto.ssa_detections, output_path)
 
         elif input_dto.director_input_dto.product == SecurityContentProduct.API:
-            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_api.output_path)
+            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_api.path_root)
             shutil.rmtree(output_path, ignore_errors=True)
             os.makedirs(output_path)
             api_json_output = ApiJsonOutput()

@@ -30,3 +30,7 @@ class Playbook(SecurityContentObject):
     @validator('references')
     def references_check(cls, v, values):
         return LinkValidator.SecurityContentObject_validate_references(v, values)
+
+    @validator('how_to_implement')
+    def encode_error(cls, v, values, field):
+        return SecurityContentObject.free_text_field_valid(cls,v,values,field)

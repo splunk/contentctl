@@ -25,6 +25,7 @@ from contentctl.input.investigation_builder import InvestigationBuilder
 from contentctl.input.story_builder import StoryBuilder
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.enums import SecurityContentProduct
+from contentctl.objects.enums import DetectionStatus 
 from contentctl.helper.utils import Utils
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.objects.config import Config
@@ -99,15 +100,14 @@ class Director():
         
 
     def createSecurityContent(self, type: SecurityContentType) -> None:
-        objects = []
         if type == SecurityContentType.ssa_detections:
-             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
         elif type == SecurityContentType.unit_tests:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
         else:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
 
-        validation_error_found = False
+        validation_errors = []
                 
         already_ran = False
         progress_percent = 0
@@ -167,7 +167,7 @@ class Director():
                 elif type == SecurityContentType.ssa_detections:
                         self.constructSSADetection(self.ssa_detection_builder, file)
                         detection = self.ssa_detection_builder.getObject()
-                        if detection.status == "production" or detection.status == "validated":
+                        if detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
                             self.output_dto.ssa_detections.append(detection)
 
                 else:
@@ -177,16 +177,15 @@ class Director():
                         already_ran = True
                         print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
             
-            except ValidationError as e:
-                print(f"\nValidation Error for file '{file}'")
-                print(e)
-                validation_error_found = True
+            except (ValidationError, ValueError) as e:
+                validation_errors.append(e)
 
         print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
         print("Done!")
 
-        if validation_error_found:
-            sys.exit(1)
+        if len(validation_errors) > 0:
+            errors_string = '\n\n - '.join([str(e) for e in validation_errors])
+            raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n - {errors_string}\n\nVALIDATION FAILED")
 
 
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:

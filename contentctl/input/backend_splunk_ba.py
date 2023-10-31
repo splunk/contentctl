@@ -8,7 +8,7 @@ from sigma.types import SigmaCompareExpression
 from sigma.exceptions import SigmaFeatureNotSupportedByBackendError
 from sigma.pipelines.splunk.splunk import splunk_sysmon_process_creation_cim_mapping, splunk_windows_registry_cim_mapping, splunk_windows_file_event_cim_mapping
 
-from contentctl.objects.detection import Detection
+from contentctl.objects.ssa_detection import SSADetection
 
 from typing import ClassVar, Dict, List, Optional, Pattern, Tuple
 
@@ -67,7 +67,7 @@ class SplunkBABackend(TextQueryBackend):
     wildcard_match_expression : ClassVar[Optional[str]] = "{field} LIKE {value}"
 
 
-    def __init__(self, processing_pipeline: Optional["sigma.processing.pipeline.ProcessingPipeline"] = None, collect_errors: bool = False, min_time : str = "-30d", max_time : str = "now", detection : Detection = None, field_mapping: dict = None, **kwargs):
+    def __init__(self, processing_pipeline: Optional["sigma.processing.pipeline.ProcessingPipeline"] = None, collect_errors: bool = False, min_time : str = "-30d", max_time : str = "now", detection : SSADetection = None, field_mapping: dict = None, **kwargs):
         super().__init__(processing_pipeline, collect_errors, **kwargs)
         self.min_time = min_time or "-30d"
         self.max_time = max_time or "now"
@@ -110,6 +110,7 @@ $main = from source
                     parent = new_val
                     i = i + 1
                     continue
+
                 
                 new_val_equals = new_val + "="
                 new_val_IN = new_val + " IN"
@@ -117,14 +118,13 @@ $main = from source
                     parser_str = '| eval ' + new_val + ' = ' + 'lower(' + parent + '.' + val + ') '
                 else:
                     parser_str = '| eval ' + new_val + ' = ' +  parent + '.' + val + ' '
-                
                 detection_str = detection_str + parser_str
                 parsed_fields.append(new_val)
                 parent = new_val
                 i = i + 1
 
-        detection_str = detection_str + "| where " + query
 
+        ### Convert sigma values into lower case
         lower_query = ""
         in_quotes = False
         for char in query:

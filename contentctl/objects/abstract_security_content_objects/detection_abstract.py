@@ -31,7 +31,9 @@ from contentctl.objects.enums import SecurityContentType
 class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
     type: str
-    status: DetectionStatus
+    file_path: str = None
+    #status field is REQUIRED (the way to denote this with pydantic is ...)
+    status: DetectionStatus = ...
     data_source: list[str]
     tags: DetectionTags
     search: Union[str, dict]
@@ -54,7 +56,7 @@ class Detection_Abstract(SecurityContentObject):
     lookups: list[Lookup] = []
     cve_enrichment: list = None
     splunk_app_enrichment: list = None
-    file_path: str = None
+    
     source: str = None
     nes_fields: str = None
     providing_technologies: list = None
@@ -84,9 +86,32 @@ class Detection_Abstract(SecurityContentObject):
             raise ValueError("not valid analytics type: " + values["name"])
         return v
 
-    @validator('how_to_implement')
+    @validator('how_to_implement', 'search', 'known_false_positives')
     def encode_error(cls, v, values, field):
+        if not isinstance(v,str):
+            if isinstance(v,dict) and field.name == "search":
+                #This is a special case of the search field.  It can be a dict, containing
+                #a sigma search, if we are running the converter. So we will not
+                #validate the field further. Additional validation will be done
+                #during conversion phase later on
+                return v
+            else:
+                #No other fields should contain a non-str type:
+                raise ValueError(f"Error validating field '{field.name}'. Field MUST be be a string, not type '{type(v)}' ")
+
         return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+
+    @validator("status")
+    def validation_for_ba_only(cls, v, values):
+        # Ensure that only a BA detection can have status: validation
+        p = pathlib.Path(values['file_path'])
+        if v == DetectionStatus.validation.value:
+            if p.name.startswith("ssa___"): 
+                pass
+            else:
+                raise ValueError(f"The following is NOT an ssa_ detection, but has 'status: {v}' which may ONLY be used for ssa_ detections: {values['file_path']}")
+        
+        return v
 
     # @root_validator
     # def search_validation(cls, values):
@@ -105,43 +130,42 @@ class Detection_Abstract(SecurityContentObject):
     #     return v
     
 
-    # @validator("search")
-    # def search_obsersables_exist_validate(cls, v, values):
-    #     if type(v) is str:
-    #         tags:DetectionTags = values.get("tags")
-    #         if tags == None:
-    #             raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
+    @validator("search")
+    def search_obsersables_exist_validate(cls, v, values):
+        if type(v) is str:
+            tags:DetectionTags = values.get("tags")
+            if tags == None:
+                raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
             
-    #         observable_fields = [ob.name.lower() for ob in tags.observable]
+            observable_fields = [ob.name.lower() for ob in tags.observable]
             
-    #         #All $field$ fields from the message must appear in the search
-    #         field_match_regex = r"\$([^\s.]*)\$"
+            #All $field$ fields from the message must appear in the search
+            field_match_regex = r"\$([^\s.]*)\$"
             
-    #         message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
-    #         missing_fields = set([field for field in observable_fields if field not in v.lower()])
+            message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
+            missing_fields = set([field for field in observable_fields if field not in v.lower()])
 
-    #         error_messages = []
-    #         if len(missing_fields) > 0:
-    #             error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
+            error_messages = []
+            if len(missing_fields) > 0:
+                error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
 
             
-    #         missing_fields = set([field for field in message_fields if field not in v.lower()])
-    #         if len(missing_fields) > 0:
-    #             error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
+            missing_fields = set([field for field in message_fields if field not in v.lower()])
+            if len(missing_fields) > 0:
+                error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
             
-    #         if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
-    #             msg = "\n\t".join(error_messages)
-    #             print("Errors found in notable validation - skipping for now")
-    #             #raise(ValueError(msg))
+            if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
+                msg = "\n\t".join(error_messages)
+                raise(ValueError(msg))
         
-    #     # Found everything
-    #     return v
+        # Found everything
+        return v
 
     @validator("tests")
     def tests_validate(cls, v, values):
-        if values.get("status","") != DetectionStatus.production and not v:
+        if values.get("status","") == DetectionStatus.production.value and not v:
             raise ValueError(
-                "tests value is needed for production detection: " + values["name"]
+                "At least one test is REQUIRED for production detection: " + values["name"]
             )
         return v
     

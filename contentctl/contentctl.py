@@ -122,7 +122,7 @@ def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
         product=product_type, 
         config=config
     )
-    generate_input_dto = GenerateInputDto(director_input_dto)
+    generate_input_dto = GenerateInputDto(director_input_dto, args.appinspect_api_username, args.appinspect_api_password)
 
     generate = Generate()
 
@@ -212,11 +212,11 @@ def test(args: argparse.Namespace):
     # be able to do it in Test().execute. For now, we will do it here
     app = App(
         uid=9999,
-        appid=config.build.name,
-        title=config.build.name,
+        appid=config.build.title,
+        title=config.build.title,
         release=config.build.version,
         http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
+        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.title}-{config.build.version}.tar.gz"),
         description=config.build.description,
         splunkbase_path=None,
         force_local=True
@@ -424,6 +424,22 @@ def main():
         default="app",
         help="Type of package: app, ssa or api"
     )
+
+    build_parser.add_argument(
+        "--appinspect_api_username",
+        required=False,
+        type=str,
+        default=None,
+        help=f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+    )
+    build_parser.add_argument(
+        "--appinspect_api_password",
+        required=False,
+        type=str,
+        default=None,
+        help=f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+    )
+
     build_parser.set_defaults(func=build)
 
     docs_parser.set_defaults(func=doc_gen)
@@ -500,6 +516,24 @@ def main():
                                                  "contentctl_test.yml.")
     test_parser.add_argument("--num_containers", required=False, default=1, type=int)
     test_parser.add_argument("--server_info", required=False, default=None, type=str, nargs='+')
+
+    #Even though these are also options to build, make them available to test_parser
+    #as well to make the tool easier to use
+    test_parser.add_argument(
+        "--appinspect_api_username",
+        required=False,
+        type=str,
+        default=None,
+        help=f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+    )
+    test_parser.add_argument(
+        "--appinspect_api_password",
+        required=False,
+        type=str,
+        default=None,
+        help=f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+    )
+
     test_parser.set_defaults(func=test)
 
     convert_parser.add_argument("-dm", "--data_model", required=False, type=str, default="cim", help="converter target, choose between cim, raw, ocsf")
@@ -520,6 +554,6 @@ def main():
         print(f"Error during contentctl:\n{str(e)}")
         import traceback
         traceback.print_exc()
-        traceback.print_stack()
+        #traceback.print_stack()
         sys.exit(1)
     

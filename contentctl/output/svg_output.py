@@ -54,7 +54,7 @@ class SvgOutput():
         experimental_dict = self.get_badge_dict("Experimental", total_detections, experimental_detections)
         
 
-        JinjaWriter.writeObject('detection_count.j2', os.path.join(output_path, 'detections_count.svg'), total_dict)
+        JinjaWriter.writeObject('detection_count.j2', os.path.join(output_path, 'detection_count.svg'), total_dict)
         #JinjaWriter.writeObject('detection_count.j2', os.path.join(output_path, 'production_count.svg'), production_dict)
         #JinjaWriter.writeObject('detection_count.j2', os.path.join(output_path, 'deprecated_count.svg'), deprecated_dict)
         #JinjaWriter.writeObject('detection_count.j2', os.path.join(output_path, 'experimental_count.svg'), experimental_dict)

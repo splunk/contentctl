@@ -92,10 +92,10 @@ Running Splunk Security Content Control Tool (contentctl)
     )
 
 
-def start(args, read_test_file:bool = False) -> Config:
-    base_config = ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml")
+def start(args:argparse.Namespace, read_test_file:bool = False) -> Config:
+    base_config = ConfigHandler.read_config(args)
     if read_test_file:
-        base_config.test = ConfigHandler.read_test_config(pathlib.Path(args.path)/"contentctl_test.yml", args)
+        base_config.test = ConfigHandler.read_test_config( args)
     return base_config
 
 

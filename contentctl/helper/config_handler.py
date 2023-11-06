@@ -12,7 +12,8 @@ import argparse
 class ConfigHandler:
 
     @classmethod
-    def read_config(cls, config_path: pathlib.Path) -> Config:
+    def read_config(cls, args:argparse.Namespace) -> Config:
+        config_path = pathlib.Path(args.path)/"contentctl.yml"
         try:
             yml_dict = YmlReader.load_file(config_path, add_fields=False)
 
@@ -29,7 +30,8 @@ class ConfigHandler:
         return config
     
     @classmethod
-    def read_test_config(cls, test_config_path: pathlib.Path, args:argparse.Namespace) -> TestConfig:
+    def read_test_config(cls, args:argparse.Namespace) -> TestConfig:
+        test_config_path = pathlib.Path(args.path)/"contentctl_test.yml"
         try:
             yml_dict = YmlReader.load_file(test_config_path, add_fields=False)
         except:

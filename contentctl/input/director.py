@@ -178,7 +178,7 @@ class Director():
                         print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
             
             except (ValidationError, ValueError) as e:
-                relative_path = file.relative_to(self.input_dto.input_path.absolute())
+                relative_path = file.absolute().relative_to(self.input_dto.input_path.absolute())
                 validation_errors.append((relative_path,e))
 
         print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)

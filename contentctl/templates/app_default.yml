@@ -128,8 +128,8 @@
 - uid: 3110
   appid: "SPLUNK_TA_MICROSOFT_CLOUD_SERVICES"
   title: "Splunk Add-on for Microsoft Cloud Services"
-  release: "5.2.0"
-  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-cloud-services_520.tgz
+  release: "5.2.1"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-cloud-services_521.tgz
 
 - uid: 4055
   appid: "SPLUNK_ADD_ON_FOR_MICROSOFT_OFFICE_365"

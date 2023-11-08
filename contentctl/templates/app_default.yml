@@ -1,35 +1,156 @@
+############################# Common Information Model Addon #############################
+- uid: 1621
+  appid: "Splunk_SA_CIM"
+  title: "Splunk Common Information Model (CIM)"
+  release: "5.2.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-common-information-model-cim_520.tgz
+
+############################# Endpoint Technology Addons #############################
 - uid: 6176
   appid: "Splunk_TA_linux_sysmon"
   title: "Add-on for Linux Sysmon"
   release: "1.0.4"
   http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/add-on-for-linux-sysmon_104.tgz
 
-- uid: 742
+### Patched TA
+- uid: 9999
   appid: "Splunk_TA_windows"
   title: "Splunk Add-on for Microsoft Windows"
-  release: "8.5.0"
+  release: "8.5.0_patched"
   http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_850_PATCHED.tgz
+
+### Original Windows TA on Splunkbase
+# - uid: 742
+#   appid: "SPLUNK_ADD_ON_FOR_MICROSOFT_WINDOWS"
+#   title: "Splunk Add-on for Microsoft Windows"
+#   release: "8.8.0"
+#   http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_880.tgz
 
 - uid: 5709
   appid: "Splunk_TA_microsoft_sysmon"
   title: "Splunk Add-on for Sysmon"
-  release: "3.0.0"
-  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-sysmon_300.tgz
+  release: "3.1.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-sysmon_310.tgz
 
 - uid: 833
   appid: "Splunk_TA_nix"
   title: "Splunk Add-on for Unix and Linux"
-  release: "8.7.0"
-  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-unix-and-linux_860.tgz
+  release: "9.0.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-unix-and-linux_900.tgz
+
+- uid: 5579
+  appid: "Splunk_TA_CrowdStrike_FDR"
+  title: "Splunk Add-on for CrowdStrike FDR"
+  release: "1.4.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-crowdstrike-fdr_140.tgz
+
+############################# Network/Web Technology Addons #############################
+- uid: 3185
+  appid: "SPLUNK_TA_FOR_IIS"
+  title: "Splunk Add-on for Microsoft IIS"
+  release: "1.2.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-iis_120.tgz
+
+### Not a splunk supported app
+- uid: 4242
+  appid: "SPLUNK_TA_FOR_SURICATA"
+  title: "TA for Suricata"
+  release: "2.3.4"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/ta-for-suricata_234.tgz
+
+- uid: 5466
+  appid: "SPLUNK_TA_FOR_ZEEK"
+  title: "TA for Zeek"
+  release: "1.0.5"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/ta-for-zeek_105.tgz
+
+- uid: 3258
+  appid: "SPLUNK_ADD_ON_FOR_NGINX"
+  title: "Splunk Add-on for NGINX"
+  release: "3.2.1"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-nginx_321.tgz
+
+- uid: 5238
+  appid: "SPLUNK_ADD_ON_FOR_STREAM_FORWARDERS"
+  title: "Splunk Add-on for Stream Forwarders"
+  release: "8.1.1"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-stream-forwarders_811.tgz
+
+- uid: 5234
+  appid: "SPLUNK_ADD_ON_FOR_STREAM_WIRE_DATA"
+  title: "Splunk Add-on for Stream Wire Data"
+  release: "8.1.1"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-stream-wire-data_811.tgz
+
+- uid: 2757
+  appid: "PALO_ALTO_NETWORKS_ADD_ON_FOR_SPLUNK"
+  title: "Palo Alto Networks Add-on for Splunk"
+  release: "8.1.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/palo-alto-networks-add-on-for-splunk_810.tgz
+
+- uid: 3865
+  appid: "TA-Zscaler_CIM"
+  title: "Zscaler Technical Add-On for Splunk"
+  release: "4.0.3"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/zscaler-technical-add-on-for-splunk_403.tgz
+
+############################# Cloud Technology add-ons #############################
+### AWS
+- uid: 3719
+  appid: "SPLUNK_ADD_ON_FOR_AMAZON_KINESIS_FIREHOSE"
+  title: "Splunk Add-on for Amazon Kinesis Firehose"
+  release: "1.3.2"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-amazon-kinesis-firehose_132.tgz
+
+- uid: 1876
+  appid: "Splunk_TA_aws"
+  title: "Splunk Add-on for AWS"
+  release: "7.2.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-amazon-web-services-aws_720.tgz
+
+### GOOGLE
+- uid: 3088
+  appid: "SPLUNK_ADD_ON_FOR_GOOGLE_CLOUD_PLATFORM"
+  title: "Splunk Add-on for Google Cloud Platform"
+  release: "4.3.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-google-cloud-platform_430.tgz
+
+- uid: 5556
+  appid: "SPLUNK_ADD_ON_FOR_GOOGLE_WORKSPACE:"
+  title: "Splunk Add-on for Google Workspace"
+  release: "2.6.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-google-workspace_260.tgz
+
+### MICROSOFT CLOUD
+- uid: 3110
+  appid: "SPLUNK_TA_MICROSOFT_CLOUD_SERVICES"
+  title: "Splunk Add-on for Microsoft Cloud Services"
+  release: "5.2.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-cloud-services_520.tgz
+
+- uid: 4055
+  appid: "SPLUNK_ADD_ON_FOR_MICROSOFT_OFFICE_365"
+  title: "Splunk Add-on for Microsoft Office 365"
+  release: "4.3.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-office-365_430.tgz
+
+############################# Other Addons #############################
+
+- uid: 2890
+  appid: "SPLUNK_MACHINE_LEARNING_TOOLKIT"
+  title: "Splunk Machine Learning Toolkit"
+  release: "5.4.1"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-machine-learning-toolkit_541.tgz
 
 - uid: 2734
-  appid: "utbox"
+  appid: "URL_TOOLBOX"
   title: "URL Toolbox"
   release: "1.9.2"
   http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/url-toolbox_192.tgz
 
-- uid: 1621
-  appid: "Splunk_SA_CIM"
-  title: "Splunk Common Information Model (CIM)"
-  release: "5.0.2"
-  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-common-information-model-cim_501.tgz
+############################# NOT USED Addons #############################= 
+# - uid: 2882
+#   appid: "PYTHON_FOR_SCIENTIFIC_COMPUTING_FOR_LINUX_64_BIT"
+#   title: "Python for Scientific Computing (for Linux 64-bit)"
+#   release: "4.2.0"
+#   http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/python-for-scientific-computing-for-linux-64-bit_420.tgz

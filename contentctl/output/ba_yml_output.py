@@ -64,6 +64,9 @@ class BAYmlOutput():
             obj.runtime = "SPL2"
             obj.internalVersion = 2
 
+            ### Adding detection_type as top level key for SRS detections
+            obj.detection_type = "STREAMING"
+
             # remove unncessary fields
             YmlWriter.writeYmlFile(file_path, obj.dict(
                 exclude_none=True,
@@ -80,6 +83,7 @@ class BAYmlOutput():
                         "references": True,
                         "runtime": True,
                         "internalVersion": True,
+                        "detection_type": True,
                         "tags": 
                             {
                                 #"analytic_story": True,

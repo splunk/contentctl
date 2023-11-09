@@ -32,6 +32,7 @@ class SSADetection(BaseModel):
     author: str
     type: str
     status: DetectionStatus = ...
+    detection_type: str = None
     description: str
     data_source: list[str]
     search: Union[str, dict]

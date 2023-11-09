@@ -50,7 +50,11 @@ class ConfOutput:
         ConfWriter.writeConfFileHeader(self.output_path/'default/workflow_actions.conf', self.config)
         ConfWriter.writeConfFileHeader(self.output_path/'default/app.conf', self.config)
         ConfWriter.writeConfFileHeader(self.output_path/'default/content-version.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'app.manifest', self.config)
+        #The contents of app.manifest are not a conf file, but json.
+        #DO NOT write a header for this file type, simply create the file
+        with open(self.output_path/'app.manifest', 'w') as f:
+            pass
+            
 
     def writeAppConf(self):
         ConfWriter.writeConfFile(self.output_path/"default"/"app.conf", "app.conf.j2", self.config, [self.config.build] )

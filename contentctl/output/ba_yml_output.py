@@ -76,6 +76,7 @@ class BAYmlOutput():
                         "id": True,
                         "version": True,
                         "status": True,
+                        "detection_type": True,
                         "description": True,
                         "search": True,
                         "how_to_implement": True,
@@ -83,7 +84,6 @@ class BAYmlOutput():
                         "references": True,
                         "runtime": True,
                         "internalVersion": True,
-                        "detection_type": True,
                         "tags": 
                             {
                                 #"analytic_story": True,

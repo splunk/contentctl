@@ -23,11 +23,11 @@
   http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_850_PATCHED.tgz
 
 ### Original Windows TA on Splunkbase
-# - uid: 742
-#   appid: "SPLUNK_ADD_ON_FOR_MICROSOFT_WINDOWS"
-#   title: "Splunk Add-on for Microsoft Windows"
-#   release: "8.8.0"
-#   http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_880.tgz
+- uid: 742
+  appid: "SPLUNK_ADD_ON_FOR_MICROSOFT_WINDOWS"
+  title: "Splunk Add-on for Microsoft Windows"
+  release: "8.8.0"
+  http_path: https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_880.tgz
 
 - uid: 5709
   appid: "Splunk_TA_microsoft_sysmon"

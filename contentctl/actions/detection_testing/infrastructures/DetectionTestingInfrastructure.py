@@ -355,10 +355,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
             try:
                 detection = self.sync_obj.inputQueue.pop()
-                if detection.status != DetectionStatus.production.value:
-                    self.sync_obj.skippedQueue.append(detection)
-                    self.pbar.write(f"\nSkipping {detection.name} since it is status: {detection.status}\n")
-                    continue
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError as e:
                 # self.pbar.write(

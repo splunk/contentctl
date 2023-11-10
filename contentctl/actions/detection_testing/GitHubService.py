@@ -21,7 +21,7 @@ from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.unit_test import UnitTest
 
-from contentctl.objects.enums import DetectionTestingMode
+from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
 import random
 import pathlib
 from contentctl.helper.utils import Utils
@@ -76,19 +76,29 @@ class GithubService:
         lookups: list[Lookup] = []
         return lookups
 
+    def filter_detections_by_status(self, detections: list[Detection], status_to_test: set[AnalyticsType])->list[Detection]:
+        return detections
+
+    def filter_detections_by_type(self, detections: list[Detection])->list[Detection]:
+        return detections
+
     def get_detections(self, director: DirectorOutputDto) -> list[Detection]:
         if self.config.mode == DetectionTestingMode.selected:
-            return self.get_detections_selected(director)
+            detections =  self.get_detections_selected(director)
         elif self.config.mode == DetectionTestingMode.all:
-            return self.get_detections_all(director)
+            detections =  self.get_detections_all(director)
         elif self.config.mode == DetectionTestingMode.changes:
-            return self.get_detections_changed(director)
+            detections =  self.get_detections_changed(director)
         else:
             raise (
                 Exception(
                     f"Error: Unsupported detection testing mode in GithubServer: {self.config.mode}"
                 )
             )
+        
+        detections = self.filter_detections_by_status(detections)
+        detections = self.filter_detections_by_type(detections)
+        return detections
 
     def get_detections_selected(self, director: DirectorOutputDto) -> list[Detection]:
         detections_to_test: list[Detection] = []
@@ -237,107 +247,6 @@ class GithubService:
         repo_obj = git.Repo.clone_from(url, project, branch=branch)
         return repo_obj
 
-    def get_detections_to_test(
-        self,
-        config: TestConfig,
-        director: DirectorOutputDto,
-        ignore_experimental: bool = True,
-        ignore_deprecated: bool = True,
-        ignore_ssa: bool = True,
-        allowed_types: list[str] = ["Anomaly", "Hunting", "TTP"],
-    ) -> list[Detection]:
-
-        print(f"Total detections found: {len(director.detections)}")
-
-        if ignore_experimental:
-            director.detections = [
-                d for d in director.detections if not (d.experimental == True)
-            ]
-        if ignore_deprecated:
-            director.detections = [
-                d for d in director.detections if not (d.status == "deprecated")
-            ]
-        if ignore_ssa:
-            director.detections = [
-                d
-                for d in director.detections
-                if not pathlib.Path(d.file_path).name.startswith(SSA_PREFIX)
-            ]
-
-        print(
-            f"Total detections loaded after removal of experimental, deprecated, and ssa: {len(director.detections)}"
-        )
-
-        # Downselect to only the types we want to test. For example, this will by default remove the Correlation type
-        director.detections = [
-            d for d in director.detections if d.type in allowed_types
-        ]
-
-        if config.mode == DetectionTestingMode.changes:
-
-            untracked_files, changed_files = self.get_all_modified_content(
-                director.detections
-            )
-            newline_tab = "\n\t"
-            print(
-                f"Found the following untracked files:\n\t{newline_tab.join([f.file_path for f in untracked_files])}"
-            )
-            print(
-                f"Found the following modified  files:\n\t{newline_tab.join([f.file_path for f in changed_files])}"
-            )
-
-            director.detections = untracked_files + changed_files
-
-        elif config.mode == DetectionTestingMode.all:
-            # Don't need to do anything, we don't need to remove it from the list
-            pass
-        elif config.mode == DetectionTestingMode.selected:
-            if config.detections_list is None:
-                # We should never get here because validation should catch it.  Adding this test to avoid
-                # type warning
-                raise (
-                    Exception(
-                        f"Detection Testing mode is {config.mode}. but Detections List was {config.detections_list}"
-                    )
-                )
-
-            selected_set = set(
-                os.path.join(config.repo_path, d) for d in config.detections_list
-            )
-            all_detections_set = set([d.file_path for d in director.detections])
-            difference = selected_set - all_detections_set
-            if len(difference) > 0:
-                newline = "\n * "
-                print(list(all_detections_set)[:10])
-                raise (
-                    Exception(
-                        f"The detections in the detections_list do not exist:{newline}{newline.join(difference)}"
-                    )
-                )
-
-            # All the detections exist, so find them an update the objects to reflect them
-            director.detections = [
-                d for d in director.detections if d.file_path in selected_set
-            ]
-        else:
-            raise (
-                Exception(
-                    f"Unsupported mode {config.mode}.  Supported modes are {DetectionTestingMode._member_names_}"
-                )
-            )
-
-        print(f"Finally the number is: {len(director.detections)}")
-
-        if config.mode != DetectionTestingMode.selected:
-            # If the user has selected specific detections to run, then
-            # run those in that specific order.  Otherwise, shuffle the order.
-            # This is particulary important when doing a mock because, for example,
-            # we don't want one container to get a group of cloud detections which may,
-            # on average, run for longer than the group of endpoint detections on
-            # another container
-            random.shuffle(director.detections)
-
-        return director.detections
 
     def get_all_modified_content(
         self,

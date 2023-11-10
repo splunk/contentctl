@@ -30,7 +30,7 @@ from contentctl.objects.enums import SecurityContentType
 
 class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
-    type: str
+    type: AnalyticsType = ...
     file_path: str = None
     #status field is REQUIRED (the way to denote this with pydantic is ...)
     status: DetectionStatus = ...
@@ -80,11 +80,11 @@ class Detection_Abstract(SecurityContentObject):
             raise Exception(f"Failed to find detection object for modified detection: {str(e)}")
         
 
-    @validator("type")
-    def type_valid(cls, v, values):
-        if v.lower() not in [el.name.lower() for el in AnalyticsType]:
-            raise ValueError("not valid analytics type: " + values["name"])
-        return v
+    # @validator("type")
+    # def type_valid(cls, v, values):
+    #     if v.lower() not in [el.name.lower() for el in AnalyticsType]:
+    #         raise ValueError("not valid analytics type: " + values["name"])
+    #     return v
 
     @validator('how_to_implement', 'search', 'known_false_positives')
     def encode_error(cls, v, values, field):

@@ -38,10 +38,10 @@ MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
 @dataclass(frozen=True)
 class TestInputDto:
-    director_output_dto: DirectorOutputDto
+    test_director_output_dto: DirectorOutputDto
     githubService: GithubService
     config: TestConfig
-
+    
 
 class TestOutputDto:
     results: list
@@ -50,9 +50,7 @@ class TestOutputDto:
 class Test:
     def execute(self, input_dto: TestInputDto) -> bool:
 
-        test_director = input_dto.githubService.get_all_content(
-            input_dto.director_output_dto
-        )
+        
 
         output_dto = DetectionTestingManagerOutputDto()
 
@@ -62,15 +60,18 @@ class Test:
 
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,
-            testContent=test_director,
+            testContent=input_dto.test_director_output_dto,
             views=[web, cli, file],
         )
         manager = DetectionTestingManager(
             input_dto=manager_input_dto, output_dto=output_dto
         )
-
-        manager.setup()
-        manager.execute()
+        
+        if len(input_dto.test_director_output_dto.detections) == 0:
+            print(f"With Detection Testing Mode '{input_dto.config.mode.value}', there were detections [{len(input_dto.test_director_output_dto.detections)}] found to test.\nAs such, we will quit immediately.")
+        else:
+            manager.setup()
+            manager.execute()
 
         try:
             summary_results = file.getSummaryObject()

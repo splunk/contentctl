@@ -425,7 +425,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         try:
             self.replay_attack_data_files(test.attack_data, test, start_time)
         except Exception as e:
-
+            print("\n\nexception replaying attack data files\n\n")
             test.result = UnitTestResult()
             test.result.set_job_content(
                 None, self.infrastructure, exception=e, duration=time.time() - start_time
@@ -458,6 +458,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except ContainerStoppedException as e:
             raise (e)
         except Exception as e:
+            print("\n\nexception trying search until timeout\n\n")
             test.result = UnitTestResult()
             test.result.set_job_content(
                 None, self.infrastructure, exception=e, duration=time.time() - start_time
@@ -686,13 +687,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 except Exception as e:
                     raise (
                         Exception(
-                            f"Error copying local Attack Data File for [{Detection.name}] - [{attack_data_file.data}]: {str(e)}"
+                            f"Error copying local Attack Data File for [{test.name}] - [{attack_data_file.data}]: {str(e)}"
                         )
                     )
             else:
                 raise (
                     Exception(
-                        f"Attack Data File for [{Detection.name}] is local [{attack_data_file.data}], but does not exist."
+                        f"Attack Data File for [{test.name}] is local [{attack_data_file.data}], but does not exist."
                     )
                 )
 

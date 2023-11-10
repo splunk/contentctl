@@ -218,11 +218,9 @@ def test(args: argparse.Namespace):
 
     
     director_output_dto = build(args, config)
-    if len(githubService.get_detections(director_output_dto)) == 0:
-        print(f"With Detection Testing Mode {config.test.mode}, there were detections found to test.")
-    
-    
 
+    test_director_output_dto = githubService.get_all_content(director_output_dto)
+    
     # All this information will later come from the config, so we will
     # be able to do it in Test().execute. For now, we will do it here
     app = App(
@@ -246,7 +244,7 @@ def test(args: argparse.Namespace):
 
     
     test_input_dto = TestInputDto(
-        director_output_dto=director_output_dto,
+        test_director_output_dto=test_director_output_dto,
         githubService=githubService,
         config=config.test,
     )

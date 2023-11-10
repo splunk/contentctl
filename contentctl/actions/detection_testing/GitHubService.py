@@ -139,20 +139,23 @@ class GithubService:
                 )
             )
         
-        differences = self.repo.git.diff("--name-status", f"origin/{self.config.version_control_config.target_branch}").split("\n")
+        target_branch_repo_object = self.repo.commit(f"origin/{self.config.version_control_config.target_branch}")
+        test_branch_repo_object = self.repo.commit(self.config.version_control_config.test_branch)
+        differences = target_branch_repo_object.diff(test_branch_repo_object)
+        
         new_content = []
         modified_content =  []
         deleted_content = []
-        for difference in differences:
-            mode, filename = difference.split("\t")
-            if mode == "A":
-                new_content.append(filename)
-            elif mode == "M":
-                modified_content.append(filename)
-            elif mode == "D":
-                deleted_content.append(filename)
-            else:
-                raise Exception(f"Unknown mode in determining differences: {difference}")
+        renamed_content = []
+
+        for content in differences.iter_change_type("M"):
+            modified_content.append(content.b_path)
+        for content in differences.iter_change_type("A"):
+            new_content.append(content.b_path)
+        for content in differences.iter_change_type("D"):
+            deleted_content.append(content.b_path)
+        for content in differences.iter_change_type("R"):
+            renamed_content.append(content.b_path)
             
         #Changes to detections, macros, and lookups should trigger a re-test for anything which uses them
         changed_lookups_list = list(filter(lambda x: x.startswith("lookups"), new_content+modified_content))
@@ -168,7 +171,7 @@ class GithubService:
         changed_macros = set(filter(lambda x: x.startswith("macros"), new_content+modified_content))
         changed_macros_and_lookups = set([str(pathlib.Path(filename).absolute()) for filename in changed_lookups.union(changed_macros)])
 
-        changed_detections = set(filter(lambda x: x.startswith("detections"), new_content+modified_content))
+        changed_detections = set(filter(lambda x: x.startswith("detections"), new_content+modified_content+renamed_content))
 
         #Check and see if content that has been modified uses any of the changed macros or lookups
         for detection in director.detections:
@@ -176,6 +179,8 @@ class GithubService:
             if not deps.isdisjoint(changed_macros_and_lookups):
                 changed_detections.add(detection.file_path)
 
+        changed_detections_string = '\n - '.join(changed_detections)
+        print(f"The following [{len(changed_detections)}] detections, or their dependencies (macros/lookups), have changed:\n - {changed_detections_string}")
         return Detection.get_detections_from_filenames(changed_detections, director.detections)
 
     def __init__(self, config: TestConfig):

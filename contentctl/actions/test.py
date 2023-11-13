@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from contentctl.objects.test_config import TestConfig
 
 from contentctl.input.director import DirectorOutputDto
-from contentctl.actions.detection_testing.GitHubService import (
-    GithubService,
+from contentctl.actions.detection_testing.GitService import (
+    GitService,
 )
 
 from contentctl.actions.detection_testing.DetectionTestingManager import (
@@ -39,7 +39,7 @@ MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 @dataclass(frozen=True)
 class TestInputDto:
     test_director_output_dto: DirectorOutputDto
-    githubService: GithubService
+    gitService: GitService
     config: TestConfig
     
 

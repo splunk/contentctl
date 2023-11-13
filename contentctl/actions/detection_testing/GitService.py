@@ -37,7 +37,7 @@ LOGGER = logging.getLogger(__name__)
 SSA_PREFIX = "ssa___"
 
 
-class GithubService:
+class GitService:
     def get_all_content(self, director: DirectorOutputDto) -> DirectorOutputDto:
         # get a new director that will be used for testing.
         return DirectorOutputDto(
@@ -76,12 +76,17 @@ class GithubService:
         lookups: list[Lookup] = []
         return lookups
 
-    def filter_detections_by_status(self, detections: list[Detection], status_to_test: set[AnalyticsType])->list[Detection]:
-        return detections
+    def filter_detections_by_status(self, detections: list[Detection], 
+                                    statuses_to_test: set[DetectionStatus] = {DetectionStatus.production})->list[Detection]:
+        #print("\n".join(sorted([f"{detection.file_path[92:]} - {detection.status}" for detection in detections if DetectionStatus(detection.status) not in statuses_to_test])))
+        #print()
+        return [detection for detection in detections if DetectionStatus(detection.status) in statuses_to_test]
 
-    def filter_detections_by_type(self, detections: list[Detection])->list[Detection]:
-        return detections
-
+    def filter_detections_by_type(self, detections: list[Detection], 
+                                  types_to_test: set[AnalyticsType] = {AnalyticsType.Anomaly, AnalyticsType.TTP, AnalyticsType.Hunting})->list[Detection]:
+        #print("\n".join(sorted([f"{detection.file_path[92:]} - {detection.type}" for detection in detections if AnalyticsType(detection.type) not in types_to_test])))
+        #print()
+        return [detection for detection in detections if AnalyticsType(detection.type) in types_to_test]
     def get_detections(self, director: DirectorOutputDto) -> list[Detection]:
         if self.config.mode == DetectionTestingMode.selected:
             detections =  self.get_detections_selected(director)
@@ -92,12 +97,16 @@ class GithubService:
         else:
             raise (
                 Exception(
-                    f"Error: Unsupported detection testing mode in GithubServer: {self.config.mode}"
+                    f"Error: Unsupported detection testing mode in GitService: {self.config.mode}"
                 )
             )
         
+        
         detections = self.filter_detections_by_status(detections)
+        
         detections = self.filter_detections_by_type(detections)
+        print("\n".join(sorted([f".{detection.file_path[101:]}" for detection in detections])))
+        sys.exit(0)
         return detections
 
     def get_detections_selected(self, director: DirectorOutputDto) -> list[Detection]:

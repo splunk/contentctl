@@ -7,8 +7,8 @@ from typing import Union
 import yaml
 import pathlib
 
-from contentctl.actions.detection_testing.GitHubService import (
-    GithubService,
+from contentctl.actions.detection_testing.GitService import (
+    GitService,
 )
 from contentctl.actions.validate import ValidateInputDto, Validate
 from contentctl.actions.generate import (
@@ -213,13 +213,13 @@ def test(args: argparse.Namespace):
             
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
-    githubService = GithubService(config.test)
+    gitService = GitService(config.test)
 
 
     
     director_output_dto = build(args, config)
 
-    test_director_output_dto = githubService.get_all_content(director_output_dto)
+    test_director_output_dto = gitService.get_all_content(director_output_dto)
     
     # All this information will later come from the config, so we will
     # be able to do it in Test().execute. For now, we will do it here
@@ -245,7 +245,7 @@ def test(args: argparse.Namespace):
     
     test_input_dto = TestInputDto(
         test_director_output_dto=test_director_output_dto,
-        githubService=githubService,
+        gitService=gitService,
         config=config.test,
     )
     

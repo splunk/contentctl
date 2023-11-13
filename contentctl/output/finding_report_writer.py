@@ -63,7 +63,7 @@ class FindingReportObject():
             evidence_str = evidence_str + '"' + detection.tags.observable[i]["name"] + '": ' + detection.tags.observable[i]["name"].replace(".", "_")
             if not i == (len(detection.tags.observable) - 1):
                 evidence_str = evidence_str + ', '
-        evidence_str = evidence_str + '"sourceType": metadata.source_type, "source": metadata.source' + '}'        
+        evidence_str = evidence_str + ' "sourceType": metadata.source_type, "source": metadata.source' + '}'        
 
         detection.tags.evidence_str = evidence_str
 

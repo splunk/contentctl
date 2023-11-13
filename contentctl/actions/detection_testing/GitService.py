@@ -105,8 +105,6 @@ class GitService:
         detections = self.filter_detections_by_status(detections)
         
         detections = self.filter_detections_by_type(detections)
-        print("\n".join(sorted([f".{detection.file_path[101:]}" for detection in detections])))
-        sys.exit(0)
         return detections
 
     def get_detections_selected(self, director: DirectorOutputDto) -> list[Detection]:
@@ -199,7 +197,7 @@ class GitService:
                 changed_detections.add(detection.file_path)
 
         changed_detections_string = '\n - '.join(changed_detections)
-        print(f"The following [{len(changed_detections)}] detections, or their dependencies (macros/lookups), have changed:\n - {changed_detections_string}")
+        #print(f"The following [{len(changed_detections)}] detections, or their dependencies (macros/lookups), have changed:\n - {changed_detections_string}")
         return Detection.get_detections_from_filenames(changed_detections, director.detections)
 
     def __init__(self, config: TestConfig):
@@ -256,71 +254,3 @@ class GitService:
         repo_obj = git.Repo.clone_from(url, project, branch=branch)
         return repo_obj
 
-
-    def get_all_modified_content(
-        self,
-        detections: list[Detection],
-        paths: list[pathlib.Path] = [
-            pathlib.Path("detections/"),
-            pathlib.Path("tests/"),
-        ],
-    ) -> Tuple[list[Detection], list[Detection]]:
-        # Note that at present, we only search in the 'detections' and 'tests' folders.  In the future, we could search in all
-        # folders, for example to evaluate any content affected by a macro or playbook change.
-
-        try:
-
-            # Because we have not passed -all as a kwarg, we will have a MAX of one commit returned:
-            # https://gitpython.readthedocs.io/en/stable/reference.html?highlight=merge_base#git.repo.base.Repo.merge_base
-            base_commits = self.repo.merge_base(
-                self.config.version_control_config.target_branch, self.config.version_control_config.test_branch
-            )
-            if len(base_commits) == 0:
-                raise (
-                    Exception(
-                        f"Error, main branch '{self.config.version_control_config.target_branch}' and test branch '{self.config.version_control_config.test_branch}' do not share a common ancestor"
-                    )
-                )
-            base_commit = base_commits[0]
-            if base_commit is None:
-                raise (
-                    Exception(
-                        f"Error, main branch '{self.config.version_control_config.target_branch}' and test branch '{self.config.version_control_config.test_branch}' common ancestor commit was 'None'"
-                    )
-                )
-
-            all_changes = base_commit.diff(
-                self.config.version_control_config.test_branch, paths=[str(path) for path in paths]
-            )
-
-            # distill changed files down to the paths of added or modified files
-            all_changes_paths = [
-                os.path.join(self.config.version_control_config.repo_path, change.b_path)
-                for change in all_changes
-                if change.change_type in ["M", "A"]
-            ]
-
-            # untracked_files = [detection for detection in detections if detection.file_path in self.repo.untracked_files or detection.test.file_path in self.repo.untracked_files]
-            # changed_files = [detection for detection in detections if detection.file_path in all_changes or detection.test.file_path in all_changes]
-
-            # we must do this call BEFORE the list comprehension because otherwise untracked files are enumerated on each
-            # iteration through the list and it is EXTREMELY slow
-            repo_untracked_files = self.repo.untracked_files
-
-            untracked_files = [
-                detection
-                for detection in detections
-                if detection.file_path in repo_untracked_files
-                or detection.test.file_path in repo_untracked_files
-            ]
-            changed_files = [
-                detection
-                for detection in detections
-                if detection.file_path in all_changes_paths
-                or detection.test.file_path in all_changes_paths
-            ]
-        except Exception as e:
-            print(f"Error enumerating modified content: {str(e)}")
-            sys.exit(1)
-
-        return untracked_files, changed_files

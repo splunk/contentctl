@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 
 from contentctl.objects.test_config import TestConfig
+from contentctl.objects.enums import DetectionTestingMode
 
 from contentctl.input.director import DirectorOutputDto
+
 from contentctl.actions.detection_testing.GitService import (
     GitService,
 )
@@ -31,7 +33,7 @@ from contentctl.actions.detection_testing.views.DetectionTestingViewFile import 
 )
 
 from argparse import Namespace
-
+from os.path import relpath
 
 MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
@@ -70,6 +72,11 @@ class Test:
         if len(input_dto.test_director_output_dto.detections) == 0:
             print(f"With Detection Testing Mode '{input_dto.config.mode.value}', there were detections [{len(input_dto.test_director_output_dto.detections)}] found to test.\nAs such, we will quit immediately.")
         else:
+            print(f"MODE: [{input_dto.config.mode.value}] - Test [{len(input_dto.test_director_output_dto.detections)}] detections")
+            if input_dto.config.mode in [DetectionTestingMode.changes, DetectionTestingMode.selected]:
+                files_string = '\n- '.join([relpath(detection.file_path) for detection in input_dto.test_director_output_dto.detections])
+                print(f"Detections:\n- {files_string}")
+
             manager.setup()
             manager.execute()
 

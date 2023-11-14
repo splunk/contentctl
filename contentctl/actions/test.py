@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 
 from contentctl.objects.test_config import TestConfig
+from contentctl.objects.enums import DetectionTestingMode
 
 from contentctl.input.director import DirectorOutputDto
-from contentctl.actions.detection_testing.GitHubService import (
-    GithubService,
+
+from contentctl.actions.detection_testing.GitService import (
+    GitService,
 )
 
 from contentctl.actions.detection_testing.DetectionTestingManager import (
@@ -31,17 +33,17 @@ from contentctl.actions.detection_testing.views.DetectionTestingViewFile import 
 )
 
 from argparse import Namespace
-
+from os.path import relpath
 
 MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
 
 @dataclass(frozen=True)
 class TestInputDto:
-    director_output_dto: DirectorOutputDto
-    githubService: GithubService
+    test_director_output_dto: DirectorOutputDto
+    gitService: GitService
     config: TestConfig
-
+    
 
 class TestOutputDto:
     results: list
@@ -50,9 +52,7 @@ class TestOutputDto:
 class Test:
     def execute(self, input_dto: TestInputDto) -> bool:
 
-        test_director = input_dto.githubService.get_all_content(
-            input_dto.director_output_dto
-        )
+        
 
         output_dto = DetectionTestingManagerOutputDto()
 
@@ -62,15 +62,23 @@ class Test:
 
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,
-            testContent=test_director,
+            testContent=input_dto.test_director_output_dto,
             views=[web, cli, file],
         )
         manager = DetectionTestingManager(
             input_dto=manager_input_dto, output_dto=output_dto
         )
+        
+        if len(input_dto.test_director_output_dto.detections) == 0:
+            print(f"With Detection Testing Mode '{input_dto.config.mode.value}', there were detections [{len(input_dto.test_director_output_dto.detections)}] found to test.\nAs such, we will quit immediately.")
+        else:
+            print(f"MODE: [{input_dto.config.mode.value}] - Test [{len(input_dto.test_director_output_dto.detections)}] detections")
+            if input_dto.config.mode in [DetectionTestingMode.changes, DetectionTestingMode.selected]:
+                files_string = '\n- '.join([relpath(detection.file_path) for detection in input_dto.test_director_output_dto.detections])
+                print(f"Detections:\n- {files_string}")
 
-        manager.setup()
-        manager.execute()
+            manager.setup()
+            manager.execute()
 
         try:
             summary_results = file.getSummaryObject()

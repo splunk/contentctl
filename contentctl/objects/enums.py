@@ -2,10 +2,10 @@ import enum
 
 
 class AnalyticsType(enum.Enum):
-    TTP = 1
-    anomaly = 2
-    hunting = 3
-    correlation = 4
+    TTP = "TTP"
+    Anomaly = "Anomaly"
+    Hunting = "Hunting"
+    Correlation = "Correlation"
 
 
 class DataModel(enum.Enum):

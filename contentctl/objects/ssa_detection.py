@@ -30,7 +30,7 @@ class SSADetection(BaseModel):
     version: int
     date: str
     author: str
-    type: str
+    type: AnalyticsType = ...
     status: DetectionStatus = ...
     description: str
     data_source: list[str]
@@ -83,11 +83,11 @@ class SSADetection(BaseModel):
             raise ValueError("date is not in format YYYY-MM-DD: " + values["name"])
         return v
 
-    @validator("type")
-    def type_valid(cls, v, values):
-        if v.lower() not in [el.name.lower() for el in AnalyticsType]:
-            raise ValueError("not valid analytics type: " + values["name"])
-        return v
+    # @validator("type")
+    # def type_valid(cls, v, values):
+    #     if v.lower() not in [el.name.lower() for el in AnalyticsType]:
+    #         raise ValueError("not valid analytics type: " + values["name"])
+    #     return v
 
     @validator("description", "how_to_implement")
     def encode_error(cls, v, values, field):

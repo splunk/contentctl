@@ -9,6 +9,9 @@ from contentctl.input.director import Director, DirectorInputDto, DirectorOutput
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.ba_yml_output import BAYmlOutput
 from contentctl.output.api_json_output import ApiJsonOutput
+import pathlib
+import json
+import datetime
 from typing import Union
 
 @dataclass(frozen=True)
@@ -73,5 +76,12 @@ class Generate:
             api_json_output.writeObjects(director_output_dto.lookups, output_path, SecurityContentType.lookups)
             api_json_output.writeObjects(director_output_dto.macros, output_path, SecurityContentType.macros)
             api_json_output.writeObjects(director_output_dto.deployments, output_path, SecurityContentType.deployments)
-
+            
+            #create version file for sse api
+            version_file = pathlib.Path(output_path)/"version.json"
+            utc_time = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+            version_dict = {"version":{"name":f"v{input_dto.director_input_dto.config.build.version}","published_at": f"{utc_time}Z"  }}
+            with open(version_file,"w") as version_f:
+                json.dump(version_dict,version_f)
+                
         return director_output_dto

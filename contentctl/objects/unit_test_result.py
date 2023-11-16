@@ -26,7 +26,7 @@ class UnitTestResult(BaseTestResult):
         for field in model_fields:
             if getattr(self, field) is not None:
                 if isinstance(getattr(self, field), Exception):
-                    #Exception cannot be serialized, so convert to str
+                    # Exception cannot be serialized, so convert to str
                     results_dict[field] = str(getattr(self, field))
                 else:
                     results_dict[field] = getattr(self, field)
@@ -53,10 +53,12 @@ class UnitTestResult(BaseTestResult):
         success: bool = False,
         duration: float = 0,
     ):
+        # Set duration, exception and success
         self.duration = round(duration, 2)
         self.exception = exception
         self.success = success
 
+        # Set the job content, if given
         if content is not None:
             self.job_content = content
             

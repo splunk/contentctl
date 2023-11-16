@@ -65,6 +65,7 @@ class TestingStates(str, Enum):
     PROCESSING = "Waiting for Processing"
     SEARCHING = "Running Search"
     DELETING = "Deleting Data"
+    DONE_GROUP = "Test Group Done"
 
 
 # the longest length of any state
@@ -80,6 +81,8 @@ class FinalTestingStates(str, Enum):
 
 
 # max length of a test name
+# TODO: this max size is declared, and it is used appropriatel w/ .ljust, but nothing truncates test names to makes 
+#   them the appropriate size
 MAX_TEST_NAME_LENGTH = 70
 
 # The format string used for pbar reporting
@@ -90,12 +93,15 @@ class SetupTestGroupResults(BaseModel):
     exception: Union[Exception, None] = None
     success: bool = True
     duration: float = 0
-    start_time: float = 0
+    start_time: float
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class CleanupTestGroupResults(BaseModel):
-    duration: float = 0
-    start_time: float = 0
+    duration: float
+    start_time: float
 
 
 class ContainerStoppedException(Exception):
@@ -433,7 +439,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.finish()
                 return
             except Exception as e:
-                self.pbar.write(f"Error testing detection: {str(e)}")
+                self.pbar.write(f"Error testing detection: {type(e).__name__}: {str(e)}")
             finally:
                 self.sync_obj.outputQueue.append(detection)
                 self.sync_obj.currentTestingQueue[self.get_name()] = None
@@ -478,6 +484,20 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     test_group.integration_test.result.duration + setup_results.duration + cleanup_results.duration,
                     2
                 )
+      
+            self.pbar.write(f"duration: {test_group.unit_test.result.duration}")
+            self.pbar.write(f"setup_results.start_time: {setup_results.start_time}")
+
+            # Write test group status
+            self.pbar.write(
+                self.format_pbar_string(
+                    TestReportingType.GROUP,
+                    test_group.name,
+                    TestingStates.DONE_GROUP.value,
+                    setup_results.start_time,
+                    set_pbar=False,
+                )
+            )
 
     def setup_test_group(self, test_group: TestGroup) -> SetupTestGroupResults:
         """
@@ -488,6 +508,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         """
         # Capture the setup start time
         setup_start_time = time.time()
+        self.pbar.write(f"setup_start_time: {setup_start_time}")
         self.pbar.reset()
         self.format_pbar_string(
             TestReportingType.GROUP,
@@ -499,7 +520,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Use NullBar if there is more than 1 container or we are running
         # in a non-interactive context
 
-        results = SetupTestGroupResults()
+        results = SetupTestGroupResults(start_time=setup_start_time)
 
         try:
             self.replay_attack_data_files(test_group, setup_start_time)
@@ -700,7 +721,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         if test.result is not None:
             test.result.duration = round(time.time() - test_start_time, 2)
 
-    def execute_integration_test(self, detection: Detection) -> None:
+    def execute_integration_test(
+        self,
+        detection: Detection,
+        test: UnitTest,
+        setup_results: SetupTestGroupResults,
+        FORCE_ALL_TIME: bool = True
+    ):
         """
         Executes an integration test on the detection
         :param detection: the detection on which to run the test
@@ -818,6 +845,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                             success=True,
                             duration=time.time() - search_start_time,
                         )
+                        self.pbar.write(f"runDuration: {test.result.job_content.runDuration}")
                         return
 
                     else:

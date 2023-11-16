@@ -1,11 +1,10 @@
-from pydantic import BaseModel, root_validator, validator
-
-
 from typing import Union
-from datetime import timedelta
+
 from splunklib.data import Record
+
 from contentctl.objects.test_config import Infrastructure
 from contentctl.helper.utils import Utils
+from contentctl.objects.base_test_result import BaseTestResult
 
 FORCE_TEST_FAILURE_FOR_MISSING_OBSERVABLE = False
 
@@ -13,18 +12,10 @@ NO_SID = "Testing Failed, NO Search ID"
 SID_TEMPLATE = "{server}:{web_port}/en-US/app/search/search?sid={sid}"
 
 
-class UnitTestResult(BaseModel):
+class UnitTestResult(BaseTestResult):
     job_content: Union[Record, None] = None
     missing_observables: list[str] = []
     sid_link: Union[None, str] = None
-    message: Union[None, str] = None
-    exception: Union[Exception,None] = None
-    success: bool = False
-    duration: float = 0
-
-    class Config:
-        validate_assignment = True
-        arbitrary_types_allowed = True
 
     def get_summary_dict(
         self,
@@ -85,6 +76,7 @@ class UnitTestResult(BaseModel):
                 sid=content.get("sid", None),
             )
 
+        # TODO: this error message seems not the most helpful, since content must be None for it to be set
         elif content is None:
             self.job_content = None
             self.success = False

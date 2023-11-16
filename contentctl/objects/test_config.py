@@ -487,7 +487,7 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
         title="A list of all the apps to be installed on each container",
     )
     enable_integration_testing: bool = Field(
-        defauls=False,
+        default=False,
         title="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk"
         " instance with ES installed)"
     )

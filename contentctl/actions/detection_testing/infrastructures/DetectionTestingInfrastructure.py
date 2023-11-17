@@ -459,7 +459,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # iterate TestGroups
         for test_group in detection.test_groups:
-            test_group.unit_test.skip("skip")
             # If all tests in the group have been skipped, report and continue
             if test_group.all_tests_skipped():
                 self.pbar.write(

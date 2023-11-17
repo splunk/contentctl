@@ -185,6 +185,7 @@ class Detection_Abstract(SecurityContentObject):
                 raise ValueError("not valid data model: " + values["name"])
         return v
 
+    # TODO: if all of a detections tests are skipped, this will return True (is this desirable?)
     def all_tests_successful(self) -> bool:
         if len(self.tests) == 0:
             return False

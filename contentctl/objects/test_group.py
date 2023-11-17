@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
+from contentctl.objects.base_test_result import TestResultStatus
 
 
 class TestGroup(BaseModel):
@@ -35,3 +36,34 @@ class TestGroup(BaseModel):
             integration_test=integration_test,
             attack_data=unit_test.attack_data
         )
+
+    def unit_test_skipped(self) -> bool:
+        """
+        Returns true if the unit test has been skipped
+        :returns: bool
+        """
+        # Return True if skipped
+        if self.unit_test.result is not None:
+            return self.unit_test.result.status == TestResultStatus.SKIP
+
+        # If no result yet, it has not been skipped
+        return False
+
+    def integration_test_skipped(self) -> bool:
+        """
+        Returns true if the integration test has been skipped
+        :returns: bool
+        """
+        # Return True if skipped
+        if self.integration_test.result is not None:
+            return self.integration_test.result.status == TestResultStatus.SKIP
+
+        # If no result yet, it has not been skipped
+        return False
+
+    def all_tests_skipped(self) -> bool:
+        """
+        Returns true if both the unit test and integration test have been skipped
+        :returns: bool
+        """
+        return self.unit_test_skipped() and self.integration_test_skipped()

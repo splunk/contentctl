@@ -459,6 +459,20 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # iterate TestGroups
         for test_group in detection.test_groups:
+            test_group.unit_test.skip("skip")
+            # If all tests in the group have been skipped, report and continue
+            if test_group.all_tests_skipped():
+                self.pbar.write(
+                    self.format_pbar_string(
+                        TestReportingType.GROUP,
+                        test_group.name,
+                        FinalTestingStates.SKIP.value,
+                        time.time(),
+                        set_pbar=False,
+                    )
+                )
+                continue
+
             # replay attack_data
             setup_results = self.setup_test_group(test_group)
 
@@ -480,20 +494,22 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # cleanup
             cleanup_results = self.cleanup_test_group(test_group, setup_results.start_time)
 
-            # update the results duration w/ the setup/cleanup time
-            if test_group.unit_test.result is not None:
+            # update the results duration w/ the setup/cleanup time (for those not skipped)
+            if (test_group.unit_test.result is not None) and (not test_group.unit_test_skipped()):
                 test_group.unit_test.result.duration = round(
                     test_group.unit_test.result.duration + setup_results.duration + cleanup_results.duration,
                     2
                 )
-            if test_group.integration_test.result is not None:
+            if (test_group.integration_test.result is not None) and (not test_group.integration_test_skipped()):
                 test_group.integration_test.result.duration = round(
                     test_group.integration_test.result.duration + setup_results.duration + cleanup_results.duration,
                     2
                 )
 
-            self.pbar.write(f"duration: {test_group.unit_test.result.duration}")
-            self.pbar.write(f"setup_results.start_time: {setup_results.start_time}")
+            self.pbar.write(f"unit_test.duration: {test_group.unit_test.result.duration}")
+            self.pbar.write(f"integration_test.duration: {test_group.integration_test.result.duration}")
+            self.pbar.write(f"setup_results.duration: {setup_results.duration}")
+            self.pbar.write(f"cleanup_results.duration: {cleanup_results.duration}")
 
             # Write test group status
             self.pbar.write(

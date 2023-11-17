@@ -124,21 +124,25 @@ class DetectionTestingView(BaseModel, abc.ABC):
         else:
             overall_success = False
 
+        # Compute total detections
+        total_detections = total_fail + total_pass + total_untested
+
         # Compute the percentage of completion for testing, as well as the success rate
         percent_complete = Utils.getPercent(
             len(tested_detections), len(untested_detections), 1
         )
         success_rate = Utils.getPercent(
-            total_pass, total_fail + total_pass + total_untested, 1
+            total_pass, total_detections, 1
         )
 
         # Construct and return the larger results dict
         result_dict = {
             "summary": {
                 "success": overall_success,
-                "total_detections": total_pass + total_fail,
+                "total_detections": total_detections,
                 "total_pass": total_pass,
-                "total_fail_or_untested": total_fail + total_untested,
+                "total_fail": total_fail,
+                "total_untested": total_untested,
                 "total_experimental_or_deprecated": len(deprecated_detections+experimental_detections),
                 "success_rate": success_rate,
             },

@@ -13,6 +13,7 @@ from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.config import ConfigDetectionConfiguration
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test import IntegrationTest
+from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.baseline import Baseline
@@ -188,6 +189,11 @@ class Detection_Abstract(SecurityContentObject):
         if len(self.tests) == 0:
             return False
         for test in self.tests:
+            # Ignore any skipped tests
+            if (test.result is not None) and (test.result.status == TestResultStatus.SKIP):
+                continue
+
+            # If any result is missing or if any has a failure, the return False
             if test.result is None or test.result.success is False:
                 return False
         return True

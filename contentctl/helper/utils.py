@@ -7,7 +7,8 @@ import string
 from timeit import default_timer
 import pathlib
 import datetime
-from typing import Union
+from typing import Union, Tuple
+from pydantic import ValidationError
 import tqdm
 from contentctl.objects.security_content_object import SecurityContentObject
 from math import ceil
@@ -18,39 +19,38 @@ ALWAYS_PULL = True
 
 class Utils:
     @staticmethod
-    def get_all_yml_files_from_directory(path: str) -> list:
-        listOfFiles = list()
+    def get_all_yml_files_from_directory(path: str) -> list[pathlib.Path]:
+        listOfFiles:list[pathlib.Path] = []
         for (dirpath, dirnames, filenames) in os.walk(path):
             for file in filenames:
                 if file.endswith(".yml"):
-                    listOfFiles.append(os.path.join(dirpath, file))
-
+                    listOfFiles.append(pathlib.Path(os.path.join(dirpath, file)))
+    
         return sorted(listOfFiles)
 
+
     @staticmethod
-    def add_id(
-        id_dict: dict[str, list[str]], obj: SecurityContentObject, path: str
-    ) -> None:
+    def add_id(id_dict:dict[str, list[pathlib.Path]], obj:SecurityContentObject, path:pathlib.Path) -> None:     
         if hasattr(obj, "id"):
             obj_id = obj.id
             if obj_id in id_dict:
                 id_dict[obj_id].append(path)
             else:
                 id_dict[obj_id] = [path]
-
     # Otherwise, no ID so nothing to add....
 
     @staticmethod
-    def check_ids_for_duplicates(id_dict: dict[str, list[str]]) -> bool:
-        validation_error = False
+    def check_ids_for_duplicates(id_dict:dict[str, list[pathlib.Path]])->list[Tuple[pathlib.Path,  ValueError]]:
+        validation_errors:list[Tuple[pathlib.Path,  ValueError]] = []
+        
         for key, values in id_dict.items():
             if len(values) > 1:
-                validation_error = True
-                id_conflicts_string = "\n\t* ".join(values)
-                print(
-                    f"\nError validating id [{key}] - duplicate ID is used for the following content: \n\t* {id_conflicts_string}"
-                )
-        return validation_error
+                error_file_path = pathlib.Path("MULTIPLE")
+                all_files = '\n\t'.join(str(pathlib.Path(p)) for p in values)
+                exception = ValueError(f"Error validating id [{key}] - duplicate ID was used in the following files: \n\t{all_files}")
+                validation_errors.append((error_file_path, exception))
+                
+        return validation_errors
 
     @staticmethod
     def validate_git_hash(
@@ -179,19 +179,19 @@ class Utils:
 
         return hash
 
-    @staticmethod
-    def check_required_fields(
-        thisField: str, definedFields: dict, requiredFields: list[str]
-    ):
-        missing_fields = [
-            field for field in requiredFields if field not in definedFields
-        ]
-        if len(missing_fields) > 0:
-            raise (
-                ValueError(
-                    f"Could not validate - please resolve other errors resulting in missing fields {missing_fields}"
-                )
-            )
+    # @staticmethod
+    # def check_required_fields(
+    #     thisField: str, definedFields: dict, requiredFields: list[str]
+    # ):
+    #     missing_fields = [
+    #         field for field in requiredFields if field not in definedFields
+    #     ]
+    #     if len(missing_fields) > 0:
+    #         raise (
+    #             ValueError(
+    #                 f"Could not validate - please resolve other errors resulting in missing fields {missing_fields}"
+    #             )
+    #         )
 
     @staticmethod
     def verify_file_exists(
@@ -207,15 +207,16 @@ class Utils:
 
         # Try to make a head request to verify existence of the file
         try:
+            
             req = requests.head(
                 file_path, timeout=timeout_seconds, verify=True, allow_redirects=True
             )
             if req.status_code > 400:
-                raise (Exception(f"Return code {req.status_code}"))
+                raise (Exception(f"Return code={req.status_code}"))
         except Exception as e:
             raise (
                 Exception(
-                    f"Cannot confirm the existence of '{file_path}' - are you sure it exists: {str(e)}"
+                    f"HTTP Resolution Failed: {str(e)}"
                 )
             )
 

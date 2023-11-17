@@ -10,18 +10,20 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
 from contentctl.objects.baseline_tags import BaselineTags
 from contentctl.objects.deployment import Deployment
+from contentctl.helper.link_validator import LinkValidator
+from contentctl.objects.enums import SecurityContentType
 
-
-class Baseline(BaseModel, SecurityContentObject):
+class Baseline(SecurityContentObject):
     # baseline spec
-    name: str
-    id: str
-    version: int
-    date: str
-    author: str
+    #name: str
+    #id: str
+    #version: int
+    #date: str
+    #author: str
+    #contentType: SecurityContentType = SecurityContentType.baselines
     type: str
     datamodel: list
-    description: str
+    #description: str
     search: str
     how_to_implement: str
     known_false_positives: str
@@ -33,34 +35,7 @@ class Baseline(BaseModel, SecurityContentObject):
     deployment: Deployment = None
 
 
-    @validator('name')
-    def name_max_length(cls, v):
-        if len(v) > 67:
-            raise ValueError('name is longer then 67 chars: ' + v)
-        return v
 
-    @validator('name')
-    def name_invalid_chars(cls, v):
-        invalidChars = set(string.punctuation.replace("-", ""))
-        if any(char in invalidChars for char in v):
-            raise ValueError('invalid chars used in name: ' + v)
-        return v
-
-    @validator('id')
-    def id_check(cls, v, values):
-        try:
-            uuid.UUID(str(v))
-        except:
-            raise ValueError('uuid is not valid: ' + values["name"])
-        return v
-
-    @validator('date')
-    def date_valid(cls, v, values):
-        try:
-            datetime.strptime(v, "%Y-%m-%d")
-        except:
-            raise ValueError('date is not in format YYYY-MM-DD: ' + values["name"])
-        return v
 
     @validator('type')
     def type_valid(cls, v, values):
@@ -75,14 +50,13 @@ class Baseline(BaseModel, SecurityContentObject):
                 raise ValueError('not valid data model: ' + values["name"])
         return v
 
-    @validator('description', 'how_to_implement')
+    @validator('how_to_implement')
     def encode_error(cls, v, values, field):
-        try:
-            v.encode('ascii')
-        except UnicodeEncodeError:
-            raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
-        return v
-
+        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+        
+    # @validator('references')
+    # def references_check(cls, v, values):
+    #     return LinkValidator.SecurityContentObject_validate_references(v, values)
     @validator('search')
     def search_validate(cls, v, values):
         # write search validator

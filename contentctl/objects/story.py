@@ -7,16 +7,19 @@ from datetime import datetime
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.story_tags import StoryTags
-
-class Story(BaseModel, SecurityContentObject):
+from contentctl.helper.link_validator import LinkValidator
+from contentctl.objects.enums import SecurityContentType
+class Story(SecurityContentObject):
     # story spec
-    name: str
-    id: str
-    version: int
-    date: str
-    author: str
-    description: str
+    #name: str
+    #id: str
+    #version: int
+    #date: str
+    #author: str
+    #description: str
+    #contentType: SecurityContentType = SecurityContentType.stories
     narrative: str
+    check_references: bool = False #Validation is done in order, this field must be defined first
     references: list
     tags: StoryTags
 
@@ -29,34 +32,18 @@ class Story(BaseModel, SecurityContentObject):
     detections: list = None
     investigations: list = None
     
+
+    # Allow long names for macros
+    @validator('name',check_fields=False)
+    def name_max_length(cls, v):
+        #if len(v) > 67:
+        #    raise ValueError('name is longer then 67 chars: ' + v)
+        return v
     
-    @validator('name')
-    def name_invalid_chars(cls, v):
-        invalidChars = set(string.punctuation.replace("-", ""))
-        if any(char in invalidChars for char in v):
-            raise ValueError('invalid chars used in name: ' + v)
-        return v
-
-    @validator('id')
-    def id_check(cls, v, values):
-        try:
-            uuid.UUID(str(v))
-        except:
-            raise ValueError('uuid is not valid: ' + values["name"])
-        return v
-
-    @validator('date')
-    def date_valid(cls, v, values):
-        try:
-            datetime.strptime(v, "%Y-%m-%d")
-        except:
-            raise ValueError('date is not in format YYYY-MM-DD: ' + values["name"])
-        return v
-
-    @validator('description', 'narrative')
+    @validator('narrative')
     def encode_error(cls, v, values, field):
-        try:
-            v.encode('ascii')
-        except UnicodeEncodeError:
-            raise ValueError('encoding error in ' + field.name + ': ' + values["name"])
-        return v
+        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+
+    @validator('references')
+    def references_check(cls, v, values):
+        return LinkValidator.SecurityContentObject_validate_references(v, values)

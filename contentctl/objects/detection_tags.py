@@ -1,8 +1,9 @@
 import re
 
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel, validator, ValidationError, root_validator
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
+from contentctl.objects.observable import Observable
 
 class DetectionTags(BaseModel):
     # detection spec
@@ -12,14 +13,12 @@ class DetectionTags(BaseModel):
     automated_detection_testing: str = None
     cis20: list = None
     confidence: str
-    context: list
-    dataset: list = None
     impact: int
-    kill_chain_phases: list
-    message: str
+    kill_chain_phases: list = None
     mitre_attack_id: list = None
     nist: list = None
-    observable: list
+    observable: list[Observable] = []
+    message: str
     product: list
     required_fields: list
     risk_score: int
@@ -27,6 +26,10 @@ class DetectionTags(BaseModel):
     risk_severity: str = None
     cve: list = None
     supported_tas: list = None
+    atomic_guid: list = None
+    drilldown_search: str = None
+    manual_test: str = None
+
 
     # enrichment
     mitre_attack_enrichments: list[MitreAttackEnrichment] = []
@@ -36,15 +39,36 @@ class DetectionTags(BaseModel):
     risk_level_id: int = None
     risk_level: str = None
     observable_str: str = None
+    evidence_str: str = None
     kill_chain_phases_id: list = None
+    research_site_url: str = None
+    event_schema: str = None
+    mappings: list = None
+    annotations: dict = None
 
 
     @validator('cis20')
     def tags_cis20(cls, v, values):
-        pattern = 'CIS [0-9]{1,2}'
+        pattern = '^CIS ([0-9]|1[0-9]|20)$' #DO NOT match leading zeroes and ensure no extra characters before or after the string
         for value in v:
             if not re.match(pattern, value):
-                raise ValueError('CIS controls are not following the pattern CIS xx: ' + values["name"])
+                raise ValueError(f"CIS control '{value}' is not a valid Control ('CIS 1' -> 'CIS 20'):  {values['name']}")
+        return v
+    
+    @validator('nist')
+    def tags_nist(cls, v, values):
+        # Sourced Courtest of NIST: https://www.nist.gov/system/files/documents/cyberframework/cybersecurity-framework-021214.pdf (Page 19)
+        IDENTIFY = [f'ID.{category}' for category in ["AM", "BE", "GV", "RA", "RM"]      ]
+        PROTECT  = [f'PR.{category}' for category in ["AC", "AT", "DS", "IP", "MA", "PT"]]
+        DETECT   = [f'DE.{category}' for category in ["AE", "CM", "DP"]                  ]
+        RESPOND  = [f'RS.{category}' for category in ["RP", "CO", "AN", "MI", "IM"]      ]
+        RECOVER  = [f'RC.{category}' for category in ["RP", "IM", "CO"]                  ]
+        ALL_NIST_CATEGORIES = IDENTIFY + PROTECT + DETECT + RESPOND + RECOVER
+
+        
+        for value in v:
+            if not value in ALL_NIST_CATEGORIES:
+                raise ValueError(f"NIST Category '{value}' is not a valid category")
         return v
 
     @validator('confidence')
@@ -55,7 +79,7 @@ class DetectionTags(BaseModel):
         else:
             return v
 
-    @validator('context')
+    @validator('context_ids')
     def tags_context(cls, v, values):
         context_list = SES_CONTEXT_MAPPING.keys()
         for value in v:
@@ -86,20 +110,6 @@ class DetectionTags(BaseModel):
                 raise ValueError('Mitre Attack ID are not following the pattern Txxxx: ' + values["name"])
         return v
 
-    @validator('observable')
-    def tags_observable(cls,v,values):
-        valid_roles = SES_OBSERVABLE_ROLE_MAPPING.keys()
-        valid_types = SES_OBSERVABLE_TYPE_MAPPING.keys()
-        
-        for value in v:
-            if value['type'] in valid_types:
-                for role in value['role']:
-                    if role not in valid_roles:
-                        raise ValueError('Observable role ' + role + ' not valid for ' + values["name"] + '. valid options are ' + str(valid_roles))
-            else:
-                raise ValueError('Observable type ' + value['type'] + ' not valid for ' + values["name"] + '. valid options are ' + str(valid_types))
-        return v
-
     @validator('product')
     def tags_product(cls, v, values):
         valid_products = [
@@ -114,8 +124,37 @@ class DetectionTags(BaseModel):
 
     @validator('risk_score')
     def tags_calculate_risk_score(cls, v, values):
-        calculated_risk_score = (int(values['impact']))*(int(values['confidence']))/100
+        calculated_risk_score = round(values['impact'] * values['confidence'] / 100)
         if calculated_risk_score != int(v):
-            raise ValueError('risk_score is calculated wrong: ' + values["name"])
+            raise ValueError(f"Risk Score must be calculated as round(confidence * impact / 100)"
+                             f"\n  Expected risk_score={calculated_risk_score}, found risk_score={int(v)}: {values['name']}")
         return v
+    
+    # The following validator is temporarily disabled pending further discussions
+    # @validator('message')
+    # def validate_message(cls,v,values):
+        
+    #     observables:list[Observable] = values.get("observable",[])
+    #     observable_names = set([o.name for o in observables])
+    #     #find all of the observables used in the message by name
+    #     name_match_regex = r"\$([^\s.]*)\$"
+        
+    #     message_observables = set()
 
+    #     #Make sure that all observable names in 
+    #     for match in re.findall(name_match_regex, v):
+    #         #Remove
+    #         match_without_dollars = match.replace("$", "")
+    #         message_observables.add(match_without_dollars)
+        
+
+    #     missing_observables = message_observables - observable_names
+    #     unused_observables = observable_names - message_observables
+    #     if len(missing_observables) > 0:
+    #         raise ValueError(f"The following observables are referenced in the message, but were not declared as observables: {missing_observables}")
+        
+    #     if len(unused_observables) > 0:
+    #         raise ValueError(f"The following observables were declared, but are not referenced in the message: {unused_observables}")        
+    #     return v
+
+    

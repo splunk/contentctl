@@ -11,16 +11,18 @@ from contentctl.output.attack_nav_output import AttackNavOutput
 class ReportingInputDto:
     director_input_dto: DirectorInputDto
 
-
 class Reporting:
 
     def execute(self, input_dto: ReportingInputDto) -> None:
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[])
+        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)
 
-        #svg_output = SvgOutput()
-        #svg_output.writeObjects(director_output_dto.detections, input_dto.output_path)
+        svg_output = SvgOutput()
+        svg_output.writeObjects(
+            director_output_dto.detections, 
+            os.path.join(input_dto.director_input_dto.input_path, "reporting")
+        )
         
         attack_nav_output = AttackNavOutput()        
         attack_nav_output.writeObjects(

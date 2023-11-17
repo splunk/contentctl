@@ -17,7 +17,7 @@ from contentctl.helper.utils import Utils
 import yaml
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{release}/download"
-
+ENVIRONMENT_PATH_NOT_SET = "ENVIRONMENT_PATH_NOT_SET"
 
 class App(BaseModel, extra=Extra.forbid):
 
@@ -25,7 +25,7 @@ class App(BaseModel, extra=Extra.forbid):
     # homemade applications will not have this
     uid: Union[int, None]
 
-    # appid is basically the internal name of you app
+    # appid is basically the internal name of your app
     appid: str
 
     # Title is the human readable name for your application
@@ -43,7 +43,8 @@ class App(BaseModel, extra=Extra.forbid):
     # Ultimate source of the app. Can be a local path or a Splunkbase Path.
     # This will be set via a function call and should not be provided in the YML
     # Note that this is the path relative to the container mount
-    environment_path: str = "ENVIRONMENT_PATH_NOT_SET"
+    environment_path: str = ENVIRONMENT_PATH_NOT_SET
+    force_local:bool = False
 
     def configure_app_source_for_container(
         self,
@@ -57,7 +58,7 @@ class App(BaseModel, extra=Extra.forbid):
             splunkbase_username is not None and splunkbase_password is not None
         )
 
-        if splunkbase_creds_provided and self.splunkbase_path is not None:
+        if splunkbase_creds_provided and self.splunkbase_path is not None and not self.force_local:
             self.environment_path = self.splunkbase_path
 
         elif self.local_path is not None:
@@ -101,32 +102,32 @@ class App(BaseModel, extra=Extra.forbid):
                 )
         return True
 
-    @validator("uid", always=True)
+    @validator("uid")
     def validate_uid(cls, v):
         return v
 
-    @validator("appid", always=True)
+    @validator("appid")
     def validate_appid(cls, v):
         # Called function raises exception on failure, so we don't need to raise it here
         cls.validate_string_alphanumeric_with_underscores(v)
         return v
 
-    @validator("title", always=True)
+    @validator("title")
     def validate_title(cls, v):
         # Basically, a title can be any string
         return v
 
-    @validator("description", always=True)
+    @validator("description")
     def validate_description(cls, v):
         # description can be anything
         return v
 
-    @validator("release", always=True)
+    @validator("release")
     def validate_release(cls, v):
         # release can be any string
         return v
 
-    @validator("local_path", always=True)
+    @validator("local_path")
     def validate_local_path(cls, v):
         if v is not None:
             p = pathlib.Path(v)
@@ -138,7 +139,7 @@ class App(BaseModel, extra=Extra.forbid):
         # release can be any string
         return v
 
-    @validator("http_path", always=True)
+    @validator("http_path")
     def validate_http_path(cls, v, values):
         if v is not None:
             try:
@@ -148,19 +149,15 @@ class App(BaseModel, extra=Extra.forbid):
                 raise (ValueError(f"Error validating the http_path: {str(e)}"))
         return v
 
-    @validator("splunkbase_path", always=True)
+    @validator("splunkbase_path")
     def validate_splunkbase_path(cls, v, values):
-        Utils.check_required_fields(
-            "splunkbase_path", values, ["local_path", "http_path", "uid", "title"]
-        )
 
         if v is not None:
             try:
-                res = bool(validator.url(v))
-                if res is False:
-                    raise Exception
+                if bool(validators.url(v)) == False:
+                    raise ValueError(f"splunkbase_url {v} is not a valid URL")
             except Exception as e:
-                raise (ValueError(f"splunkbase_url {v} is not a valid URL"))
+                raise (ValueError(f"Error validating the splunkbase_url: {str(e)}"))
 
             if (
                 bool(

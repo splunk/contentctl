@@ -7,6 +7,7 @@ from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfras
     DetectionTestingManagerOutputDto,
 )
 from contentctl.helper.utils import Utils
+from contentctl.objects.enums import DetectionStatus
 
 
 class DetectionTestingView(BaseModel, abc.ABC):
@@ -59,7 +60,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
         try:
             runtime = self.getRuntime()
             time_per_detection = runtime / num_tested
-            remaining_time = num_untested * time_per_detection
+            remaining_time = (num_untested+.5) * time_per_detection
             remaining_time -= datetime.timedelta(
                 microseconds=remaining_time.microseconds
             )
@@ -69,7 +70,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
 
     def getSummaryObject(
         self,
-        test_model_fields: list[str] = ["success", "message"],
+        test_model_fields: list[str] = ["success", "message", "exception"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict:
         total_untested = len(self.sync_obj.inputQueue)
@@ -95,6 +96,10 @@ class DetectionTestingView(BaseModel, abc.ABC):
         # All failures appear first
         untested_detections.sort(key=lambda x: x["name"])
 
+        experimental_detections = sorted([detection.name for detection in self.sync_obj.skippedQueue if detection.status == DetectionStatus.experimental.value])
+        deprecated_detections = sorted([detection.name for detection in self.sync_obj.skippedQueue if detection.status == DetectionStatus.deprecated.value])
+
+
         if (total_fail + len(untested_detections)) == 0:
             overall_success = True
         else:
@@ -113,10 +118,14 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 "total_detections": total_pass + total_fail,
                 "total_pass": total_pass,
                 "total_fail_or_untested": total_fail + total_untested,
+                "total_experimental_or_deprecated": len(deprecated_detections+experimental_detections),
                 "success_rate": success_rate,
             },
             "tested_detections": tested_detections,
             "untested_detections": untested_detections,
             "percent_complete": percent_complete,
+            "deprecated_detections": deprecated_detections,
+            "experimental_detections": experimental_detections
+
         }
         return result_dict

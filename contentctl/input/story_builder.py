@@ -1,6 +1,6 @@
 import re
 import sys
-
+import pathlib
 from pydantic import ValidationError
 
 from contentctl.objects.story import Story
@@ -12,14 +12,14 @@ from contentctl.input.yml_reader import YmlReader
 class StoryBuilder():
     story: Story
 
-    def setObject(self, path: str) -> None:
+    def setObject(self, path: pathlib.Path) -> None:
         yml_dict = YmlReader.load_file(path)
         yml_dict["tags"]["name"] = yml_dict["name"]
 
         try:
             self.story = Story.parse_obj(yml_dict)
         except ValidationError as e:
-            print('Validation Error for file ' + path)
+            print('Validation Error for file ' + str(path))
             print(e)
             sys.exit(1)
 
@@ -41,7 +41,7 @@ class StoryBuilder():
             if detection:
                 for detection_analytic_story in detection.tags.analytic_story:
                     if detection_analytic_story == self.story.name:
-                        matched_detection_names.append(str(f'{config.build.splunk_app.prefix} - ' + detection.name + ' - Rule'))
+                        matched_detection_names.append(str(f'{config.build.prefix} - ' + detection.name + ' - Rule'))
                         mitre_attack_enrichments_list = []
                         if (detection.tags.mitre_attack_enrichments):
                             for attack in detection.tags.mitre_attack_enrichments:

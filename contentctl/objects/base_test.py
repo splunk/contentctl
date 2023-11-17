@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Union
+from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
 
@@ -13,8 +14,11 @@ class TestType(str, Enum):
     UNIT = "unit"
     INTEGRATION = "integration"
 
+    def __str__(self) -> str:
+        return self.value
 
-class BaseTest(BaseModel):
+
+class BaseTest(BaseModel, ABC):
     """
     A test case for a detection
     """
@@ -32,3 +36,7 @@ class BaseTest(BaseModel):
 
     # The test result
     result: Union[None, BaseTestResult] = None
+
+    @abstractmethod
+    def skip(self) -> None:
+        pass

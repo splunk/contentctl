@@ -29,8 +29,11 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
+from contentctl.objects.integration_test import IntegrationTest
+from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.objects.test_config import TestConfig, Infrastructure
 from contentctl.objects.test_group import TestGroup
+from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.helper.utils import Utils
 from contentctl.actions.detection_testing.DataManipulation import (
     DataManipulation,
@@ -42,16 +45,16 @@ class TestReportingType(str, Enum):
     5-char identifiers for the type of testing being reported on
     """
     # Reporting around general testing setup (e.g. infra, role configuration)
-    SETUP = "setup"
+    SETUP = "SETUP"
 
     # Reporting around a group of tests
-    GROUP = "group"
+    GROUP = "GROUP"
 
     # Reporting around a unit test
-    UNIT = "unit "
+    UNIT = "UNIT "
 
     # Reporting around an integration test
-    INTEGRATION = "integ"
+    INTEGRATION = "INTEG"
 
 
 class TestingStates(str, Enum):
@@ -78,6 +81,7 @@ class FinalTestingStates(str, Enum):
     """
     FAIL = "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m"
     PASS = "\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m"
+    SKIP = "\x1b[0;30;47m" + "SKIP".ljust(LONGEST_STATE) + "\x1b[0m"
 
 
 # max length of a test name
@@ -86,7 +90,7 @@ class FinalTestingStates(str, Enum):
 MAX_TEST_NAME_LENGTH = 70
 
 # The format string used for pbar reporting
-PBAR_FORMAT_STRING = "({test_reporting_type}) {test_name} >> {state} | Time: {time}"
+PBAR_FORMAT_STRING = "[{test_reporting_type}] {test_name} >> {state} | Time: {time}"
 
 
 class SetupTestGroupResults(BaseModel):
@@ -422,6 +426,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             try:
                 detection = self.sync_obj.inputQueue.pop()
                 if detection.status != DetectionStatus.production.value:
+                    # NOTE: we handle skipping entire detections differently than we do skipping individual test cases;
+                    #   we skip entire detections by excluding them to an entirely separate queue, while we skip 
+                    #   individual test cases via the BaseTest.skip() method, such as when we are skipping all 
+                    #   integration tests (see DetectionBuilder.skipIntegrationTests)
                     self.sync_obj.skippedQueue.append(detection)
                     self.pbar.write(f"\nSkipping {detection.name} since it is status: {detection.status}\n")
                     continue
@@ -462,13 +470,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # run unit test
             self.execute_unit_test(detection, test_group.unit_test, setup_results)
 
-            # run integration test (if enabled)
-            if self.global_config.enable_integration_testing:
-                self.execute_integration_test(
-                    detection,
-                    test_group.integration_test,
-                    setup_results
-                )
+            # run integration test
+            self.execute_integration_test(
+                detection,
+                test_group.integration_test,
+                setup_results
+            )
 
             # cleanup
             cleanup_results = self.cleanup_test_group(test_group, setup_results.start_time)
@@ -484,7 +491,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     test_group.integration_test.result.duration + setup_results.duration + cleanup_results.duration,
                     2
                 )
-      
+
             self.pbar.write(f"duration: {test_group.unit_test.result.duration}")
             self.pbar.write(f"setup_results.start_time: {setup_results.start_time}")
 
@@ -600,6 +607,20 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         """
         # Capture unit test start time
         test_start_time = time.time()
+
+        # First, check to see if this test has been skipped; log and return if so
+        if test.result is not None and test.result.status == TestResultStatus.SKIP:
+            # report the skip to the CLI
+            self.pbar.write(
+                self.format_pbar_string(
+                    TestReportingType.UNIT,
+                    f"{detection.name}:{test.name}",
+                    FinalTestingStates.SKIP.value,
+                    start_time=test_start_time,
+                    set_pbar=False,
+                )
+            )
+            return
 
         # Reset the pbar and print that we are beginning a unit test
         self.pbar.reset()
@@ -724,7 +745,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def execute_integration_test(
         self,
         detection: Detection,
-        test: UnitTest,
+        test: IntegrationTest,
         setup_results: SetupTestGroupResults,
         FORCE_ALL_TIME: bool = True
     ):
@@ -732,7 +753,94 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         Executes an integration test on the detection
         :param detection: the detection on which to run the test
         """
-        raise NotImplementedError
+        # Capture unit test start time
+        test_start_time = time.time()
+
+        # First, check to see if this test has been skipped; log and return if so
+        if test.result is not None and test.result.status == TestResultStatus.SKIP:
+            # report the skip to the CLI
+            self.pbar.write(
+                self.format_pbar_string(
+                    TestReportingType.INTEGRATION,
+                    f"{detection.name}:{test.name}",
+                    FinalTestingStates.SKIP.value,
+                    start_time=test_start_time,
+                    set_pbar=False,
+                )
+            )
+            return
+
+        # Reset the pbar and print that we are beginning a unit test
+        self.pbar.reset()
+        self.format_pbar_string(
+            TestReportingType.INTEGRATION,
+            f"{detection.name}:{test.name}",
+            TestingStates.BEGINNING_TEST,
+            test_start_time,
+        )
+
+        try:
+            raise NotImplementedError
+        except NotImplementedError:
+            test.result = IntegrationTestResult()
+            test.result.success = False
+
+        # Pause here if the terminate flag has NOT been set AND either of the below are true:
+        #   1. the behavior is always_pause
+        #   2. the behavior is pause_on_failure and the test failed
+        if (
+            self.global_config.post_test_behavior == PostTestBehavior.always_pause
+            or (
+                self.global_config.post_test_behavior == PostTestBehavior.pause_on_failure
+                and (test.result is None or test.result.success is False)
+            )
+        ) and not self.sync_obj.terminate:
+            # Determine the state to report to the user
+            if test.result is None:
+                res = "ERROR"
+                # link = detection.search
+            else:
+                res = test.result.success
+                if res:
+                    res = "PASS"
+                else:
+                    res = "FAIL"
+                # link = test.result.get_summary_dict()["sid_link"]
+
+            self.format_pbar_string(
+                TestReportingType.INTEGRATION,
+                f"{detection.name}:{test.name}",
+                f"{res} (CTRL+D to continue)",
+                test_start_time,
+            )
+
+            # Wait for user input
+            try:
+                _ = input()
+            except Exception:
+                pass
+
+        if test.result is not None and test.result.success:
+            self.pbar.write(
+                self.format_pbar_string(
+                    TestReportingType.INTEGRATION,
+                    f"{detection.name}:{test.name}",
+                    FinalTestingStates.PASS.value,
+                    start_time=test_start_time,
+                    set_pbar=False,
+                )
+            )
+        else:
+            # report the failure to the CLI
+            self.pbar.write(
+                self.format_pbar_string(
+                    TestReportingType.INTEGRATION,
+                    f"{detection.name}:{test.name}",
+                    FinalTestingStates.FAIL.value,
+                    start_time=test_start_time,
+                    set_pbar=False,
+                )
+            )
 
     def retry_search_until_timeout(
         self,

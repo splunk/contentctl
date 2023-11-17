@@ -35,5 +35,10 @@ class Detection(Detection_Abstract):
         # iterate over the unit tests and create a TestGroup (and as a result, an IntegrationTest) for each
         test_groups: list[TestGroup] = []
         for unit_test in values["tests"]:
-            test_groups.append(TestGroup.derive_from_unit_test(unit_test, values["name"]))
+            test_group = TestGroup.derive_from_unit_test(unit_test, values["name"])
+            test_groups.append(test_group)
+
+        # now add each integration test to the list of tests
+        for test_group in test_groups:
+            values["tests"].append(test_group.integration_test)
         return test_groups

@@ -216,6 +216,10 @@ class Director():
         if self.input_dto.config.enrichments.splunk_app_enrichment:
             builder.addSplunkApp()
 
+        # Skip all integration tests if configured to do so
+        if not self.input_dto.config.test.enable_integration_testing:
+            builder.skipIntegrationTests()
+
 
     def constructSSADetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()

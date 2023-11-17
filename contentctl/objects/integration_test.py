@@ -5,6 +5,7 @@ from pydantic import Field
 from contentctl.objects.base_test import BaseTest, TestType
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test_result import IntegrationTestResult
+from contentctl.objects.base_test_result import TestResultStatus
 
 
 class IntegrationTest(BaseTest):
@@ -29,4 +30,14 @@ class IntegrationTest(BaseTest):
             name=unit_test.name,
             earliest_time=unit_test.earliest_time,
             latest_time=unit_test.latest_time,
+        )
+
+    def skip(self, message: str) -> None:
+        """
+        Skip the test by setting its result status
+        :param message: the reason for skipping
+        """
+        self.result = IntegrationTestResult(
+            message=message,
+            status=TestResultStatus.SKIP
         )

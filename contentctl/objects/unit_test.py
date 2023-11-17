@@ -10,6 +10,7 @@ from contentctl.objects.unit_test_baseline import UnitTestBaseline
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.base_test import BaseTest, TestType
+from contentctl.objects.base_test_result import TestResultStatus
 
 
 class UnitTest(BaseTest):
@@ -21,7 +22,7 @@ class UnitTest(BaseTest):
     # The test type (unit)
     test_type: TestType = Field(TestType.UNIT, const=True)
 
-    # The condition to check if the searh was successful
+    # The condition to check if the search was successful
     pass_condition: Union[str, None] = None
 
     # Baselines to be run before a unit test
@@ -32,3 +33,13 @@ class UnitTest(BaseTest):
 
     # The result of the unit test
     result: Union[None, UnitTestResult] = None
+
+    def skip(self, message: str) -> None:
+        """
+        Skip the test by setting its result status
+        :param message: the reason for skipping
+        """
+        self.result = UnitTestResult(
+            message=message,
+            status=TestResultStatus.SKIP
+        )

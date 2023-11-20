@@ -95,9 +95,9 @@ class StoryBuilder():
     def addAuthorCompanyName(self) -> None:
         match_author = re.search(r'^([^,]+)', self.story.author)
         if match_author is None:
-            self.story.author_name = 'no'
+            self.story.author = 'no'
         else:
-            self.story.author_name = match_author.group(1)
+            self.story.author = match_author.group(1)
 
         match_company = re.search(r',\s?(.*)$', self.story.author)
         if match_company is None:

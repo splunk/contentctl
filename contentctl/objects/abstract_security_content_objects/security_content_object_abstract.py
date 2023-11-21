@@ -11,7 +11,7 @@ import pathlib
 
 NO_FILE_NAME = "NO_FILE_NAME"
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    name: str = Field(...,max_length=67)
+    name: str = ...
     author: str = Field(...,max_length=255)
     date: datetime.date = Field(...)
     version: int = Field(...,ge=0)

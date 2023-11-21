@@ -6,7 +6,9 @@
 action.escu = 0
 action.escu.enabled = 1
 {% if detection.status == "deprecated" %}
-description = WARNING, this detection has been marked deprecated by the Splunk Threat Research team, this means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
+description = **WARNING**, this detection has been marked **DEPRECATED** by the Splunk Threat Research team, this means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }}
+{% elif detection.status == "experimental" %}
+description = **WARNING**, this detection is marked **EXPERIMENTAL** by the Splunk Threat Research team, this means that the detected has been manually tested and we do not have the associated attack data to do automated testing or share this attack dataset due to it sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
 {% else %}
 description = {{ detection.description }}
 {% endif %}
@@ -27,7 +29,6 @@ action.escu.creation_date = {{ detection.date }}
 action.escu.modification_date = {{ detection.date }}
 action.escu.confidence = high
 action.escu.full_search_name = {{APP_NAME}} - {{ detection.name }} - Rule
-action.escu.search_type = detection
 {% if detection.tags.product is defined %}
 action.escu.product = {{ detection.tags.product | tojson }}
 {% endif %}
@@ -54,6 +55,8 @@ dispatch.latest_time = {{ detection.deployment.scheduling.latest_time }}
 action.correlationsearch.enabled = 1
 {% if detection.status == "deprecated" %}
 action.correlationsearch.label = {{APP_NAME}} - Deprecated - {{ detection.name }} - Rule
+{% elif detection.status == "experimental" %}
+action.correlationsearch.label = {{APP_NAME}} - Experimental - {{ detection.name }} - Rule
 {% elif detection.type | lower == "correlation" %}
 action.correlationsearch.label = {{APP_NAME}} - RIR - {{ detection.name }} - Rule
 {% else %}

@@ -13,7 +13,6 @@ SID_TEMPLATE = "{server}:{web_port}/en-US/app/search/search?sid={sid}"
 
 class UnitTestResult(BaseTestResult):
     missing_observables: list[str] = []
-    sid_link: Union[None, str] = None
 
     def set_job_content(
         self,

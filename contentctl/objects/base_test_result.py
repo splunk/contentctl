@@ -1,7 +1,7 @@
 from typing import Union
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from splunklib.data import Record
 
 from contentctl.helper.utils import Utils
@@ -28,19 +28,49 @@ class TestResultStatus(str, Enum):
 class BaseTestResult(BaseModel):
     message: Union[None, str] = None
     exception: Union[Exception, None] = None
+    status: Union[TestResultStatus, None] = None
     success: bool = False
     duration: float = 0
     job_content: Union[Record, None] = None
-    status: Union[TestResultStatus, None] = None
+    sid_link: Union[None, str] = None
 
     class Config:
         validate_assignment = True
         arbitrary_types_allowed = True
 
+    @validator("success", always=True)
+    @classmethod
+    def derive_success_from_status(cls, v, values) -> bool:
+        """
+        If a status is provided at initialization, we can derive success from it
+        """
+        print(f"*** VALUES ***: {values}")
+        if ("status" in values) and (values["status"] is not None):
+            if values["status"] == TestResultStatus.PASS:
+                return True
+            else:
+                if v is not False:
+                    raise ValueError(f"Status {values['status'].value} is not compatible with success={v}")
+                return False
+        return v
+
+    # TODO: ensure that all invocations of test results have status set AND consider if SKIP should be success as True
+    #   or False
+    @property
+    def failed_and_complete(self) -> bool:
+        """
+        Uses status to determine if a test was a failure; useful because success == False for a SKIP, but it is also
+        not a failure
+        :returns: bool indicating the test failed and is complete (in that it has a status)
+        """
+        if self.status is not None:
+            return self.status == TestResultStatus.FAIL or self.status == TestResultStatus.ERROR
+        return False
+
     def get_summary_dict(
         self,
         model_fields: list[str] = [
-            "success", "exception", "message", "sid_link", "status", "duration"
+            "success", "exception", "message", "sid_link", "status", "duration", "wait_duration"
         ],
         job_fields: list[str] = ["search", "resultCount", "runDuration"],
     ) -> dict:
@@ -55,7 +85,7 @@ class BaseTestResult(BaseModel):
 
         # Grab the fields required
         for field in model_fields:
-            if getattr(self, field) is not None:
+            if getattr(self, field, None) is not None:
                 # Exceptions and enums cannot be serialized, so convert to str
                 if isinstance(getattr(self, field), Exception):
                     summary_dict[field] = str(getattr(self, field))

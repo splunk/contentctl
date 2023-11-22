@@ -128,6 +128,7 @@ class DetectionTestingManager(BaseModel):
                     except Exception as e:
                         self.output_dto.terminate = True
                         print(f"Error running in container: {str(e)}")
+                        raise e
 
             self.output_dto.terminate = True
 

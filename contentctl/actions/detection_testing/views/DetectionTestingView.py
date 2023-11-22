@@ -72,7 +72,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
 
     def getSummaryObject(
         self,
-        test_result_fields: list[str] = ["success", "message", "exception", "status", "duration"],
+        test_result_fields: list[str] = ["success", "message", "exception", "status", "duration", "wait_duration"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict:
         """

@@ -39,4 +39,6 @@ class BaseTest(BaseModel, ABC):
 
     @abstractmethod
     def skip(self) -> None:
-        pass
+        raise NotImplementedError(
+            "BaseTest test is an abstract class; skip must be implemented by subclasses"
+        )

@@ -41,6 +41,7 @@ from contentctl.actions.test import Test, TestInputDto, TestOutputDto
 from contentctl.objects.enums import *
 from contentctl.input.sigma_converter import *
 from contentctl.actions.convert import *
+from contentctl.actions.conf_import import *
 
 
 SERVER_ARGS_ENV_VARIABLE = "CONTENTCTL_TEST_INFRASTRUCTURES"
@@ -99,10 +100,31 @@ def start(args:argparse.Namespace, read_test_file:bool = False) -> Config:
     return base_config
 
 
-
-
 def initialize(args) -> None:
     Initialize().execute(InitializeInputDto(path=pathlib.Path(args.path), demo=args.demo))
+
+
+def conf_import(args) -> None:
+    config = start(args)
+    # if args.type == "app":
+    product_type = SecurityContentProduct.SPLUNK_APP
+    # elif args.type == "ssa":
+    #     product_type = SecurityContentProduct.SSA
+    # elif args.type == "api":
+    #     product_type = SecurityContentProduct.API
+    # else:
+    #     print(f"Invalid build type. Valid options app, ssa or api")
+    #     sys.exit(1)
+    director_input_dto = DirectorInputDto(
+        input_path=pathlib.Path(args.path),
+        product=product_type, 
+        config=config
+    )
+    Import().execute(ImportInputDto(
+        input_path=pathlib.Path(os.path.abspath(args.config)),
+        director_input_dto=director_input_dto
+    ))
+
 
 
 def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
@@ -382,6 +404,10 @@ def main():
         "init",
         help="initialize a Splunk content pack using and customizes a configuration under contentctl.yml",
     )
+    import_parser = actions_parser.add_parser(
+        "import",
+        help="import an existing savedsearches.conf"
+    )
     validate_parser = actions_parser.add_parser(
         "validate", help="validates a Splunk content pack"
     )
@@ -418,6 +444,15 @@ def main():
                              "with one additional detection that will fail 'contentctl validate' "
                              "and on detection that will fail 'contentctl test'.  This is useful "
                              "for demonstrating contentctl functionality.")
+    
+    import_parser.add_argument(
+        "-c",
+        "--config",
+        required=True,
+        type=str,
+        help="Path to savedsearches.conf"
+    )
+    import_parser.set_defaults(func=conf_import)
 
     validate_parser.add_argument(
         "-t",

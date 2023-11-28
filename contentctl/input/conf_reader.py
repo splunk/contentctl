@@ -13,6 +13,7 @@ class ConfReader():
         try:
             with open(file_path, 'r') as f:
                 conf = re.sub(r'^\|', '\t|', f.read(), flags=re.MULTILINE)
+                conf = re.sub(r' \\$', ' ', conf, flags=re.MULTILINE)
             config = configparser.ConfigParser()
             config.read_string(conf)
             conf_obj = []

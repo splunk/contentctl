@@ -47,7 +47,7 @@ class API_Deploy:
                 "username": target.username,
                 "password": target.password,
                 "owner": "nobody",
-                "app": "search",
+                "app": "SplunkEnterpriseSecuritySuite",
             }
             print("Warning - we are currently deploying all content into the 'search' app. "
                   "At this time, this means the user does not have to install the app "

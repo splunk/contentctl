@@ -1,4 +1,5 @@
-from pydantic import BaseModel, validator, ValidationError, Field, Extra
+import os
+from pydantic import BaseModel, validator, root_validator, ValidationError, Field, Extra
 import semantic_version
 from datetime import datetime
 from typing import Union
@@ -68,6 +69,14 @@ class ConfigDeploy(BaseModel):
     description: str = "Description for this deployment target"
     server: str = "127.0.0.1"
 
+    @root_validator(pre=True)
+    def check_server(cls, values):
+        server = os.getenv('SPLUNK_SERVER')
+        if server:
+            values['server'] = server
+        return values
+
+
 CREDENTIAL_MISSING = "PROVIDE_CREDENTIALS_VIA_CMD_LINE_ARGUMENT"
 class ConfigDeployACS(ConfigDeploy):
     token: str = CREDENTIAL_MISSING
@@ -77,12 +86,31 @@ class ConfigDeployRestAPI(ConfigDeploy):
     port: int = 8089
     username: str = "admin"
     password: str = PASSWORD
-    
+    token: str = None
+
+    @root_validator()
+    def check_auth(cls, values):
+        token = os.getenv('SPLUNK_TOKEN')
+        if token:
+            values['token'] = token
+
+        if not values.get('token'):
+            username = os.getenv('SPLUNK_USERNAME')
+            if username:
+                values['username'] = username
+            
+            password = os.getenv('SPLUNK_PASSWORD')
+            if password:
+                values['password'] = password
+
+            if not (values.get('username') and values.get('password')):
+                raise ValueError("You must specify username/password, or token.")
+        return values
+
 
 class Deployments(BaseModel):
     acs_deployments: list[ConfigDeployACS] = []
     rest_api_deployments: list[ConfigDeployRestAPI] = [ConfigDeployRestAPI()]
-
 
 
 class ConfigBuildSplunk(BaseModel):

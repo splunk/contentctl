@@ -54,7 +54,9 @@ class ConfWriter():
         j2_env = Environment(
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')), 
             trim_blocks=True,
-            undefined=StrictUndefined)
+            undefined=StrictUndefined,
+            finalize=lambda var: var if not isinstance(var, str) else var.strip().replace('\n', '\\\n')
+        )
 
 
         j2_env.filters['custom_jinja2_enrichment_filter'] = custom_jinja2_enrichment_filter

@@ -18,7 +18,7 @@ from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
 from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.detection_tags import DetectionTags
-from contentctl.objects.config import ConfigDetectionConfiguration
+from contentctl.objects.config import ConfigDetectionConfiguration, ConfigDrilldown
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
@@ -61,6 +61,7 @@ class Detection_Abstract(SecurityContentObject):
     nes_fields: str = None
     providing_technologies: list = None
     runtime: str = None
+    drilldown: ConfigDrilldown = None
 
     class Config:
         use_enum_values = True

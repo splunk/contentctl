@@ -56,6 +56,25 @@ class NewContentQuestions():
                 'default': '| UPDATE_SPL'
             },
             {
+                'type': 'confirm',
+                'message': 'Do you want to add a drilldown search?',
+                'name': 'use_drilldown',
+                'default': False,
+            },
+            {
+                'type': 'text',
+                'message': 'enter drilldown name',
+                'name': 'drilldown_name',
+                'when': lambda answers: answers['use_drilldown'],
+                'default': 'View Contributing Events',
+            },
+            {
+                'type': 'text',
+                'message': 'enter drilldown search (spl) (supports variables)',
+                'name': 'drilldown_search',
+                'when': lambda answers: answers['use_drilldown'],
+            },
+            {
                 'type': 'text',
                 'message': 'enter MITRE ATT&CK Technique IDs related to the detection, comma delimited for multiple',
                 'name': 'mitre_attack_ids',

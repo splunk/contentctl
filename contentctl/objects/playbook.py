@@ -2,7 +2,7 @@
 import uuid
 import string
 
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError, Field
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.playbook_tags import PlaybookTag
@@ -11,26 +11,16 @@ from contentctl.objects.enums import SecurityContentType
 
 
 class Playbook(SecurityContentObject):
-    #name: str
-    #id: str
-    #version: int
-    #date: str
-    #author: str
-    #contentType: SecurityContentType = SecurityContentType.playbooks
     type: str
-    #description: str
-    how_to_implement: str
-    playbook: str
-    check_references: bool = False #Validation is done in order, this field must be defined first
-    references: list
-    app_list: list
-    tags: PlaybookTag
+    how_to_implement: str = ...
+    playbook: str = ...
+    app_list: list[str] = Field(...,gt=0) 
+    tags: PlaybookTag = ...
 
 
-    @validator('references')
-    def references_check(cls, v, values):
-        return LinkValidator.SecurityContentObject_validate_references(v, values)
+    @field_validator('how_to_implement')
+    @classmethod
+    def encode_error(cls, v:str, info:ValidationInfo):
+        return super().free_text_field_valid(v,info)
 
-    @validator('how_to_implement')
-    def encode_error(cls, v, values, field):
-        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+    

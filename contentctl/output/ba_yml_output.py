@@ -49,6 +49,9 @@ class BAYmlOutput():
                     a = urlparse(test_dict["tests"][0]["attack_data"][count]["data"])
                     test_dict["tests"][0]["attack_data"][count]["file_name"] = os.path.basename(a.path)
                 test = UnitTestOld.parse_obj(test_dict)
+                print("UNIT_TEST_OLD_DEBUGGING_BREAKPOINT")
+                import code
+                code.interact(local=locals())
 
                 obj.test = test
 

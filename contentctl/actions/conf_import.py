@@ -33,6 +33,8 @@ class Import:
                     yml_detection = YmlReader.load_file(yml_path[0])
                     print(f"[*] Updating {yml_path[0].name}")
                     yml_detection['search'] = conf_detection['search']
+                    if 'file_path' in yml_detection:
+                        del yml_detection['file_path']
                     YmlWriter.writeYmlFile(yml_path[0], yml_detection)
                     count += 1
                     

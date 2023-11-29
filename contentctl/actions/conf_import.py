@@ -1,43 +1,41 @@
-import pathlib
+import os
+
 from dataclasses import dataclass
-from yaml import load, dump
-try:
-    from yaml import CLoader as Loader, CDumper as Dumper
-except ImportError:
-    from yaml import Loader, Dumper
+from pathlib import Path
 
 from contentctl.input.conf_reader import ConfReader
-from contentctl.output.yml_output import YmlOutput
-from contentctl.input.director import (
-    Director,
-    DirectorInputDto,
-    DirectorOutputDto,
-)
-from contentctl.input.detection_builder import DetectionBuilder
-from contentctl.objects.enums import SecurityContentType
+from contentctl.input.yml_reader import YmlReader
+from contentctl.output.yml_writer import YmlWriter
 
 
 @dataclass(frozen=True)
 class ImportInputDto:
-    input_path: pathlib.Path
-    director_input_dto: DirectorInputDto
+    input_path: Path
+    conf_path: Path
 
 
 class Import:
 
     def execute(self, input_dto: ImportInputDto) -> None:
-        conf_obj = ConfReader.load_file(input_dto.input_path)
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
-        director = Director(director_output_dto)
-        director.execute(input_dto.director_input_dto)
-        for savedsearch in conf_obj:
-            for i in range(len(director.output_dto.detections)):
-                if director.output_dto.detections[i].name == savedsearch['name']:
-                    if 'search' in savedsearch:
-                        with open(director.output_dto.detections[i].file_path, 'r') as f:
-                            yml_rule = load(f.read(),Loader=Loader)
-                        yml_rule['search'] = savedsearch['search']
-                        with open(director.output_dto.detections[i].file_path, 'w') as f:
-                            f.write(dump(yml_rule, sort_keys=False,))
+        detections_path = os.path.join(input_dto.input_path, 'detections')
+        conf_obj = ConfReader.load_file(input_dto.conf_path)
+
+        print(f"Loaded {len(conf_obj)} saved searches\n")
+
+        count = 0
+        for conf_detection in conf_obj:
+            conf_detection['file_name'] = conf_detection['name'].lower().replace(' ', '_')+'.yml'
+
+            if 'search' in conf_detection:
+                yml_path = list(Path(detections_path).rglob(conf_detection['file_name']))
+
+                if len(yml_path) > 0:
+                    yml_detection = YmlReader.load_file(yml_path[0])
+                    print(f"[*] Updating {yml_path[0].name}")
+                    yml_detection['search'] = conf_detection['search']
+                    YmlWriter.writeYmlFile(yml_path[0], yml_detection)
+                    count += 1
+                    
+        print(f'\nUpdated {count} detections')
 
         return None

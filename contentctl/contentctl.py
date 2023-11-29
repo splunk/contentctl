@@ -105,25 +105,11 @@ def initialize(args) -> None:
 
 
 def conf_import(args) -> None:
-    config = start(args)
-    # if args.type == "app":
-    product_type = SecurityContentProduct.SPLUNK_APP
-    # elif args.type == "ssa":
-    #     product_type = SecurityContentProduct.SSA
-    # elif args.type == "api":
-    #     product_type = SecurityContentProduct.API
-    # else:
-    #     print(f"Invalid build type. Valid options app, ssa or api")
-    #     sys.exit(1)
-    director_input_dto = DirectorInputDto(
-        input_path=pathlib.Path(args.path),
-        product=product_type, 
-        config=config
+    import_input_dto = ImportInputDto(
+        input_path=pathlib.Path(os.path.abspath(args.path)),
+        conf_path=pathlib.Path(os.path.abspath(args.config))
     )
-    Import().execute(ImportInputDto(
-        input_path=pathlib.Path(os.path.abspath(args.config)),
-        director_input_dto=director_input_dto
-    ))
+    Import().execute(import_input_dto)
 
 
 

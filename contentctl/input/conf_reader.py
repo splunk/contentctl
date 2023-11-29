@@ -1,9 +1,10 @@
-import configparser
 import pathlib
 import re
 import sys
 
 from typing import List
+
+from addonfactory_splunk_conf_parser_lib import TABConfigParser
 
 
 class ConfReader():
@@ -12,10 +13,9 @@ class ConfReader():
     def load_file(file_path: pathlib.Path) -> List:
         try:
             with open(file_path, 'r') as f:
-                conf = re.sub(r'^\|', '\t|', f.read(), flags=re.MULTILINE)
-                conf = re.sub(r' \\$', ' ', conf, flags=re.MULTILINE)
-            config = configparser.ConfigParser()
-            config.read_string(conf)
+                conf_file = f.read()
+            config = TABConfigParser()
+            config.read_string(conf_file)
             conf_obj = []
             for section_name in config.sections():
                 obj = {'name': section_name.split(' - ')[1].strip()}

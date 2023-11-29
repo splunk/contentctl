@@ -63,7 +63,6 @@ class StoryBuilder():
                                 if attack_enrichment.mitre_attack_id not in [attack.mitre_attack_id for attack in mitre_attack_enrichments]:
                                     mitre_attack_enrichments.append(attack_enrichment)
 
-        self.story.detection_names = matched_detection_names
         self.story.detections = matched_detections
         self.story.tags.datamodels = sorted(list(datamodels))
         self.story.tags.kill_chain_phases = sorted(list(kill_chain_phases))
@@ -86,10 +85,8 @@ class StoryBuilder():
         for investigation in investigations:
             for investigation_analytic_story in  investigation.tags.analytic_story:
                 if investigation_analytic_story == self.story.name:
-                    matched_investigation_names.append(str(f'ESCU - ' + investigation.name + ' - Response Task'))
                     matched_investigations.append(investigation)
 
-        self.story.investigation_names = matched_investigation_names
         self.story.investigations = matched_investigations
 
     def addAuthorCompanyName(self) -> None:

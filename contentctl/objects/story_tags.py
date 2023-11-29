@@ -1,38 +1,36 @@
 
 
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel, validator, ValidationError, Field
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.enums import StoryCategory
+from typing import List
+
+from enum import Enum
+
+class StoryUseCase(str,Enum):
+   FRAUD_DETECTION = "Fraud Detection"
+   COMPLIANCE = "Compliance"
+   APPLICATION_SECURITY = "Application Security"
+   SECURITY_MONITORING = "Security Monitoring"
+   ADVANCED_THREAD_DETECTION = "Advanced Threat Detection"
+
+class SecurityContentProduct(str, Enum):
+    SPLUNK_ENTERPRISE = "Splunk Enterprise"
+    SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
+    SPLUNK_CLOUD = "Splunk Cloud"
+    SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
+    SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
 
 class StoryTags(BaseModel):
-    # story spec
-    name: str
-    analytic_story: str
-    category: list[StoryCategory]
-    product: list
-    usecase: str
+    category: list[StoryCategory] = Field(...,gt=0)
+    product: list[SecurityContentProduct] = Field(...,gt=0)
+    usecase: StoryUseCase = Field(...)
 
     # enrichment
-    mitre_attack_enrichments: list[MitreAttackEnrichment] = []
-    mitre_attack_tactics: list = []
-    datamodels: list = []
-    kill_chain_phases: list = []
+    mitre_attack_enrichments: List[MitreAttackEnrichment] = []
+    mitre_attack_tactics: List = []
+    datamodels: List = []
+    kill_chain_phases: List = []
 
 
-    @validator('product')
-    def tags_product(cls, v, values):
-        valid_products = [
-            "Splunk Enterprise", "Splunk Enterprise Security", "Splunk Cloud",
-            "Splunk Security Analytics for AWS", "Splunk Behavioral Analytics"
-        ]
-
-        for value in v:
-            if value not in valid_products:
-                raise ValueError('product is not valid for ' + values['name'] + '. valid products are ' + str(valid_products))
-        return v
-
-    @validator('category')
-    def category_validate(cls,v,values):
-        if len(v) == 0:
-            raise ValueError(f"Error for Story '{values['name']}' - at least one 'category' MUST be provided.")
-        return v
+   

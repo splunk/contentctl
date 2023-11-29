@@ -6,7 +6,7 @@ from pydantic import Field
 
 from contentctl.objects.security_content_object import SecurityContentObject
 
-from typing import Tuple
+from typing import Tuple, List
 
 
 MACROS_TO_IGNORE = set(["_filter", "drop_dm_object_name"])
@@ -19,7 +19,7 @@ MACROS_TO_IGNORE.add("prohibited_processes")
 
 class Macro(SecurityContentObject):
     definition: str = Field(...,ge=1)
-    arguments: list[str] = Field([])
+    arguments: List[str] = Field([])
 
     
     @staticmethod

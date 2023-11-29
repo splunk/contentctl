@@ -3,9 +3,9 @@ import re
 import abc
 import uuid
 import datetime
-from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath
-from typing import Tuple
-
+from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl
+from typing import Tuple, Optional, List
+import pydantic
 import uuid
 import pathlib
 
@@ -18,12 +18,13 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
     description: str = Field(...,max_length=1000)
     file_path: FilePath = Field(...)
-
+    references: Optional[List[pydantic.HttpUrl]] = None
     
     @field_validator('file_path')
     @classmethod
-    def file_path_valid(cls, v: str, info: ValidationInfo):
-        if not v.endswith(".yml"):
+    def file_path_valid(cls, v: pathlib.PosixPath, info: ValidationInfo):
+        
+        if not v.name.endswith(".yml"):
             raise ValueError(f"All Security Content Objects must be YML files and end in .yml.  The following file does not: '{v}'")
         return v
 

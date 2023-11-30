@@ -131,3 +131,26 @@ class SigmaConverterTarget(enum.Enum):
     RAW = 2
     OCSF = 3
     ALL = 4
+
+# It's unclear why we use a mix of constants and enums. The following list was taken from:
+# contentctl/contentctl/helper/constants.py.
+# We convect it to an enum here
+# SES_KILL_CHAIN_MAPPINGS = {
+#     "Unknown": 0,
+#     "Reconnaissance": 1,
+#     "Weaponization": 2,
+#     "Delivery": 3,
+#     "Exploitation": 4,
+#     "Installation": 5,
+#     "Command And Control": 6,
+#     "Actions on Objectives": 7
+# }
+class KillChainPhases(str, enum.Enum):
+    UNKNOWN ="Unknown"
+    RECONNAISSANCE = "Reconnaissance"
+    WEAPONIZATION = "Weaponization"
+    DELIVERY = "Delivery"
+    EXPLOITAITON = "Exploitation"
+    INSTALLATION = "Installation"
+    COMMAND_AND_CONTROL = "Command And Control"
+    ACTIONS_ON_OBJECTIVES = "Actions on Objectives"

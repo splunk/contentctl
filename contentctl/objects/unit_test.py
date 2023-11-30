@@ -14,7 +14,6 @@ class UnitTest(BaseModel):
     pass_condition: Optional[str] = None
     earliest_time: Optional[str] = None
     latest_time: Optional[str] = None
-    baselines: list[UnitTestBaseline] = []
     attack_data: list[UnitTestAttackData] = Field(..., gt=0)
     result: Optional[UnitTestResult] = None
 

@@ -12,7 +12,7 @@ from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
 from dataclasses import dataclass
 from shutil import copyfile
-from typing import Union
+from typing import Union, Optional
 
 from pydantic import BaseModel, PrivateAttr, Field
 import requests
@@ -64,8 +64,12 @@ from contentctl.actions.detection_testing.progress_bar import (
 #   completed/elapsed counter)
 # TODO: investigate failures (true, transient, latency?)
 # TODO: why is the unit test duration so long on Risk Rule for Dev Sec Ops by Repository? big dataset? long
-#   cleanup/upload? retries in clearing the "stash" index? Maybe the stash index gets super big... we shouldn't be 
+#   cleanup/upload? retries in clearing the "stash" index? Maybe the stash index gets super big... we shouldn't be
 #   testing on Correlation type detections anyway
+# TODO: make it clear to Eric that test durations will no longer account for
+#   replay/cleanup in this new test grouping model (in the CLI reporting; the recorded
+#   test duration in the result file will include the setup/cleanup time in the duration
+#   for both unit and integration tests (effectively double counted))
 
 
 class SetupTestGroupResults(BaseModel):
@@ -430,7 +434,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.sync_obj.outputQueue.append(detection)
                 self.sync_obj.currentTestingQueue[self.get_name()] = None
 
-    def test_detection(self, detection: Detection):
+    def test_detection(self, detection: Detection) -> None:
+        """
+        Tests a single detection; iterates over the TestGroups for the detection (one TestGroup per
+        unit test, where a TestGroup is a unit test and integration test relying on the same attack
+        data)
+        :param detection: the Detection to test
+        """
+        # TODO: do we want to return a failure here if no test exists for a production detection?
+        # Log and return if no tests exist
         if detection.tests is None:
             self.pbar.write(f"No test(s) found for {detection.name}")
             return
@@ -453,20 +465,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # replay attack_data
             setup_results = self.setup_test_group(test_group)
 
-            # TODO: make it clear to Eric that test durations will no longer account for
-            # replay/cleanup in this new test grouping model (in the CLI reporting; the recorded
-            # test duration in the result file will include the setup/cleanup time in the duration
-            # for both unit and integration tests (effectively double counted))
-
             # run unit test
             self.execute_unit_test(detection, test_group.unit_test, setup_results)
 
-            # TODO: if unit test fails, SKIP or FAIL the integration test
             # run integration test
             self.execute_integration_test(
                 detection,
                 test_group.integration_test,
-                setup_results
+                setup_results,
+                test_group.unit_test.result
             )
 
             # cleanup
@@ -510,6 +517,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Capture the setup start time
         setup_start_time = time.time()
         self.pbar.write(f"setup_start_time: {setup_start_time}")
+
+        # Log the start of the test group
         self.pbar.reset()
         self.format_pbar_string(
             TestReportingType.GROUP,
@@ -521,23 +530,35 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Use NullBar if there is more than 1 container or we are running
         # in a non-interactive context
 
+        # Initialize the setup results
         results = SetupTestGroupResults(start_time=setup_start_time)
 
+        # Replay attack data
         try:
             self.replay_attack_data_files(test_group, setup_start_time)
         except Exception as e:
             results.exception = e
             results.success = False
 
+        # Set setup duration
         results.duration = time.time() - setup_start_time
+
         return results
 
     def cleanup_test_group(
-            self,
-            test_group: TestGroup,
-            test_group_start_time: float
+        self,
+        test_group: TestGroup,
+        test_group_start_time: float,
     ) -> CleanupTestGroupResults:
+        """
+        Deletes attack data for the test group and returns metadata about the cleanup duration
+        :param test_group: the TestGroup being cleaned up
+        :param test_group_start_time: the start time of the TestGroup (for logging)
+        """
+        # Get the start time for cleanup
         cleanup_start_time = time.time()
+
+        # Log the cleanup action
         self.format_pbar_string(
             TestReportingType.GROUP,
             test_group.name,
@@ -546,8 +567,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         )
 
         # TODO: do we want to clean up even if replay failed? Could have been partial failure?
+        # Delete attack data
         self.delete_attack_data(test_group.attack_data)
 
+        # Return the cleanup metadata, adding start time and duration
         return CleanupTestGroupResults(
             duration=time.time() - cleanup_start_time,
             start_time=cleanup_start_time
@@ -699,16 +722,16 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 and (test.result is None or test.result.success is False)
             )
         ) and not self.sync_obj.terminate:
+            # Assume failure
+            res = "FAIL"
+
             # Determine the state to report to the user
             if test.result is None:
                 res = "ERROR"
                 link = detection.search
             else:
-                res = test.result.success
-                if res:
+                if test.result.success:
                     res = "PASS"
-                else:
-                    res = "FAIL"
                 link = test.result.get_summary_dict()["sid_link"]
 
             self.format_pbar_string(
@@ -724,6 +747,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except Exception:
                 pass
 
+        # Report success
         if test.result is not None and test.result.success:
             self.pbar.write(
                 self.format_pbar_string(
@@ -734,8 +758,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
-
         else:
+            # Report failure
             self.pbar.write(
                 self.format_pbar_string(
                     TestReportingType.UNIT,
@@ -745,7 +769,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
+
+        # Flush stdout for pbar
         stdout.flush()
+
+        # Add duration
         if test.result is not None:
             test.result.duration = round(time.time() - test_start_time, 2)
 
@@ -754,6 +782,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         detection: Detection,
         test: IntegrationTest,
         setup_results: SetupTestGroupResults,
+        unit_test_result: Optional[UnitTestResult]
     ):
         """
         Executes an integration test on the detection
@@ -762,7 +791,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Capture unit test start time
         test_start_time = time.time()
 
-        # First, check to see if this test has been skipped; log and return if so
+        # First, check to see if the unit test failed; skip integration testing if so
+        if (unit_test_result is not None) and (unit_test_result.status == TestResultStatus.FAIL):
+            test.skip("TEST SKIPPED: associated unit test failed")
+
+        # Next, check to see if this test has been skipped (just now or elsewhere); log and return
+        # if so
         if test.result is not None and test.result.status == TestResultStatus.SKIP:
             # report the skip to the CLI
             self.pbar.write(
@@ -814,17 +848,22 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Run the test
         try:
+            # Capture pbar data for CorrelationSearch logging
             pbar_data = PbarData(
                 pbar=self.pbar,
                 fq_test_name=f"{detection.name}:{test.name}",
                 start_time=test_start_time
             )
+
+            # Instantiate the CorrelationSearch
             correlation_search = CorrelationSearch(
                 detection_name=detection.name,
                 service=self.get_conn(),
                 pbar_data=pbar_data,
             )
+
             # TODO: add max_sleep as a configurable value on cli/config
+            # Run the test
             test.result = correlation_search.test()
         except Exception as e:
             # Catch and report and unhandled exceptions in integration testing
@@ -848,7 +887,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             if test.result is None:
                 res = "ERROR"
             else:
-                res = test.result.status.value
+                res = test.result.status.value.upper()
 
             self.format_pbar_string(
                 TestReportingType.INTEGRATION,

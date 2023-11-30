@@ -35,15 +35,14 @@ def get_logger() -> logging.Logger:
     """
     # get logger for module
     logger = logging.getLogger(__name__)
-    logger.propagate = False
-    print(f"***** Got logger *** {logger}: {__name__}")
 
+    # set propagate to False if not already set as such (needed to that we do not flow up to any
+    # root loggers)
+    if logger.propagate:
+        logger.propagate = False
 
     # if logger has no handlers, it needs to be configured for the first time
-    print(f"***** Has handlers *** {logger.hasHandlers()}")
-    print(f"***** Has handlers 2 *** {logger.handlers}")
     if not logger.hasHandlers():
-        print(f"***** No handlers *** {logger.handlers}")
         # set level
         logger.setLevel(LOG_LEVEL)
 
@@ -53,18 +52,15 @@ def get_logger() -> logging.Logger:
             handler = logging.FileHandler(LOG_PATH)
         else:
             handler = logging.NullHandler()
-        print(f"***** Made handlers *** {handler}")
 
         # Format our output
         formatter = logging.Formatter('%(asctime)s - %(levelname)s:%(name)s - %(message)s')
         handler.setFormatter(formatter)
-        print(f"***** Made formatter *** {formatter}")
 
         # Set handler level and add to logger
         handler.setLevel(LOG_LEVEL)
         logger.addHandler(handler)
-        print(f"***** Added handler *** {logger.handlers}")
-    print(f"***** HANDLERS *** {logger.handlers}")
+
     return logger
 
 
@@ -135,8 +131,10 @@ class ResultIterator:
     :param logger: a Logger object
     """
     def __init__(self, response_reader: ResponseReader) -> None:
+        # init the results reader
         self.results_reader: JSONResultsReader = JSONResultsReader(
-            response_reader)
+            response_reader
+        )
 
         # get logger
         self.logger: logging.Logger = get_logger()
@@ -183,12 +181,13 @@ class PbarData(BaseModel):
     start_time: float
 
     class Config:
+        # needed to support the tqdm type
         arbitrary_types_allowed = True
 
 
-# TODO: right now, we are creating one CorrelationSearch instance for each test case; in general, there is only one
+# TODO: right now, we are creating one CorrelationSearch instance for each test case; typically, there is only one
 #   unit test, and thus one integration test, per detection, so this is not an issue. However, if we start having many
-#   test cases per detection, we will be duplicating some effort & network calls that we don't need to. Condier
+#   test cases per detection, we will be duplicating some effort & network calls that we don't need to. Consider
 #   refactoring in order to re-use CorrelationSearch objects across tests in such a case
 class CorrelationSearch(BaseModel):
     """Representation of a correlation search in Splunk
@@ -197,35 +196,55 @@ class CorrelationSearch(BaseModel):
     detection rule for our purposes.
     :param detection_name: the name of the search/detection (e.g. "Windows Modify Registry EnableLinkedConnections")
     :param service: a Service instance representing a connection to a Splunk instance
-    :param test_index: the index attack data is forwarded to for testing (optionally used in cleanup)
     :param pbar_data: the encapsulated info needed for logging w/ pbar
+    :param test_index: the index attack data is forwarded to for testing (optionally used in cleanup)
     """
-    # our instance fields
+    ## The following three fields are explicitly needed at instantiation                            # noqa: E266
+
+    # the name of the search/detection (e.g. "Windows Modify Registry EnableLinkedConnections")
     detection_name: str
 
+    # a Service instance representing a connection to a Splunk instance
     service: splunklib.Service
+
+    # the encapsulated info needed for logging w/ pbar
     pbar_data: PbarData
 
-    # TODO: replace this w/ pbar stuff
+    ## The following field is optional for instantiation                                            # noqa: E266
+
+    # The index attack data is sent to; can be None if we are relying on the caller to do our
+    # cleanup of this index
     test_index: Optional[str] = Field(default=None, min_length=1)
 
+    ## All remaining fields can be derived from other fields or have intentional defaults that      # noqa: E266
+    ## should not be changed (validators should prevent instantiating some of these fields directly # noqa: E266
+    ## to prevent undefined behavior)                                                               # noqa: E266
+
+    # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
+    # to conflict w/ tqdm)
     logger: logging.Logger = Field(default_factory=get_logger, const=True)
 
+    # The search name (e.g. "ESCU - Windows Modify Registry EnableLinkedConnections - Rule")
     name: Optional[str] = None
+
+    # The path to the saved search on the Splunk instance
     splunk_path: Optional[str] = None
+
+    # A model of the saved search as provided by splunklib
     saved_search: Optional[splunklib.SavedSearch] = None
+
+    # The set of indexes to clear on cleanup
     indexes_to_purge: set[str] = set()
 
-    # earliest_time: Optional[str] = None
-    # latest_time: Optional[str] = None
-    # cron_schedule: Optional[str] = None
+    # The risk analysis adaptive response action (if defined)
     risk_analysis_action: Union[RiskAnalysisAction, None] = None
+
+    # The notable adaptive response action (if defined)
     notable_action: Union[NotableAction, None] = None
 
     class Config:
+        # needed to allow fields w/ types like SavedSearch
         arbitrary_types_allowed = True
-
-    # enabled: bool = False
 
     @validator("name", always=True)
     @classmethod
@@ -235,7 +254,7 @@ class CorrelationSearch(BaseModel):
         """
         if "detection_name" not in values:
             raise ValueError("detection_name missing; name is dependent on detection_name")
-        
+
         expected_name = f"ESCU - {values['detection_name']} - Rule"
         if v is not None and v != expected_name:
             raise ValueError(
@@ -251,7 +270,7 @@ class CorrelationSearch(BaseModel):
         """
         if "name" not in values:
             raise ValueError("name missing; splunk_path is dependent on name")
-        
+
         expected_path = f"saved/searches/{values['name']}"
         if v is not None and v != expected_path:
             raise ValueError(
@@ -267,7 +286,7 @@ class CorrelationSearch(BaseModel):
         """
         if "splunk_path" not in values or "service" not in values:
             raise ValueError("splunk_path or service missing; saved_search is dependent on both")
-        
+
         if v is not None:
             raise ValueError(
                 "saved_search must be derived from the service and splunk_path; leave as None and it will be derived "
@@ -278,18 +297,16 @@ class CorrelationSearch(BaseModel):
             values['splunk_path'],
         )
 
-    # @validator("risk_analysis_action", "notable_action")
-    # @classmethod
-    # def _initialized_to_none(cls, v, values) -> None:
-    #     """
-    #     Ensure a field was initialized as None
-    #     """
-    #     if v is not None:
-    #         raise ValueError("field must be initialized to None; will be derived automatically")
-
+    # TODO: ideally, we could handle this and the following init w/ a call to model_post_init, so
+    #   that all the logic is encapsulated w/in _parse_risk_and_notable_actions but that is a
+    #   pydantic v2 feature:
+    #   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
     @validator("risk_analysis_action", always=True)
     @classmethod
     def _init_risk_analysis_action(cls, v, values) -> Optional[RiskAnalysisAction]:
+        """
+        Initialize risk_analysis_action
+        """
         if "saved_search" not in values:
             raise ValueError("saved_search missing; risk_analysis_action is dependent on saved_search")
 
@@ -303,9 +320,12 @@ class CorrelationSearch(BaseModel):
     @validator("notable_action", always=True)
     @classmethod
     def _init_notable_action(cls, v, values) -> Optional[NotableAction]:
+        """
+        Initialize notable_action
+        """
         if "saved_search" not in values:
             raise ValueError("saved_search missing; notable_action is dependent on saved_search")
-        
+
         if v is not None:
             raise ValueError(
                 "notable_action must be derived from the saved_search; leave as None and it will be derived "
@@ -313,17 +333,11 @@ class CorrelationSearch(BaseModel):
             )
         return CorrelationSearch._get_notable_action(values['saved_search'].content)
 
-    # def __init__(self, **kwargs) -> None:
-    #     # call the parent constructor
-    #     super().__init__(**kwargs)
-
-    #     # parse out the metadata we care about
-    #     # TODO: ideally, we could handle this w/ a call to model_post_init, but that is a pydantic v2 feature
-    #     #   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
-    #     self._parse_metadata()
-
     @property
     def earliest_time(self) -> str:
+        """
+        The earliest time configured for the saved search
+        """
         if self.saved_search is not None:
             return self.saved_search.content[SavedSearchKeys.EARLIEST_TIME_KEY.value]
         else:
@@ -331,6 +345,9 @@ class CorrelationSearch(BaseModel):
 
     @property
     def latest_time(self) -> str:
+        """
+        The latest time configured for the saved search
+        """
         if self.saved_search is not None:
             return self.saved_search.content[SavedSearchKeys.LATEST_TIME_KEY.value]
         else:
@@ -338,6 +355,9 @@ class CorrelationSearch(BaseModel):
 
     @property
     def cron_schedule(self) -> str:
+        """
+        The cron schedule configured for the saved search
+        """
         if self.saved_search is not None:
             return self.saved_search.content[SavedSearchKeys.CRON_SCHEDULE_KEY.value]
         else:
@@ -345,6 +365,9 @@ class CorrelationSearch(BaseModel):
 
     @property
     def enabled(self) -> bool:
+        """
+        Whether the saved search is enabled
+        """
         if self.saved_search is not None:
             if int(self.saved_search.content[SavedSearchKeys.DISBALED_KEY.value]):
                 return False
@@ -353,20 +376,27 @@ class CorrelationSearch(BaseModel):
         else:
             raise ClientError("Something unexpected went wrong in initialization; saved_search was not populated")
 
-    # @property
-    # def risk_analysis_action(self) -> Optional[RiskAnalysisAction]:
-    #     if self._risk_analysis_action is None:
-    #         self._parse_risk_analysis_action()
-    #     return self._risk_analysis_action
+    @ property
+    def has_risk_analysis_action(self) -> bool:
+        """Whether the correlation search has an associated risk analysis Adaptive Response Action
+        :return: a boolean indicating whether it has a risk analysis Adaptive Response Action
+        """
+        return self.risk_analysis_action is not None
 
-    # @property
-    # def notable_action(self) -> Optional[NotableAction]:
-    #     if self._notable_action is None:
-    #         self._parse_notable_action()
-    #     return self._notable_action
+    @property
+    def has_notable_action(self) -> bool:
+        """Whether the correlation search has an associated notable Adaptive Response Action
+        :return: a boolean indicating whether it has a notable Adaptive Response Action
+        """
+        return self.notable_action is not None
 
     @staticmethod
     def _get_risk_analysis_action(content: dict[str, Any]) -> Optional[RiskAnalysisAction]:
+        """
+        Given the saved search content, parse the risk analysis action
+        :param content: a dict of strings to values
+        :returns: a RiskAnalysisAction, or None if none exists
+        """
         if int(content[SavedSearchKeys.RISK_ACTION_KEY.value]):
             try:
                 return RiskAnalysisAction.parse_from_dict(content)
@@ -376,13 +406,18 @@ class CorrelationSearch(BaseModel):
 
     @staticmethod
     def _get_notable_action(content: dict[str, Any]) -> Optional[NotableAction]:
+        """
+        Given the saved search content, parse the notable action
+        :param content: a dict of strings to values
+        :returns: a NotableAction, or None if none exists
+        """
         # grab notable details if present
         if int(content[SavedSearchKeys.NOTABLE_ACTION_KEY.value]):
             return NotableAction.parse_from_dict(content)
         return None
 
-    def _parse_metadata(self) -> None:
-        """Parses the metadata we care about from self.saved_search.content
+    def _parse_risk_and_notable_actions(self) -> None:
+        """Parses the risk/notable metadata we care about from self.saved_search.content
 
         :raises KeyError: if self.saved_search.content does not contain a required key
         :raises json.JSONDecodeError: if the value at self.saved_search.content['action.risk.param._risk'] can't be
@@ -410,7 +445,7 @@ class CorrelationSearch(BaseModel):
             self.saved_search.refresh()  # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered during refresh: {e}")
-        self._parse_metadata()
+        self._parse_risk_and_notable_actions()
 
     def enable(self, refresh: bool = True) -> None:
         """Enables the SavedSearch
@@ -442,22 +477,8 @@ class CorrelationSearch(BaseModel):
         if refresh:
             self.refresh()
 
-    @ property
-    def has_risk_analysis_action(self) -> bool:
-        """Whether the correlation search has an associated risk analysis Adaptive Response Action
-        :return: a boolean indicating whether it has a risk analysis Adaptive Response Action
-        """
-        return self.risk_analysis_action is not None
-
-    @property
-    def has_notable_action(self) -> bool:
-        """Whether the correlation search has an associated notable Adaptive Response Action
-        :return: a boolean indicating whether it has a notable Adaptive Response Action
-        """
-        return self.notable_action is not None
-
-    # TODO: evaluate sane defaults here (e.g. 3y is good now, but maybe not always...); NOTE also that
-    # contentctl may already be munging timestamps for us
+    # TODO: evaluate sane defaults here (e.g. 3y is good now, but maybe not always...); NOTE also
+    #   that contentctl may already be munging timestamps for us
     def update_timeframe(
         self,
         earliest_time: str = ScheduleConfig.EARLIEST_TIME.value,
@@ -476,7 +497,6 @@ class CorrelationSearch(BaseModel):
         :param cron_schedule: the cron schedule for the search to run on (default: "*/1 * * * *")
         :param refresh: a bool indicating whether to run refresh after enabling
         """
-        print(f"***** HANDLERS 2 *** {self.logger.handlers}")
         # update the SavedSearch accordingly
         data = {
             SavedSearchKeys.EARLIEST_TIME_KEY.value: earliest_time,
@@ -775,8 +795,7 @@ class CorrelationSearch(BaseModel):
             message = f"No result returned showing deletion in index {index}"
             raise ServerError(message)
 
-    # TODO: refactor to allow for cleanup externally of the testing index; also ensure that ES is configured to use the
-    #   default index set by contenctl
+    # TODO: ensure that ES is configured to use the default index set by contenctl
     def cleanup(self, delete_test_index=False) -> None:
         """Cleans up after an integration test
 
@@ -800,10 +819,7 @@ class CorrelationSearch(BaseModel):
             self._delete_index(index)
         self.indexes_to_purge.clear()
 
-    def update_pbar(
-        self,
-        state: str,
-    ) -> str:
+    def update_pbar(self, state: str) -> str:
         """
         Instance specific function to log integrtation testing information via pbar
         :param state: the state/message of the test to be logged

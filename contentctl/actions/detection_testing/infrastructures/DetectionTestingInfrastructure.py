@@ -5,7 +5,7 @@ import os.path
 import configparser
 import json
 import datetime
-import tqdm
+import tqdm                                                                                         # type: ignore
 import pathlib
 from tempfile import TemporaryDirectory, mktemp
 from ssl import SSLEOFError, SSLZeroReturnError
@@ -15,15 +15,15 @@ from shutil import copyfile
 from typing import Union, Optional
 
 from pydantic import BaseModel, PrivateAttr, Field
-import requests
-import splunklib.client as client
-from splunklib.binding import HTTPError
-from splunklib.results import JSONResultsReader, Message
+import requests                                                                                     # type: ignore
+import splunklib.client as client                                                                   # type: ignore
+from splunklib.binding import HTTPError                                                             # type: ignore
+from splunklib.results import JSONResultsReader, Message                                            # type: ignore
 import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
 
-from contentctl.objects.enums import PostTestBehavior, DetectionStatus
+from contentctl.objects.enums import PostTestBehavior
 from contentctl.objects.detection import Detection
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
@@ -47,6 +47,7 @@ from contentctl.actions.detection_testing.progress_bar import (
 
 
 # TODO: cleanup extra prints/logs, add docstrings/comments
+# TODO: cleanup noqas/ignores
 # TODO: test known failures/successes
 # TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly
 # TODO: SKIP/FAIL integration test on unit test fail/error (and SKIP?)
@@ -405,15 +406,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 return
 
             try:
+                # NOTE: (THIS CODE HAS MOVED) we handle skipping entire detections differently than
+                #   we do skipping individual test cases; we skip entire detections by excluding
+                #   them to an entirely separate queue, while we skip individual test cases via the
+                #   BaseTest.skip() method, such as when we are skipping all integration tests (see
+                #   DetectionBuilder.skipIntegrationTests)
+                # TODO: are we skipping by production status elsewhere?
                 detection = self.sync_obj.inputQueue.pop()
-                if detection.status != DetectionStatus.production.value:
-                    # NOTE: we handle skipping entire detections differently than we do skipping individual test cases;
-                    #   we skip entire detections by excluding them to an entirely separate queue, while we skip
-                    #   individual test cases via the BaseTest.skip() method, such as when we are skipping all
-                    #   integration tests (see DetectionBuilder.skipIntegrationTests)
-                    self.sync_obj.skippedQueue.append(detection)
-                    self.pbar.write(f"\nSkipping {detection.name} since it is status: {detection.status}\n")
-                    continue
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError:
                 # self.pbar.write(
@@ -663,12 +662,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # if the replay failed, record the test failure and return
         if not setup_results.success:
+            print("\n\nexception replaying attack data files\n\n")
             test.result = UnitTestResult()
             test.result.set_job_content(
                 None,
                 self.infrastructure,
                 exception=setup_results.exception,
-                duration=round(time.time() - test_start_time, 2)
+                duration=time.time() - test_start_time
             )
 
             # report the failure to the CLI
@@ -707,6 +707,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             raise e
         except Exception as e:
             # Init the test result and record a failure if there was an issue during the search
+            print("\n\nexception trying search until timeout\n\n")
             test.result = UnitTestResult()
             test.result.set_job_content(
                 None, self.infrastructure, exception=e, duration=time.time() - test_start_time
@@ -1136,12 +1137,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     copyfile(attack_data_file.data, tempfile)
                 except Exception as e:
                     raise Exception(
-                        f"Error copying local Attack Data File for [{Detection.name}] - [{attack_data_file.data}]: "
+                        f"Error copying local Attack Data File for [{test_group.name}] - [{attack_data_file.data}]: "
                         f"{str(e)}"
                     )
             else:
                 raise Exception(
-                    f"Attack Data File for [{Detection.name}] is local [{attack_data_file.data}], but does not exist."
+                    f"Attack Data File for [{test_group.name}] is local [{attack_data_file.data}], but does not exist."
                 )
 
         else:

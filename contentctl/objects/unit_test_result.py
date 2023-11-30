@@ -50,7 +50,8 @@ class UnitTestResult(BaseTestResult):
         elif content is None:
             self.job_content = None
             self.success = False
-            self.message = f"Error during test: {str(content)}"
+            if self.exception is not None:
+                self.message = f"EXCEPTION: {str(self.exception)}"
             self.sid_link = NO_SID
 
         # Set status if the test was not already skipped

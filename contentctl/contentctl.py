@@ -180,7 +180,6 @@ def test(args: argparse.Namespace):
         config.test.detections_list = args.detections_list
     if args.enable_integration_testing or config.test.enable_integration_testing:
         config.test.enable_integration_testing = True
-    # TODO: add setting to skip listing skips
 
     # validate and setup according to infrastructure type
     if config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.container:
@@ -594,7 +593,6 @@ def main():
         help="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk "
         "instance with ES installed)"
     )
-    # TODO: add setting to skip listing skips
 
     test_parser.set_defaults(func=test)
 

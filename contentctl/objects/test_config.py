@@ -491,8 +491,7 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
         title="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk"
         " instance with ES installed)"
     )
-    # TODO: add setting to skip listing skips
-    
+
 
 
 

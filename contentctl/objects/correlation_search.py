@@ -4,10 +4,10 @@ from typing import Union, Optional, Any
 from enum import Enum
 
 from pydantic import BaseModel, validator, Field
-from splunklib.results import JSONResultsReader, Message  # type: ignore
-from splunklib.binding import HTTPError, ResponseReader  # type: ignore
-import splunklib.client as splunklib  # type: ignore
-from tqdm import tqdm  # type: ignore
+from splunklib.results import JSONResultsReader, Message                                            # type: ignore
+from splunklib.binding import HTTPError, ResponseReader                                             # type: ignore
+import splunklib.client as splunklib                                                                # type: ignore
+from tqdm import tqdm                                                                               # type: ignore
 
 from contentctl.objects.risk_analysis_action import RiskAnalysisAction
 from contentctl.objects.notable_action import NotableAction
@@ -185,10 +185,6 @@ class PbarData(BaseModel):
         arbitrary_types_allowed = True
 
 
-# TODO: right now, we are creating one CorrelationSearch instance for each test case; typically, there is only one
-#   unit test, and thus one integration test, per detection, so this is not an issue. However, if we start having many
-#   test cases per detection, we will be duplicating some effort & network calls that we don't need to. Consider
-#   refactoring in order to re-use CorrelationSearch objects across tests in such a case
 class CorrelationSearch(BaseModel):
     """Representation of a correlation search in Splunk
 
@@ -297,10 +293,6 @@ class CorrelationSearch(BaseModel):
             values['splunk_path'],
         )
 
-    # TODO: ideally, we could handle this and the following init w/ a call to model_post_init, so
-    #   that all the logic is encapsulated w/in _parse_risk_and_notable_actions but that is a
-    #   pydantic v2 feature:
-    #   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
     @validator("risk_analysis_action", always=True)
     @classmethod
     def _init_risk_analysis_action(cls, v, values) -> Optional[RiskAnalysisAction]:
@@ -427,11 +419,11 @@ class CorrelationSearch(BaseModel):
         """
         # grab risk details if present
         self.risk_analysis_action = CorrelationSearch._get_risk_analysis_action(
-            self.saved_search.content  # type: ignore
+            self.saved_search.content                                                               # type: ignore
         )
 
         # grab notable details if present
-        self.notable_action = CorrelationSearch._get_notable_action(self.saved_search.content)  # type: ignore
+        self.notable_action = CorrelationSearch._get_notable_action(self.saved_search.content)      # type: ignore
 
     def refresh(self) -> None:
         """Refreshes the metadata in the SavedSearch entity, and re-parses the fields we care about
@@ -442,7 +434,7 @@ class CorrelationSearch(BaseModel):
         self.logger.debug(
             f"Refreshing SavedSearch metadata for {self.name}...")
         try:
-            self.saved_search.refresh()  # type: ignore
+            self.saved_search.refresh()                                                             # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered during refresh: {e}")
         self._parse_risk_and_notable_actions()
@@ -456,7 +448,7 @@ class CorrelationSearch(BaseModel):
         """
         self.logger.debug(f"Enabling {self.name}...")
         try:
-            self.saved_search.enable()  # type: ignore
+            self.saved_search.enable()                                                              # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered while enabling detection: {e}")
         if refresh:
@@ -471,14 +463,12 @@ class CorrelationSearch(BaseModel):
         """
         self.logger.debug(f"Disabling {self.name}...")
         try:
-            self.saved_search.disable()  # type: ignore
+            self.saved_search.disable()                                                             # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered while disabling detection: {e}")
         if refresh:
             self.refresh()
 
-    # TODO: evaluate sane defaults here (e.g. 3y is good now, but maybe not always...); NOTE also
-    #   that contentctl may already be munging timestamps for us
     def update_timeframe(
         self,
         earliest_time: str = ScheduleConfig.EARLIEST_TIME.value,
@@ -506,7 +496,7 @@ class CorrelationSearch(BaseModel):
         self.logger.info(data)
         self.logger.info(f"Updating timeframe for '{self.name}': {data}")
         try:
-            self.saved_search.update(**data)  # type: ignore
+            self.saved_search.update(**data)                                                        # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered while updating timeframe: {e}")
 
@@ -535,16 +525,12 @@ class CorrelationSearch(BaseModel):
         Queries the `risk` index and returns True if a risk event exists
         :return: a bool indicating whether a risk event exists in the risk index
         """
-        # TODO: make this a more specific query based on the search in question (and update the docstring to relfect
-        # when you do)
         # construct our query and issue our search job on the risk index
         query = "search index=risk | head 1"
         result_iterator = self._search(query)
         try:
             for result in result_iterator:
                 # we return True if we find at least one risk object
-                # TODO: re-evaluate this condition; we may want to look for multiple risk objects on different
-                #   entitities
                 # (e.g. users vs systems) and we may want to do more confirmational testing
                 if result["index"] == Indexes.RISK_INDEX.value:
                     self.logger.debug(
@@ -562,8 +548,6 @@ class CorrelationSearch(BaseModel):
         Queries the `notable` index and returns True if a risk event exists
         :return: a bool indicating whether a risk event exists in the risk index
         """
-        # TODO: make this a more specific query based on the search in question (and update the docstring to reflect
-        #   when you do)
         # construct our query and issue our search job on the risk index
         query = "search index=notable | head 1"
         result_iterator = self._search(query)
@@ -721,7 +705,7 @@ class CorrelationSearch(BaseModel):
                     wait_duration=elapsed_sleep_time,
                     exception=e,
                 )
-                self.logger.exception(f"{result.status.name}: {result.message}")  # type: ignore
+                self.logger.exception(f"{result.status.name}: {result.message}")                    # type: ignore
             else:
                 raise e
 
@@ -795,7 +779,6 @@ class CorrelationSearch(BaseModel):
             message = f"No result returned showing deletion in index {index}"
             raise ServerError(message)
 
-    # TODO: ensure that ES is configured to use the default index set by contenctl
     def cleanup(self, delete_test_index=False) -> None:
         """Cleans up after an integration test
 
@@ -814,7 +797,7 @@ class CorrelationSearch(BaseModel):
 
         # delete the indexes
         if delete_test_index:
-            self.indexes_to_purge.add(self.test_index)  # type: ignore
+            self.indexes_to_purge.add(self.test_index)                                              # type: ignore
         for index in self.indexes_to_purge:
             self._delete_index(index)
         self.indexes_to_purge.clear()

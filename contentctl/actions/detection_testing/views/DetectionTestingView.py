@@ -11,7 +11,6 @@ from contentctl.helper.utils import Utils
 from contentctl.objects.enums import DetectionStatus
 
 
-# TODO: adjust the view to report from test_groups instead of tests
 class DetectionTestingView(BaseModel, abc.ABC):
     config: TestConfig
     sync_obj: DetectionTestingManagerOutputDto

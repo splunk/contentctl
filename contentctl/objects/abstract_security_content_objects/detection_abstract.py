@@ -36,9 +36,6 @@ class Detection_Abstract(SecurityContentObject):
     check_references: bool = False
     references: list
 
-    # TODO: consider restructuring this as a set of associated tests; each test should be an individual case, but 2
-    #   tests may rely on the same data and thus it doesn't make sense to replay the data twice; similarly, it doesn't
-    #   make sense to run an integration test if the unit test failed. Currently, IntegrationTest is a field in UnitTest
     tests: list[Union[UnitTest, IntegrationTest]] = []
 
     # enrichments
@@ -185,7 +182,6 @@ class Detection_Abstract(SecurityContentObject):
                 raise ValueError("not valid data model: " + values["name"])
         return v
 
-    # TODO: if all of a detections tests are skipped, this will return True (is this desirable?)
     def all_tests_successful(self) -> bool:
         if len(self.tests) == 0:
             return False

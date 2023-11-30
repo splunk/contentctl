@@ -53,8 +53,8 @@ class FinalTestingStates(str, Enum):
 
 
 # max length of a test name
-# TODO: this max size is declared, and it is used appropriatel w/ .ljust, but nothing truncates test names to makes
-#   them the appropriate size
+# TODO: this max size is declared, and it is used appropriately w/ .ljust, but nothing truncates
+#   test names to makes them the appropriate size
 MAX_TEST_NAME_LENGTH = 70
 
 # The format string used for pbar reporting

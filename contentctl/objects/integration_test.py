@@ -18,7 +18,6 @@ class IntegrationTest(BaseTest):
     # The test result
     result: Union[None, IntegrationTestResult] = None
 
-    # TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
     @classmethod
     def derive_from_unit_test(cls, unit_test: UnitTest) -> Self:
         """

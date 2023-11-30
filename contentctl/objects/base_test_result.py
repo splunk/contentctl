@@ -26,16 +26,34 @@ class TestResultStatus(str, Enum):
 
 
 class BaseTestResult(BaseModel):
+    """
+    Base class for test results
+    """
+    # Message for the result
     message: Union[None, str] = None
+
+    # Any exception that was raised (may be None)
     exception: Union[Exception, None] = None
+
+    # The status (PASS, FAIL, SKIP, ERROR)
     status: Union[TestResultStatus, None] = None
+
+    # Whether the test passed (should only be True when status==PASS)
     success: bool = False
+
+    # The duration of the test in seconds
     duration: float = 0
+
+    # The search job metadata
     job_content: Union[Record, None] = None
+
+    # The Splunk endpoint URL
     sid_link: Union[None, str] = None
 
     class Config:
         validate_assignment = True
+
+        # Needed to allow for embedding of Exceptions in the model
         arbitrary_types_allowed = True
 
     @validator("success", always=True)
@@ -44,8 +62,9 @@ class BaseTestResult(BaseModel):
         """
         If a status is provided at initialization, we can derive success from it
         """
-        print(f"*** VALUES ***: {values}")
+        # If a status is provided an initialization, derive success
         if ("status" in values) and (values["status"] is not None):
+            # Success is True only if status is PASS
             if values["status"] == TestResultStatus.PASS:
                 return True
             else:
@@ -54,8 +73,6 @@ class BaseTestResult(BaseModel):
                 return False
         return v
 
-    # TODO: ensure that all invocations of test results have status set AND consider if SKIP should be success as True
-    #   or False
     @property
     def failed_and_complete(self) -> bool:
         """

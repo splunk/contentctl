@@ -45,33 +45,57 @@ from contentctl.actions.detection_testing.progress_bar import (
     TestingStates
 )
 
-
-# TODO: cleanup extra prints/logs, add docstrings/comments
-# TODO: cleanup noqas/ignores
-# TODO: test known failures/successes
-# TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly
-# TODO: SKIP/FAIL integration test on unit test fail/error (and SKIP?)
-# TODO: consolidate logic around success vs. status across unit and integration tests
-# TODO: validate duration, wait_duration, runDuration
-# TODO: consider renaming duration, wait_duration for clarity
-# TODO: add flag for enabling logging for correlation_search logging (?)
-# TODO: add flag for changing max_sleep time for integration tests
-# TODO: update extractor to work w/ new fields in output
+# DO THE FOLLOWING BEFORE REVIEW
 # TODO: look into getting better time elapsed updates on pbar statuses
-# TODO: add stats around total test cases and unit/integration test sucess/failure? maybe configurable reporting?
-# TODO: do a full package test
-# TODO: look into how index/risk index clearing surfaces to contentctl as an error (if at all)
 # TODO: look into why some pbar statuses seem to be overwriting each other (my status reporting and the
 #   completed/elapsed counter)
-# TODO: investigate failures (true, transient, latency?)
+# TODO: test known failures/successes
+# TODO: do a full package test
+# TODO: validate duration, wait_duration, runDuration
+# TODO: consolidate logic around success vs. status across unit and integration tests -> if we
+#   force the setting of a status, maybe make success a property instead of a field?; ensure that
+#   all invocations of test results have status set AND consider if SKIP should be success as True
+#   or False
+# TODO: for Detection.all_tests_successful, if all of a detections tests are skipped, it will 
+#   return True; is this desirable? We definitely don't want skips interspersed w/ passes to cause
+#   a failure overall
+
+
+# TODO: look into how notable/risk index clearing surfaces to contentctl as an error (if at all)
 # TODO: why is the unit test duration so long on Risk Rule for Dev Sec Ops by Repository? big dataset? long
 #   cleanup/upload? retries in clearing the "stash" index? Maybe the stash index gets super big... we shouldn't be
 #   testing on Correlation type detections anyway
+# TODO: cleanup extra prints/logs
+# TODO: cleanup noqas/ignores
+
+# LIST THE FOLLOWING AS PART OF THE REVIEW
+# TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly
 # TODO: make it clear to Eric that test durations will no longer account for
 #   replay/cleanup in this new test grouping model (in the CLI reporting; the recorded
 #   test duration in the result file will include the setup/cleanup time in the duration
 #   for both unit and integration tests (effectively double counted))
 
+# LIST THE FOLLOWING AS (POSSIBLE) FUTURE WORK IN THE REVIEW
+# TODO: update extractor to work w/ new fields in output
+# TODO: add flag for enabling logging for correlation_search logging (?)
+# TODO: add flag for changing max_sleep time for integration tests
+# TODO: add stats around total test cases and unit/integration test sucess/failure? maybe configurable reporting?
+# TODO: add setting to skip listing skips -> test_config.TestConfig, contentctl.test, contentctl.main
+# TODO: right now, we are creating one CorrelationSearch instance for each test case; typically, there is only one
+#   unit test, and thus one integration test, per detection, so this is not an issue. However, if we start having many
+#   test cases per detection, we will be duplicating some effort & network calls that we don't need to. Consider
+#   refactoring in order to re-use CorrelationSearch objects across tests in such a case
+# TODO: ideally, we could handle this and the following init w/ a call to model_post_init, so
+#   that all the logic is encapsulated w/in _parse_risk_and_notable_actions but that is a
+#   pydantic v2 feature (see the init validators for risk/notable actions):
+#   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
+# TODO: evaluate sane defaults for timeframe for integration testing (e.g. 3y is good now, but 
+#   maybe not always...); NOTE also that contentctl may already be munging timestamps for us
+# TODO: make the search for risk/notable events a more specific query based on the search in 
+#   question (and update the docstring to relfect when you do)
+
+# GENERAL CURIOSITY
+# TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
 
 class SetupTestGroupResults(BaseModel):
     exception: Union[Exception, None] = None
@@ -863,7 +887,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 pbar_data=pbar_data,
             )
 
-            # TODO: add max_sleep as a configurable value on cli/config
             # Run the test
             test.result = correlation_search.test()
         except Exception as e:

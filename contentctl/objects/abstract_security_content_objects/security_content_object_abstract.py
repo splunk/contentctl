@@ -18,7 +18,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
     description: str = Field(...,max_length=1000)
     file_path: FilePath = Field(...)
-    references: Optional[List[pydantic.HttpUrl]] = None
+    references: Optional[List[HttpUrl]] = None
     
     @field_validator('file_path')
     @classmethod

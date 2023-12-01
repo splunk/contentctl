@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, validator, ValidationError, field_validator, ValidationInfo, model_validator
+from pydantic import BaseModel, validator, ValidationError, field_validator, ValidationInfo, model_validator, FilePath
 from typing import Tuple, Optional
 import re
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -20,7 +20,6 @@ LOOKUPS_TO_IGNORE.add("other_lookups")
 
 class Lookup(SecurityContentObject):
     
-    
     collection: Optional[str] = None
     fields_list: Optional[str] = None
     filename: Optional[FilePath] = ...
@@ -28,12 +27,13 @@ class Lookup(SecurityContentObject):
     match_type: Optional[str] = None
     min_matches: Optional[int] = None
     case_sensitive_match: Optional[bool] = None
-    file_path:str = None
+    
 
     @field_validator('filename')
     @classmethod
-    def lookup_file_valid(cls, v: str, info: ValidationInfo):
-        if not v.endswith(".csv"):
+    def lookup_file_valid(cls, v: FilePath, info: ValidationInfo):
+        
+        if not v.name.endswith(".csv"):
             raise ValueError(f"All Lookup files must be CSV files and end in .csv.  The following file does not: '{v}'")
         return v
         

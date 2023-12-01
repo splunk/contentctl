@@ -31,7 +31,4 @@ class Story(SecurityContentObject):
         return [detection.name for detection in self.detections]
     def getInvestigationNames(self)->List[str]:
         return [investigation.name for investigation in self.investigations]
-    # @field_validator('references')
-    # @classmethod
-    # def references_check(cls, v, values):
-    #     return LinkValidator.SecurityContentObject_validate_references(v, values)
+ 

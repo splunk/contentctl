@@ -1,5 +1,3 @@
-from typing import Self
-
 from pydantic import BaseModel
 
 from contentctl.objects.unit_test import UnitTest
@@ -23,7 +21,7 @@ class TestGroup(BaseModel):
     attack_data: list[UnitTestAttackData]
 
     @classmethod
-    def derive_from_unit_test(cls, unit_test: UnitTest, name_prefix: str) -> Self:
+    def derive_from_unit_test(cls, unit_test: UnitTest, name_prefix: str) -> "TestGroup":
         """
         Given a UnitTest and a prefix, construct a TestGroup, with in IntegrationTest corresponding to the UnitTest
         :param unit_test: the UnitTest

@@ -1,9 +1,8 @@
-from bottle import route, run, template, Bottle, ServerAdapter
+from bottle import template, Bottle, ServerAdapter
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
 
-from contentctl.objects.unit_test_result import UnitTestResult
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 import jinja2
 import webbrowser

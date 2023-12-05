@@ -620,10 +620,15 @@ class CorrelationSearch(BaseModel):
             # skip test if no risk or notable action defined
             if not self.has_risk_analysis_action and not self.has_notable_action:
                 message = (
-                    f"No risk analysis or notable Adaptive Response actions defined for '{self.name}'; skipping "
-                    "integration test"
+                    f"TEST SKIPPED: No risk analysis or notable Adaptive Response actions defined "
+                    f"for '{self.name}'; skipping integration test"
                 )
-                result = IntegrationTestResult(message=message, status=TestResultStatus.SKIP, wait_duration=0)
+                result = IntegrationTestResult(
+                    message=message,
+                    status=TestResultStatus.SKIP,
+                    wait_duration=0,
+                    saved_search_path=self.saved_search.path,
+                )
             else:
                 # force the detection to run
                 self.logger.info(f"Forcing a run on {self.name}")
@@ -653,8 +658,9 @@ class CorrelationSearch(BaseModel):
                         if not self.risk_event_exists():
                             result = IntegrationTestResult(
                                 status=TestResultStatus.FAIL,
-                                message=f"No matching risk event created for '{self.name}'",
+                                message=f"TEST FAILED: No matching risk event created for '{self.name}'",
                                 wait_duration=elapsed_sleep_time,
+                                saved_search_path=self.saved_search.path,
                             )
                         else:
                             self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
@@ -668,8 +674,9 @@ class CorrelationSearch(BaseModel):
                             # adding more descriptive test results
                             result = IntegrationTestResult(
                                 status=TestResultStatus.FAIL,
-                                message=f"No matching notable event created for '{self.name}'",
+                                message=f"TEST FAILED: No matching notable event created for '{self.name}'",
                                 wait_duration=elapsed_sleep_time,
+                                saved_search_path=self.saved_search.path,
                             )
                         else:
                             self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
@@ -678,8 +685,9 @@ class CorrelationSearch(BaseModel):
                     if result is None:
                         result = IntegrationTestResult(
                             status=TestResultStatus.PASS,
-                            message=f"Expected risk and/or notable events were created for '{self.name}'",
+                            message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}",
                             wait_duration=elapsed_sleep_time,
+                            saved_search_path=self.saved_search.path,
                         )
                         break
 
@@ -701,9 +709,10 @@ class CorrelationSearch(BaseModel):
             if not raise_on_exc:
                 result = IntegrationTestResult(
                     status=TestResultStatus.ERROR,
-                    message=f"Exception raised during integration test: {e}",
+                    message=f"TEST FAILED (ERROR): Exception raised during integration test: {e}",
                     wait_duration=elapsed_sleep_time,
                     exception=e,
+                    saved_search_path=self.saved_search.path,
                 )
                 self.logger.exception(f"{result.status.name}: {result.message}")                    # type: ignore
             else:

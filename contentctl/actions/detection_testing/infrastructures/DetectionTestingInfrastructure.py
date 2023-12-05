@@ -25,10 +25,11 @@ import urllib.parse
 
 from contentctl.objects.enums import PostTestBehavior
 from contentctl.objects.detection import Detection
+from contentctl.objects.base_test import BaseTest
 from contentctl.objects.unit_test import UnitTest
+from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
-from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.objects.test_config import TestConfig, Infrastructure
 from contentctl.objects.test_group import TestGroup
@@ -46,27 +47,19 @@ from contentctl.actions.detection_testing.progress_bar import (
 )
 
 # DO THE FOLLOWING BEFORE REVIEW
+# TODO: handle correlation type tests
+# TODO: test known failures/successes
 # TODO: look into getting better time elapsed updates on pbar statuses
 # TODO: look into why some pbar statuses seem to be overwriting each other (my status reporting and the
 #   completed/elapsed counter)
-# TODO: test known failures/successes
 # TODO: do a full package test
-# TODO: validate duration, wait_duration, runDuration
-# TODO: consolidate logic around success vs. status across unit and integration tests -> if we
-#   force the setting of a status, maybe make success a property instead of a field?; ensure that
-#   all invocations of test results have status set AND consider if SKIP should be success as True
-#   or False
-# TODO: for Detection.all_tests_successful, if all of a detections tests are skipped, it will 
-#   return True; is this desirable? We definitely don't want skips interspersed w/ passes to cause
-#   a failure overall
-
-
 # TODO: look into how notable/risk index clearing surfaces to contentctl as an error (if at all)
 # TODO: why is the unit test duration so long on Risk Rule for Dev Sec Ops by Repository? big dataset? long
 #   cleanup/upload? retries in clearing the "stash" index? Maybe the stash index gets super big... we shouldn't be
 #   testing on Correlation type detections anyway
 # TODO: cleanup extra prints/logs
 # TODO: cleanup noqas/ignores
+# TODO: set correlation_search.ENABLE_LOGGING to False
 
 # LIST THE FOLLOWING AS PART OF THE REVIEW
 # TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly
@@ -89,13 +82,17 @@ from contentctl.actions.detection_testing.progress_bar import (
 #   that all the logic is encapsulated w/in _parse_risk_and_notable_actions but that is a
 #   pydantic v2 feature (see the init validators for risk/notable actions):
 #   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
-# TODO: evaluate sane defaults for timeframe for integration testing (e.g. 3y is good now, but 
+# TODO: evaluate sane defaults for timeframe for integration testing (e.g. 3y is good now, but
 #   maybe not always...); NOTE also that contentctl may already be munging timestamps for us
-# TODO: make the search for risk/notable events a more specific query based on the search in 
+# TODO: make the search for risk/notable events a more specific query based on the search in
 #   question (and update the docstring to relfect when you do)
+# TODO: break up the execute routines for integration/unit tests some more to remove code w/
+#   similar structure
+# TODO: skip docker and TA ext pull for custom infrastructure
 
 # GENERAL CURIOSITY
 # TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
+
 
 class SetupTestGroupResults(BaseModel):
     exception: Union[Exception, None] = None
@@ -514,11 +511,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     2
                 )
 
-            self.pbar.write(f"unit_test.duration: {test_group.unit_test.result.duration}")
-            self.pbar.write(f"integration_test.duration: {test_group.integration_test.result.duration}")
-            self.pbar.write(f"setup_results.duration: {setup_results.duration}")
-            self.pbar.write(f"cleanup_results.duration: {cleanup_results.duration}")
-
             # Write test group status
             self.pbar.write(
                 self.format_pbar_string(
@@ -539,7 +531,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         """
         # Capture the setup start time
         setup_start_time = time.time()
-        self.pbar.write(f"setup_start_time: {setup_start_time}")
 
         # Log the start of the test group
         self.pbar.reset()
@@ -560,6 +551,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         try:
             self.replay_attack_data_files(test_group, setup_start_time)
         except Exception as e:
+            print("\n\nexception replaying attack data files\n\n")
             results.exception = e
             results.success = False
 
@@ -686,11 +678,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # if the replay failed, record the test failure and return
         if not setup_results.success:
-            print("\n\nexception replaying attack data files\n\n")
             test.result = UnitTestResult()
             test.result.set_job_content(
                 None,
                 self.infrastructure,
+                TestResultStatus.ERROR,
                 exception=setup_results.exception,
                 duration=time.time() - test_start_time
             )
@@ -734,29 +726,23 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             print("\n\nexception trying search until timeout\n\n")
             test.result = UnitTestResult()
             test.result.set_job_content(
-                None, self.infrastructure, exception=e, duration=time.time() - test_start_time
+                None,
+                self.infrastructure,
+                TestResultStatus.ERROR,
+                exception=e,
+                duration=time.time() - test_start_time
             )
 
         # Pause here if the terminate flag has NOT been set AND either of the below are true:
         #   1. the behavior is always_pause
         #   2. the behavior is pause_on_failure and the test failed
-        if (
-            self.global_config.post_test_behavior == PostTestBehavior.always_pause
-            or (
-                self.global_config.post_test_behavior == PostTestBehavior.pause_on_failure
-                and (test.result is None or test.result.success is False)
-            )
-        ) and not self.sync_obj.terminate:
-            # Assume failure
-            res = "FAIL"
-
+        if self.pause_for_user(test):
             # Determine the state to report to the user
             if test.result is None:
                 res = "ERROR"
                 link = detection.search
             else:
-                if test.result.success:
-                    res = "PASS"
+                res = test.result.status.value.upper()
                 link = test.result.get_summary_dict()["sid_link"]
 
             self.format_pbar_string(
@@ -772,8 +758,17 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except Exception:
                 pass
 
-        # Report success
-        if test.result is not None and test.result.success:
+        # Treat the case where no result is created as an error
+        if test.result is None:
+            message = "TEST ERROR: No result generated during testing"
+            test.result = UnitTestResult(
+                message=message,
+                exception=ValueError(message),
+                status=TestResultStatus.ERROR
+            )
+
+        # Report a pass
+        if test.result.status == TestResultStatus.PASS:
             self.pbar.write(
                 self.format_pbar_string(
                     TestReportingType.UNIT,
@@ -783,8 +778,19 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
-        else:
-            # Report failure
+        elif test.result.status == TestResultStatus.SKIP:
+            # Report a skip
+            self.pbar.write(
+                self.format_pbar_string(
+                    TestReportingType.UNIT,
+                    f"{detection.name}:{test.name}",
+                    FinalTestingStates.SKIP.value,
+                    start_time=test_start_time,
+                    set_pbar=False,
+                )
+            )
+        elif test.result.status == TestResultStatus.FAIL:
+            # Report a FAIL
             self.pbar.write(
                 self.format_pbar_string(
                     TestReportingType.UNIT,
@@ -794,13 +800,27 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
+        elif test.result.status == TestResultStatus.ERROR:
+            # Report an ERROR
+            self.pbar.write(
+                self.format_pbar_string(
+                    TestReportingType.UNIT,
+                    f"{detection.name}:{test.name}",
+                    FinalTestingStates.ERROR.value,
+                    test_start_time,
+                    set_pbar=False,
+                )
+            )
+        else:
+            # Status was None or some other unexpected value
+            raise ValueError(
+                f"Status for (unit) '{detection.name}:{test.name}' was an unexpected"
+                f"value: {test.result.status}"
+            )
 
-        # Flush stdout for pbar
+        # Flush stdout and set duration
         stdout.flush()
-
-        # Add duration
-        if test.result is not None:
-            test.result.duration = round(time.time() - test_start_time, 2)
+        test.result.duration = round(time.time() - test_start_time, 2)
 
     def execute_integration_test(
         self,
@@ -816,19 +836,38 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Capture unit test start time
         test_start_time = time.time()
 
-        # First, check to see if the unit test failed; skip integration testing if so
-        if (unit_test_result is not None) and (unit_test_result.status == TestResultStatus.FAIL):
-            test.skip("TEST SKIPPED: associated unit test failed")
+        # First, check to see if the unit test failed; preemptively fail integration testing if so
+        if unit_test_result is not None:
+            # check status is set (complete) and if failed (FAIL/ERROR)
+            if unit_test_result.complete and unit_test_result.failed:
+                test.result = IntegrationTestResult(
+                    message="TEST FAILED (preemptive): associated unit test failed or encountered an error",
+                    exception=unit_test_result.exception,
+                    status=unit_test_result.status,
+                )
 
-        # Next, check to see if this test has been skipped (just now or elsewhere); log and return
-        # if so
-        if test.result is not None and test.result.status == TestResultStatus.SKIP:
-            # report the skip to the CLI
+        # Next, check to see if this test has already had its status set (just now or elsewhere);
+        # log and return if so
+        if (test.result is not None) and test.result.complete:
+            # Determine the reporting state (we should only encounter SKIP/FAIL/ERROR)
+            state: str
+            if test.result.status == TestResultStatus.SKIP:
+                state = FinalTestingStates.SKIP.value
+            elif test.result.status == TestResultStatus.FAIL:
+                state = FinalTestingStates.FAIL.value
+            elif test.result.status == TestResultStatus.ERROR:
+                state = FinalTestingStates.ERROR.value
+            else:
+                raise ValueError(
+                    f"Status for (integration) '{detection.name}:{test.name}' was preemptively set"
+                    f"to an unexpected value: {test.result.status}"
+                )
+            # report the status to the CLI
             self.pbar.write(
                 self.format_pbar_string(
                     TestReportingType.INTEGRATION,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.SKIP.value,
+                    state,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -846,16 +885,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # if the replay failed, record the test failure and return
         if not setup_results.success:
-            status: TestResultStatus
-            if setup_results.exception is not None:
-                status = TestResultStatus.ERROR
-            else:
-                status = TestResultStatus.FAIL
             test.result = IntegrationTestResult(
-                message="TEST FAILED: something went wrong during during TestGroup setup (e.g. attack data replay)",
+                message="TEST FAILED (ERROR): something went wrong during during TestGroup setup (e.g. attack data replay)",
                 exception=setup_results.exception,
                 duration=round(time.time() - test_start_time, 2),
-                status=status
+                status=TestResultStatus.ERROR
             )
 
             # report the failure to the CLI
@@ -900,23 +934,20 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Pause here if the terminate flag has NOT been set AND either of the below are true:
         #   1. the behavior is always_pause
         #   2. the behavior is pause_on_failure and the test failed
-        if (
-            self.global_config.post_test_behavior == PostTestBehavior.always_pause
-            or (
-                self.global_config.post_test_behavior == PostTestBehavior.pause_on_failure
-                and (test.result is None or test.result.failed_and_complete())
-            )
-        ) and not self.sync_obj.terminate:
+        if self.pause_for_user(test):
             # Determine the state to report to the user
             if test.result is None:
                 res = "ERROR"
             else:
                 res = test.result.status.value.upper()
 
+            # Get the link to the saved search in this specific instance
+            link = test.result.get_saved_search_url(self.infrastructure)
+
             self.format_pbar_string(
                 TestReportingType.INTEGRATION,
                 f"{detection.name}:{test.name}",
-                f"{res} (CTRL+D to continue)",
+                f"{res} - {link} (CTRL+D to continue)",
                 test_start_time,
             )
 
@@ -926,8 +957,17 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except Exception:
                 pass
 
+        # Treat the case where no result is created as an error
+        if test.result is None:
+            message = "TEST ERROR: No result generated during testing"
+            test.result = IntegrationTestResult(
+                message=message,
+                exception=ValueError(message),
+                status=TestResultStatus.ERROR
+            )
+
         # Report a pass
-        if (test.result is not None) and (test.result.status == TestResultStatus.PASS):
+        if test.result.status == TestResultStatus.PASS:
             self.pbar.write(
                 self.format_pbar_string(
                     TestReportingType.INTEGRATION,
@@ -937,7 +977,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
-        elif (test.result is not None) and (test.result.status == TestResultStatus.SKIP):
+        elif test.result.status == TestResultStatus.SKIP:
             # Report a skip
             self.pbar.write(
                 self.format_pbar_string(
@@ -948,8 +988,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
-        else:
-            # report the failure to the CLI
+        elif test.result.status == TestResultStatus.FAIL:
+            # report a FAIL
             self.pbar.write(
                 self.format_pbar_string(
                     TestReportingType.INTEGRATION,
@@ -959,11 +999,47 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     set_pbar=False,
                 )
             )
+        elif test.result.status == TestResultStatus.ERROR:
+            # report an ERROR
+            self.pbar.write(
+                self.format_pbar_string(
+                    TestReportingType.INTEGRATION,
+                    f"{detection.name}:{test.name}",
+                    FinalTestingStates.ERROR.value,
+                    start_time=test_start_time,
+                    set_pbar=False,
+                )
+            )
+        else:
+            # Status was None or some other unexpected value
+            raise ValueError(
+                f"Status for (integration) '{detection.name}:{test.name}' was an "
+                f"unexpected value: {test.result.status}"
+            )
 
         # Flush stdout and set duration
         stdout.flush()
-        if test.result is not None:
-            test.result.duration = round(time.time() - test_start_time, 2)
+        test.result.duration = round(time.time() - test_start_time, 2)
+
+    def pause_for_user(self, test: BaseTest) -> bool:
+        """
+        Returns true if test execution should pause for user investigation
+        :param test: the test instance
+        :returns: bool where True indicates we should pause for the user
+        """
+        # Ensure the worker has not been terminated
+        if not self.sync_obj.terminate:
+            # check if the behavior is to always pause
+            if self.global_config.post_test_behavior == PostTestBehavior.always_pause:
+                return True
+            elif self.global_config.post_test_behavior == PostTestBehavior.pause_on_failure:
+                # If the behavior is to pause on failure, check for failure (either explicitly, or
+                # just a lack of a result)
+                if test.result is None or test.result.failed:
+                    return True
+
+        # Otherwise, don't pause
+        return False
 
     def retry_search_until_timeout(
         self,
@@ -1052,10 +1128,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         test.result.set_job_content(
                             job.content,
                             self.infrastructure,
+                            TestResultStatus.ERROR,
                             exception=e,
-                            success=False,
                             duration=time.time() - search_start_time,
-                            )
+                        )
 
                         return
 
@@ -1073,10 +1149,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         test.result.set_job_content(
                             job.content,
                             self.infrastructure,
-                            success=True,
+                            TestResultStatus.PASS,
                             duration=time.time() - search_start_time,
                         )
-                        self.pbar.write(f"runDuration: {test.result.job_content.runDuration}")
                         return
 
                     else:
@@ -1090,8 +1165,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 test.result.set_job_content(
                     job.content,
                     self.infrastructure,
+                    TestResultStatus.ERROR,
                     exception=e,
-                    success=False,
                     duration=time.time() - search_start_time,
                 )
 
@@ -1103,7 +1178,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 test.result.set_job_content(
                     job.content,
                     self.infrastructure,
-                    success=False,
+                    TestResultStatus.FAIL,
                     duration=time.time() - search_start_time,
                 )
                 tick += 1

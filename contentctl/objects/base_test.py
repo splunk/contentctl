@@ -38,7 +38,7 @@ class BaseTest(BaseModel, ABC):
     result: Union[None, BaseTestResult] = None
 
     @abstractmethod
-    def skip(self) -> None:
+    def skip(self, message: str) -> None:
         """
         Skip a test
         """

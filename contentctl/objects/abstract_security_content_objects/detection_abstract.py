@@ -13,7 +13,6 @@ from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.config import ConfigDetectionConfiguration
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.baseline import Baseline
@@ -23,7 +22,7 @@ from contentctl.objects.enums import SecurityContentType
 
 
 class Detection_Abstract(SecurityContentObject):
-    #contentType: SecurityContentType = SecurityContentType.detections
+    # contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = ...
     file_path: str = None
     # status field is REQUIRED (the way to denote this with pydantic is ...)
@@ -183,16 +182,35 @@ class Detection_Abstract(SecurityContentObject):
         return v
 
     def all_tests_successful(self) -> bool:
+        """
+        Checks that all tests in the detection succeeded. If no tests are defined, consider that a
+        failure; if any test fails (FAIL, ERROR), consider that a failure; if any test has
+        no result or no status, consider that a failure. If all tests succeed (PASS, SKIP), consider
+        the detection a success
+        :returns: bool where True indicates all tests succeeded (they existed, complete and were 
+            PASS/SKIP)
+        """
+        # If no tests are defined, we consider it a failure for the detection
         if len(self.tests) == 0:
             return False
-        for test in self.tests:
-            # Ignore any skipped tests
-            if (test.result is not None) and (test.result.status == TestResultStatus.SKIP):
-                continue
 
-            # If any result is missing or if any has a failure, the return False
-            if test.result is None or test.result.success is False:
+        # Iterate over tests
+        for test in self.tests:
+            # Check that test.result is not None
+            if test.result is not None:
+                # Check status is set (complete)
+                if test.result.complete:
+                    # Check for failure (FAIL, ERROR)
+                    if test.result.failed:
+                        return False
+                else:
+                    # If no stauts, return False
+                    return False
+            else:
+                # If no result, return False
                 return False
+
+        # If all tests are successful (PASS/SKIP), return True
         return True
 
     def get_summary(

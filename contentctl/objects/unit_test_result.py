@@ -18,23 +18,38 @@ class UnitTestResult(BaseTestResult):
         self,
         content: Union[Record, None],
         config: Infrastructure,
+        status: TestResultStatus,
         exception: Union[Exception, None] = None,
-        success: bool = False,
         duration: float = 0,
-    ):
-        # Set duration, exception and success
+    ) -> bool:
+        """
+        Sets various fields in the result, pulling some fields from the provided search job's
+        content
+        :param content: search job content
+        :param config: the Infrastructure config
+        :param status: the test status (TestResultStatus)
+        :param exception: an Exception raised during the test (may be None)
+        :param duration: the overall duration of the test, including data replay and cleanup time
+            (float, in seconds)
+        :returns: bool indicating test success (inclusive of PASS and SKIP)
+        """
+        # Set duration, exception and status
         self.duration = round(duration, 2)
         self.exception = exception
-        self.success = success
+        self.status = status
 
         # Set the job content, if given
         if content is not None:
             self.job_content = content
 
-            if success:
+            if self.status == TestResultStatus.PASS:
                 self.message = "TEST PASSED"
-            else:
+            elif self.status == TestResultStatus.FAIL:
                 self.message = "TEST FAILED"
+            elif self.status == TestResultStatus.ERROR:
+                self.message == "TEST FAILED (ERROR)"
+            elif self.status == TestResultStatus.SKIP:
+                self.message = "TEST SKIPPED"
 
             if not config.instance_address.startswith("http://"):
                 sid_template = f"http://{SID_TEMPLATE}"
@@ -49,18 +64,9 @@ class UnitTestResult(BaseTestResult):
         # TODO: this error message seems not the most helpful, since content must be None for it to be set
         elif content is None:
             self.job_content = None
-            self.success = False
+            self.status = TestResultStatus.ERROR
             if self.exception is not None:
                 self.message = f"EXCEPTION: {str(self.exception)}"
             self.sid_link = NO_SID
-
-        # Set status if the test was not already skipped
-        if self.status != TestResultStatus.SKIP:
-            if self.exception is not None:
-                self.status = TestResultStatus.ERROR
-            elif not self.success:
-                self.status = TestResultStatus.FAIL
-            else:
-                self.status = TestResultStatus.PASS
 
         return self.success

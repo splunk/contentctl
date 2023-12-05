@@ -207,18 +207,19 @@ class Director():
         builder.addPlaybook(self.output_dto.playbooks)
         builder.addMacros(self.output_dto.macros)
         builder.addLookups(self.output_dto.lookups)
-        
+
         if self.input_dto.config.enrichments.attack_enrichment:
             builder.addMitreAttackEnrichment(self.attack_enrichment)
 
         if self.input_dto.config.enrichments.cve_enrichment:
             builder.addCve()
-    
+
         if self.input_dto.config.enrichments.splunk_app_enrichment:
             builder.addSplunkApp()
 
         # Skip all integration tests if configured to do so
-        if not self.input_dto.config.test.enable_integration_testing:
+        # TODO: is there a better way to handle this? The `test` portion of the config is not defined for validate
+        if (self.input_dto.config.test is not None) and (not self.input_dto.config.test.enable_integration_testing):
             builder.skipIntegrationTests()
 
 

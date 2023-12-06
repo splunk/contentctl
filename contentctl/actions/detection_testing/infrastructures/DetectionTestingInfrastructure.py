@@ -47,7 +47,6 @@ from contentctl.actions.detection_testing.progress_bar import (
 )
 
 # DO THE FOLLOWING BEFORE REVIEW
-# TODO: test known failures/successes
 # TODO: do a full package test
 # TODO: cleanup extra prints/logs
 # TODO: cleanup noqas/ignores

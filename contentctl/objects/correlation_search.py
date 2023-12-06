@@ -627,7 +627,6 @@ class CorrelationSearch(BaseModel):
                     message=message,
                     status=TestResultStatus.SKIP,
                     wait_duration=0,
-                    saved_search_path=self.saved_search.path,
                 )
             else:
                 # force the detection to run
@@ -660,7 +659,6 @@ class CorrelationSearch(BaseModel):
                                 status=TestResultStatus.FAIL,
                                 message=f"TEST FAILED: No matching risk event created for: {self.name}",
                                 wait_duration=elapsed_sleep_time,
-                                saved_search_path=self.saved_search.path,
                             )
                         else:
                             self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
@@ -676,7 +674,6 @@ class CorrelationSearch(BaseModel):
                                 status=TestResultStatus.FAIL,
                                 message=f"TEST FAILED: No matching notable event created for: {self.name}",
                                 wait_duration=elapsed_sleep_time,
-                                saved_search_path=self.saved_search.path,
                             )
                         else:
                             self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
@@ -687,7 +684,6 @@ class CorrelationSearch(BaseModel):
                             status=TestResultStatus.PASS,
                             message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}",
                             wait_duration=elapsed_sleep_time,
-                            saved_search_path=self.saved_search.path,
                         )
                         break
 
@@ -712,7 +708,6 @@ class CorrelationSearch(BaseModel):
                     message=f"TEST FAILED (ERROR): Exception raised during integration test: {e}",
                     wait_duration=elapsed_sleep_time,
                     exception=e,
-                    saved_search_path=self.saved_search.path,
                 )
                 self.logger.exception(f"{result.status.name}: {result.message}")                    # type: ignore
             else:

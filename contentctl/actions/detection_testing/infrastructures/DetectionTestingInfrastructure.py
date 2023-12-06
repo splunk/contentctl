@@ -48,15 +48,11 @@ from contentctl.actions.detection_testing.progress_bar import (
 
 # DO THE FOLLOWING BEFORE REVIEW
 # TODO: test known failures/successes
-# TODO: look into getting better time elapsed updates on pbar statuses
 # TODO: do a full package test
-# TODO: look into how notable/risk index clearing surfaces to contentctl as an error (if at all)
-# TODO: test integration testing link on pause
-# TODO: test failure propagation (integration)
 # TODO: cleanup extra prints/logs
 # TODO: cleanup noqas/ignores
 # TODO: set correlation_search.ENABLE_LOGGING to False
-# TODO: review
+# TODO: review TODOs
 
 # LIST THE FOLLOWING AS PART OF THE REVIEW
 # TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly
@@ -90,7 +86,9 @@ from contentctl.actions.detection_testing.progress_bar import (
 #   results altogether?
 # TODO: look into why some pbar statuses seem to be overwriting each other (my status reporting and the
 #   completed/elapsed counter)
+# TODO: look into getting better time elapsed updates on pbar statuses
 # TODO: add flag around behavior to propagate unit failures to integration
+# TODO: investigate 1-off count in "Completed X/X"
 
 # GENERAL CURIOSITY
 # TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
@@ -852,7 +850,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # check status is set (complete) and if failed (FAIL/ERROR)
             if unit_test_result.complete and unit_test_result.failed:
                 test.result = IntegrationTestResult(
-                    message="TEST FAILED (preemptive): associated unit test failed or encountered an error",
+                    message="TEST FAILED (PREEMPTIVE): associated unit test failed or encountered an error",
                     exception=unit_test_result.exception,
                     status=unit_test_result.status,
                 )
@@ -953,7 +951,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 res = test.result.status.value.upper()
 
             # Get the link to the saved search in this specific instance
-            link = test.result.get_saved_search_url(self.infrastructure)
+            link = f"https://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
 
             self.format_pbar_string(
                 TestReportingType.INTEGRATION,

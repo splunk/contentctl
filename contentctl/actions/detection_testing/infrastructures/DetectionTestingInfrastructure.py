@@ -23,7 +23,7 @@ import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
 
-from contentctl.objects.enums import PostTestBehavior
+from contentctl.objects.enums import PostTestBehavior, AnalyticsType
 from contentctl.objects.detection import Detection
 from contentctl.objects.base_test import BaseTest
 from contentctl.objects.unit_test import UnitTest
@@ -47,19 +47,16 @@ from contentctl.actions.detection_testing.progress_bar import (
 )
 
 # DO THE FOLLOWING BEFORE REVIEW
-# TODO: handle correlation type tests
 # TODO: test known failures/successes
 # TODO: look into getting better time elapsed updates on pbar statuses
-# TODO: look into why some pbar statuses seem to be overwriting each other (my status reporting and the
-#   completed/elapsed counter)
 # TODO: do a full package test
 # TODO: look into how notable/risk index clearing surfaces to contentctl as an error (if at all)
-# TODO: why is the unit test duration so long on Risk Rule for Dev Sec Ops by Repository? big dataset? long
-#   cleanup/upload? retries in clearing the "stash" index? Maybe the stash index gets super big... we shouldn't be
-#   testing on Correlation type detections anyway
+# TODO: test integration testing link on pause
+# TODO: test failure propagation (integration)
 # TODO: cleanup extra prints/logs
 # TODO: cleanup noqas/ignores
 # TODO: set correlation_search.ENABLE_LOGGING to False
+# TODO: review
 
 # LIST THE FOLLOWING AS PART OF THE REVIEW
 # TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly
@@ -89,10 +86,17 @@ from contentctl.actions.detection_testing.progress_bar import (
 # TODO: break up the execute routines for integration/unit tests some more to remove code w/
 #   similar structure
 # TODO: skip docker and TA ext pull for custom infrastructure
+# TODO: consider listing Correlation type detections as skips rather than excluding them from
+#   results altogether?
+# TODO: look into why some pbar statuses seem to be overwriting each other (my status reporting and the
+#   completed/elapsed counter)
+# TODO: add flag around behavior to propagate unit failures to integration
 
 # GENERAL CURIOSITY
 # TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
-
+# TODO: why is the unit test duration so long on Risk Rule for Dev Sec Ops by Repository? big dataset? long
+#   cleanup/upload? retries in clearing the "stash" index? Maybe the stash index gets super big... we shouldn't be
+#   testing on Correlation type detections anyway
 
 class SetupTestGroupResults(BaseModel):
     exception: Union[Exception, None] = None
@@ -836,7 +840,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Capture unit test start time
         test_start_time = time.time()
 
-        # First, check to see if the unit test failed; preemptively fail integration testing if so
+        # First, check to see if the test should be skipped (Hunting or Correlation)
+        if detection.type in [AnalyticsType.Hunting.value, AnalyticsType.Correlation.value]:
+            test.skip(
+                f"TEST SKIPPED: detection is type {detection.type} and cannot be integration "
+                "tested at this time"
+            )
+
+        # Next, check to see if the unit test failed; preemptively fail integration testing if so
         if unit_test_result is not None:
             # check status is set (complete) and if failed (FAIL/ERROR)
             if unit_test_result.complete and unit_test_result.failed:

@@ -23,6 +23,7 @@ from contentctl.objects.enums import SecurityContentType
 
 class Detection_Abstract(SecurityContentObject):
     # contentType: SecurityContentType = SecurityContentType.detections
+    # NOTE: because `use_enum_values` is configured, this will actually be type str
     type: AnalyticsType = ...
     file_path: str = None
     # status field is REQUIRED (the way to denote this with pydantic is ...)

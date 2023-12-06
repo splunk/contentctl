@@ -620,8 +620,8 @@ class CorrelationSearch(BaseModel):
             # skip test if no risk or notable action defined
             if not self.has_risk_analysis_action and not self.has_notable_action:
                 message = (
-                    f"TEST SKIPPED: No risk analysis or notable Adaptive Response actions defined "
-                    f"for '{self.name}'; skipping integration test"
+                    f"TEST SKIPPED: No risk analysis or notable Adaptive Response actions defined; "
+                    f"skipping integration test: {self.name}"
                 )
                 result = IntegrationTestResult(
                     message=message,
@@ -658,7 +658,7 @@ class CorrelationSearch(BaseModel):
                         if not self.risk_event_exists():
                             result = IntegrationTestResult(
                                 status=TestResultStatus.FAIL,
-                                message=f"TEST FAILED: No matching risk event created for '{self.name}'",
+                                message=f"TEST FAILED: No matching risk event created for: {self.name}",
                                 wait_duration=elapsed_sleep_time,
                                 saved_search_path=self.saved_search.path,
                             )
@@ -674,7 +674,7 @@ class CorrelationSearch(BaseModel):
                             # adding more descriptive test results
                             result = IntegrationTestResult(
                                 status=TestResultStatus.FAIL,
-                                message=f"TEST FAILED: No matching notable event created for '{self.name}'",
+                                message=f"TEST FAILED: No matching notable event created for: {self.name}",
                                 wait_duration=elapsed_sleep_time,
                                 saved_search_path=self.saved_search.path,
                             )

@@ -6,9 +6,9 @@
 action.escu = 0
 action.escu.enabled = 1
 {% if detection.status == "deprecated" %}
-description = **WARNING**, this detection has been marked **DEPRECATED** by the Splunk Threat Research team, this means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }}
+description = **WARNING**, this detection has been marked **DEPRECATED** by the Splunk Threat Research Team. This means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }}
 {% elif detection.status == "experimental" %}
-description = **WARNING**, this detection is marked **EXPERIMENTAL** by the Splunk Threat Research team, this means that the detected has been manually tested and we do not have the associated attack data to do automated testing or share this attack dataset due to it sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
+description = **WARNING**, this detection is marked **EXPERIMENTAL** by the Splunk Threat Research Team. This means that the detected has been manually tested and we do not have the associated attack data to perform automated testing or cannot share this attack dataset due to its sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
 {% else %}
 description = {{ detection.description }}
 {% endif %}

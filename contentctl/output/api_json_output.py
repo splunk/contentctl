@@ -5,8 +5,9 @@ import json
 from contentctl.output.json_writer import JsonWriter
 from contentctl.objects.enums import SecurityContentType
 
-# Maximum Lambda Request Response Limit it 6MB
+# Maximum Lambda Request Response Limit is 6MB
 # https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+# Note that if you are not using AWS Lambda, this file size may be increased.
 AWS_LAMBDA_LIMIT = 1024 * 1024 * 6 - 1
 
 class ApiJsonOutput():
@@ -22,26 +23,21 @@ class ApiJsonOutput():
                                                     'response_tasks.json', 
                                                     'lookups.json', 
                                                     'deployments.json'])->None:
-    # If size exceeds 90 percent of the maximum allowed size, throw a warning
+    # If size exceeds a certain percentage of the maximum allowed size, throw a warning
     size_warning = round(max_size * size_warning_percent)
     exceptions = []
-    warnings = []
     for file_name in file_names:
         file_path = os.path.join(output_path, file_name)
         size = os.path.getsize(file_path)
         if size >= max_size:
-            exceptions.append(f"\n -{file_name}: {size} bytes")
+            exceptions.append(f"\n   - {file_name}: {size} bytes ({(size/max_size)*100:.1f}% of max file size)")
         elif size >= size_warning:
-            print(f"WARNING: '{file_name}' is in danger of exceeding {max_size} bytes and is "
-                  f"currently {(size/max_size)*100:.1f}% of the maximum size. "
-                  "Exceeding this limit will cause an error when hosting on AWS Lambda. Please "
-                  " review the AWS Lambda Limits here: "
-                  "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html")
+            print(f"WARNING: '{file_name}' is in danger of exceeding {max_size} bytes and is "\
+                  f"currently {(size/max_size)*100:.1f}% of the maximum size. ")
     
     if len(exceptions) > 0:
-        size_error_message = f"ERROR: The following files exceed the maximum JSON File size of {max_size} bytes. "
-                             "This will cause issues when hosting on AWS Lambda "
-                             f"(https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html):\n -{''.join(exceptions)}"
+        size_error_message = f"ERROR: The following files exceed the maximum JSON File size "\
+                             f"of {max_size} bytes:{''.join(exceptions)}"
         raise(Exception(size_error_message))
     return     
  

@@ -28,6 +28,10 @@ class DataModel(enum.Enum):
     Splunk_Audit = 17
 
 
+class PlaybookType(str, enum.Enum):
+    INVESTIGATION = "Investigation"
+    RESPONSE = "Response"
+
 class SecurityContentType(enum.Enum):
     detections = 1
     baselines = 2

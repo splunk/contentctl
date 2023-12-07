@@ -112,7 +112,7 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
         default="https://registry.hub.docker.com/splunk/splunk:latest",
         title="Full path to the container image to be used",
     )
-    infrastructures: list[Infrastructure] = Field([Infrastructure()],gt=0)
+    infrastructures: list[Infrastructure] = Field([Infrastructure()],min_length=1)
 
     
 
@@ -244,9 +244,7 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
     
 class VersionControlConfig(BaseModel, extra='forbid', validate_assignment=True):
     repo_path: DirectoryPath = Field(default=".", title="Path to the root of your app")
-    repo_url: AnyHttpUrl = Field(
-        default="https://github.com/your_organization/your_repo",
-        title="HTTP(s) path to the repo for repo_path.  If this field is blank, it will be inferred from the repo",
+    repo_url: Optional[AnyHttpUrl] = Field(None,title="HTTP(s) path to the repo for repo_path.  If this field is blank, it will be inferred from the repo",
     )
     target_branch: Optional[str] = Field(None,title="Main branch of the repo or target of a Pull Request/Merge Request.")
     test_branch: Optional[str] = Field(None, title="Branch of the repo to be tested, if applicable.")
@@ -288,6 +286,8 @@ class VersionControlConfig(BaseModel, extra='forbid', validate_assignment=True):
             raise(ValueError(f"Error reading remote_url from the repo located at '{self.repo_path}'"))
 
         if self.repo_url is not None and remote_url_from_repo != self.repo_url:
+            import code
+            code.interact(local=locals())
             raise(ValueError(f"The url of the remote repo supplied in the config file {self.repo_url} does not "\
                               f"match the value read from the repository at {self.repo_path}, {remote_url_from_repo}"))
 

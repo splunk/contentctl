@@ -1,8 +1,8 @@
 import re
 from tracemalloc import start
 from unittest.mock import DEFAULT
-from pydantic import BaseModel, validator, root_validator,Field
-from typing import Union, Callable
+from pydantic import BaseModel, validator, model_validator,Field
+from typing import Union, Callable, Any
 import requests
 import urllib3, urllib3.exceptions
 import time
@@ -14,6 +14,7 @@ import shelve
 DEFAULT_USER_AGENT_STRING = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36"
 ALLOWED_HTTP_CODES = [200]
 class LinkStats(BaseModel):
+
     #Static Values
     method: Callable = requests.get
     allowed_http_codes: list[int] = ALLOWED_HTTP_CODES 
@@ -42,17 +43,17 @@ class LinkStats(BaseModel):
         self.referencing_files.add(referencing_file)
         return self.valid
     
-    @root_validator
-    def check_reference(cls, values):
+    @model_validator(mode="before")
+    def check_reference(cls, data:Any)->Any:
         start_time = time.time()
         #Get out all the fields names to make them easier to reference
-        method = values['method']
-        reference = values['reference']
-        timeout_seconds = values['timeout_seconds']
-        headers = values['headers']
-        allow_redirects = values['allow_redirects']
-        verify_ssl = values['verify_ssl']
-        allowed_http_codes = values['allowed_http_codes']
+        method = data['method']
+        reference = data['reference']
+        timeout_seconds = data['timeout_seconds']
+        headers = data['headers']
+        allow_redirects = data['allow_redirects']
+        verify_ssl = data['verify_ssl']
+        allowed_http_codes = data['allowed_http_codes']
         if not (reference.startswith("http://") or reference.startswith("https://")):
             raise(ValueError(f"Reference {reference} does not begin with http(s). Only http(s) references are supported"))
         
@@ -61,29 +62,29 @@ class LinkStats(BaseModel):
                             headers = headers, 
                             allow_redirects=allow_redirects, verify=verify_ssl)
             resolution_time = time.time() - start_time
-            values['status_code'] = get.status_code
-            values['resolution_time'] = resolution_time
+            data['status_code'] = get.status_code
+            data['resolution_time'] = resolution_time
             if reference != get.url:
-                values['redirect'] = get.url
+                data['redirect'] = get.url
             else:
-                values['redirect'] = None #None is also already the default
+                data['redirect'] = None #None is also already the default
 
             #Returns the updated values and sets them for the object
             if get.status_code in allowed_http_codes:
-                values['valid'] = True
+                data['valid'] = True
             else:
                 #print(f"Unacceptable HTTP Status Code {get.status_code} received for {reference}")
-                values['valid'] = False
-            return values    
+                data['valid'] = False
+            return data    
 
         except Exception as e:
             resolution_time = time.time() - start_time
             #print(f"Reference {reference} was not reachable after {resolution_time:.2f} seconds")
-            values['status_code'] = 0
-            values['valid'] = False
-            values['redirect'] = None
-            values['resolution_time'] = resolution_time
-            return values
+            data['status_code'] = 0
+            data['valid'] = False
+            data['redirect'] = None
+            data['resolution_time'] = resolution_time
+            return data
 
 
 class LinkValidator(abc.ABC):

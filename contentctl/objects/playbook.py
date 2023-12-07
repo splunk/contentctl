@@ -7,14 +7,14 @@ from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.playbook_tags import PlaybookTag
 from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType
+from contentctl.objects.enums import SecurityContentType, PlaybookType
 
 
 class Playbook(SecurityContentObject):
-    type: str
+    type: PlaybookType = ...
     how_to_implement: str = ...
     playbook: str = ...
-    app_list: list[str] = Field(...,gt=0) 
+    app_list: list[str] = Field(...,min_length=0) 
     tags: PlaybookTag = ...
 
 

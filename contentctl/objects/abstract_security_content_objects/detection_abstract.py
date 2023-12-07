@@ -7,9 +7,9 @@ import time
 import sys
 import re
 import pathlib
-from pydantic import BaseModel, validator, root_validator, Extra
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Optional, List
 from datetime import datetime, timedelta
 
 
@@ -31,16 +31,13 @@ from contentctl.objects.enums import SecurityContentType
 class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = ...
-    file_path: str = None
-    #status field is REQUIRED (the way to denote this with pydantic is ...)
     status: DetectionStatus = ...
-    data_source: list[str]
+    data_source: Optional[List[]] = None
     tags: DetectionTags
     search: Union[str, dict]
-    how_to_implement: str
-    known_false_positives: str
+    how_to_implement: str = ...
+    known_false_positives: str = ...
     check_references: bool = False  
-    references: list
     
     tests: list[UnitTest] = []
 
@@ -66,8 +63,14 @@ class Detection_Abstract(SecurityContentObject):
         use_enum_values = True
 
 
-    def get_content_dependencies(self)->list[SecurityContentObject]:    
-        return self.playbooks + self.baselines + self.macros + self.lookups
+    def get_content_dependencies(self)->list[SecurityContentObject]:
+        #Do this separately to satisfy type checker
+        objects: list[SecurityContentObject] = []
+        objects += self.playbooks 
+        objects += self.baselines
+        objects += self.macros 
+        objects += self.lookups     
+        return objects
     
     @staticmethod
     def get_detections_from_filenames(detection_filenames:set[str], all_detections:list[Detection_Abstract])->list[Detection_Abstract]:
@@ -86,20 +89,23 @@ class Detection_Abstract(SecurityContentObject):
     #         raise ValueError("not valid analytics type: " + values["name"])
     #     return v
 
-    @validator('how_to_implement', 'search', 'known_false_positives')
-    def encode_error(cls, v, values, field):
-        if not isinstance(v,str):
-            if isinstance(v,dict) and field.name == "search":
-                #This is a special case of the search field.  It can be a dict, containing
-                #a sigma search, if we are running the converter. So we will not
-                #validate the field further. Additional validation will be done
-                #during conversion phase later on
-                return v
-            else:
-                #No other fields should contain a non-str type:
-                raise ValueError(f"Error validating field '{field.name}'. Field MUST be be a string, not type '{type(v)}' ")
-
+    @field_validator('search')
+    @classmethod
+    def encode_error_search(cls, v: Union[str,dict], info: ValidationInfo):
+        if isinstance(v,dict):
+            #This is a special case of the search field.  It can be a dict, containing
+            #a sigma search, if we are running the converter. So we will not
+            #validate the field further. Additional validation will be done
+            #during conversion phase later on
+            return v
+        
         return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+
+
+    @field_validator('how_to_implement', 'known_false_positives')
+    @classmethod
+    def encode_error(cls, v: str, info: ValidationInfo):
+        return SecurityContentObject.free_text_field_valid(v,info)
 
     @validator("status")
     def validation_for_ba_only(cls, v, values):
@@ -112,24 +118,7 @@ class Detection_Abstract(SecurityContentObject):
                 raise ValueError(f"The following is NOT an ssa_ detection, but has 'status: {v}' which may ONLY be used for ssa_ detections: {values['file_path']}")
         
         return v
-
-    # @root_validator
-    # def search_validation(cls, values):
-    #     if 'ssa_' not in values['file_path']:
-    #         if not '_filter' in values['search']:
-    #             raise ValueError('filter macro missing in: ' + values["name"])
-    #         if any(x in values['search'] for x in ['eventtype=', 'sourcetype=', ' source=', 'index=']):
-    #             if not 'index=_internal' in values['search']:
-    #                 raise ValueError('Use source macro instead of eventtype, sourcetype, source or index in detection: ' + values["name"])
-    #     return values
-
-    # disable it because of performance reasons
-    # @validator('references')
-    # def references_check(cls, v, values):
-    #     return LinkValidator.check_references(v, values["name"])
-    #     return v
     
-
     @validator("search")
     def search_obsersables_exist_validate(cls, v, values):
         if type(v) is str:

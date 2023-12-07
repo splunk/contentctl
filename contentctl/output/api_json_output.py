@@ -63,6 +63,7 @@ class ApiJsonOutput():
                         "data_source": True,
                         "tests": True,
                         "cve_enrichment": True,
+                        "file_path": True,
                         "tags": 
                             {
                                 "file_path": True,
@@ -74,7 +75,13 @@ class ApiJsonOutput():
                             }
                     }
                 ))
-            
+
+            for detection in obj_array:
+                # Loop through each macro in the detection
+                for macro in detection["macros"]:
+                    # Remove the 'file_path' key if it exists
+                    macro.pop("file_path", None)
+
             JsonWriter.writeJsonObject(os.path.join(output_path, 'detections.json'), {'detections': obj_array })
 
             ### Code to be added to contentctl to ship filter macros to macros.json
@@ -98,6 +105,10 @@ class ApiJsonOutput():
             for item in uniques:
                 obj_array.append(json.loads(item))
 
+            for obj in obj_array:
+                if 'file_path' in obj:
+                   del obj['file_path']
+
             JsonWriter.writeJsonObject(os.path.join(output_path, 'macros.json'), {'macros': obj_array})
 
         
@@ -108,7 +119,8 @@ class ApiJsonOutput():
                 obj_array.append(story.dict(exclude_none=True,
                     exclude =
                     {
-                        "investigations": True
+                        "investigations": True,
+                        "file_path": True
                     }
                 ))
 
@@ -133,7 +145,12 @@ class ApiJsonOutput():
             obj_array = []
             for investigation in objects:
                 investigation.id = str(investigation.id)
-                obj_array.append(investigation.dict(exclude_none=True))
+                obj_array.append(investigation.dict(
+                    exclude =
+                    {
+                        "file_path":True,
+                    }
+                ))
 
             JsonWriter.writeJsonObject(os.path.join(output_path, 'response_tasks.json'), {'response_tasks': obj_array })
         
@@ -141,7 +158,12 @@ class ApiJsonOutput():
             obj_array = []
             for lookup in objects:
 
-                obj_array.append(lookup.dict(exclude_none=True))
+                obj_array.append(lookup.dict(
+                    exclude =
+                    {
+                        "file_path":True,
+                    }
+                ))
 
 
             JsonWriter.writeJsonObject(os.path.join(output_path, 'lookups.json'), {'lookups': obj_array })

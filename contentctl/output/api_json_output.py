@@ -5,9 +5,43 @@ import json
 from contentctl.output.json_writer import JsonWriter
 from contentctl.objects.enums import SecurityContentType
 
+# Maximum Lambda Request Response Limit it 6MB
+# https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+AWS_LAMBDA_LIMIT = 1024 * 1024 * 6 - 1
 
 class ApiJsonOutput():
 
+
+ def checkMaxJsonObjectSize(self, output_path:str, 
+                            max_size=AWS_LAMBDA_LIMIT,
+                            size_warning_percent:float = .9,
+                            file_names:list[str] = ['detections.json', 
+                                                    'macros.json', 
+                                                    'stories.json', 
+                                                    'baselines.json', 
+                                                    'response_tasks.json', 
+                                                    'lookups.json', 
+                                                    'deployments.json'])->None:
+    # If size exceeds 90 percent of the maximum allowed size, throw a warning
+    size_warning = round(max_size * size_warning_percent)
+    exceptions = []
+    warnings = []
+    for file_name in file_names:
+        file_path = os.path.join(output_path, file_name)
+        size = os.path.getsize(file_path)
+        if size >= max_size:
+            exceptions.append(f"{file_path} - {size} bytes")
+        elif size >= size_warning:
+            percent_of_maximum_size = round((size / max_size, 2) * 100
+            print(f"Warning: '{file_path}' is in danger of exceeding {max_size} bytes and is "
+                  "currently {percent_of_maximum_size}% of the maximum size. "
+                  "Exceeding this limit will cause an error when hosting on AWS Lambda."
+    
+    if len(exceptions) > 0:
+        size_error_message = f"The following files exceed the maximum JSON File size of {max_size} bytes:\n -{'\n -'.join(exceptions)}"
+        raise(Exception(size_error_message))
+    return     
+ 
  def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:
             obj_array = []

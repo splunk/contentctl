@@ -22,8 +22,7 @@ class SSADetectionBuilder():
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
         yml_dict["tags"]["name"] = yml_dict["name"]
-        self.security_content_obj = SSADetection.parse_obj(yml_dict)
-        self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
+        self.security_content_obj = SSADetection.parse_obj(yml_dict)      
 
 
     def addProvidingTechnologies(self) -> None:

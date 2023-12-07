@@ -25,16 +25,16 @@ from contentctl.objects.lookup import Lookup
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.playbook import Playbook
 from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType
+from contentctl.objects.enums import DataSource,ProvidingTechnology
 
 
 class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = ...
     status: DetectionStatus = ...
-    data_source: Optional[List[]] = None
-    tags: DetectionTags
-    search: Union[str, dict]
+    data_source: Optional[List[DataSource]] = None
+    tags: DetectionTags = ...
+    search: Union[str, dict] = ...
     how_to_implement: str = ...
     known_false_positives: str = ...
     check_references: bool = False  
@@ -42,22 +42,19 @@ class Detection_Abstract(SecurityContentObject):
     tests: list[UnitTest] = []
 
     # enrichments
-    datamodel: list = None
-    deployment: ConfigDetectionConfiguration = None
-    annotations: dict = None
-    risk: list = None
+    datamodel: Optional[List] = None
+    deployment: Optional[ConfigDetectionConfiguration] = None
+    annotations: dict = {}
     playbooks: list[Playbook] = []
     baselines: list[Baseline] = []
-    mappings: dict = None
+    mappings: Optional[dict] = None
     macros: list[Macro] = []
     lookups: list[Lookup] = []
-    cve_enrichment: list = None
-    splunk_app_enrichment: list = None
+    cve_enrichment: Optional[List[dict]] = None
+    splunk_app_enrichment: Optional[List[dict]] = None
     
-    source: str = None
-    nes_fields: str = None
-    providing_technologies: list = None
-    runtime: str = None
+    nes_fields: Optional[str] = None
+    providing_technologies: Optional[List[ProvidingTechnology]] = None
 
     class Config:
         use_enum_values = True
@@ -72,6 +69,9 @@ class Detection_Abstract(SecurityContentObject):
         objects += self.lookups     
         return objects
     
+    def getSource(self)->str:
+        return self.file_path.parts[-2]
+
     @staticmethod
     def get_detections_from_filenames(detection_filenames:set[str], all_detections:list[Detection_Abstract])->list[Detection_Abstract]:
         detection_filenames = set(str(pathlib.Path(filename).absolute()) for filename in detection_filenames)

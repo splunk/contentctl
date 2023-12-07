@@ -31,7 +31,7 @@ class BAYmlOutput():
 
             # add research object
             RESEARCH_SITE_BASE = 'https://research.splunk.com/'
-            research_site_url = RESEARCH_SITE_BASE + obj.source + "/" + obj.id + "/"
+            research_site_url = RESEARCH_SITE_BASE + obj.getSource() + "/" + obj.id + "/"
             obj.tags.research_site_url = research_site_url
 
             # add ocsf schema tag

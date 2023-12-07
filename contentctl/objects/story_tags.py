@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, field_validator, ValidationError, Field, ValidationInfo
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
-from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhases
+from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhase
 from typing import List
 from typing_extensions import Annotated
 from enum import Enum
@@ -30,4 +30,4 @@ class StoryTags(BaseModel):
     mitre_attack_enrichments: List[MitreAttackEnrichment] = []
     mitre_attack_tactics: List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]] = []
     datamodels: List[DataModel] = []
-    kill_chain_phases: List[KillChainPhases] = []
+    kill_chain_phases: List[KillChainPhase] = []

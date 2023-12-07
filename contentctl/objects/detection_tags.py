@@ -1,59 +1,57 @@
 import re
 
-from pydantic import BaseModel, validator, ValidationError, root_validator
+from pydantic import BaseModel, validator, ValidationError, root_validator,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
+from contentctl.objects.enums import Cis18Value, AssetType, KillChainPhase, NistCategory, RiskLevel
+from typing import List, Optional, Annotated
 
 class DetectionTags(BaseModel):
     # detection spec
     name: str
     analytic_story: list
-    asset_type: str
-    automated_detection_testing: str = None
-    cis20: list = None
-    confidence: str
-    impact: int
-    kill_chain_phases: list = None
-    mitre_attack_id: list = None
-    nist: list = None
+    asset_type: AssetType = ...
+    #enum is intentionally Cis18 even though field is named cis20 for legacy reasons
+    cis20: Optional[List[Cis18Value]] = None 
+    confidence: NonNegativeInt = Field(...,le=100)
+    impact: NonNegativeInt = Field(...,le=100)
+    @computed_field
+    @property
+    def risk_score(self)->int:
+        return round((self.confidence * self.impact)/100)
+    
+    kill_chain_phases: Optional[list[KillChainPhase]] = None
+    mitre_attack_id: Optional[List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]]] = None
+    nist: Optional[list[NistCategory]] = None
     observable: list[Observable] = []
-    message: str
+    message: Optional[str] = ...
     product: list
     required_fields: list
-    risk_score: int
+    
     security_domain: str
     risk_severity: str = None
-    cve: list = None
-    supported_tas: list = None
-    atomic_guid: list = None
+    cve: Optional[List[str]] = Field(pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")
+    atomic_guid: Optional[list[UUID4]] = None
     drilldown_search: str = None
-    manual_test: str = None
 
 
     # enrichment
     mitre_attack_enrichments: list[MitreAttackEnrichment] = []
-    confidence_id: int = None
-    impact_id: int = None
-    context_ids: list = None
-    risk_level_id: int = None
-    risk_level: str = None
-    observable_str: str = None
-    evidence_str: str = None
-    kill_chain_phases_id: list = None
-    research_site_url: str = None
-    event_schema: str = None
+    confidence_id: Optional[PositiveInt] = Field(ge=1,le=3)
+    impact_id: Optional[PositiveInt] = Field(ge=1,le=5)
+    # context_ids: list = None
+    risk_level_id: Optional[NonNegativeInt] = Field(le=4)
+    risk_level: Optional[RiskLevel] = None
+    #observable_str: str = None
+    evidence_str: Optional[str] = None
+    kill_chain_phases_id: Optional[dict[KillChainPhase,dict[str,int]]] = None
+    
+    research_site_url: Optional[HttpUrl] = None
+    event_schema: str = "ocsf"
     mappings: list = None
     annotations: dict = None
 
-
-    @validator('cis20')
-    def tags_cis20(cls, v, values):
-        pattern = '^CIS ([0-9]|1[0-9]|20)$' #DO NOT match leading zeroes and ensure no extra characters before or after the string
-        for value in v:
-            if not re.match(pattern, value):
-                raise ValueError(f"CIS control '{value}' is not a valid Control ('CIS 1' -> 'CIS 20'):  {values['name']}")
-        return v
     
     @validator('nist')
     def tags_nist(cls, v, values):
@@ -79,13 +77,13 @@ class DetectionTags(BaseModel):
         else:
             return v
 
-    @validator('context_ids')
-    def tags_context(cls, v, values):
-        context_list = SES_CONTEXT_MAPPING.keys()
-        for value in v:
-            if value not in context_list:
-                raise ValueError('context value not valid for ' + values["name"] + '. valid options are ' + str(context_list) )
-        return v
+    # @validator('context_ids')
+    # def tags_context(cls, v, values):
+    #     context_list = SES_CONTEXT_MAPPING.keys()
+    #     for value in v:
+    #         if value not in context_list:
+    #             raise ValueError('context value not valid for ' + values["name"] + '. valid options are ' + str(context_list) )
+    #     return v
 
     @validator('impact')
     def tags_impact(cls, v, values):

@@ -37,7 +37,7 @@ tags:
 | ----------- | ----------- |--------------|
 {%- if object.detections %}
 {%- for detection in object.detections %}
-| [{{ detection.name }}](/{{ detection.source }}/{{ detection.name | lower | replace(' ', '_') }}/) | {% if detection.tags.mitre_attack_enrichments %}{% for attack in detection.tags.mitre_attack_enrichments -%}[{{ attack.mitre_attack_technique }}](/tags/#{{ attack.mitre_attack_technique | lower | replace(" ", "-") }}){% if not loop.last %}, {% endif %}{%- endfor %}{% else %}None{%- endif -%} | {{ detection.type }} |
+| [{{ detection.name }}](/{{ detection.getSource() }}/{{ detection.name | lower | replace(' ', '_') }}/) | {% if detection.tags.mitre_attack_enrichments %}{% for attack in detection.tags.mitre_attack_enrichments -%}[{{ attack.mitre_attack_technique }}](/tags/#{{ attack.mitre_attack_technique | lower | replace(" ", "-") }}){% if not loop.last %}, {% endif %}{%- endfor %}{% else %}None{%- endif -%} | {{ detection.type }} |
 {%- endfor %}
 {%- endif %}
 

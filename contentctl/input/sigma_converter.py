@@ -228,7 +228,7 @@ class SigmaConverter():
         detection = Detection.parse_obj(yml_dict)
         detection.name = name
 
-        detection.source = os.path.split(os.path.dirname(detection_path))[-1]  
+          
         return detection 
 
 

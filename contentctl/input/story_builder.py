@@ -49,7 +49,7 @@ class StoryBuilder():
                         tags_obj = {"mitre_attack_enrichments": mitre_attack_enrichments_list}
                         matched_detections.append({
                             "name": detection.name,
-                            "source": detection.source,
+                            "source": detection.getSource(),
                             "type": detection.type,
                             "tags": tags_obj
                         })

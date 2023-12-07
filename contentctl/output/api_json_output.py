@@ -32,13 +32,16 @@ class ApiJsonOutput():
         if size >= max_size:
             exceptions.append(f"\n -{file_name}: {size} bytes")
         elif size >= size_warning:
-            percent_of_maximum_size = round(size / max_size, 2) * 100
             print(f"WARNING: '{file_name}' is in danger of exceeding {max_size} bytes and is "
-                  f"currently {percent_of_maximum_size}% of the maximum size. "
-                  "Exceeding this limit will cause an error when hosting on AWS Lambda.")
+                  f"currently {(size/max_size)*100:.1f}% of the maximum size. "
+                  "Exceeding this limit will cause an error when hosting on AWS Lambda. Please "
+                  " review the AWS Lambda Limits here: "
+                  "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html")
     
     if len(exceptions) > 0:
-        size_error_message = f"ERROR: The following files exceed the maximum JSON File size of {max_size} bytes:\n -{''.join(exceptions)}"
+        size_error_message = f"ERROR: The following files exceed the maximum JSON File size of {max_size} bytes. "
+                             "This will cause issues when hosting on AWS Lambda "
+                             f"(https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html):\n -{''.join(exceptions)}"
         raise(Exception(size_error_message))
     return     
  

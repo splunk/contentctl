@@ -30,10 +30,10 @@ class ApiJsonOutput():
         file_path = os.path.join(output_path, file_name)
         size = os.path.getsize(file_path)
         if size >= max_size:
-            exceptions.append(f"\n -{file_path}: {size} bytes")
+            exceptions.append(f"\n -{file_name}: {size} bytes")
         elif size >= size_warning:
             percent_of_maximum_size = round(size / max_size, 2) * 100
-            print(f"Warning: '{file_path}' is in danger of exceeding {max_size} bytes and is "
+            print(f"Warning: '{file_name}' is in danger of exceeding {max_size} bytes and is "
                   f"currently {percent_of_maximum_size}% of the maximum size. "
                   "Exceeding this limit will cause an error when hosting on AWS Lambda.")
     

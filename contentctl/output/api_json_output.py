@@ -35,7 +35,7 @@ class ApiJsonOutput():
             percent_of_maximum_size = round(size / max_size, 2) * 100
             print(f"Warning: '{file_path}' is in danger of exceeding {max_size} bytes and is "
                   "currently {percent_of_maximum_size}% of the maximum size. "
-                  "Exceeding this limit will cause an error when hosting on AWS Lambda."
+                  "Exceeding this limit will cause an error when hosting on AWS Lambda.")
     
     if len(exceptions) > 0:
         size_error_message = f"The following files exceed the maximum JSON File size of {max_size} bytes:\n -{'\n -'.join(exceptions)}"

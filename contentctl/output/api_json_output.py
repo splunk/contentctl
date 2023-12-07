@@ -14,7 +14,7 @@ class ApiJsonOutput():
 
  def checkMaxJsonObjectSize(self, output_path:str, 
                             max_size=AWS_LAMBDA_LIMIT,
-                            size_warning_percent:float = .9,
+                            size_warning_percent:float = .8,
                             file_names:list[str] = ['detections.json', 
                                                     'macros.json', 
                                                     'stories.json', 
@@ -34,7 +34,7 @@ class ApiJsonOutput():
         elif size >= size_warning:
             percent_of_maximum_size = round(size / max_size, 2) * 100
             print(f"Warning: '{file_path}' is in danger of exceeding {max_size} bytes and is "
-                  "currently {percent_of_maximum_size}% of the maximum size. "
+                  f"currently {percent_of_maximum_size}% of the maximum size. "
                   "Exceeding this limit will cause an error when hosting on AWS Lambda.")
     
     if len(exceptions) > 0:

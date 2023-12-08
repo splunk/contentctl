@@ -4,7 +4,7 @@ import string
 import re
 import requests
 
-from pydantic import BaseModel, field_validator, ValidationError,computed_field, Field
+from pydantic import BaseModel, field_validator, ValidationError,computed_field, Field, ValidationInfo
 from dataclasses import dataclass
 from datetime import datetime
 

@@ -1,7 +1,11 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.story import Story
 
 from pydantic import BaseModel, validator, ValidationError, Field
 from contentctl.objects.enums import SecurityContentInvestigationProductName, SecurityDomain
-from contentctl.objects.story import Story
+
 
 class InvestigationTags(BaseModel):
     analytic_story: list[Story] = Field(min_length=1)

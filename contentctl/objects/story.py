@@ -1,4 +1,3 @@
-
 from pydantic import field_validator, Field, ValidationInfo
 
 from contentctl.objects.security_content_object import SecurityContentObject

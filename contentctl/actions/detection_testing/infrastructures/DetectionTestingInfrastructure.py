@@ -47,6 +47,8 @@ from contentctl.actions.detection_testing.progress_bar import (
 )
 
 # DO THE FOLLOWING BEFORE REVIEW
+# TODO: Validate that the TestGroup methodology works across multiple instances
+# TODO: consider overall detections success vs overall pass; also list skips
 # TODO: do a full package test
 # TODO: cleanup extra prints/logs
 # TODO: cleanup noqas/ignores
@@ -87,7 +89,7 @@ from contentctl.actions.detection_testing.progress_bar import (
 #   completed/elapsed counter)
 # TODO: look into getting better time elapsed updates on pbar statuses
 # TODO: add flag around behavior to propagate unit failures to integration
-# TODO: investigate 1-off count in "Completed X/X"
+# TODO: investigate 1-off (occasionally 2-off?) count in "Completed X/X"; noticed it when testing against multiple instances, but not against a single instance
 
 # GENERAL CURIOSITY
 # TODO: how often do we actually encounter tests w/ an earliest/latest time defined?

@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, field_validator, ValidationError, Field, ValidationInfo
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
-from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhase
+from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhase, SecurityContentProductName
 from typing import List
 from typing_extensions import Annotated
 from enum import Enum
@@ -14,16 +14,9 @@ class StoryUseCase(str,Enum):
    SECURITY_MONITORING = "Security Monitoring"
    ADVANCED_THREAD_DETECTION = "Advanced Threat Detection"
 
-class SecurityContentProduct(str, Enum):
-    SPLUNK_ENTERPRISE = "Splunk Enterprise"
-    SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
-    SPLUNK_CLOUD = "Splunk Cloud"
-    SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
-    SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
-
 class StoryTags(BaseModel):
-    category: list[StoryCategory] = Field(...,gt=0)
-    product: list[SecurityContentProduct] = Field(...,gt=0)
+    category: list[StoryCategory] = Field(...,min_length=1)
+    product: list[SecurityContentProductName] = Field(...,min_length=1)
     usecase: StoryUseCase = Field(...)
 
     # enrichment

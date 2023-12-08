@@ -36,7 +36,3 @@ class InvestigationBuilder():
             inputs.append(input)
 
         self.investigation.inputs = inputs
-
-    
-    def addLowercaseName(self) -> None:
-        self.investigation.lowercase_name = self.investigation.name.replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower().replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()

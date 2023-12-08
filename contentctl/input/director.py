@@ -276,7 +276,6 @@ class Director():
         builder.reset()
         builder.setObject(file_path)
         builder.addInputs()
-        builder.addLowercaseName()
 
     def constructObjects(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()

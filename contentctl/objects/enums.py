@@ -58,13 +58,29 @@ class SecurityContentProduct(enum.Enum):
     API = 3
     CUSTOM = 4
 
-class SigmaConverterTarget(enum.Enum):
-    CIM = 1
-    RAW = 2
-    OCSF = 3
-    ALL = 4
+class SecurityContentProductName(str, enum.Enum):
+    SPLUNK_ENTERPRISE = "Splunk Enterprise"
+    SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
+    SPLUNK_CLOUD = "Splunk Cloud"
+    SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
+    SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
+
+class SecurityContentInvestigationProductName(str, enum.Enum):
+    SPLUNK_ENTERPRISE = "Splunk Enterprise"
+    SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
+    SPLUNK_CLOUD = "Splunk Cloud"
+    SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
+    SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
+    SPLUNK_PHANTOM = "Splunk Phantom"
+
+
 
 class DetectionStatus(enum.Enum):
+    production = "production"
+    deprecated = "deprecated"
+    experimental = "experimental"
+
+class DetectionStatusSSA(enum.Enum):
     production = "production"
     deprecated = "deprecated"
     experimental = "experimental"
@@ -228,6 +244,10 @@ class Cis18Value(str,enum.Enum):
     CIS_16 = "CIS 16"
     CIS_17 = "CIS 17"
     CIS_18 = "CIS 18"
+
+class SecurityDomain(str, enum.Enum):
+    ENDPOINT = "endpoint"
+    NETWORK = "network"
 
 class AssetType(str, enum.Enum):
     AWS_ACCOUNT = "AWS Account"

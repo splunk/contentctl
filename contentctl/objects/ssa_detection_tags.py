@@ -1,9 +1,10 @@
 import re
 
-from pydantic import BaseModel, validator, ValidationError, root_validator
+from pydantic import BaseModel, validator, ValidationError, root_validator, Field
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
-
+from typing import List, Optional
+from contentctl.objects.enums import SecurityContentProductName
 
 class SSADetectionTags(BaseModel):
     # detection spec
@@ -19,7 +20,7 @@ class SSADetectionTags(BaseModel):
     mitre_attack_id: list = None
     nist: list = None
     observable: list
-    product: list
+    product: List[SecurityContentProductName] = Field(...,min_length=1)
     required_fields: list
     risk_score: int
     security_domain: str
@@ -105,17 +106,7 @@ class SSADetectionTags(BaseModel):
                 raise ValueError('Mitre Attack ID are not following the pattern Txxxx: ' + values["name"])
         return v
 
-    @validator('product')
-    def tags_product(cls, v, values):
-        valid_products = [
-            "Splunk Enterprise", "Splunk Enterprise Security", "Splunk Cloud",
-            "Splunk Security Analytics for AWS", "Splunk Behavioral Analytics"
-        ]
 
-        for value in v:
-            if value not in valid_products:
-                raise ValueError('product is not valid for ' + values['name'] + '. valid products are ' + str(valid_products))
-        return v
 
     @validator('risk_score')
     def tags_calculate_risk_score(cls, v, values):

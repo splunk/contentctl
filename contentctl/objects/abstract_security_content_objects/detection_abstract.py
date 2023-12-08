@@ -99,7 +99,7 @@ class Detection_Abstract(SecurityContentObject):
             #during conversion phase later on
             return v
         
-        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+        return SecurityContentObject.free_text_field_valid(v,info)
 
 
     @field_validator('how_to_implement', 'known_false_positives')
@@ -107,64 +107,49 @@ class Detection_Abstract(SecurityContentObject):
     def encode_error(cls, v: str, info: ValidationInfo):
         return SecurityContentObject.free_text_field_valid(v,info)
 
-    @validator("status")
-    def validation_for_ba_only(cls, v, values):
-        # Ensure that only a BA detection can have status: validation
-        p = pathlib.Path(values['file_path'])
-        if v == DetectionStatus.validation.value:
-            if p.name.startswith("ssa___"): 
-                pass
-            else:
-                raise ValueError(f"The following is NOT an ssa_ detection, but has 'status: {v}' which may ONLY be used for ssa_ detections: {values['file_path']}")
-        
-        return v
     
-    @validator("search")
-    def search_obsersables_exist_validate(cls, v, values):
-        if type(v) is str:
-            tags:DetectionTags = values.get("tags")
-            if tags == None:
-                raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
+    @model_validator(mode="after")
+    def search_obsersables_exist_validate(self):
+        if isinstance(self.search, str):
             
-            observable_fields = [ob.name.lower() for ob in tags.observable]
+            observable_fields = [ob.name.lower() for ob in self.tags.observable]
             
             #All $field$ fields from the message must appear in the search
             field_match_regex = r"\$([^\s.]*)\$"
             
-            message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
-            missing_fields = set([field for field in observable_fields if field not in v.lower()])
+            
+            if self.tags.message:
+                message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, self.tags.message.lower())]
+                missing_fields = set([field for field in observable_fields if field not in v.lower()])
+            else:
+                message_fields = []
+                missing_fields = set()
+            
 
             error_messages = []
             if len(missing_fields) > 0:
                 error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
 
             
-            missing_fields = set([field for field in message_fields if field not in v.lower()])
+            missing_fields = set([field for field in message_fields if field not in self.search.lower()])
             if len(missing_fields) > 0:
                 error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
             
-            if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
+            if len(error_messages) > 0 and self.status == DetectionStatus.production.value:
                 msg = "\n\t".join(error_messages)
                 raise(ValueError(msg))
         
         # Found everything
-        return v
+        return self
 
-    @validator("tests")
-    def tests_validate(cls, v, values):
-        if values.get("status","") == DetectionStatus.production.value and not v:
+    @model_validator(mode="after")
+    def tests_validate(self):
+        if self.status == DetectionStatus.production.value and not self.tests:
             raise ValueError(
-                "At least one test is REQUIRED for production detection: " + values["name"]
+                "At least one test is REQUIRED for production detection: " + self.name
             )
-        return v
-    
-    @validator("datamodel")
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError("not valid data model: " + values["name"])
-        return v
-    
+        return self
+        
     def all_tests_successful(self) -> bool:
         if len(self.tests) == 0:
             return False

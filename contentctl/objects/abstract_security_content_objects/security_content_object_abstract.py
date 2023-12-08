@@ -3,7 +3,7 @@ import re
 import abc
 import uuid
 import datetime
-from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl
+from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt
 from typing import Tuple, Optional, List
 import pydantic
 import uuid
@@ -14,7 +14,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     name: str = ...
     author: str = Field(...,max_length=255)
     date: datetime.date = Field(...)
-    version: int = Field(...,ge=0)
+    version: NonNegativeInt = ...
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
     description: str = Field(...,max_length=1000)
     file_path: FilePath = Field(...)
@@ -23,7 +23,6 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     @field_validator('file_path')
     @classmethod
     def file_path_valid(cls, v: pathlib.PosixPath, info: ValidationInfo):
-        
         if not v.name.endswith(".yml"):
             raise ValueError(f"All Security Content Objects must be YML files and end in .yml.  The following file does not: '{v}'")
         return v

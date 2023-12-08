@@ -1,6 +1,6 @@
 import re
 
-from pydantic import BaseModel, validator, ValidationError, root_validator, Field
+from pydantic import BaseModel, validator, ValidationError, model_validator, Field
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 from typing import List, Optional
@@ -116,7 +116,8 @@ class SSADetectionTags(BaseModel):
                              f"\n  Expected risk_score={calculated_risk_score}, found risk_score={int(v)}: {values['name']}")
         return v
 
-    @root_validator
+
+    @model_validator(mode="after")
     def tags_observable(cls, values):
         valid_roles = SES_OBSERVABLE_ROLE_MAPPING.keys()
         valid_types = SES_OBSERVABLE_TYPE_MAPPING.keys()

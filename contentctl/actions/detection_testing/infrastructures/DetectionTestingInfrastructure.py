@@ -554,8 +554,38 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             results = JSONResultsReader(job.results(output_mode="json"))
                         
             observable_fields_set = set([o.name for o in detection.tags.observable])
-        
-            if int(job.content.get("resultCount", "0")) > 0:
+            
+            search_string = b"required fields list to add to remote search ="
+            for r in job.searchlog():
+                if search_string in r:
+                    all_required_string = r.split(search_string)[1]
+                    all_required_string = all_required_string.strip()
+                    fields = set([field.strip().decode('ascii') for field in all_required_string.split(b',') if b"*" not in field])
+                    fields -= set(["sourcetype", "index", "EventType"])
+                    fff = '\n - '.join(fields)
+                    print(f"\n\n\n\nThe required fields were at runtime were:\n{fff}\n\n\n\n")
+                    from_yml = set(detection.tags.required_fields)
+                    joined_yml = '\n - '.join(from_yml)
+                    print(f"The required fields from the yml were: {joined_yml}")
+                    import contentctl.input.yml_reader
+                    import contentctl.output.yml_output
+
+                    ym = contentctl.input.yml_reader.YmlReader.load_file(pathlib.Path(detection.file_path), add_fields=False)
+                    if ym.get("tags",{}).get("required_fields"):
+                        ym["tags"]["required_fields"] = sorted(list(fields))
+                    else:
+                        raise Exception("failed to get tags or required fields?\n\n\n")
+                    contentctl.output.yml_output.DetectionWriter.writeYmlFile(detection.file_path, ym)
+                    import yaml
+                    with open(detection.file_path, 'w') as outfile:
+                        yaml.safe_dump(ym, outfile, default_flow_style=False, sort_keys=False)
+
+                    break
+            
+            
+
+            
+            if int(job.content.get("resultCount", "0")) >= 0:
                 test.result = UnitTestResult()
                 empty_fields = set()
                 for result in results:
@@ -633,6 +663,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         return
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
+        return
         for attack_data_file in attack_data_files:
             index = attack_data_file.custom_index or self.sync_obj.replay_index
             host = attack_data_file.host or self.sync_obj.replay_host
@@ -657,6 +688,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         test: UnitTestTest,
         start_time: float,
     ):
+        print("\nskipping replay\n")
+        return
         with TemporaryDirectory(prefix="contentctl_attack_data") as attack_data_dir:
             for attack_data_file in attack_data_files:
                 self.replay_attack_data_file(

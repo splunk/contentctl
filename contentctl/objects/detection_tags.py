@@ -31,17 +31,17 @@ class DetectionTags(BaseModel):
     
     security_domain: str
     risk_severity: str = None
-    cve: Optional[List[str]] = Field(pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")
+    cve: Optional[List[str]] = Field(None,pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")
     atomic_guid: Optional[list[UUID4]] = None
     drilldown_search: str = None
 
 
     # enrichment
     mitre_attack_enrichments: list[MitreAttackEnrichment] = []
-    confidence_id: Optional[PositiveInt] = Field(ge=1,le=3)
-    impact_id: Optional[PositiveInt] = Field(ge=1,le=5)
+    confidence_id: Optional[PositiveInt] = Field(None,ge=1,le=3)
+    impact_id: Optional[PositiveInt] = Field(None,ge=1,le=5)
     # context_ids: list = None
-    risk_level_id: Optional[NonNegativeInt] = Field(le=4)
+    risk_level_id: Optional[NonNegativeInt] = Field(None,le=4)
     risk_level: Optional[RiskLevel] = None
     #observable_str: str = None
     evidence_str: Optional[str] = None

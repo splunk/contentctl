@@ -3,7 +3,7 @@ import re
 import abc
 import uuid
 import datetime
-from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt
+from pydantic import BaseModel, field_validator, model_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict
 from typing import Tuple, Optional, List
 import pydantic
 import uuid
@@ -11,15 +11,25 @@ import pathlib
 
 NO_FILE_NAME = "NO_FILE_NAME"
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    name: str = ...
-    author: str = Field(...,max_length=255)
-    date: datetime.date = Field(...)
-    version: NonNegativeInt = ...
-    id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
-    description: str = Field(...,max_length=1000)
-    file_path: FilePath = Field(...)
-    references: Optional[List[HttpUrl]] = None
+    model_config = ConfigDict(use_enum_values=True,validate_default=True)
+    # name: str = ...
+    # author: str = Field(...,max_length=255)
+    # date: datetime.date = Field(...)
+    # version: NonNegativeInt = ...
+    # id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
+    # description: str = Field(...,max_length=1000)
+    # file_path: FilePath = Field(...)
+    # references: Optional[List[HttpUrl]] = None
     
+    name: str = Field("NO_NAME")
+    author: str = Field("me",max_length=255)
+    date: datetime.date = Field(datetime.date.today())
+    version: NonNegativeInt = 1
+    id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
+    description: str = Field("wow",max_length=1000)
+    file_path: FilePath = Field("/tmp/doesnt_exist.yml")
+    references: Optional[List[HttpUrl]] = None
+
     @field_validator('file_path')
     @classmethod
     def file_path_valid(cls, v: pathlib.PosixPath, info: ValidationInfo):
@@ -27,14 +37,15 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             raise ValueError(f"All Security Content Objects must be YML files and end in .yml.  The following file does not: '{v}'")
         return v
 
-    @field_validator('date', mode='before')
-    @classmethod
-    def date_valid(cls, v: str, info: ValidationInfo):
-        try:
-            datetime.datetime.strptime(v, "%Y-%m-%d")
-        except:
-            raise ValueError(f"date is not in ISO format YYYY-MM-DD: '{v}'")
-        return v
+    # @field_validator('date', mode='before')
+    # @classmethod
+    # def date_valid(cls, v: str, info: ValidationInfo):
+    #     try:
+    #         datetime.datetime.strptime(v, "%Y-%m-%d")
+    #     except Exception as e:
+    #         print(e)
+    #         raise ValueError(f"date is not in ISO format YYYY-MM-DD: '{v}'")
+    #     return v
 
     @field_validator('name','author','description')
     @classmethod

@@ -6,7 +6,7 @@ import validators
 import pathlib
 import yaml
 import os
-from pydantic import BaseModel, field_validator, model_validator, root_validator, Extra, Field, ValidationInfo, AnyHttpUrl, DirectoryPath, NonNegativeInt, FilePath
+from pydantic import BaseModel, field_validator, model_validator, root_validator, Extra, Field, ValidationInfo, AnyHttpUrl, DirectoryPath, NonNegativeInt, FilePath, field_serializer
 from dataclasses import dataclass
 from typing import Union, Any, Optional
 import re
@@ -40,6 +40,10 @@ def getTestConfigFromYMLFile(path: pathlib.Path):
     except Exception as e:
         print(f"Error loading test configuration file '{path}': {str(e)}")
 
+
+def serialize_url(url:AnyHttpUrl)->str:
+    return str(url)
+
 class Infrastructure(BaseModel, extra=Extra.forbid, validate_assignment=True):
     splunk_app_username: Optional[str] = Field(
         default="admin", title="The name of the user for testing"
@@ -51,6 +55,9 @@ class Infrastructure(BaseModel, extra=Extra.forbid, validate_assignment=True):
         default="http://127.0.0.1",
         title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'",
     )
+    @field_serializer('instance_address')
+    def serialize_address(self, repo_url: AnyHttpUrl, _info)->str:
+        return serialize_url(repo_url)    
     
     instance_name: str = Field(
         default="Splunk_Server_Name",
@@ -251,6 +258,10 @@ class VersionControlConfig(BaseModel, extra='forbid', validate_assignment=True):
     commit_hash: Optional[str] = Field(None, title="Commit hash of the repo state to be tested, if applicable")
     pr_number: Optional[NonNegativeInt] = Field(None, title="The number of the PR to test")
 
+
+    @field_serializer('repo_url')
+    def serialize_address(self, repo_url: AnyHttpUrl, _info)->str:
+        return serialize_url(repo_url)    
     
     @field_validator('repo_path')
     @classmethod
@@ -286,8 +297,6 @@ class VersionControlConfig(BaseModel, extra='forbid', validate_assignment=True):
             raise(ValueError(f"Error reading remote_url from the repo located at '{self.repo_path}'"))
 
         if self.repo_url is not None and remote_url_from_repo != self.repo_url:
-            import code
-            code.interact(local=locals())
             raise(ValueError(f"The url of the remote repo supplied in the config file {self.repo_url} does not "\
                               f"match the value read from the repository at {self.repo_path}, {remote_url_from_repo}"))
 

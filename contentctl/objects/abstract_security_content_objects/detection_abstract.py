@@ -55,7 +55,8 @@ class Detection_Abstract(SecurityContentObject):
     
     nes_fields: Optional[str] = None
     providing_technologies: Optional[List[ProvidingTechnology]] = None
-
+    risk: Optional[list[dict]] = None
+    
     class Config:
         use_enum_values = True
 
@@ -120,7 +121,7 @@ class Detection_Abstract(SecurityContentObject):
             
             if self.tags.message:
                 message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, self.tags.message.lower())]
-                missing_fields = set([field for field in observable_fields if field not in v.lower()])
+                missing_fields = set([field for field in observable_fields if field not in self.tags.message.lower()])
             else:
                 message_fields = []
                 missing_fields = set()

@@ -2,11 +2,11 @@
 # type Macro as an argument
 from __future__ import annotations
 import re
-from pydantic import Field
+from pydantic import Field, ConfigDict, model_validator
 
 from contentctl.objects.security_content_object import SecurityContentObject
 
-from typing import Tuple, List
+from typing import Tuple, List, Any
 
 
 MACROS_TO_IGNORE = set(["_filter", "drop_dm_object_name"])
@@ -18,10 +18,11 @@ MACROS_TO_IGNORE.add("prohibited_processes")
 
 
 class Macro(SecurityContentObject):
-    definition: str = Field(...,ge=1)
+    definition: str = Field(..., min_length=1)
     arguments: List[str] = Field([])
-
     
+    
+
     @staticmethod
     def get_macros(text_field:str, all_macros: list[Macro], ignore_macros:set[str]=MACROS_TO_IGNORE)->Tuple[list[Macro], set[str]]:
         

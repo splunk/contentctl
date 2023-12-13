@@ -209,6 +209,6 @@ class App(BaseModel, extra=Extra.forbid):
         ) as app_data:
             all_apps_raw = yaml.safe_load(app_data)
             for a in all_apps_raw:
-                app_obj = App.parse_obj(a)
+                app_obj = App.model_validate(a)
                 all_app_objs.append(app_obj)
         return all_app_objs

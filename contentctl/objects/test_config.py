@@ -35,7 +35,7 @@ def getTestConfigFromYMLFile(path: pathlib.Path):
     try:
         with open(path, "r") as config_handle:
             cfg = yaml.safe_load(config_handle)
-        return TestConfig.parse_obj(cfg)
+        return TestConfig.model_validate(cfg)
 
     except Exception as e:
         print(f"Error loading test configuration file '{path}': {str(e)}")

@@ -8,7 +8,7 @@ from contentctl.objects.enums import SecurityContentInvestigationProductName, Se
 
 
 class InvestigationTags(BaseModel):
-    analytic_story: list[Story] = Field(min_length=1)
+    analytic_story: list[Story] = Field([],min_length=1)
     product: list[SecurityContentInvestigationProductName] = Field(...,min_length=1)
     required_fields: list[str] = Field(min_length=1)
     security_domain: SecurityDomain = ...

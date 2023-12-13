@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, validator, ValidationError, field_validator, ValidationInfo, model_validator, FilePath
-from typing import Tuple, Optional, Any
+from typing import Tuple, Optional, Any, Union
 import re
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import SecurityContentType
@@ -37,14 +37,21 @@ class Lookup(SecurityContentObject):
 
     @field_validator('filename')
     @classmethod
-    def lookup_file_valid(cls, v: FilePath, info: ValidationInfo):
+    def lookup_file_valid(cls, v: Union[FilePath,None], info: ValidationInfo):
+        if not v:
+            return v
         if not (v.name.endswith(".csv") or v.name.endswith(".mlmodel")):
             raise ValueError(f"All Lookup files must be CSV files and end in .csv.  The following file does not: '{v}'")
+
         return v
         
     @field_validator('match_type')
     @classmethod
-    def match_type_valid(cls, v: str, info: ValidationInfo):
+    def match_type_valid(cls, v: Union[str,None], info: ValidationInfo):
+        if not v:
+            #Match type can be None and that's okay
+            return v
+
         if not (v.startswith("WILDCARD(") or v.endswith(")")) :
             raise ValueError(f"All match_types must take the format 'WILDCARD(field_name)'. The following file does not: '{v}'")
         return v
@@ -58,6 +65,8 @@ class Lookup(SecurityContentObject):
         elif self.filename is None and self.collection is None:
             raise ValueError("Neither filename nor collection were defined in the lookup file.  Exactly one must "
                              "be defined.")
+
+
         return self
     
     

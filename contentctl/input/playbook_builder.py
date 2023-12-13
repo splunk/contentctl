@@ -21,7 +21,7 @@ class PlaybookBuilder():
         yml_dict = YmlReader.load_file(path)
 
         try:
-            self.playbook = Playbook.parse_obj(yml_dict)
+            self.playbook = Playbook.model_validate(yml_dict)
 
         except ValidationError as e:
             print('Validation Error for file ' + str(path))

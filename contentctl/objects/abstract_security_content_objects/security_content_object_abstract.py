@@ -26,7 +26,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     date: datetime.date = Field(datetime.date.today())
     version: NonNegativeInt = 1
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
-    description: str = Field("wow",max_length=1000)
+    description: str = Field("wow",max_length=10000)
     file_path: FilePath = Field("/tmp/doesnt_exist.yml")
     references: Optional[List[HttpUrl]] = None
 

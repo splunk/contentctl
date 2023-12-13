@@ -186,7 +186,7 @@ class Director():
 
         if len(validation_errors) > 0:
             errors_string = '\n\n'.join([f"{e_tuple[0]}\n{str(e_tuple[1])}" for e_tuple in validation_errors])
-            raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
+            #raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
 
 
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:

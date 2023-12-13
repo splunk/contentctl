@@ -22,7 +22,7 @@ class ConfigHandler:
             sys.exit(1)
 
         try: 
-            config = Config.parse_obj(yml_dict)
+            config = Config.model_validate(yml_dict)
         except Exception as e:
             raise Exception(f"Error reading config file: {str(e)}")
             
@@ -47,7 +47,7 @@ class ConfigHandler:
                 yml_dict.get("version_control_config", None)['test_branch'] = args.test_branch or yml_dict.get("version_control_config", None)['test_branch']
             if yml_dict.get("infrastructure_config", None) is not None:
                 yml_dict.get("infrastructure_config", None)['infrastructure_type'] = args.infrastructure or yml_dict.get("infrastructure_config", None)['infrastructure_type']
-            test_config = TestConfig.parse_obj(yml_dict)
+            test_config = TestConfig.model_validate(yml_dict)
         except Exception as e:
             raise Exception(f"Error reading test config file: {str(e)}")
             

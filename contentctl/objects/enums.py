@@ -248,6 +248,11 @@ class Cis18Value(str,enum.Enum):
 class SecurityDomain(str, enum.Enum):
     ENDPOINT = "endpoint"
     NETWORK = "network"
+    THREAT = "threat"
+    IDENTITY = "identity"
+    ACCESS = "access"
+    AUDIT = "audit"
+    CLOUD = "cloud"
 
 class AssetType(str, enum.Enum):
     AWS_ACCOUNT = "AWS Account"
@@ -322,3 +327,8 @@ class RiskLevel(str,enum.Enum):
     MEDIUM = "Medium"
     HIGH = "High"
     CRITICAL = "Critical"
+
+class RiskSeverity(str,enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"

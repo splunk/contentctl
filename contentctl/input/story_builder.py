@@ -17,7 +17,7 @@ class StoryBuilder():
         yml_dict["tags"]["name"] = yml_dict["name"]
 
         try:
-            self.story = Story.parse_obj(yml_dict)
+            self.story = Story.model_validate(yml_dict)
         except ValidationError as e:
             print('Validation Error for file ' + str(path))
             print(e)

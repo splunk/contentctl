@@ -1,17 +1,18 @@
 import re
 
-from pydantic import BaseModel, field_validator, ValidationError, root_validator,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl
+from pydantic import BaseModel, field_validator, ValidationError, root_validator,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
-from contentctl.objects.enums import Cis18Value, AssetType, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
+from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
+from contentctl.objects.story import Story
 from typing import List, Optional, Annotated
 
 class DetectionTags(BaseModel):
     # detection spec
-    name: str
-    analytic_story: list
-    asset_type: AssetType = ...
+    model_config = ConfigDict(use_enum_values=True,validate_default=False)
+    analytic_story: list[Story] = Field(...)
+    asset_type: AssetType = Field(...)
     #enum is intentionally Cis18 even though field is named cis20 for legacy reasons
     cis20: Optional[List[Cis18Value]] = None 
     confidence: NonNegativeInt = Field(...,le=100)
@@ -24,16 +25,16 @@ class DetectionTags(BaseModel):
     kill_chain_phases: Optional[list[KillChainPhase]] = None
     mitre_attack_id: Optional[List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]]] = None
     nist: Optional[list[NistCategory]] = None
-    observable: list[Observable] = []
-    message: Optional[str] = ...
+    observable: Optional[list[Observable]] = None
+    message: Optional[str] = Field(...)
     product: list[SecurityContentProductName] = Field(...,min_length=1)
-    required_fields: list
+    required_fields: list[str] = Field(min_length=1)
     
-    security_domain: str
-    risk_severity: str = None
-    cve: Optional[List[str]] = Field(None,pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")
+    security_domain: SecurityDomain = Field(...)
+    risk_severity: Optional[RiskSeverity] = None
+    #cve: Optional[List[str]] = Field(None,pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")
     atomic_guid: Optional[list[UUID4]] = None
-    drilldown_search: str = None
+    drilldown_search: Optional[str] = None
 
 
     # enrichment
@@ -49,8 +50,8 @@ class DetectionTags(BaseModel):
     
     research_site_url: Optional[HttpUrl] = None
     event_schema: str = "ocsf"
-    mappings: list = None
-    annotations: dict = None
+    mappings: Optional[List] = None
+    annotations: Optional[dict] = None
 
     
     

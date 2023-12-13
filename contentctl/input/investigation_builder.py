@@ -14,9 +14,9 @@ class InvestigationBuilder():
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
         try:
-            self.investigation = Investigation.parse_obj(yml_dict)
+            self.investigation = Investigation.model_validate(yml_dict)
         except ValidationError as e:
-            print('Validation Error for file ' + path)
+            print(f'Validation Error for file {path}' )
             print(e)
             sys.exit(1)
 

@@ -47,16 +47,15 @@ from contentctl.actions.detection_testing.progress_bar import (
 )
 
 # DO THE FOLLOWING BEFORE REVIEW
-# TODO: Validate that the TestGroup methodology works across multiple instances
-# TODO: consider overall detections success vs overall pass; also list skips
-# TODO: do a full package test
+# TODO: Adjust extracto
 # TODO: cleanup extra prints/logs
 # TODO: cleanup noqas/ignores
 # TODO: set correlation_search.ENABLE_LOGGING to False
 # TODO: review TODOs
 
 # LIST THE FOLLOWING AS PART OF THE REVIEW
-# TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly
+# TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly and how the relate to success (e.g. 
+#   consider overall detections success vs overall pass)
 # TODO: make it clear to Eric that test durations will no longer account for
 #   replay/cleanup in this new test grouping model (in the CLI reporting; the recorded
 #   test duration in the result file will include the setup/cleanup time in the duration
@@ -85,17 +84,47 @@ from contentctl.actions.detection_testing.progress_bar import (
 # TODO: skip docker and TA ext pull for custom infrastructure
 # TODO: consider listing Correlation type detections as skips rather than excluding them from
 #   results altogether?
-# TODO: look into why some pbar statuses seem to be overwriting each other (my status reporting and the
-#   completed/elapsed counter)
+# TODO: look into why some pbar statuses seem to be overwriting each other (my status reporting and
+#   the completed/elapsed counter)
 # TODO: look into getting better time elapsed updates on pbar statuses
 # TODO: add flag around behavior to propagate unit failures to integration
-# TODO: investigate 1-off (occasionally 2-off?) count in "Completed X/X"; noticed it when testing against multiple instances, but not against a single instance
+# TODO: investigate 1-off (occasionally 2-off?) count in "Completed X/X"; noticed it when testing
+#   against multiple instances, but not against a single instance
+# TODO: enforce distinct test names w/in detections
+# TODO: add section to summary called "testwise_summary" listing per test metrics (e.g. total test,
+#   total tests passed, ...); also list num skipped at both detection and test level
+# TODO: when in interactive mode, consider maybe making the cleanup routine in correlation_search
+#   happen after the user breaks the interactivity; currently risk/notable indexes are dumped
+#   before the user can inspect
+# TODO: add more granular error messaging that can show success in finding a notable, but failure
+#   in finding a risk and vice-versa
+# TODO: add logic which reports concretely that integration testing failed (or would fail) as a
+#   result of a missing victim observable
+# TODO: Fix detection_abstract.tests_validate so that it surfaces validation errors (e.g. a lack of
+#   tests) to the final results, instead of looking like the following (maybe have a message
+#   propagated at the detection level? do a separate coverage check as part of validation?):
+# - name: Azure AD PIM Role Assigned
+#   search: ' `azuread` operationName="Add eligible member to role in PIM completed*"
+#     | rename properties.* as * | rename targetResources{}.userPrincipalName as userPrincipalName
+#     | rename initiatedBy.user.userPrincipalName as initiatedBy | stats values(userPrincipalName)
+#     as userPrincipalName values(targetResources{}.displayName) as target_display_name
+#     by _time, result, operationName, initiatedBy | `azure_ad_pim_role_assigned_filter`'
+#   success: false
+#   tests: []
+# untested_detections: []
+# percent_complete: UKNOWN
+# deprecated_detections: []
+# experimental_detections: []
 
 # GENERAL CURIOSITY
 # TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
 # TODO: why is the unit test duration so long on Risk Rule for Dev Sec Ops by Repository? big dataset? long
 #   cleanup/upload? retries in clearing the "stash" index? Maybe the stash index gets super big... we shouldn't be
 #   testing on Correlation type detections anyway
+# TODO: WinEvent Scheduled Task Created Within Public Path -> "1 validation error for
+#   CorrelationSearch notable_action -> rule_name none is not an allowed value
+#   (type=type_error.none.not_allowed)"
+
 
 class SetupTestGroupResults(BaseModel):
     exception: Union[Exception, None] = None
@@ -695,7 +724,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.FAIL.value,
+                    FinalTestingStates.ERROR.value,
                     start_time=test_start_time,
                     set_pbar=False,
                 )

@@ -22,7 +22,6 @@ class DetectionBuilder():
 
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
-        yml_dict["tags"]["name"] = yml_dict["name"]
         self.security_content_obj = Detection.model_validate(yml_dict)
         
 

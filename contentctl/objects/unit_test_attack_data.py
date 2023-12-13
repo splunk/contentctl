@@ -1,5 +1,4 @@
-from pydantic import BaseModel, validator, ValidationError, HttpUrl, FilePath
-from contentctl.helper.utils import Utils
+from pydantic import BaseModel, HttpUrl, FilePath
 from typing import Union, Optional
 
 

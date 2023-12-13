@@ -2,11 +2,11 @@
 # type Macro as an argument
 from __future__ import annotations
 import re
-from pydantic import Field, ConfigDict, model_validator
+from pydantic import Field
 
 from contentctl.objects.security_content_object import SecurityContentObject
 
-from typing import Tuple, List, Any
+from typing import Tuple, List
 
 
 MACROS_TO_IGNORE = set(["_filter", "drop_dm_object_name"])

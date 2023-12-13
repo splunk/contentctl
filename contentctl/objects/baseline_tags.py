@@ -1,7 +1,7 @@
 
-from pydantic import BaseModel, validator, ValidationError, Field
+from pydantic import BaseModel, Field
 from contentctl.objects.enums import SecurityContentProductName
-from typing import List, Optional
+from typing import List
 
 
 class BaselineTags(BaseModel):

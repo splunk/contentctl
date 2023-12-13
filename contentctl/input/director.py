@@ -235,7 +235,8 @@ class Director():
         builder.reset()
         builder.setObject(file_path)
         builder.addDetections(self.output_dto.detections, self.input_dto.config)
-        builder.addInvestigations(self.output_dto.investigations)
+        
+        #builder.addInvestigations(self.output_dto.investigations)
         builder.addBaselines(self.output_dto.baselines)
         builder.addAuthorCompanyName()
 

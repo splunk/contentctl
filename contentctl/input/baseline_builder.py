@@ -13,7 +13,6 @@ class BaselineBuilder():
 
     def setObject(self, path: pathlib.Path) -> None:
         yml_dict = YmlReader.load_file(path)
-        yml_dict["tags"]["name"] = yml_dict["name"]
         
         try:
             self.baseline = Baseline.model_validate(yml_dict)

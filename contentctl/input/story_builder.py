@@ -4,7 +4,6 @@ import pathlib
 from pydantic import ValidationError
 
 from contentctl.objects.story import Story
-from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.config import Config
 from contentctl.input.yml_reader import YmlReader
 
@@ -14,7 +13,6 @@ class StoryBuilder():
 
     def setObject(self, path: pathlib.Path) -> None:
         yml_dict = YmlReader.load_file(path)
-        yml_dict["tags"]["name"] = yml_dict["name"]
 
         try:
             self.story = Story.model_validate(yml_dict)

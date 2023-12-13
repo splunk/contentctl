@@ -1,13 +1,9 @@
-
-import uuid
-import string
-
-from pydantic import BaseModel, field_validator, ValidationInfo, ValidationError, Field
+from pydantic import field_validator, ValidationInfo, Field
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.playbook_tags import PlaybookTag
-from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType, PlaybookType
+
+from contentctl.objects.enums import PlaybookType
 
 
 class Playbook(SecurityContentObject):

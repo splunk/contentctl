@@ -213,7 +213,6 @@ class SigmaConverter():
 
     def read_detection(self, detection_path : str) -> Detection:
         yml_dict = YmlReader.load_file(detection_path)
-        yml_dict["tags"]["name"] = yml_dict["name"]
         
         #SSA Detections are ALLOWED to have names longer than 67 characters,
         #unlike Splunk App Detections.  Because we still want to use the 

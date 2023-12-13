@@ -1,6 +1,6 @@
 
 
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel
 
 
 class DeploymentRBA(BaseModel):

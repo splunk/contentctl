@@ -2,16 +2,11 @@
 from __future__ import annotations
 
 import git
-import validators
 import pathlib
 import yaml
-import os
-from pydantic import BaseModel, field_validator, model_validator, root_validator, Extra, Field, ValidationInfo, AnyHttpUrl, DirectoryPath, NonNegativeInt, FilePath, field_serializer
-from dataclasses import dataclass
-from typing import Union, Any, Optional
-import re
-import docker
-import docker.errors
+from pydantic import BaseModel, field_validator, model_validator, Field, ValidationInfo, AnyHttpUrl, DirectoryPath, NonNegativeInt, FilePath, field_serializer
+from typing import Any, Optional
+
 
 
 from contentctl.objects.enums import (
@@ -20,7 +15,6 @@ from contentctl.objects.enums import (
     DetectionTestingTargetInfrastructure,
 )
 
-from contentctl.objects.app import App, ENVIRONMENT_PATH_NOT_SET
 from contentctl.helper.utils import Utils
 
 
@@ -44,7 +38,7 @@ def getTestConfigFromYMLFile(path: pathlib.Path):
 def serialize_url(url:AnyHttpUrl)->str:
     return str(url)
 
-class Infrastructure(BaseModel, extra=Extra.forbid, validate_assignment=True):
+class Infrastructure(BaseModel, extra="forbid", validate_assignment=True):
     splunk_app_username: Optional[str] = Field(
         default="admin", title="The name of the user for testing"
     )
@@ -56,7 +50,7 @@ class Infrastructure(BaseModel, extra=Extra.forbid, validate_assignment=True):
         title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'",
     )
     @field_serializer('instance_address')
-    def serialize_address(self, repo_url: AnyHttpUrl, _info)->str:
+    def serialize_address(self, repo_url: AnyHttpUrl, _info:ValidationInfo)->str:
         return serialize_url(repo_url)    
     
     instance_name: str = Field(
@@ -260,7 +254,7 @@ class VersionControlConfig(BaseModel, extra='forbid', validate_assignment=True):
 
 
     @field_serializer('repo_url')
-    def serialize_address(self, repo_url: AnyHttpUrl, _info)->str:
+    def serialize_address(self, repo_url: AnyHttpUrl, _info:ValidationInfo)->str:
         return serialize_url(repo_url)    
     
     @field_validator('repo_path')

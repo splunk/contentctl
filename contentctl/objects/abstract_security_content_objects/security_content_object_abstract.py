@@ -3,10 +3,8 @@ import re
 import abc
 import uuid
 import datetime
-from pydantic import BaseModel, field_validator, model_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict
+from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict
 from typing import Tuple, Optional, List
-import pydantic
-import uuid
 import pathlib
 
 NO_FILE_NAME = "NO_FILE_NAME"
@@ -49,7 +47,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
     @field_validator('name','author','description')
     @classmethod
-    def free_text_field_valid(cls, v: str, info:ValidationInfo):
+    def free_text_field_valid(cls, v: str, info:ValidationInfo)->str:
         try:
             v.encode('ascii')
         except UnicodeEncodeError as e:

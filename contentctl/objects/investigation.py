@@ -1,32 +1,23 @@
-import enum
-import uuid
-import string
-import re
-import requests
 
-from pydantic import BaseModel, field_validator, ValidationError,computed_field, Field, ValidationInfo
-from dataclasses import dataclass
-from datetime import datetime
+from pydantic import field_validator, computed_field, Field, ValidationInfo, ConfigDict
+from typing import Optional, List
 
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
-from contentctl.objects.enums import SecurityContentType
-
 from contentctl.objects.investigation_tags import InvestigationTags
-from contentctl.helper.link_validator import LinkValidator
 
 
 class Investigation(SecurityContentObject):
+    model_config = ConfigDict(use_enum_values=True,validate_default=False)
     name: str = Field(max_length=75)
     type: str = Field(...,pattern="^Investigation$")
-    datamodel: list[DataModel] = ...
+    datamodel: list[DataModel] = Field(...)
     
-    search: str = ...
-    how_to_implement: str = ...
-    known_false_positives: str = ...
+    search: str = Field(...)
+    how_to_implement: str = Field(...)
+    known_false_positives: str = Field(...)
     check_references: bool = False #Validation is done in order, this field must be defined first
-    inputs: list = None
+    inputs: Optional[List[str]] = None
     tags: InvestigationTags
 
     # enrichment

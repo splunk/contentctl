@@ -1,18 +1,12 @@
-import string
-import uuid
-import requests
 
-from pydantic import BaseModel, field_validator, ValidationError, ValidationInfo, Field, HttpUrl
-from dataclasses import dataclass
-from datetime import datetime
+from pydantic import field_validator, ValidationInfo, Field, HttpUrl
 from typing import Annotated, Optional, List
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
 from contentctl.objects.baseline_tags import BaselineTags
 from contentctl.objects.deployment import Deployment
-from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType
+
 
 class Baseline(SecurityContentObject):
     # baseline spec

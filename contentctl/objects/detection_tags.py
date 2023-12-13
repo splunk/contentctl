@@ -1,11 +1,15 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.story import Story
+
 import re
 
-from pydantic import BaseModel, field_validator, ValidationError, root_validator,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict
+from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
 from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
-from contentctl.objects.story import Story
 from typing import List, Optional, Annotated
 
 class DetectionTags(BaseModel):

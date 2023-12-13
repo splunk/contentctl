@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
 
-from pydantic import BaseModel, validator, ValidationError, Field
+from pydantic import BaseModel, Field
 
 import enum
 

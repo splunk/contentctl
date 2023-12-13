@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator, ValidationError, Field, Extra
+from pydantic import BaseModel, validator, Field
 import semantic_version
 from datetime import datetime
 from typing import Union

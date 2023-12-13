@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, validator, ValidationError, field_validator, ValidationInfo, model_validator, FilePath
+from pydantic import field_validator, ValidationInfo, model_validator, FilePath
 from typing import Tuple, Optional, Any, Union
 import re
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import SecurityContentType
 
 LOOKUPS_TO_IGNORE = set(["outputlookup"])
 LOOKUPS_TO_IGNORE.add("ut_shannon_lookup") #In the URL toolbox app which is recommended for ESCU

@@ -160,22 +160,62 @@ class GitService:
         test_branch_repo_object = self.repo.commit(self.config.version_control_config.test_branch)
         differences = target_branch_repo_object.diff(test_branch_repo_object)
         
-        new_content = []
-        modified_content =  []
-        deleted_content = []
-        renamed_content = []
+        #The following command will find all untracked files
+        untracked_files = set(self.repo.untracked_files)
+        
+        #The following command will find all staged, but uncommitted, changes
+        staged_changes  = self.repo.index.diff("HEAD")
+        
+        staged_new_content = set()
+        staged_modified_content =  set()
+        staged_deleted_content = set()
+        staged_renamed_content = set()
+        
+        
+        for content in staged_changes.iter_change_type("M"):
+            staged_modified_content.add(content.b_path)
+        for content in staged_changes.iter_change_type("A"):
+            staged_new_content.add(content.b_path)
+        for content in staged_changes.iter_change_type("D"):
+            staged_deleted_content.add(content.b_path)
+        for content in staged_changes.iter_change_type("R"):
+            staged_renamed_content.add(content.b_path)
+        
+
+
+        staged_new_content = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_new_content))
+        staged_modified_content =  set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_new_content))
+        staged_deleted_content = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_new_content))
+        staged_renamed_content = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_new_content))
+
+
+
+        new_content = set()
+        modified_content =  set()
+        deleted_content = set()
+        renamed_content = set()
 
         for content in differences.iter_change_type("M"):
-            modified_content.append(content.b_path)
+            if content.b_path in staged_modified_content:
+                print(f"Warning - staged but uncommitted MODIFICATIONS in {content.b_path}. Using uncommitted MODIFICATIONS.")
+            else:
+                modified_content.add(content.b_path)
         for content in differences.iter_change_type("A"):
-            new_content.append(content.b_path)
+            if content.b_path in staged_new_content:
+                print(f"Warning - staged but uncommitted NEW CONTENT in {content.b_path}. Using uncommitted NEW CONTENT.")
+            else:
+                new_content.add(content.b_path)
         for content in differences.iter_change_type("D"):
-            deleted_content.append(content.b_path)
+            if content.b_path in staged_deleted_content:
+                print(f"Warning - staged but uncommitted file {content.b_path} was deleted. Treating this content as DELETED.")
+            deleted_content.add(content.b_path)
         for content in differences.iter_change_type("R"):
-            renamed_content.append(content.b_path)
-            
+            renamed_content.add(content.b_path)
+        
+
+
         #Changes to detections, macros, and lookups should trigger a re-test for anything which uses them
-        changed_lookups_list = list(filter(lambda x: x.startswith("lookups"), new_content+modified_content))
+        changed_lookups_list = list(filter(lambda x: x.startswith("lookups"), new_content.union(modified_content)))
         changed_lookups = set()
         
         #We must account for changes to the lookup yml AND for the underlying csv
@@ -185,20 +225,20 @@ class GitService:
             changed_lookups.add(lookup)
 
         # At some point we should account for macros which contain other macros...
-        changed_macros = set(filter(lambda x: x.startswith("macros"), new_content+modified_content))
+        changed_macros = set(filter(lambda x: x.startswith("macros"), new_content.union(modified_content)))
         changed_macros_and_lookups = set([str(pathlib.Path(filename).absolute()) for filename in changed_lookups.union(changed_macros)])
 
-        changed_detections = set(filter(lambda x: x.startswith("detections"), new_content+modified_content+renamed_content))
-
+        changed_detections = set(filter(lambda x: x.startswith("detections"), new_content.union(modified_content).union(renamed_content)))
+        changed_detections_full_filename_paths = set(str(pathlib.Path(d).absolute()) for d in changed_detections)
         #Check and see if content that has been modified uses any of the changed macros or lookups
         for detection in director.detections:
             deps = set([content.file_path for content in detection.get_content_dependencies()])
             if not deps.isdisjoint(changed_macros_and_lookups):
-                changed_detections.add(detection.file_path)
+                changed_detections_full_filename_paths.add(detection.file_path)
 
-        changed_detections_string = '\n - '.join(changed_detections)
-        #print(f"The following [{len(changed_detections)}] detections, or their dependencies (macros/lookups), have changed:\n - {changed_detections_string}")
-        return Detection.get_detections_from_filenames(changed_detections, director.detections)
+        import code
+        code.interact(local=locals())
+        return Detection.get_detections_from_filenames(changed_detections_full_filename_paths, director.detections)
 
     def __init__(self, config: TestConfig):
         

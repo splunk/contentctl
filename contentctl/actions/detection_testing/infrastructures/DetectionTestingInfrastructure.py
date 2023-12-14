@@ -46,85 +46,6 @@ from contentctl.actions.detection_testing.progress_bar import (
     TestingStates
 )
 
-# DO THE FOLLOWING BEFORE REVIEW
-# TODO: Adjust extracto
-# TODO: cleanup extra prints/logs
-# TODO: cleanup noqas/ignores
-# TODO: set correlation_search.ENABLE_LOGGING to False
-# TODO: review TODOs
-
-# LIST THE FOLLOWING AS PART OF THE REVIEW
-# TODO: list SKIP, FAIL, PASS, ERROR conditions explicitly and how the relate to success (e.g. 
-#   consider overall detections success vs overall pass)
-# TODO: make it clear to Eric that test durations will no longer account for
-#   replay/cleanup in this new test grouping model (in the CLI reporting; the recorded
-#   test duration in the result file will include the setup/cleanup time in the duration
-#   for both unit and integration tests (effectively double counted))
-
-# LIST THE FOLLOWING AS (POSSIBLE) FUTURE WORK IN THE REVIEW
-# TODO: update extractor to work w/ new fields in output
-# TODO: add flag for enabling logging for correlation_search logging (?)
-# TODO: add flag for changing max_sleep time for integration tests
-# TODO: add stats around total test cases and unit/integration test sucess/failure? maybe configurable reporting?
-# TODO: add setting to skip listing skips -> test_config.TestConfig, contentctl.test, contentctl.main
-# TODO: right now, we are creating one CorrelationSearch instance for each test case; typically, there is only one
-#   unit test, and thus one integration test, per detection, so this is not an issue. However, if we start having many
-#   test cases per detection, we will be duplicating some effort & network calls that we don't need to. Consider
-#   refactoring in order to re-use CorrelationSearch objects across tests in such a case
-# TODO: ideally, we could handle this and the following init w/ a call to model_post_init, so
-#   that all the logic is encapsulated w/in _parse_risk_and_notable_actions but that is a
-#   pydantic v2 feature (see the init validators for risk/notable actions):
-#   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
-# TODO: evaluate sane defaults for timeframe for integration testing (e.g. 3y is good now, but
-#   maybe not always...); NOTE also that contentctl may already be munging timestamps for us
-# TODO: make the search for risk/notable events a more specific query based on the search in
-#   question (and update the docstring to relfect when you do)
-# TODO: break up the execute routines for integration/unit tests some more to remove code w/
-#   similar structure
-# TODO: skip docker and TA ext pull for custom infrastructure
-# TODO: consider listing Correlation type detections as skips rather than excluding them from
-#   results altogether?
-# TODO: look into why some pbar statuses seem to be overwriting each other (my status reporting and
-#   the completed/elapsed counter)
-# TODO: look into getting better time elapsed updates on pbar statuses
-# TODO: add flag around behavior to propagate unit failures to integration
-# TODO: investigate 1-off (occasionally 2-off?) count in "Completed X/X"; noticed it when testing
-#   against multiple instances, but not against a single instance
-# TODO: enforce distinct test names w/in detections
-# TODO: add section to summary called "testwise_summary" listing per test metrics (e.g. total test,
-#   total tests passed, ...); also list num skipped at both detection and test level
-# TODO: when in interactive mode, consider maybe making the cleanup routine in correlation_search
-#   happen after the user breaks the interactivity; currently risk/notable indexes are dumped
-#   before the user can inspect
-# TODO: add more granular error messaging that can show success in finding a notable, but failure
-#   in finding a risk and vice-versa
-# TODO: add logic which reports concretely that integration testing failed (or would fail) as a
-#   result of a missing victim observable
-# TODO: Fix detection_abstract.tests_validate so that it surfaces validation errors (e.g. a lack of
-#   tests) to the final results, instead of looking like the following (maybe have a message
-#   propagated at the detection level? do a separate coverage check as part of validation?):
-# - name: Azure AD PIM Role Assigned
-#   search: ' `azuread` operationName="Add eligible member to role in PIM completed*"
-#     | rename properties.* as * | rename targetResources{}.userPrincipalName as userPrincipalName
-#     | rename initiatedBy.user.userPrincipalName as initiatedBy | stats values(userPrincipalName)
-#     as userPrincipalName values(targetResources{}.displayName) as target_display_name
-#     by _time, result, operationName, initiatedBy | `azure_ad_pim_role_assigned_filter`'
-#   success: false
-#   tests: []
-# untested_detections: []
-# percent_complete: UKNOWN
-# deprecated_detections: []
-# experimental_detections: []
-
-# GENERAL CURIOSITY
-# TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
-# TODO: why is the unit test duration so long on Risk Rule for Dev Sec Ops by Repository? big dataset? long
-#   cleanup/upload? retries in clearing the "stash" index? Maybe the stash index gets super big... we shouldn't be
-#   testing on Correlation type detections anyway
-# TODO: WinEvent Scheduled Task Created Within Public Path -> "1 validation error for
-#   CorrelationSearch notable_action -> rule_name none is not an allowed value
-#   (type=type_error.none.not_allowed)"
-
 
 class SetupTestGroupResults(BaseModel):
     exception: Union[Exception, None] = None
@@ -854,6 +775,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         stdout.flush()
         test.result.duration = round(time.time() - test_start_time, 2)
 
+    # TODO (cmcginley): break up the execute routines for integration/unit tests some more to remove
+    #   code w/ similar structure
     def execute_integration_test(
         self,
         detection: Detection,
@@ -925,7 +848,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # if the replay failed, record the test failure and return
         if not setup_results.success:
             test.result = IntegrationTestResult(
-                message="TEST FAILED (ERROR): something went wrong during during TestGroup setup (e.g. attack data replay)",
+                message=(
+                    "TEST FAILED (ERROR): something went wrong during during TestGroup setup (e.g. "
+                    "attack data replay)"
+                ),
                 exception=setup_results.exception,
                 duration=round(time.time() - test_start_time, 2),
                 status=TestResultStatus.ERROR
@@ -953,6 +879,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 start_time=test_start_time
             )
 
+            # TODO (cmcginley): right now, we are creating one CorrelationSearch instance for each
+            #   test case; typically, there is only one unit test, and thus one integration test,
+            #   per detection, so this is not an issue. However, if we start having many test cases
+            #   per detection, we will be duplicating some effort & network calls that we don't need
+            #   to. Consider refactoring in order to re-use CorrelationSearch objects across tests
+            #   in such a case
             # Instantiate the CorrelationSearch
             correlation_search = CorrelationSearch(
                 detection_name=detection.name,
@@ -970,6 +902,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 status=TestResultStatus.ERROR
             )
 
+        # TODO (cmcginley): when in interactive mode, consider maybe making the cleanup routine in
+        #   correlation_search happen after the user breaks the interactivity; currently
+        #   risk/notable indexes are dumped before the user can inspect
         # Pause here if the terminate flag has NOT been set AND either of the below are true:
         #   1. the behavior is always_pause
         #   2. the behavior is pause_on_failure and the test failed

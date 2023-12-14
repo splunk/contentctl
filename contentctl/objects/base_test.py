@@ -18,6 +18,7 @@ class TestType(str, Enum):
         return self.value
 
 
+# TODO (cmcginley): enforce distinct test names w/in detections
 class BaseTest(BaseModel, ABC):
     """
     A test case for a detection

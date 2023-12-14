@@ -21,7 +21,7 @@ from contentctl.actions.detection_testing.progress_bar import (
 
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = True
+ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
@@ -112,11 +112,13 @@ class TimeoutConfig(int, Enum):
     MAX_SLEEP = 210
 
 
+# TODO (cmcginley): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good
+#   now, but maybe not always...); maybe set latest/earliest to None?
 class ScheduleConfig(str, Enum):
     """
     Configuraton values for the saved search schedule
     """
-    EARLIEST_TIME: str = "-3y@y"
+    EARLIEST_TIME: str = "-5y@y"
     LATEST_TIME: str = "-1m@m"
     CRON_SCHEDULE: str = "*/1 * * * *"
 
@@ -408,6 +410,10 @@ class CorrelationSearch(BaseModel):
             return NotableAction.parse_from_dict(content)
         return None
 
+    # TODO (cmcginley): ideally, we could handle this and the following init w/ a call to
+    #   model_post_init, so that all the logic is encapsulated w/in _parse_risk_and_notable_actions
+    #   but that is a pydantic v2 feature (see the init validators for risk/notable actions):
+    #   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
     def _parse_risk_and_notable_actions(self) -> None:
         """Parses the risk/notable metadata we care about from self.saved_search.content
 
@@ -482,9 +488,9 @@ class CorrelationSearch(BaseModel):
         data it runs on is no older than the given earliest time and no newer than the given latest time; optionally
         calls self.refresh() (optional, because in some situations the caller may want to handle calling refresh, to
         avoid repeated network operations).
-        :param earliest_time: the max age of data for the search to run on (default: "-3y@y")
-        :param earliest_time: the max age of data for the search to run on (default: "-3y@y")
-        :param cron_schedule: the cron schedule for the search to run on (default: "*/1 * * * *")
+        :param earliest_time: the max age of data for the search to run on (default: see ScheduleConfig)
+        :param earliest_time: the max age of data for the search to run on (default: see ScheduleConfig)
+        :param cron_schedule: the cron schedule for the search to run on (default: see ScheduleConfig)
         :param refresh: a bool indicating whether to run refresh after enabling
         """
         # update the SavedSearch accordingly
@@ -519,6 +525,8 @@ class CorrelationSearch(BaseModel):
         if refresh:
             self.refresh()
 
+    # TODO (cmcginley): make the search for risk/notable events a more specific query based on the
+    #   search in question (and update the docstring to relfect when you do)
     def risk_event_exists(self) -> bool:
         """Whether a risk event exists
 
@@ -651,6 +659,8 @@ class CorrelationSearch(BaseModel):
                     # reset the result to None on each loop iteration
                     result = None
 
+                    # TODO (cmcginley): add more granular error messaging that can show success in
+                    #   finding a notable, but failure in finding a risk and vice-versa
                     # check for risk events
                     self.logger.debug("Checking for matching risk events")
                     if self.has_risk_analysis_action:

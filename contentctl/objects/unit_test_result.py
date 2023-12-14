@@ -61,7 +61,6 @@ class UnitTestResult(BaseTestResult):
                 sid=content.get("sid", None),
             )
 
-        # TODO: this error message seems not the most helpful, since content must be None for it to be set
         elif content is None:
             self.job_content = None
             self.status = TestResultStatus.ERROR

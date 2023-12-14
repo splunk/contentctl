@@ -26,6 +26,8 @@ class TestResultStatus(str, Enum):
         return self.value
 
 
+# TODO (cmcginley): add validator to BaseTestResult which makes a lack of exception incompatible
+#   with status ERROR
 class BaseTestResult(BaseModel):
     """
     Base class for test results
@@ -53,8 +55,6 @@ class BaseTestResult(BaseModel):
 
         # Needed to allow for embedding of Exceptions in the model
         arbitrary_types_allowed = True
-
-    # TODO: add validator which makes a lack of exception incompatible with status ERROR
 
     @property
     def passed(self) -> bool:

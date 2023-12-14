@@ -593,6 +593,11 @@ def main():
         help="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk "
         "instance with ES installed)"
     )
+    # TODO (cmcginley): add flag for enabling logging for correlation_search logging
+    # TODO (cmcginley): add flag for changing max_sleep time for integration tests
+    # TODO (cmcginley): add setting to skip listing skips -> test_config.TestConfig,
+    #   contentctl.test, contentctl.main
+
 
     test_parser.set_defaults(func=test)
 

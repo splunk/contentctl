@@ -167,6 +167,10 @@ class Detection_Abstract(SecurityContentObject):
         # Found everything
         return v
 
+    # TODO (cmcginley): Fix detection_abstract.tests_validate so that it surfaces validation errors
+    #   (e.g. a lack of tests) to the final results, instead of just showing a failed detection w/
+    #   no tests (maybe have a message propagated at the detection level? do a separate coverage
+    #   check as part of validation?):
     @validator("tests")
     def tests_validate(cls, v, values):
         if values.get("status", "") == DetectionStatus.production.value and not v:
@@ -188,7 +192,7 @@ class Detection_Abstract(SecurityContentObject):
         failure; if any test fails (FAIL, ERROR), consider that a failure; if any test has
         no result or no status, consider that a failure. If all tests succeed (PASS, SKIP), consider
         the detection a success
-        :returns: bool where True indicates all tests succeeded (they existed, complete and were 
+        :returns: bool where True indicates all tests succeeded (they existed, complete and were
             PASS/SKIP)
         """
         # If no tests are defined, we consider it a failure for the detection

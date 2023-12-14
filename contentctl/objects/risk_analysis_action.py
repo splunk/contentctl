@@ -77,7 +77,7 @@ class RiskAnalysisAction(BaseModel):
         risk_objects: list[RiskObject] = []
         threat_objects: list[ThreatObject] = []
 
-        # TODO: add validation ensuring at least 1 risk objects
+        # TODO (cmcginley): add validation ensuring at least 1 risk objects
         for entry in object_dicts:
             if "risk_object_field" in entry:
                 risk_objects.append(RiskObject(

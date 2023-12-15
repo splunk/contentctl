@@ -162,7 +162,8 @@ class GitService:
         
         #The following command will find all untracked files
         untracked_files = set(self.repo.untracked_files)
-        
+        untracked_files = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), untracked_files))
+
         #The following command will find all staged, but uncommitted, changes
         staged_changes  = self.repo.index.diff("HEAD")
         
@@ -182,11 +183,12 @@ class GitService:
             staged_renamed_content.add(content.b_path)
         
 
-
+        #import code
+        #code.interact(local=locals())
         staged_new_content = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_new_content))
-        staged_modified_content =  set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_new_content))
-        staged_deleted_content = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_new_content))
-        staged_renamed_content = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_new_content))
+        staged_modified_content =  set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_modified_content))
+        staged_deleted_content = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_deleted_content))
+        staged_renamed_content = set(filter(lambda x: x.startswith("lookups") or x.startswith("macros") or x.startswith("detections"), staged_renamed_content))
 
 
 
@@ -196,22 +198,32 @@ class GitService:
         renamed_content = set()
 
         for content in differences.iter_change_type("M"):
-            if content.b_path in staged_modified_content:
-                print(f"Warning - staged but uncommitted MODIFICATIONS in {content.b_path}. Using uncommitted MODIFICATIONS.")
-            else:
-                modified_content.add(content.b_path)
+            # if content.b_path in staged_modified_content:
+            #     print(f"Warning - staged but uncommitted MODIFICATIONS in {content.b_path}. Using uncommitted MODIFICATIONS.")
+            # else:
+            modified_content.add(content.b_path)
         for content in differences.iter_change_type("A"):
-            if content.b_path in staged_new_content:
-                print(f"Warning - staged but uncommitted NEW CONTENT in {content.b_path}. Using uncommitted NEW CONTENT.")
-            else:
-                new_content.add(content.b_path)
+            # if content.b_path in staged_new_content:
+            #     print(f"Warning - staged but uncommitted NEW CONTENT in {content.b_path}. Using uncommitted NEW CONTENT.")
+            # else:
+            new_content.add(content.b_path)
         for content in differences.iter_change_type("D"):
-            if content.b_path in staged_deleted_content:
-                print(f"Warning - staged but uncommitted file {content.b_path} was deleted. Treating this content as DELETED.")
+            # if content.b_path in staged_deleted_content:
+            #     print(f"Warning - staged but uncommitted file {content.b_path} was deleted. Treating this content as DELETED.")
+            #else:
             deleted_content.add(content.b_path)
         for content in differences.iter_change_type("R"):
             renamed_content.add(content.b_path)
         
+        all_committed_updates = new_content.union(modified_content).union(deleted_content).union(renamed_content)
+        all_uncommitted_updates = staged_new_content.union(staged_modified_content).union(staged_deleted_content).union(staged_renamed_content).union(untracked_files).union(untracked_files)
+
+        intersection = all_committed_updates.intersection(all_uncommitted_updates)
+        if intersection:
+            print(f"Warning the following untracked and/or uncommitted files are in conflict with committed updates: {intersection}")
+        
+
+        modified_content = all_committed_updates.union(all_committed_updates)
 
 
         #Changes to detections, macros, and lookups should trigger a re-test for anything which uses them
@@ -236,8 +248,10 @@ class GitService:
             if not deps.isdisjoint(changed_macros_and_lookups):
                 changed_detections_full_filename_paths.add(detection.file_path)
 
-        import code
-        code.interact(local=locals())
+        #import code
+        #code.interact(local=locals())
+        import pprint
+        pprint.pprint(changed_detections_full_filename_paths)
         return Detection.get_detections_from_filenames(changed_detections_full_filename_paths, director.detections)
 
     def __init__(self, config: TestConfig):

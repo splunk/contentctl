@@ -11,30 +11,35 @@ import enum
 class PlaybookProduct(str,enum.Enum):
     SPLUNK_SOAR = "Splunk SOAR"
 
-class PlaybookUseCases(str,enum.Enum):
+class PlaybookUseCase(str,enum.Enum):
     PHISHING = "Phishing"
     ENDPOINT = "Endpoint"
-
+    ENRICHMENT = "Enrichment"
 class PlaybookType(str,enum.Enum):
     INPUT = "Input"
+    AUTOMATIC = "Automatic"
+    AUTOMATION = "Automation"
 
 class VpeType(str,enum.Enum):
     MODERN = "Modern"
-
-class DefendTechniques(str,enum.Enum):
+    CLASSIC = "Classic"
+class DefendTechnique(str,enum.Enum):
     D3_AL = "D3-AL"
-
-
+    D3_DMSDL = "D3-DNSDL"
+    D3_DA = "D3-DA"
+    D3_IAA = "D3-IAA"
+    D3_IRA = "D3-IRA"
+    D3_OTF = "D3-OTF"
 class PlaybookTag(BaseModel):
-    #analytic_story: list = None
-    #detections: list = None
-    platform_tags: list[str] = Field(...,min_length=1)
+    analytic_story: list = None
+    detections: list = None
+    platform_tags: list[str] = Field(...,min_length=0)
     playbook_type: PlaybookType = ...
     vpe_type: VpeType = ...
-    playbook_fields: list[str] = Field(...)
-    product: list[PlaybookProduct] = Field(...,min_length=1)
-    use_cases: list[PlaybookUseCases] = Field(...,min_length=0)
-    defend_technique_id: DefendTechniques = ...
+    playbook_fields: list[str] = Field([], min_length=0)
+    product: list[PlaybookProduct] = Field([],min_length=0)
+    use_cases: list[PlaybookUseCase] = Field([],min_length=0)
+    defend_technique_id: DefendTechnique = Field(DefendTechnique.D3_AL)
     
     detection_objects: list[Detection] = []
     

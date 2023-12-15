@@ -27,7 +27,8 @@ class YmlReader():
                     print(f"Error loading YML file {file_path}: {str(e)}")
                     sys.exit(1)
             try:
-                yml_obj = list(yaml.safe_load_all(file_handler))[0]
+                #yml_obj = list(yaml.safe_load_all(file_handler))[0]
+                yml_obj = yaml.load(file_handler, Loader=yaml.CSafeLoader)
             except yaml.YAMLError as exc:
                 print(exc)
                 sys.exit(1)

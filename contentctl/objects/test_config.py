@@ -104,7 +104,7 @@ class Infrastructure(BaseModel, extra="forbid", validate_assignment=True):
         return self
 
 
-class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
+class InfrastructureConfig(BaseModel, extra="forbid", validate_assignment=True):
     infrastructure_type: DetectionTestingTargetInfrastructure = Field(
         default=DetectionTestingTargetInfrastructure.container,
         title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}",

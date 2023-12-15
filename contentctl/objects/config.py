@@ -159,7 +159,7 @@ class ConfigBuildSSA(BaseModel):
 class ConfigBuildApi(BaseModel):
     path_root: str
 
-class Config(BaseModel, extra=Extra.forbid):
+class Config(BaseModel, extra="forbid"):
     #general: ConfigGlobal = ConfigGlobal()
     #detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
     deployments: Deployments = Deployments()

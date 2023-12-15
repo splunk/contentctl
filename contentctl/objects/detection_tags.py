@@ -1,9 +1,4 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from contentctl.objects.story import Story
-
-import re
+from contentctl.objects.story import Story
 
 from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
@@ -29,14 +24,14 @@ class DetectionTags(BaseModel):
     kill_chain_phases: Optional[list[KillChainPhase]] = None
     mitre_attack_id: Optional[List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]]] = None
     nist: Optional[list[NistCategory]] = None
-    observable: Optional[list[Observable]] = None
+    observable: Optional[list[Observable]] = []
     message: Optional[str] = Field(...)
     product: list[SecurityContentProductName] = Field(...,min_length=1)
     required_fields: list[str] = Field(min_length=1)
     
     security_domain: SecurityDomain = Field(...)
     risk_severity: Optional[RiskSeverity] = None
-    #cve: Optional[List[str]] = Field(None,pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")
+    cve: Optional[List[str]] = Field(None,pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")
     atomic_guid: Optional[list[UUID4]] = None
     drilldown_search: Optional[str] = None
 

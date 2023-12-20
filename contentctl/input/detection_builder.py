@@ -20,9 +20,9 @@ class DetectionBuilder():
     security_content_obj : SecurityContentObject
 
 
-    def setObject(self, path: str) -> None:
+    def setObject(self, path: str, contentNameToDictMap:dict[str,SecurityContentObject]={}) -> None:
         yml_dict = YmlReader.load_file(path)
-        self.security_content_obj = Detection.model_validate(yml_dict)
+        self.security_content_obj = Detection.model_validate(yml_dict, context=contentNameToDictMap)
         
 
 

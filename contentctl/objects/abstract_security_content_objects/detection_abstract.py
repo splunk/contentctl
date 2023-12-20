@@ -32,7 +32,7 @@ class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = ...
     status: DetectionStatus = ...
-    data_source: Optional[List[DataSource]] = None
+    data_source: Optional[List[str]] = None
     tags: DetectionTags = ...
     search: Union[str, dict] = ...
     how_to_implement: str = ...
@@ -111,6 +111,7 @@ class Detection_Abstract(SecurityContentObject):
     
     @model_validator(mode="after")
     def search_obsersables_exist_validate(self):
+        return self
         if isinstance(self.search, str):
             
             observable_fields = [ob.name.lower() for ob in self.tags.observable]

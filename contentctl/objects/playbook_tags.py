@@ -15,9 +15,9 @@ class PlaybookUseCase(str,enum.Enum):
     PHISHING = "Phishing"
     ENDPOINT = "Endpoint"
     ENRICHMENT = "Enrichment"
+    
 class PlaybookType(str,enum.Enum):
     INPUT = "Input"
-    AUTOMATIC = "Automatic"
     AUTOMATION = "Automation"
 
 class VpeType(str,enum.Enum):
@@ -25,7 +25,7 @@ class VpeType(str,enum.Enum):
     CLASSIC = "Classic"
 class DefendTechnique(str,enum.Enum):
     D3_AL = "D3-AL"
-    D3_DMSDL = "D3-DNSDL"
+    D3_DNSDL = "D3-DNSDL"
     D3_DA = "D3-DA"
     D3_IAA = "D3-IAA"
     D3_IRA = "D3-IRA"
@@ -39,7 +39,7 @@ class PlaybookTag(BaseModel):
     playbook_fields: list[str] = Field([], min_length=0)
     product: list[PlaybookProduct] = Field([],min_length=0)
     use_cases: list[PlaybookUseCase] = Field([],min_length=0)
-    defend_technique_id: DefendTechnique = Field(DefendTechnique.D3_AL)
+    defend_technique_id: DefendTechnique = Field(...)
     
     detection_objects: list[Detection] = []
     

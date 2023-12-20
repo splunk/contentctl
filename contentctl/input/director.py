@@ -31,8 +31,8 @@ from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.objects.config import Config
 
 from contentctl.objects.config import Config
-
-
+from contentctl.objects.security_content_object import SecurityContentObject
+from uuid import UUID
 
 @dataclass(frozen=True)
 class DirectorInputDto:
@@ -52,6 +52,7 @@ class DirectorOutputDto:
      lookups: list[Lookup]
      deployments: list[Deployment]
      ssa_detections: list[SSADetection]
+     
 
 
 class Director():
@@ -72,7 +73,23 @@ class Director():
         self.output_dto = output_dto
         self.attack_enrichment = dict()
 
-
+        
+        self.name_to_content_map: dict[str, SecurityContentObject] = {}
+        self.uuid_to_content_map: dict[UUID, SecurityContentObject] = {}
+    
+    def addContentToDictMappings(self, content:SecurityContentObject):
+         if content.name in self.name_to_content_map:
+            raise ValueError(f"Duplicate name '{content.name}' with paths:\n"
+                             f" - {content.file_path}\n"
+                             f" - {self.name_to_content_map[content.name].file_path}")
+         elif content.id in self.uuid_to_content_map:
+            raise ValueError(f"Duplicate id '{content.id}' with paths:\n"
+                    f" - {content.file_path}\n"
+                    f" - {self.name_to_content_map[content.name].file_path}")
+         
+         self.name_to_content_map[content.name] = content 
+         self.uuid_to_content_map[content.id] = content 
+    
     def execute(self, input_dto: DirectorInputDto) -> None:
         self.input_dto = input_dto
         
@@ -91,10 +108,10 @@ class Director():
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
             self.createSecurityContent(SecurityContentType.baselines)
+            self.createSecurityContent(SecurityContentType.stories)
             self.createSecurityContent(SecurityContentType.investigations)
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
-            self.createSecurityContent(SecurityContentType.stories)
         elif self.input_dto.product == SecurityContentProduct.SSA:
             self.createSecurityContent(SecurityContentType.ssa_detections)
         
@@ -128,47 +145,56 @@ class Director():
                         self.constructLookup(self.basic_builder, file)
                         lookup = self.basic_builder.getObject()
                         self.output_dto.lookups.append(lookup)
+                        self.addContentToDictMappings(lookup)
                 
                 elif type == SecurityContentType.macros:
                         self.constructMacro(self.basic_builder, file)
                         macro = self.basic_builder.getObject()
                         self.output_dto.macros.append(macro)
+                        self.addContentToDictMappings(macro)
                 
                 elif type == SecurityContentType.deployments:
                         self.constructDeployment(self.basic_builder, file)
                         deployment = self.basic_builder.getObject()
                         self.output_dto.deployments.append(deployment)
+                        self.addContentToDictMappings(deployment)
                 
                 elif type == SecurityContentType.playbooks:
                         self.constructPlaybook(self.playbook_builder, file)
                         playbook = self.playbook_builder.getObject()
-                        self.output_dto.playbooks.append(playbook)                    
+                        self.output_dto.playbooks.append(playbook)  
+                        self.addContentToDictMappings(playbook)                  
                 
                 elif type == SecurityContentType.baselines:
                         self.constructBaseline(self.baseline_builder, file)
                         baseline = self.baseline_builder.getObject()
                         self.output_dto.baselines.append(baseline)
+                        self.addContentToDictMappings(baseline)
                 
                 elif type == SecurityContentType.investigations:
                         self.constructInvestigation(self.investigation_builder, file)
                         investigation = self.investigation_builder.getObject()
                         self.output_dto.investigations.append(investigation)
+                        self.addContentToDictMappings(investigation)
 
                 elif type == SecurityContentType.stories:
                         self.constructStory(self.story_builder, file)
                         story = self.story_builder.getObject()
                         self.output_dto.stories.append(story)
+                        self.addContentToDictMappings(story)
             
                 elif type == SecurityContentType.detections:
                         self.constructDetection(self.detection_builder, file)
                         detection = self.detection_builder.getObject()
                         self.output_dto.detections.append(detection)
+                        self.addContentToDictMappings(detection)
 
                 elif type == SecurityContentType.ssa_detections:
                         self.constructSSADetection(self.ssa_detection_builder, file)
-                        detection = self.ssa_detection_builder.getObject()
-                        if detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
-                            self.output_dto.ssa_detections.append(detection)
+                        ssa_detection = self.ssa_detection_builder.getObject()
+                        if ssa_detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
+                            self.output_dto.ssa_detections.append(ssa_detection)
+                            self.addContentToDictMappings(ssa_detection)
 
                 else:
                         raise Exception(f"Unsupported type: [{type}]")
@@ -180,18 +206,20 @@ class Director():
             except (ValidationError, ValueError) as e:
                 relative_path = file.absolute().relative_to(self.input_dto.input_path.absolute())
                 validation_errors.append((relative_path,e))
+                
 
         print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
         print("Done!")
 
         if len(validation_errors) > 0:
-            errors_string = '\n\n'.join([f"{e_tuple[0]}\n{str(e_tuple[1])}" for e_tuple in validation_errors])
+            errors_string = '\n\n'.join([f"File: {e_tuple[0]}\nError: {str(e_tuple[1])}" for e_tuple in validation_errors])
+            print(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
             #raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
 
 
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path)
+        builder.setObject(file_path,contentNameToDictMap=self.name_to_content_map)
         builder.addDeployment(self.output_dto.deployments)
         builder.addMitreAttackEnrichment(self.attack_enrichment)
         builder.addKillChainPhase()
@@ -234,10 +262,10 @@ class Director():
     def constructStory(self, builder: StoryBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path)
-        builder.addDetections(self.output_dto.detections, self.input_dto.config)
+        #builder.addDetections(self.output_dto.detections, self.input_dto.config)
         
         #builder.addInvestigations(self.output_dto.investigations)
-        builder.addBaselines(self.output_dto.baselines)
+        #builder.addBaselines(self.output_dto.baselines)
         builder.addAuthorCompanyName()
 
 
@@ -275,7 +303,7 @@ class Director():
 
     def constructInvestigation(self, builder: InvestigationBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path)
+        builder.setObject(file_path,self.name_to_content_map)
         builder.addInputs()
 
     def constructObjects(self, builder: BasicBuilder, file_path: str) -> None:

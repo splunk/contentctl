@@ -1,17 +1,18 @@
 from contentctl.objects.story import Story
 
-from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict
+from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
 from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
-from typing import List, Optional, Annotated
+from typing import List, Optional, Annotated, Union
+from contentctl.objects.security_content_object import SecurityContentObject
 
 class DetectionTags(BaseModel):
     # detection spec
     model_config = ConfigDict(use_enum_values=True,validate_default=False)
     analytic_story: list[Story] = Field(...)
-    asset_type: AssetType = Field(...)
+    asset_type: str = Field(...)
     #enum is intentionally Cis18 even though field is named cis20 for legacy reasons
     cis20: Optional[List[Cis18Value]] = None 
     confidence: NonNegativeInt = Field(...,le=100)
@@ -31,7 +32,7 @@ class DetectionTags(BaseModel):
     
     security_domain: SecurityDomain = Field(...)
     risk_severity: Optional[RiskSeverity] = None
-    cve: Optional[List[str]] = Field(None,pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")
+    cve: Optional[List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]]] = None
     atomic_guid: Optional[list[UUID4]] = None
     drilldown_search: Optional[str] = None
 
@@ -82,3 +83,8 @@ class DetectionTags(BaseModel):
     #     return v
 
     
+    @field_validator('analytic_story',mode="before")
+    @classmethod
+    def mapStoryNamesToStoryObjects(cls, v:Union[list[str], list[Story]], info:ValidationInfo)->list[Story]:
+        
+        return SecurityContentObject.mapNamesToSecurityContentObjects(v,info)

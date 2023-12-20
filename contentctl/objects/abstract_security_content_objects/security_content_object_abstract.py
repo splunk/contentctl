@@ -1,4 +1,8 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.security_content_object import SecurityContentObject
+
 import re
 import abc
 import uuid
@@ -6,6 +10,10 @@ import datetime
 from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict
 from typing import Tuple, Optional, List
 import pathlib
+
+
+
+
 
 NO_FILE_NAME = "NO_FILE_NAME"
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
@@ -60,6 +68,22 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
                 raise ValueError(f"Unexpected newline(s) in {info.field_name}:'{v}'.  Newline characters MUST be prefixed with \\")
         return v
     
+    @classmethod
+    def mapNamesToSecurityContentObjects(cls, v: list[str], info:ValidationInfo)->list[SecurityContentObject]:
+        
+        mappedObjects: list[SecurityContentObject] = []
+        missing_objects: list[str] = []
+        for object_name in v:
+            found_object = info.context.get(object_name,None)
+            if not found_object:
+                missing_objects.append(object_name)
+            else:
+                mappedObjects.append(found_object)
+        
+        if len(missing_objects) > 0:
+            raise ValueError(f"Failed to find the following objects: {missing_objects}")
+
+        return mappedObjects
 
 
     @staticmethod

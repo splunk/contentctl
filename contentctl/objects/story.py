@@ -1,7 +1,8 @@
-# from __future__ import annotations
-# from typing import TYPE_CHECKING
-# if TYPE_CHECKING:
-#     from contentctl.objects.detection import Detection
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.detection import Detection
+
 
 from pydantic import field_validator, Field, ValidationInfo
 
@@ -31,8 +32,11 @@ class Story(SecurityContentObject):
     def encode_error(cls, v:str, info:ValidationInfo)->str:
         return super().free_text_field_valid(v,info)
 
-    def getDetectionNames(self)->List[str]:
-        return [detection.name for detection in self.detections]
+    def getDetections(self, detections:List[Detection])->list[Detection]:
+        return [detection for detection in detections if self in detection.tags.analytic_story]
+
+    def getDetectionNames(self, detections:List[Detection])->List[str]:
+        return [detection.name for detection in self.getDetections(detections)]
     
     # def getInvestigationNames(self)->List[str]:
     #     if self.investigations:

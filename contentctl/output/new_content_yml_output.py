@@ -14,18 +14,14 @@ class NewContentYmlOutput():
     def writeObjectNewContent(self, object: dict, type: SecurityContentType) -> None:
         if type == SecurityContentType.detections:
             file_path = os.path.join(self.output_path, 'detections', self.convertNameToFileName(object['name'], object['tags']['product']))
-            test_obj = {}
-            test_obj['name'] = object['name'] + ' Unit Test'
-            test_obj['tests'] = [
+            object['tests'] = [
                 {
                     'name': object['name'],
-                    'file': self.convertNameToFileName(object['name'],object['tags']['product']),
                     'pass_condition': '| stats count | where count > 0',
                     'earliest_time': '-24h',
                     'latest_time': 'now',
                     'attack_data': [
                         {
-                            'file_name': 'UPDATE',
                             'data': 'UPDATE',
                             'source': 'UPDATE',
                             'sourcetype': 'UPDATE',
@@ -34,12 +30,10 @@ class NewContentYmlOutput():
                     ]
                 }
             ]
-            file_path_test = os.path.join(self.output_path, 'tests', self.convertNameToTestFileName(object['name'], object['tags']['product']))
-            YmlWriter.writeYmlFile(file_path_test, test_obj)
             #object.pop('source')
             YmlWriter.writeYmlFile(file_path, object)
             print("Successfully created detection " + file_path)
-        
+
         elif type == SecurityContentType.stories:
             file_path = os.path.join(self.output_path, 'stories', self.convertNameToFileName(object['name'], object['tags']['product']))
             YmlWriter.writeYmlFile(file_path, object)

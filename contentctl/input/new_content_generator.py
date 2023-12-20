@@ -4,7 +4,7 @@ import questionary
 from dataclasses import dataclass
 from datetime import datetime
 
-from contentctl.objects.enums import SecurityContentType
+from contentctl.objects.enums import DetectionStatus, SecurityContentType
 from contentctl.input.new_content_questions import NewContentQuestions
 
 
@@ -32,10 +32,10 @@ class NewContentGenerator():
             self.output_dto.obj['name'] = answers['detection_name']
             self.output_dto.obj['id'] = str(uuid.uuid4())
             self.output_dto.obj['version'] = 1
+            self.output_dto.obj['status'] = DetectionStatus.experimental.value
             self.output_dto.obj['date'] = datetime.today().strftime('%Y-%m-%d')
             self.output_dto.obj['author'] = answers['detection_author']
             self.output_dto.obj['type'] = answers['detection_type']
-            self.output_dto.obj['datamodel'] = answers['datamodels']
             self.output_dto.obj['datamodel'] = answers['datamodels']
             self.output_dto.obj['description'] = 'UPDATE_DESCRIPTION'   
             file_name = self.output_dto.obj['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
@@ -43,6 +43,7 @@ class NewContentGenerator():
             self.output_dto.obj['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
             self.output_dto.obj['known_false_positives'] = 'UPDATE_KNOWN_FALSE_POSITIVES'            
             self.output_dto.obj['references'] = ['REFERENCE']
+            self.output_dto.obj['data_source'] = ['UPDATE']
             self.output_dto.obj['tags'] = dict()
             self.output_dto.obj['tags']['analytic_story'] = ['UPDATE_STORY_NAME']
             self.output_dto.obj['tags']['asset_type'] = 'UPDATE asset_type'

@@ -161,7 +161,7 @@ class Detection_Abstract(SecurityContentObject):
         # Found everything
         return v
 
-    @validator("tests")
+    @validator("tests", always=True)
     def tests_validate(cls, v, values):
         if values.get("status","") == DetectionStatus.production.value and not v:
             raise ValueError(
@@ -177,7 +177,7 @@ class Detection_Abstract(SecurityContentObject):
         return v
     
     def all_tests_successful(self) -> bool:
-        if len(self.tests) == 0:
+        if len(self.tests) == 0 and self.status is DetectionStatus.production.value:
             return False
         for test in self.tests:
             if test.result is None or test.result.success == False:

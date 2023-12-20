@@ -7,7 +7,7 @@ from pathlib import Path
 
 from contentctl.objects.playbook import Playbook
 from contentctl.input.yml_reader import YmlReader
-
+from contentctl.input.director import DirectorOutputDto
 
 class PlaybookBuilder():
     playbook: Playbook
@@ -17,16 +17,12 @@ class PlaybookBuilder():
     def __init__(self, input_path: pathlib.Path):
         self.input_path = input_path
 
-    def setObject(self, path: pathlib.Path) -> None:
+    def setObject(self, path: str, 
+        output_dto:DirectorOutputDto) -> None:
         yml_dict = YmlReader.load_file(path)
+        self.playbook = Playbook.model_validate(yml_dict, context={"output_dto":output_dto})
 
-        try:
-            self.playbook = Playbook.model_validate(yml_dict)
-
-        except ValidationError as e:
-            print('Validation Error for file ' + str(path))
-            print(e)
-            sys.exit(1)
+        
 
 
     def addDetections(self) -> None:

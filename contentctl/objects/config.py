@@ -1,7 +1,8 @@
 from pydantic import BaseModel, validator, Field
-import semantic_version
 from datetime import datetime
-from typing import Union
+from typing import Optional
+import semantic_version
+
 from contentctl.objects.test_config import TestConfig
 
 import string
@@ -52,10 +53,10 @@ class ConfigRba(BaseModel):
 class ConfigDetectionConfiguration(BaseModel):
     scheduling: ConfigScheduling = ConfigScheduling(cron_schedule="0 * * * *", earliest_time="-70m@m", latest_time="-10m@m", schedule_window="auto")
     notable: ConfigNotable = ConfigNotable(rule_description="%description%", rule_title="%name%", nes_fields=["user", "dest", "src"])
-    email: Union[ConfigEmail,None] = None
-    slack: Union[ConfigSlack,None] = None
-    phantom: Union[ConfigPhantom,None] = None
-    rba: Union[ConfigRba,None] = None
+    email: Optional[ConfigEmail] = None
+    slack: Optional[ConfigSlack] = None
+    phantom: Optional[ConfigPhantom] = None
+    rba: Optional[ConfigRba] = None
 
 
 class ConfigAlertAction(BaseModel):
@@ -127,9 +128,9 @@ class ConfigBuild(BaseModel):
     author_company: str = Field(default="author company",title="Name of the company who has developed the Content Pack")
     description: str = Field(default="description of app",title="Free text description of the Content Pack.")
 
-    splunk_app: Union[ConfigBuildSplunk,None] = ConfigBuildSplunk()
-    json_objects: Union[ConfigBuildJson,None] = None
-    ba_objects: Union[ConfigBuildBa,None] = None
+    splunk_app: Optional[ConfigBuildSplunk] = ConfigBuildSplunk()
+    json_objects: Optional[ConfigBuildJson] = None
+    ba_objects: Optional[ConfigBuildBa] = None
 
     @validator('version', always=True)
     def validate_version(cls, v, values):
@@ -164,10 +165,10 @@ class Config(BaseModel, extra="forbid"):
     #detection_configuration: ConfigDetectionConfiguration = ConfigDetectionConfiguration()
     deployments: Deployments = Deployments()
     build: ConfigBuild = ConfigBuild()
-    build_ssa: Union[ConfigBuildSSA,None] = None 
-    build_api: Union[ConfigBuildApi,None] = None 
+    build_ssa: Optional[ConfigBuildSSA] = None 
+    build_api: Optional[ConfigBuildApi] = None 
     enrichments: ConfigEnrichments = ConfigEnrichments()
-    test: Union[TestConfig,None] = None 
+    test: Optional[TestConfig] = None 
     
 
 

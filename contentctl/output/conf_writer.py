@@ -55,6 +55,7 @@ class ConfWriter():
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')), 
             trim_blocks=True,
             undefined=StrictUndefined)
+        j2_env.globals.update(objectListToNameList=SecurityContentObject.objectListToNameList)
 
 
         j2_env.filters['custom_jinja2_enrichment_filter'] = custom_jinja2_enrichment_filter

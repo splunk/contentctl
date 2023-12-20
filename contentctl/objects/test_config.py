@@ -113,7 +113,7 @@ class InfrastructureConfig(BaseModel, extra="forbid", validate_assignment=True):
         default="https://registry.hub.docker.com/splunk/splunk:latest",
         title="Full path to the container image to be used",
     )
-    infrastructures: list[Infrastructure] = Field([Infrastructure()],min_length=1)
+    infrastructures: list[Infrastructure] = Field(default=[Infrastructure()],min_length=1)
 
     
 
@@ -358,7 +358,7 @@ class VersionControlConfig(BaseModel, extra='forbid', validate_assignment=True):
     
 class TestConfig(BaseModel, extra="forbid", validate_assignment=True):
     
-    version_control_config: Optional[VersionControlConfig] = Field(VersionControlConfig(), title="Basic version control information for contentctl test modes.")
+    version_control_config: Optional[VersionControlConfig] = Field(None, title="Basic version control information for contentctl test modes.")
     
     infrastructure_config: InfrastructureConfig = Field(
         default=InfrastructureConfig(),

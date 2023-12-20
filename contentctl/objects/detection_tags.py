@@ -8,6 +8,8 @@ from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, Risk
 from typing import List, Optional, Annotated, Union
 from contentctl.objects.security_content_object import SecurityContentObject
 
+
+
 class DetectionTags(BaseModel):
     # detection spec
     model_config = ConfigDict(use_enum_values=True,validate_default=False)
@@ -86,5 +88,4 @@ class DetectionTags(BaseModel):
     @field_validator('analytic_story',mode="before")
     @classmethod
     def mapStoryNamesToStoryObjects(cls, v:Union[list[str], list[Story]], info:ValidationInfo)->list[Story]:
-        
         return SecurityContentObject.mapNamesToSecurityContentObjects(v,info)

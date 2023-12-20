@@ -8,18 +8,15 @@ from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.story import Story
 from contentctl.objects.security_content_object import SecurityContentObject
-
+from contentctl.input.director import DirectorOutputDto
 class InvestigationBuilder():
     investigation: Investigation
 
-    def setObject(self, path: str, contentNameToDictMap:dict[str,SecurityContentObject]={}) -> None:
+    def setObject(self, path: str, 
+                  output_dto:DirectorOutputDto) -> None:
         yml_dict = YmlReader.load_file(path)
-        try:
-            self.investigation = Investigation.model_validate(yml_dict, context=contentNameToDictMap)
-        except ValidationError as e:
-            print(f'Validation Error for file {path}' )
-            print(e)
-            sys.exit(1)
+        self.investigation = Investigation.model_validate(yml_dict, context={"output_dto":output_dto})
+        
 
     def reset(self) -> None:
         self.investigation = None

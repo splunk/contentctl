@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
 
-
+from contentctl.objects.security_content_object import SecurityContentObject
 from pydantic import field_validator, Field, ValidationInfo
 
-from contentctl.objects.security_content_object import SecurityContentObject
+
 from contentctl.objects.story_tags import StoryTags
 
 #from contentctl.objects.investigation import Investigation

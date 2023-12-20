@@ -7,6 +7,13 @@ class AnalyticsType(enum.Enum):
     Hunting = "Hunting"
     Correlation = "Correlation"
 
+class DeploymentType(str, enum.Enum):
+    TTP = "TTP"
+    Anomaly = "Anomaly"
+    Hunting = "Hunting"
+    Correlation = "Correlation"
+    Baseline = "Baseline"
+
 
 class DataModel(str,enum.Enum):
     ENDPOINT = "Endpoint"

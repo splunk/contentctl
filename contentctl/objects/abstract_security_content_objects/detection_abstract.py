@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import uuid
-import string
-import requests
-import time
-import sys
+
 import re
 import pathlib
-from pydantic import BaseModel, field_validator, model_validator, ValidationInfo
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field
 from dataclasses import dataclass
-from typing import Union, Optional, List
+from typing import Union, Optional, List, Any
 from datetime import datetime, timedelta
 
 
@@ -18,7 +14,7 @@ from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
 from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.detection_tags import DetectionTags
-from contentctl.objects.config import ConfigDetectionConfiguration
+from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
@@ -27,23 +23,28 @@ from contentctl.objects.playbook import Playbook
 from contentctl.helper.link_validator import LinkValidator
 from contentctl.objects.enums import DataSource,ProvidingTechnology
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 
 class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
-    type: AnalyticsType = ...
-    status: DetectionStatus = ...
+    type: AnalyticsType = Field(...)
+    status: DetectionStatus = Field(...)
     data_source: Optional[List[str]] = None
-    tags: DetectionTags = ...
-    search: Union[str, dict] = ...
-    how_to_implement: str = ...
-    known_false_positives: str = ...
+    tags: DetectionTags = Field(...)
+    search: Union[str, dict] = Field(..., min_length=6)
+    how_to_implement: str = Field(..., min_length=6)
+    known_false_positives: str = Field(..., min_length=6)
     check_references: bool = False  
     
     tests: list[UnitTest] = []
 
     # enrichments
-    datamodel: Optional[List] = None
-    deployment: Optional[ConfigDetectionConfiguration] = None
+    datamodel: Optional[List[DataModel]] = None
+    
+
+    deployment: Deployment = Field('IGNORED_IN_VALIDATOR')
     annotations: dict = {}
     playbooks: list[Playbook] = []
     baselines: list[Baseline] = []
@@ -72,6 +73,37 @@ class Detection_Abstract(SecurityContentObject):
     
     def getSource(self)->str:
         return self.file_path.parts[-2]
+    
+    @field_validator("deployment", mode="before")
+    def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
+        director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
+        if not director:
+            raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
+        
+        typeField = info.data.get("type",None)
+        deps = [deployment for deployment in director.deployments if deployment.type == typeField]
+        if len(deps) == 1:
+            return deps[0]
+        elif len(deps) == 0:
+            raise ValueError(f"Failed to find Deployment for type '{typeField}' "\
+                             f"from  possible {[deployment.type for deployment in director.deployments]}")
+        else:
+            raise ValueError(f"Found more than 1 ({len(deps)}) Deployment for type '{typeField}' "\
+                             f"from  possible {[deployment.type for deployment in director.deployments]}")
+
+
+        
+    # @model_validator(mode="before")
+    # def getDeployment(cls, data:Any, info:ValidationInfo)->Optional[Deployment]:
+    #     import code
+    #     code.interact(local=locals())
+    #     director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
+    #     if not director:
+    #         raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
+        
+    #     data.get("type")
+        
+    #     return SecurityContentObject.mapNamesToSecurityContentObjects(v,info)
 
     @staticmethod
     def get_detections_from_filenames(detection_filenames:set[str], all_detections:list[Detection_Abstract])->list[Detection_Abstract]:

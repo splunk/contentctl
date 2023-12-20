@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.objects.security_content_object import SecurityContentObject
+    from contentctl.objects.config import Config
+    from contentctl.input.director import DirectorOutputDto
 
 import re
 import abc
@@ -35,6 +37,16 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     description: str = Field("wow",max_length=10000)
     file_path: FilePath = Field("/tmp/doesnt_exist.yml")
     references: Optional[List[HttpUrl]] = None
+
+
+    @staticmethod
+    def objectListToNameList(objects:list[SecurityContentObject], config:Optional[Config]=None)->list[str]:
+        return [object.getName(config) for object in objects]
+
+    # This function is overloadable by specific types if they want to redefine names, for example
+    # to have the format ESCU - NAME - Rule (config.tag - self.name - Rule)
+    def getName(self, config:Optional[Config])->str:
+        return self.name
 
     @field_validator('file_path')
     @classmethod
@@ -70,11 +82,18 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     
     @classmethod
     def mapNamesToSecurityContentObjects(cls, v: list[str], info:ValidationInfo)->list[SecurityContentObject]:
+        director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
+        if director is not None:
+            name_map = director.name_to_content_map
+        else:
+            name_map = {}
         
+
+
         mappedObjects: list[SecurityContentObject] = []
         missing_objects: list[str] = []
         for object_name in v:
-            found_object = info.context.get(object_name,None)
+            found_object = name_map.get(object_name,None)
             if not found_object:
                 missing_objects.append(object_name)
             else:
@@ -101,5 +120,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             name_dict[str(pathlib.Path(object.file_path))] = object
         
         return name_dict
+    
+
     
     

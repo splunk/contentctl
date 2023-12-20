@@ -2,7 +2,6 @@ import sys
 import re
 import os
 
-from pydantic import ValidationError
 
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
@@ -12,21 +11,25 @@ from contentctl.objects.lookup import Lookup
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
-from contentctl.objects.config import ConfigDetectionConfiguration
+
 from contentctl.helper.constants import *
 
+
+from contentctl.input.director import DirectorOutputDto
 
 class DetectionBuilder():
     security_content_obj : SecurityContentObject
 
 
-    def setObject(self, path: str, contentNameToDictMap:dict[str,SecurityContentObject]={}) -> None:
+    def setObject(self, path: str, 
+        output_dto:DirectorOutputDto) -> None:
         yml_dict = YmlReader.load_file(path)
-        self.security_content_obj = Detection.model_validate(yml_dict, context=contentNameToDictMap)
+        self.security_content_obj = Detection.model_validate(yml_dict, context={"output_dto":output_dto})
         
 
 
     def addDeployment(self, deployments: list) -> None:
+        raise Exception("addDeployment logic migrated to Detection Constructor")
         if self.security_content_obj:
             if not self.security_content_obj.deployment:
                 matched_deployments = []
@@ -34,8 +37,11 @@ class DetectionBuilder():
                     d_tags = dict(d.tags)
                     for d_tag in d_tags.keys():
                         for attr in dir(self.security_content_obj):
+                            #print(attr)
                             if not (attr.startswith('__') or attr.startswith('_')):
+                                print(f"{attr} - {d_tag}")
                                 if attr == d_tag:
+                                    print(f"{attr} - {d_tag}")
                                     if type(self.security_content_obj.__getattribute__(attr)) is str:
                                         attr_values = [self.security_content_obj.__getattribute__(attr)]
                                     else:
@@ -43,6 +49,7 @@ class DetectionBuilder():
                                     
                                     for attr_value in attr_values:
                                         if attr_value == d_tags[d_tag]:
+                                            print(f"adding deployment {d}")
                                             matched_deployments.append(d)
 
                 if len(matched_deployments) == 0:

@@ -1,16 +1,17 @@
 
 
-from typing import Union, Optional
-from pydantic import BaseModel, validator, ValidationError, Field
+from typing import Optional
+from pydantic import BaseModel, Field
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.unit_test_attack_data import UnitTestAttackData
+    from contentctl.objects.unit_test_result import UnitTestResult
 
-from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
-from contentctl.objects.enums import SecurityContentType
-
 
 class UnitTest(BaseModel):
-    name: str = ...
+    name: str = Field(...)
     pass_condition: Optional[str] = None
     earliest_time: Optional[str] = None
     latest_time: Optional[str] = None

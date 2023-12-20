@@ -1,7 +1,4 @@
-import re
-from tracemalloc import start
-from unittest.mock import DEFAULT
-from pydantic import BaseModel, validator, model_validator,Field
+from pydantic import BaseModel, model_validator
 from typing import Union, Callable, Any
 import requests
 import urllib3, urllib3.exceptions

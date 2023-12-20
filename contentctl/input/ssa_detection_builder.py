@@ -13,15 +13,16 @@ from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.ssa_detection import SSADetection
 from contentctl.helper.constants import *
-
+from contentctl.input.director import DirectorOutputDto
 
 class SSADetectionBuilder():
     security_content_obj : SSADetection
 
 
-    def setObject(self, path: str) -> None:
+    def setObject(self, path: str,
+                  output_dto:DirectorOutputDto ) -> None:
         yml_dict = YmlReader.load_file(path)
-        self.security_content_obj = SSADetection.model_validate(yml_dict)      
+        self.security_content_obj = SSADetection.model_validate(yml_dict, context={"output_dto":output_dto})      
 
 
     def addProvidingTechnologies(self) -> None:

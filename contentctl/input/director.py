@@ -1,13 +1,17 @@
 import os
 import sys
 import pathlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pydantic import ValidationError
+from uuid import UUID
 
-
-
+    
+    
+    
 from contentctl.objects.detection import Detection
 from contentctl.objects.story import Story
+from contentctl.objects.config import Config
+from contentctl.objects.enums import SecurityContentProduct
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.playbook import Playbook
@@ -15,24 +19,7 @@ from contentctl.objects.deployment import Deployment
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.ssa_detection import SSADetection
-
-from contentctl.input.basic_builder import BasicBuilder
-from contentctl.input.detection_builder import DetectionBuilder
-from contentctl.input.ssa_detection_builder import SSADetectionBuilder
-from contentctl.input.playbook_builder import PlaybookBuilder
-from contentctl.input.baseline_builder import BaselineBuilder
-from contentctl.input.investigation_builder import InvestigationBuilder
-from contentctl.input.story_builder import StoryBuilder
-from contentctl.objects.enums import SecurityContentType
-from contentctl.objects.enums import SecurityContentProduct
-from contentctl.objects.enums import DetectionStatus 
-from contentctl.helper.utils import Utils
-from contentctl.enrichments.attack_enrichment import AttackEnrichment
-from contentctl.objects.config import Config
-
-from contentctl.objects.config import Config
 from contentctl.objects.security_content_object import SecurityContentObject
-from uuid import UUID
 
 @dataclass(frozen=True)
 class DirectorInputDto:
@@ -52,6 +39,29 @@ class DirectorOutputDto:
      lookups: list[Lookup]
      deployments: list[Deployment]
      ssa_detections: list[SSADetection]
+     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
+     uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
+
+
+
+
+from contentctl.input.basic_builder import BasicBuilder
+from contentctl.input.detection_builder import DetectionBuilder
+from contentctl.input.ssa_detection_builder import SSADetectionBuilder
+from contentctl.input.playbook_builder import PlaybookBuilder
+from contentctl.input.baseline_builder import BaselineBuilder
+from contentctl.input.investigation_builder import InvestigationBuilder
+from contentctl.input.story_builder import StoryBuilder
+from contentctl.objects.enums import SecurityContentType
+
+from contentctl.objects.enums import DetectionStatus 
+from contentctl.helper.utils import Utils
+from contentctl.enrichments.attack_enrichment import AttackEnrichment
+
+
+
+
+
      
 
 
@@ -72,23 +82,19 @@ class Director():
     def __init__(self, output_dto: DirectorOutputDto) -> None:
         self.output_dto = output_dto
         self.attack_enrichment = dict()
-
-        
-        self.name_to_content_map: dict[str, SecurityContentObject] = {}
-        self.uuid_to_content_map: dict[UUID, SecurityContentObject] = {}
     
     def addContentToDictMappings(self, content:SecurityContentObject):
-         if content.name in self.name_to_content_map:
+         if content.name in self.output_dto.name_to_content_map:
             raise ValueError(f"Duplicate name '{content.name}' with paths:\n"
                              f" - {content.file_path}\n"
-                             f" - {self.name_to_content_map[content.name].file_path}")
-         elif content.id in self.uuid_to_content_map:
+                             f" - {self.output_dto.name_to_content_map[content.name].file_path}")
+         elif content.id in self.output_dto.uuid_to_content_map:
             raise ValueError(f"Duplicate id '{content.id}' with paths:\n"
                     f" - {content.file_path}\n"
-                    f" - {self.name_to_content_map[content.name].file_path}")
+                    f" - {self.output_dto.name_to_content_map[content.name].file_path}")
          
-         self.name_to_content_map[content.name] = content 
-         self.uuid_to_content_map[content.id] = content 
+         self.output_dto.name_to_content_map[content.name] = content 
+         self.output_dto.uuid_to_content_map[content.id] = content 
     
     def execute(self, input_dto: DirectorInputDto) -> None:
         self.input_dto = input_dto
@@ -219,8 +225,8 @@ class Director():
 
     def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path,contentNameToDictMap=self.name_to_content_map)
-        builder.addDeployment(self.output_dto.deployments)
+        builder.setObject(file_path, self.output_dto)
+        #builder.addDeployment(self.output_dto.deployments)
         builder.addMitreAttackEnrichment(self.attack_enrichment)
         builder.addKillChainPhase()
         builder.addCIS()
@@ -248,7 +254,7 @@ class Director():
 
     def constructSSADetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path)
+        builder.setObject(file_path,self.output_dto)
         builder.addMitreAttackEnrichment(self.attack_enrichment)
         builder.addKillChainPhase()
         builder.addCIS()
@@ -261,7 +267,7 @@ class Director():
 
     def constructStory(self, builder: StoryBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path)
+        builder.setObject(file_path,self.output_dto)
         #builder.addDetections(self.output_dto.detections, self.input_dto.config)
         
         #builder.addInvestigations(self.output_dto.investigations)
@@ -271,41 +277,41 @@ class Director():
 
     def constructBaseline(self, builder: BaselineBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path)
+        builder.setObject(file_path,self.output_dto)
         builder.addDeployment(self.output_dto.deployments)
 
 
     def constructDeployment(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path, SecurityContentType.deployments)
+        builder.setObject(file_path, SecurityContentType.deployments,self.output_dto)
 
 
     def constructLookup(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path, SecurityContentType.lookups)
+        builder.setObject(file_path, SecurityContentType.lookups,self.output_dto)
 
 
     def constructMacro(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path, SecurityContentType.macros)
+        builder.setObject(file_path, SecurityContentType.macros,self.output_dto)
 
 
     def constructPlaybook(self, builder: PlaybookBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path)
+        builder.setObject(file_path, self.output_dto)
         builder.addDetections()
 
 
     def constructTest(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path, SecurityContentType.unit_tests)
+        builder.setObject(file_path, SecurityContentType.unit_tests, self.output_dto)
 
 
     def constructInvestigation(self, builder: InvestigationBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path,self.name_to_content_map)
+        builder.setObject(file_path,self.output_dto)
         builder.addInputs()
 
     def constructObjects(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path)
+        builder.setObject(file_path, self.output_dto)

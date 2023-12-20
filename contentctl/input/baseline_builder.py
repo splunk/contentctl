@@ -6,21 +6,15 @@ from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.enums import SecurityContentProduct
-
+from contentctl.input.director import DirectorOutputDto
 
 class BaselineBuilder():
     baseline : Baseline
 
-    def setObject(self, path: pathlib.Path) -> None:
+    def setObject(self, path: str, 
+        output_dto:DirectorOutputDto) -> None:
         yml_dict = YmlReader.load_file(path)
-        
-        try:
-            self.baseline = Baseline.model_validate(yml_dict)
-            
-        except ValidationError as e:
-            print('Validation Error for file ' + str(path))
-            print(e)
-            sys.exit(1)
+        self.baseline = Baseline.model_validate(yml_dict, context={"output_dto":output_dto})
 
 
     def addDeployment(self, deployments: list) -> None:

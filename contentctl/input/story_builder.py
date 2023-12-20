@@ -6,20 +6,16 @@ from pydantic import ValidationError
 from contentctl.objects.story import Story
 from contentctl.objects.config import Config
 from contentctl.input.yml_reader import YmlReader
-
+from contentctl.input.director import DirectorOutputDto
 
 class StoryBuilder():
     story: Story
 
-    def setObject(self, path: pathlib.Path) -> None:
+    def setObject(self, path: str,
+                    output_dto:DirectorOutputDto) -> None:
         yml_dict = YmlReader.load_file(path)
-
-        try:
-            self.story = Story.model_validate(yml_dict)
-        except ValidationError as e:
-            print('Validation Error for file ' + str(path))
-            print(e)
-            sys.exit(1)
+        self.story = Story.model_validate(yml_dict, context={"output_dto":output_dto})
+        
 
     def reset(self) -> None:
         self.story = None

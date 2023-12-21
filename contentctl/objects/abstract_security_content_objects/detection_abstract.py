@@ -33,9 +33,9 @@ class Detection_Abstract(SecurityContentObject):
     status: DetectionStatus = Field(...)
     data_source: Optional[List[str]] = None
     tags: DetectionTags = Field(...)
-    search: Union[str, dict] = Field(..., min_length=6)
-    how_to_implement: str = Field(..., min_length=6)
-    known_false_positives: str = Field(..., min_length=6)
+    search: Union[str, dict] = Field(..., min_length=4)
+    how_to_implement: str = Field(..., min_length=4)
+    known_false_positives: str = Field(..., min_length=4)
     check_references: bool = False  
     
     tests: list[UnitTest] = []

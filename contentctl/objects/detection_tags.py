@@ -14,7 +14,7 @@ class DetectionTags(BaseModel):
     # detection spec
     model_config = ConfigDict(use_enum_values=True,validate_default=False)
     analytic_story: list[Story] = Field(...)
-    asset_type: str = Field(...)
+    asset_type: AssetType = Field(...)
     #enum is intentionally Cis18 even though field is named cis20 for legacy reasons
     cis20: Optional[List[Cis18Value]] = None 
     confidence: NonNegativeInt = Field(...,le=100)

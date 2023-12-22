@@ -9,7 +9,7 @@ import re
 import abc
 import uuid
 import datetime
-from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict
+from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict, model_validator
 from typing import Tuple, Optional, List
 import pathlib
 
@@ -30,11 +30,11 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     # references: Optional[List[HttpUrl]] = None
     
     name: str = Field("NO_NAME")
-    author: str = Field("me",max_length=255)
+    author: str = Field("Content Author",max_length=255)
     date: datetime.date = Field(datetime.date.today())
     version: NonNegativeInt = 1
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
-    description: str = Field("wow",max_length=10000)
+    description: str = Field("Enter Description Here",max_length=10000)
     file_path: FilePath = Field("/tmp/doesnt_exist.yml")
     references: Optional[List[HttpUrl]] = None
 
@@ -47,6 +47,22 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     # to have the format ESCU - NAME - Rule (config.tag - self.name - Rule)
     def getName(self, config:Optional[Config])->str:
         return self.name
+
+    @model_validator(mode="after")
+    def ensureFileNameMatchesSearchName(self):
+        file_name = self.name \
+            .replace(' ', '_') \
+            .replace('-','_') \
+            .replace('.','_') \
+            .replace('/','_') \
+            .lower() + ".yml"
+        
+        if (file_name != self.file_path.name and self.file_path != FilePath("/tmp/doesnt_exist.yml")):
+            raise ValueError(f"The file name MUST be based off the detection name field:\n"\
+                            f"\t- Expected File Name: {file_name}\n"\
+                            f"\t- Actual File Name  : {self.file_path.name}")
+
+        return self
 
     @field_validator('file_path')
     @classmethod

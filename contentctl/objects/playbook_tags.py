@@ -4,6 +4,7 @@ if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
 
 from pydantic import BaseModel, Field
+from typing import Optional
 
 import enum
 
@@ -39,7 +40,7 @@ class PlaybookTag(BaseModel):
     playbook_fields: list[str] = Field([], min_length=0)
     product: list[PlaybookProduct] = Field([],min_length=0)
     use_cases: list[PlaybookUseCase] = Field([],min_length=0)
-    defend_technique_id: DefendTechnique = Field(...)
+    defend_technique_id: Optional[DefendTechnique] = None
     
     detection_objects: list[Detection] = []
     

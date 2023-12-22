@@ -25,7 +25,6 @@ class DetectionBuilder():
         output_dto:DirectorOutputDto) -> None:
         yml_dict = YmlReader.load_file(path)
         self.security_content_obj = Detection.model_validate(yml_dict, context={"output_dto":output_dto})
-        
 
 
     def addDeployment(self, deployments: list) -> None:

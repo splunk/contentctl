@@ -54,7 +54,7 @@ class DetectionTags(BaseModel):
     event_schema: str = "ocsf"
     mappings: Optional[List] = None
     annotations: Optional[dict] = None
-
+    manual_test: Optional[str] = None
     
     
     # The following validator is temporarily disabled pending further discussions

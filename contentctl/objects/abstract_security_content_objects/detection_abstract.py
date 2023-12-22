@@ -122,6 +122,7 @@ class Detection_Abstract(SecurityContentObject):
     #         raise ValueError("not valid analytics type: " + values["name"])
     #     return v
 
+
     @field_validator('search')
     @classmethod
     def encode_error_search(cls, v: Union[str,dict], info: ValidationInfo):
@@ -142,8 +143,8 @@ class Detection_Abstract(SecurityContentObject):
 
     
     @model_validator(mode="after")
-    def search_obsersables_exist_validate(self):
-        return self
+    def search_observables_exist_validate(self):
+        
         if isinstance(self.search, str):
             
             observable_fields = [ob.name.lower() for ob in self.tags.observable]
@@ -154,7 +155,7 @@ class Detection_Abstract(SecurityContentObject):
             
             if self.tags.message:
                 message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, self.tags.message.lower())]
-                missing_fields = set([field for field in observable_fields if field not in self.tags.message.lower()])
+                missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
             else:
                 message_fields = []
                 missing_fields = set()
@@ -170,7 +171,7 @@ class Detection_Abstract(SecurityContentObject):
                 error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
             
             if len(error_messages) > 0 and self.status == DetectionStatus.production.value:
-                msg = "\n\t".join(error_messages)
+                msg = "Use of fields in observables/messages that do not appear in search:\n\t- "+ "\n\t- ".join(error_messages)
                 raise(ValueError(msg))
         
         # Found everything
@@ -178,7 +179,9 @@ class Detection_Abstract(SecurityContentObject):
 
     @model_validator(mode="after")
     def tests_validate(self):
-        if self.status == DetectionStatus.production.value and not self.tests:
+        # Only Production detections are required to have test(s).
+        # If the manual_test filed is defined, then the lack of test(s) is allowed.
+        if self.status == DetectionStatus.production.value and not self.tags.manual_test and not self.tests:
             raise ValueError(
                 "At least one test is REQUIRED for production detection: " + self.name
             )

@@ -215,32 +215,48 @@ def test(args: argparse.Namespace):
     # For example, if the detection(s) we are trying to test do not exist
     gitService = GitService(config.test)
 
+    
 
     
     director_output_dto = build(args, config)
 
     test_director_output_dto = gitService.get_all_content(director_output_dto)
     
-    # All this information will later come from the config, so we will
-    # be able to do it in Test().execute. For now, we will do it here
-    app = App(
-        uid=9999,
-        appid=config.build.title,
-        title=config.build.title,
-        release=config.build.version,
-        http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
-        description=config.build.description,
-        splunkbase_path=None,
-        force_local=True
-    )
+    if args.dry_run:
+        config.test.mode = DetectionTestingMode.selected
+        config.test.detections_list = [d.file_path for d in test_director_output_dto.detections]
+        with open("contentctl_test.yml.plan", "w") as plan_config:
+            d = config.test.dict()
+            d['infrastructure_config']['infrastructure_type'] = d['infrastructure_config']['infrastructure_type'].value
+            d['mode'] = d['mode'].value
+            d['post_test_behavior'] = d['post_test_behavior'].value
+            yaml.safe_dump(d, plan_config)
+        print("Wrote test plan to contentctl_test.yml.plan")
+        return
 
-    # We need to do this instead of appending to retrigger validation.
-    # It does not happen the first time since validation does not run for default values
-    # unless we use always=True in the validator
-    # we always want to keep CIM as the last app installed
 
-    config.test.apps = [app] + config.test.apps
+
+    else:
+        # All this information will later come from the config, so we will
+        # be able to do it in Test().execute. For now, we will do it here
+        app = App(
+            uid=9999,
+            appid=config.build.title,
+            title=config.build.title,
+            release=config.build.version,
+            http_path=None,
+            local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
+            description=config.build.description,
+            splunkbase_path=None,
+            force_local=True
+        )
+
+        # We need to do this instead of appending to retrigger validation.
+        # It does not happen the first time since validation does not run for default values
+        # unless we use always=True in the validator
+        # we always want to keep CIM as the last app installed
+
+        config.test.apps = [app] + config.test.apps
 
     
     test_input_dto = TestInputDto(
@@ -532,6 +548,7 @@ def main():
     
     test_parser.add_argument("--target_branch", required=False, default=None, type=str)
     test_parser.add_argument("--test_branch", required=False, default=None, type=str)
+    test_parser.add_argument("--dry_run", action=argparse.BooleanOptionalAction, help="Used to emit a contentctl_test.yml.plan file.")
     
     #Even though these are also options to build, make them available to test_parser
     #as well to make the tool easier to use
@@ -549,6 +566,7 @@ def main():
         default=None,
         help=f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
     )
+
 
     test_parser.set_defaults(func=test)
 

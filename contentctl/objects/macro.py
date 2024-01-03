@@ -25,7 +25,11 @@ class Macro(SecurityContentObject):
 
     @staticmethod
     def get_macros(text_field:str, all_macros: list[Macro], ignore_macros:set[str]=MACROS_TO_IGNORE)->Tuple[list[Macro], set[str]]:
-        
+                
+        #Simple regex to remove comments which can cause issues with
+        #the macro pasing logic below
+        text_field = re.sub(r'```.*```', ' ', text_field)
+                
         macros_to_get = re.findall(r'`([^\s]+)`', text_field)
         #If macros take arguments, stop at the first argument.  We just want the name of the macro
         macros_to_get = set([macro[:macro.find('(')] if macro.find('(') != -1 else macro for macro in macros_to_get])

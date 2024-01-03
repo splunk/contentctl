@@ -10,7 +10,7 @@ import abc
 import uuid
 import datetime
 from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict, model_validator
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Union
 import pathlib
 
 
@@ -35,7 +35,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     version: NonNegativeInt = 1
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
     description: str = Field("Enter Description Here",max_length=10000)
-    file_path: FilePath = Field("/tmp/doesnt_exist.yml")
+    file_path: Optional[FilePath] = None
     references: Optional[List[HttpUrl]] = None
 
 
@@ -57,8 +57,8 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             .replace('/','_') \
             .lower() + ".yml"
         
-        if (file_name != self.file_path.name and self.file_path != FilePath("/tmp/doesnt_exist.yml")):
-            raise ValueError(f"The file name MUST be based off the detection name field:\n"\
+        if (self.file_path is not None and file_name != self.file_path.name):
+            raise ValueError(f"The file name MUST be based off the content 'name' field:\n"\
                             f"\t- Expected File Name: {file_name}\n"\
                             f"\t- Actual File Name  : {self.file_path.name}")
 
@@ -66,20 +66,13 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
     @field_validator('file_path')
     @classmethod
-    def file_path_valid(cls, v: pathlib.PosixPath, info: ValidationInfo):
+    def file_path_valid(cls, v: Optional[pathlib.PosixPath], info: ValidationInfo):
+        if not v:
+            #It's possible that the object has no file path - for example filter macros that are created at runtime
+            return v
         if not v.name.endswith(".yml"):
             raise ValueError(f"All Security Content Objects must be YML files and end in .yml.  The following file does not: '{v}'")
         return v
-
-    # @field_validator('date', mode='before')
-    # @classmethod
-    # def date_valid(cls, v: str, info: ValidationInfo):
-    #     try:
-    #         datetime.datetime.strptime(v, "%Y-%m-%d")
-    #     except Exception as e:
-    #         print(e)
-    #         raise ValueError(f"date is not in ISO format YYYY-MM-DD: '{v}'")
-    #     return v
 
     @field_validator('name','author','description')
     @classmethod

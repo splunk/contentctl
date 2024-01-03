@@ -10,7 +10,7 @@ readme = "README.md"
 contentctl = 'contentctl.contentctl:main'
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 pydantic = "^2.5.1"
 PyYAML = "^6.0.1"
 requests = "^2.31.0"
@@ -29,7 +29,8 @@ tqdm = "^4.66.1"
 #splunk-appinspect = "^2.36.0"
 pysigma = "^0.10.8"
 pysigma-backend-splunk = "^1.0.3"
-
+streamlit = "^1.29.0"
+streamlit-pydantic = {git = "https://github.com/LukasMasuch/streamlit-pydantic.git"}
 [tool.poetry.dev-dependencies]
 
 [build-system]

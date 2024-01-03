@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import field_validator, model_validator, ValidationInfo, Field
+from pydantic import field_validator, model_validator, ValidationInfo, Field, FilePath
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.playbook_tags import PlaybookTag
@@ -43,5 +43,23 @@ class Playbook(SecurityContentObject):
             missing_files_string = '\n - '.join(missing)
             raise ValueError(f"Playbook files missing:\n -{missing_files_string}")
 
+
+    #Override playbook file name checking FOR NOW
+    @model_validator(mode="after")
+    def ensureFileNameMatchesSearchName(self):
+        file_name = self.name \
+            .replace(' ', '_') \
+            .replace('-','_') \
+            .replace('.','_') \
+            .replace('/','_') \
+            .lower() + ".yml"
+        
+        #allow different capitalization FOR NOW in playbook file names
+        if (self.file_path is not None and file_name != self.file_path.name.lower()):
+            raise ValueError(f"The file name MUST be based off the content 'name' field:\n"\
+                            f"\t- Expected File Name: {file_name}\n"\
+                            f"\t- Actual File Name  : {self.file_path.name}")
+
+        return self
 
     

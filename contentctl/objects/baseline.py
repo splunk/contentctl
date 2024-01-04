@@ -6,6 +6,11 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
 from contentctl.objects.baseline_tags import BaselineTags
 from contentctl.objects.deployment import Deployment
+from typing import Any
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 
 
 class Baseline(SecurityContentObject):
@@ -16,39 +21,38 @@ class Baseline(SecurityContentObject):
     #date: str
     #author: str
     #contentType: SecurityContentType = SecurityContentType.baselines
-    type: Annotated[str,Field(pattern="^Baseline$")] = ...
+    type: Annotated[str,Field(pattern="^Baseline$")] = Field(...)
     datamodel: Optional[List[DataModel]] = None
     #description: str
-    search: str = ...
-    how_to_implement: str = ...
-    known_false_positives: str = ...
+    search: str = Field(..., min_length=4)
+    how_to_implement: str = Field(..., min_length=4)
+    known_false_positives: str = Field(..., min_length=4)
     check_references: bool = False #Validation is done in order, this field must be defined first
-    references: Optional[List[HttpUrl]] = None
-    tags: BaselineTags
+    tags: BaselineTags = Field(...)
 
     # enrichment
-    deployment: Optional[Deployment] = None
+    deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
 
 
+    @field_validator('search', 'how_to_implement', 'known_false_positives')
+    @classmethod
+    def encode_error(cls, v: str, info: ValidationInfo):
+        return SecurityContentObject.free_text_field_valid(v,info)
 
 
-    
-
-    @field_validator('datamodel')
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError('not valid data model: ' + values["name"])
-        return v
-
-    @field_validator('how_to_implement')
-    def encode_error(cls, v:str, info:ValidationInfo):
-        return super().free_text_field_valid(v,info)
+    @field_validator("deployment", mode="before")
+    def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
+        director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
+        if not director:
+            raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
         
-    # @validator('references')
-    # def references_check(cls, v, values):
-    #     return LinkValidator.SecurityContentObject_validate_references(v, values)
-    @field_validator('search')
-    def search_validate(cls, v, values):
-        # write search validator
-        return v
+        typeField = info.data.get("type",None)
+        deps = [deployment for deployment in director.deployments if deployment.type == typeField]
+        if len(deps) == 1:
+            return deps[0]
+        elif len(deps) == 0:
+            raise ValueError(f"Failed to find Deployment for type '{typeField}' "\
+                             f"from  possible {[deployment.type for deployment in director.deployments]}")
+        else:
+            raise ValueError(f"Found more than 1 ({len(deps)}) Deployment for type '{typeField}' "\
+                             f"from  possible {[deployment.type for deployment in director.deployments]}")

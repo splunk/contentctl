@@ -20,7 +20,6 @@ from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.playbook import Playbook
-from contentctl.helper.link_validator import LinkValidator
 from contentctl.objects.enums import DataSource,ProvidingTechnology
 
 from typing import TYPE_CHECKING
@@ -33,7 +32,7 @@ class Detection_Abstract(SecurityContentObject):
     status: DetectionStatus = Field(...)
     data_source: Optional[List[str]] = None
     tags: DetectionTags = Field(...)
-    search: Union[str, dict] = Field(..., min_length=4)
+    search: Union[str, dict] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     check_references: bool = False  
@@ -44,7 +43,7 @@ class Detection_Abstract(SecurityContentObject):
     datamodel: Optional[List[DataModel]] = None
     
 
-    deployment: Deployment = Field('IGNORED_IN_VALIDATOR')
+    deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
     annotations: dict = {}
     playbooks: list[Playbook] = []
     baselines: list[Baseline] = []
@@ -91,19 +90,6 @@ class Detection_Abstract(SecurityContentObject):
             raise ValueError(f"Found more than 1 ({len(deps)}) Deployment for type '{typeField}' "\
                              f"from  possible {[deployment.type for deployment in director.deployments]}")
 
-
-        
-    # @model_validator(mode="before")
-    # def getDeployment(cls, data:Any, info:ValidationInfo)->Optional[Deployment]:
-    #     import code
-    #     code.interact(local=locals())
-    #     director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
-    #     if not director:
-    #         raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
-        
-    #     data.get("type")
-        
-    #     return SecurityContentObject.mapNamesToSecurityContentObjects(v,info)
 
     @staticmethod
     def get_detections_from_filenames(detection_filenames:set[str], all_detections:list[Detection_Abstract])->list[Detection_Abstract]:

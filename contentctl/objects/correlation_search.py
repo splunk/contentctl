@@ -18,6 +18,8 @@ from contentctl.actions.detection_testing.progress_bar import (
     TestReportingType,
     TestingStates
 )
+from contentctl.objects.detection import Detection
+from contentctl.objects.risk_event import RiskEvent
 
 
 # Suppress logging by default; enable for local testing
@@ -195,13 +197,13 @@ class CorrelationSearch(BaseModel):
 
     In Enterprise Security, a correlation search is wrapper around the saved search entity. This search represents a
     detection rule for our purposes.
-    :param detection_name: the name of the search/detection (e.g. "Windows Modify Registry EnableLinkedConnections")
+    :param detection: a Detection model
     :param service: a Service instance representing a connection to a Splunk instance
     :param test_index: the index attack data is forwarded to for testing (optionally used in cleanup)
     :param pbar_data: the encapsulated info needed for logging w/ pbar
     """
     # our instance fields
-    detection_name: str
+    detection: Detection
 
     service: splunklib.Service
     pbar_data: PbarData
@@ -222,6 +224,8 @@ class CorrelationSearch(BaseModel):
     risk_analysis_action: Union[RiskAnalysisAction, None] = None
     notable_action: Union[NotableAction, None] = None
 
+    risk_events: list[RiskEvent] = []
+
     class Config:
         arbitrary_types_allowed = True
 
@@ -231,17 +235,17 @@ class CorrelationSearch(BaseModel):
     @classmethod
     def _convert_detection_to_search_name(cls, v, values) -> str:
         """
-        Validate detection name and derive if None
+        Validate name and derive if None
         """
-        if "detection_name" not in values:
-            raise ValueError("detection_name missing; name is dependent on detection_name")
-        
-        expected_name = f"ESCU - {values['detection_name']} - Rule"
+        if "detection" not in values:
+            raise ValueError("detection missing; name is dependent on detection")
+
+        expected_name = f"ESCU - {values['detection'].name} - Rule"
         if v is not None and v != expected_name:
             raise ValueError(
-                "name must be derived from detection_name; leave as None and it will be derived automatically"
+                "name must be derived from detection; leave as None and it will be derived automatically"
             )
-        return f"ESCU - {values['detection_name']} - Rule"
+        return expected_name
 
     @validator("splunk_path", always=True)
     @classmethod
@@ -251,7 +255,7 @@ class CorrelationSearch(BaseModel):
         """
         if "name" not in values:
             raise ValueError("name missing; splunk_path is dependent on name")
-        
+
         expected_path = f"saved/searches/{values['name']}"
         if v is not None and v != expected_path:
             raise ValueError(
@@ -267,7 +271,7 @@ class CorrelationSearch(BaseModel):
         """
         if "splunk_path" not in values or "service" not in values:
             raise ValueError("splunk_path or service missing; saved_search is dependent on both")
-        
+
         if v is not None:
             raise ValueError(
                 "saved_search must be derived from the service and splunk_path; leave as None and it will be derived "
@@ -560,10 +564,80 @@ class CorrelationSearch(BaseModel):
         self.logger.debug(f"No notable event found for '{self.name}'")
         return False
 
-    def risk_message_is_valid(self) -> bool:
+    def risk_message_is_valid(self, risk_event: RiskEvent) -> tuple[bool, str]:
         """Validates the observed risk message against the expected risk message"""
         # TODO
         raise NotImplementedError
+
+    def validate_risk_events(self, elapsed_sleep_time: int) -> Optional[IntegrationTestResult]:
+        """Validates the existence of any expected risk events
+
+        First ensure the risk event exists, and if it does validate its risk message and make sure
+        any events align with the specified observables. Also adds the risk index to the purge list
+        if risk events existed
+        :param elapsed_sleep_time: an int representing the amount of time slept thus far waiting to
+            check the risks/notables
+        :returns: an IntegrationTestResult on failure; None on success
+        """
+        # result: Optional[IntegrationTestResult] = None
+        # # TODO: make this a more specific query based on the search in question (and update the docstring to relfect
+        # # when you do)
+        # # construct our query and issue our search job on the risk index
+        # query = "search index=risk | head 1"
+        # result_iterator = self._search(query)
+        # try:
+        #     for result in result_iterator:
+        #         # we return True if we find at least one risk object
+        #         # TODO: re-evaluate this condition; we may want to look for multiple risk objects on different
+        #         #   entitities
+        #         # (e.g. users vs systems) and we may want to do more confirmational testing
+        #         if result["index"] == Indexes.RISK_INDEX.value:
+        #             self.logger.debug(
+        #                 f"Found risk event for '{self.name}': {result}")
+        #             return True
+        # except ServerError as e:
+        #     self.logger.error(f"Error returned from Splunk instance: {e}")
+        #     raise e
+        # self.logger.debug(f"No risk event found for '{self.name}'")
+        # return False
+
+        result: Optional[IntegrationTestResult] = None
+        if not self.risk_event_exists():
+            result = IntegrationTestResult(
+                status=TestResultStatus.FAIL,
+                message=f"No matching risk event created for '{self.name}'",
+                wait_duration=elapsed_sleep_time,
+            )
+        else:
+            if not self.risk_message_is_valid():
+                result = IntegrationTestResult(
+                    status=TestResultStatus.FAIL,
+                    message=f"Risk message '{self.name}'",
+                    wait_duration=elapsed_sleep_time,
+                )
+            self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
+
+        return result
+
+    def validate_notable_events(self, elapsed_sleep_time: int) -> Optional[IntegrationTestResult]:
+        """Validates the existence of any expected notables
+
+        Ensures the notable exists. Also adds the notable index to the purge list if notables
+        existed
+        :param elapsed_sleep_time: an int representing the amount of time slept thus far waiting to
+            check the risks/notables
+        :returns: an IntegrationTestResult on failure; None on success
+        """
+        if not self.notable_event_exists():
+            result = IntegrationTestResult(
+                status=TestResultStatus.FAIL,
+                message=f"No matching notable event created for '{self.name}'",
+                wait_duration=elapsed_sleep_time,
+            )
+        else:
+            self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
+
+        return result
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
     #   it for completion, but that seems more tricky
@@ -646,29 +720,15 @@ class CorrelationSearch(BaseModel):
                     # check for risk events
                     self.logger.debug("Checking for matching risk events")
                     if self.has_risk_analysis_action:
-                        if not self.risk_event_exists():
-                            result = IntegrationTestResult(
-                                status=TestResultStatus.FAIL,
-                                message=f"No matching risk event created for '{self.name}'",
-                                wait_duration=elapsed_sleep_time,
-                            )
-                        else:
-                            self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
+                        result = self.validate_risk_events(elapsed_sleep_time)
 
                     # check for notable events
                     self.logger.debug("Checking for matching notable events")
                     if self.has_notable_action:
-                        if not self.notable_event_exists():
-                            # NOTE: because we check this last, if both fail, the error message about notables will
-                            # always be the last to be added and thus the one surfaced to the user; good case for
-                            # adding more descriptive test results
-                            result = IntegrationTestResult(
-                                status=TestResultStatus.FAIL,
-                                message=f"No matching notable event created for '{self.name}'",
-                                wait_duration=elapsed_sleep_time,
-                            )
-                        else:
-                            self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
+                        # NOTE: because we check this last, if both fail, the error message about notables will
+                        # always be the last to be added and thus the one surfaced to the user; good case for
+                        # adding more descriptive test results
+                        result = self.validate_notable_events(elapsed_sleep_time)
 
                     # if result is still None, then all checks passed and we can break the loop
                     if result is None:

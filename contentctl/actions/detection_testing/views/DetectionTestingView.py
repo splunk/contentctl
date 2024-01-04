@@ -11,7 +11,6 @@ from contentctl.helper.utils import Utils
 from contentctl.objects.enums import DetectionStatus
 
 
-# TODO: adjust the view to report from test_groups instead of tests
 class DetectionTestingView(BaseModel, abc.ABC):
     config: TestConfig
     sync_obj: DetectionTestingManagerOutputDto
@@ -115,8 +114,12 @@ class DetectionTestingView(BaseModel, abc.ABC):
         untested_detections.sort(key=lambda x: x["name"])
 
         # Get lists of detections (name only) that were skipped due to their status (experimental or deprecated)
-        experimental_detections = sorted([detection.name for detection in self.sync_obj.skippedQueue if detection.status == DetectionStatus.experimental.value])  # noqa: E501
-        deprecated_detections = sorted([detection.name for detection in self.sync_obj.skippedQueue if detection.status == DetectionStatus.deprecated.value])  # noqa: E501
+        experimental_detections = sorted([
+            detection.name for detection in self.sync_obj.skippedQueue if detection.status == DetectionStatus.experimental.value
+        ])
+        deprecated_detections = sorted([
+            detection.name for detection in self.sync_obj.skippedQueue if detection.status == DetectionStatus.deprecated.value
+        ])
 
         # If any detection failed, the overall success is False
         if (total_fail + len(untested_detections)) == 0:
@@ -135,6 +138,10 @@ class DetectionTestingView(BaseModel, abc.ABC):
             total_pass, total_detections, 1
         )
 
+        # TODO (cmcginley): add stats around total test cases and unit/integration test
+        #   sucess/failure? maybe configurable reporting? add section to summary called
+        #   "testwise_summary" listing per test metrics (e.g. total test, total tests passed, ...);
+        #   also list num skipped at both detection and test level
         # Construct and return the larger results dict
         result_dict = {
             "summary": {

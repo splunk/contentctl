@@ -1,13 +1,13 @@
 import sys
 import argparse
 import os
-import tqdm
+import tqdm                                                                                         # type: ignore
 import functools
 from typing import Union
 import pathlib
 
-from contentctl.actions.detection_testing.GitHubService import (
-    GithubService,
+from contentctl.actions.detection_testing.GitService import (
+    GitService,
 )
 from contentctl.actions.validate import ValidateInputDto, Validate
 from contentctl.actions.generate import (
@@ -94,10 +94,10 @@ Running Splunk Security Content Control Tool (contentctl)
     )
 
 
-def start(args, read_test_file: bool = False) -> Config:
-    base_config = ConfigHandler.read_config(pathlib.Path(args.path)/"contentctl.yml")
+def start(args: argparse.Namespace, read_test_file: bool = False) -> Config:
+    base_config = ConfigHandler.read_config(args)
     if read_test_file:
-        base_config.test = ConfigHandler.read_test_config(pathlib.Path(args.path)/"contentctl_test.yml", args.mode)
+        base_config.test = ConfigHandler.read_test_config(args)
     return base_config
 
 
@@ -118,8 +118,8 @@ def build(args, config: Union[Config, None] = None) -> DirectorOutputDto:
         print("Invalid build type. Valid options app, ssa or api")
         sys.exit(1)
     director_input_dto = DirectorInputDto(
-        input_path=os.path.abspath(args.path),
-        product=product_type,
+        input_path=pathlib.Path(os.path.abspath(args.path)), 
+        product=product_type, 
         config=config
     )
     generate_input_dto = GenerateInputDto(
@@ -154,6 +154,17 @@ def test(args: argparse.Namespace):
     if config.test is None:
         raise Exception("Error parsing test configuration. Test Object was None.")
 
+    if args.test_branch is not None:
+        if config.test.version_control_config is not None:
+            config.test.version_control_config.test_branch = args.test_branch
+        else:
+            raise Exception("Test argument 'test_branch' passed on the command line, but 'version_control_config' is not defined in contentctl_test.yml.")
+    if args.target_branch is not None:
+        if config.test.version_control_config is not None:
+            config.test.version_control_config.target_branch = args.target_branch
+        else:
+            raise Exception("Test argument 'target_branch' passed on the command line, but 'version_control_config' is not defined in contentctl_test.yml.")
+        
     # set some arguments that are not
     # yet exposed/written properly in
     # the config file
@@ -169,7 +180,6 @@ def test(args: argparse.Namespace):
         config.test.detections_list = args.detections_list
     if args.enable_integration_testing or config.test.enable_integration_testing:
         config.test.enable_integration_testing = True
-    # TODO: add setting to skip listing skips
 
     # validate and setup according to infrastructure type
     if config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.container:
@@ -223,10 +233,13 @@ def test(args: argparse.Namespace):
 
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
-    githubService = GithubService(config.test)
+    gitService = GitService(config.test)
+
 
     director_output_dto = build(args, config)
 
+    test_director_output_dto = gitService.get_all_content(director_output_dto)
+    
     # All this information will later come from the config, so we will
     # be able to do it in Test().execute. For now, we will do it here
     app = App(
@@ -235,7 +248,7 @@ def test(args: argparse.Namespace):
         title=config.build.title,
         release=config.build.version,
         http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.title}-{config.build.version}.tar.gz"),
+        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
         description=config.build.description,
         splunkbase_path=None,
         force_local=True
@@ -249,8 +262,8 @@ def test(args: argparse.Namespace):
     config.test.apps = [app] + config.test.apps
 
     test_input_dto = TestInputDto(
-        director_output_dto=director_output_dto,
-        githubService=githubService,
+        test_director_output_dto=test_director_output_dto,
+        gitService=gitService,
         config=config.test,
     )
 
@@ -261,7 +274,7 @@ def test(args: argparse.Namespace):
     # fully completes, if everything does not pass then
     # we want to return a nonzero status code
     if result:
-        sys.exit(0)
+        return
     else:
         sys.exit(1)
 
@@ -547,7 +560,10 @@ def main():
     )
     test_parser.add_argument("--num_containers", required=False, default=1, type=int)
     test_parser.add_argument("--server_info", required=False, default=None, type=str, nargs='+')
-
+    
+    test_parser.add_argument("--target_branch", required=False, default=None, type=str)
+    test_parser.add_argument("--test_branch", required=False, default=None, type=str)
+    
     # Even though these are also options to build, make them available to test_parser
     # as well to make the tool easier to use
     test_parser.add_argument(
@@ -577,7 +593,11 @@ def main():
         help="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk "
         "instance with ES installed)"
     )
-    # TODO: add setting to skip listing skips
+    # TODO (cmcginley): add flag for enabling logging for correlation_search logging
+    # TODO (cmcginley): add flag for changing max_sleep time for integration tests
+    # TODO (cmcginley): add setting to skip listing skips -> test_config.TestConfig,
+    #   contentctl.test, contentctl.main
+
 
     test_parser.set_defaults(func=test)
 
@@ -603,6 +623,7 @@ def main():
 
     # parse them
     args = parser.parse_args()
+    
 
     print_ascii_art()
     try:

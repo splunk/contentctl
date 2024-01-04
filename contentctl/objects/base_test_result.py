@@ -1,7 +1,7 @@
 from typing import Union
 from enum import Enum
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 from splunklib.data import Record
 
 from contentctl.helper.utils import Utils
@@ -18,54 +18,75 @@ class TestResultStatus(str, Enum):
     # Test skipped (nothing testable at present)
     SKIP = "skip"
 
-    # Error/exception encountered during testing (e.g. network error)
+    # Error/exception encountered during testing (e.g. network error); considered a failure as well
+    # for the purpose aggregate metric gathering
     ERROR = "error"
 
     def __str__(self) -> str:
         return self.value
 
 
+# TODO (cmcginley): add validator to BaseTestResult which makes a lack of exception incompatible
+#   with status ERROR
 class BaseTestResult(BaseModel):
+    """
+    Base class for test results
+    """
+    # Message for the result
     message: Union[None, str] = None
+
+    # Any exception that was raised (may be None)
     exception: Union[Exception, None] = None
+
+    # The status (PASS, FAIL, SKIP, ERROR)
     status: Union[TestResultStatus, None] = None
-    success: bool = False
+
+    # The duration of the test in seconds
     duration: float = 0
+
+    # The search job metadata
     job_content: Union[Record, None] = None
+
+    # The Splunk endpoint URL
     sid_link: Union[None, str] = None
 
     class Config:
         validate_assignment = True
+
+        # Needed to allow for embedding of Exceptions in the model
         arbitrary_types_allowed = True
 
-    @validator("success", always=True)
-    @classmethod
-    def derive_success_from_status(cls, v, values) -> bool:
-        """
-        If a status is provided at initialization, we can derive success from it
-        """
-        print(f"*** VALUES ***: {values}")
-        if ("status" in values) and (values["status"] is not None):
-            if values["status"] == TestResultStatus.PASS:
-                return True
-            else:
-                if v is not False:
-                    raise ValueError(f"Status {values['status'].value} is not compatible with success={v}")
-                return False
-        return v
-
-    # TODO: ensure that all invocations of test results have status set AND consider if SKIP should be success as True
-    #   or False
     @property
-    def failed_and_complete(self) -> bool:
+    def passed(self) -> bool:
         """
-        Uses status to determine if a test was a failure; useful because success == False for a SKIP, but it is also
-        not a failure
-        :returns: bool indicating the test failed and is complete (in that it has a status)
+        Property returning True if status is PASS; False otherwise (SKIP, FAIL, ERROR).
+        :returns: bool indicating success/failure
         """
-        if self.status is not None:
-            return self.status == TestResultStatus.FAIL or self.status == TestResultStatus.ERROR
-        return False
+        return self.status == TestResultStatus.PASS
+
+    @property
+    def success(self) -> bool:
+        """
+        Property returning True if status is PASS or SKIP; False otherwise (FAIL, ERROR).
+        :returns: bool indicating success/failure
+        """
+        return self.status in [TestResultStatus.PASS, TestResultStatus.SKIP]
+
+    @property
+    def failed(self) -> bool:
+        """
+        Property returning True if status is FAIL or ERROR; False otherwise (PASS, SKIP)
+        :returns: bool indicating fialure if True
+        """
+        return self.status == TestResultStatus.FAIL or self.status == TestResultStatus.ERROR
+
+    @property
+    def complete(self) -> bool:
+        """
+        Property returning True when a test is complete (i.e. the result has been given a status)
+        :returns: bool indicating the test is complete (has a status) if True
+        """
+        return self.status is not None
 
     def get_summary_dict(
         self,
@@ -93,6 +114,10 @@ class BaseTestResult(BaseModel):
                     summary_dict[field] = str(getattr(self, field))
                 else:
                     summary_dict[field] = getattr(self, field)
+            else:
+                # If field can't be found, set it to None (useful as unit and integration tests have
+                # small differences in the number of fields they share)
+                summary_dict[field] = None
 
         # Grab the job content fields required
         for field in job_fields:

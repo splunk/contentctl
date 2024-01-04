@@ -29,6 +29,7 @@ class Lookup(BaseModel):
     match_type: str = None
     min_matches: int = None
     case_sensitive_match: str = None
+    file_path:str = None
 
      # Macro can have different punctuatuation in it,
     # so redefine the name validator. For now, jsut

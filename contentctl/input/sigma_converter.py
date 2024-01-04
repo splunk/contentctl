@@ -194,6 +194,7 @@ class SigmaConverter():
                     sigma_processing_pipeline = self.get_pipeline_from_processing_items(processing_items)
 
                     splunk_backend = SplunkBABackend(processing_pipeline=sigma_processing_pipeline, detection=detection, field_mapping=field_mapping)
+                    
                     search = splunk_backend.convert(sigma_rule, "data_model")[0]
 
                     search = search + ' --finding_report--'
@@ -214,7 +215,19 @@ class SigmaConverter():
         yml_dict = YmlReader.load_file(detection_path)
         yml_dict["tags"]["name"] = yml_dict["name"]
         
+        #SSA Detections are ALLOWED to have names longer than 67 characters,
+        #unlike Splunk App Detections.  Because we still want to use the 
+        #Detection Object (and its validations), we will arbitrarily 
+        #truncate the name of a detection if it is too long so that
+        #it passes validation, then updated the name after the object
+        #is constructed.  Because we do not have Pydantic configured
+        #to validate each new field assignment, this will not throw
+        #an error
+        name = yml_dict.get("name","")
+        yml_dict["name"] = name[:67]
         detection = Detection.parse_obj(yml_dict)
+        detection.name = name
+
         detection.source = os.path.split(os.path.dirname(detection_path))[-1]  
         return detection 
 

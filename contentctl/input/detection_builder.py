@@ -289,7 +289,7 @@ class DetectionBuilder():
         if self.security_content_obj is not None and isinstance(self.security_content_obj, Detection):
             for test in self.security_content_obj.tests:
                 if isinstance(test, IntegrationTest):
-                    test.skip("Skipping all integration tests")
+                    test.skip("TEST SKIPPED: Skipping all integration tests")
         else:
             raise ValueError(
                 "security_content_obj must be an instance of Detection to skip integration tests, "

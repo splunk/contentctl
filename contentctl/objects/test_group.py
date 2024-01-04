@@ -1,5 +1,3 @@
-from typing import Self
-
 from pydantic import BaseModel
 
 from contentctl.objects.unit_test import UnitTest
@@ -11,15 +9,19 @@ from contentctl.objects.base_test_result import TestResultStatus
 class TestGroup(BaseModel):
     """
     Groups of different types of tests relying on the same attack data
+    :param name: Name of the TestGroup (typically derived from a unit test as 
+        "{detection.name}:{test.name}")
+    :param unit_test: a UnitTest
+    :param integration_test: an IntegrationTest
+    :param attack_data: the attack data associated with tests in the TestGroup
     """
     name: str
     unit_test: UnitTest
     integration_test: IntegrationTest
     attack_data: list[UnitTestAttackData]
 
-    # TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
     @classmethod
-    def derive_from_unit_test(cls, unit_test: UnitTest, name_prefix: str) -> Self:
+    def derive_from_unit_test(cls, unit_test: UnitTest, name_prefix: str) -> "TestGroup":
         """
         Given a UnitTest and a prefix, construct a TestGroup, with in IntegrationTest corresponding to the UnitTest
         :param unit_test: the UnitTest

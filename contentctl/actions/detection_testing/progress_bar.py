@@ -47,14 +47,15 @@ class FinalTestingStates(str, Enum):
     """
     The possible final states for a test (for pbar reporting)
     """
-    FAIL = "\x1b[0;30;41m" + "FAIL".ljust(LONGEST_STATE) + "\x1b[0m"
-    PASS = "\x1b[0;30;42m" + "PASS".ljust(LONGEST_STATE) + "\x1b[0m"
-    SKIP = "\x1b[0;30;47m" + "SKIP".ljust(LONGEST_STATE) + "\x1b[0m"
+    FAIL = "\x1b[0;30;41m" + "FAIL ".ljust(LONGEST_STATE) + "\x1b[0m"
+    ERROR = "\x1b[0;30;41m" + "ERROR".ljust(LONGEST_STATE) + "\x1b[0m"
+    PASS = "\x1b[0;30;42m" + "PASS ".ljust(LONGEST_STATE) + "\x1b[0m"
+    SKIP = "\x1b[0;30;47m" + "SKIP ".ljust(LONGEST_STATE) + "\x1b[0m"
 
 
 # max length of a test name
-# TODO: this max size is declared, and it is used appropriatel w/ .ljust, but nothing truncates test names to makes
-#   them the appropriate size
+# TODO: this max size is declared, and it is used appropriately w/ .ljust, but nothing truncates
+#   test names to makes them the appropriate size
 MAX_TEST_NAME_LENGTH = 70
 
 # The format string used for pbar reporting

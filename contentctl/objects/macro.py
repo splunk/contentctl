@@ -23,6 +23,7 @@ class Macro(BaseModel):
     definition: str
     description: str
     arguments: list = None
+    file_path: str = None
 
     # Macro can have different punctuatuation in it,
     # so redefine the name validator. For now, jsut

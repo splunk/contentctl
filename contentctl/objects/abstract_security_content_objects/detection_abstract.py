@@ -13,7 +13,6 @@ from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.config import ConfigDetectionConfiguration
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.baseline import Baseline
@@ -24,7 +23,8 @@ from contentctl.objects.enums import SecurityContentType
 
 class Detection_Abstract(SecurityContentObject):
     # contentType: SecurityContentType = SecurityContentType.detections
-    type: str
+    # NOTE: because `use_enum_values` is configured, this will actually be type str
+    type: AnalyticsType = ...
     file_path: str = None
     # status field is REQUIRED (the way to denote this with pydantic is ...)
     status: DetectionStatus = ...
@@ -36,9 +36,6 @@ class Detection_Abstract(SecurityContentObject):
     check_references: bool = False
     references: list
 
-    # TODO: consider restructuring this as a set of associated tests; each test should be an individual case, but 2
-    #   tests may rely on the same data and thus it doesn't make sense to replay the data twice; similarly, it doesn't
-    #   make sense to run an integration test if the unit test failed. Currently, IntegrationTest is a field in UnitTest
     tests: list[Union[UnitTest, IntegrationTest]] = []
 
     # enrichments
@@ -78,11 +75,11 @@ class Detection_Abstract(SecurityContentObject):
         except Exception as e:
             raise Exception(f"Failed to find detection object for modified detection: {str(e)}")
 
-    @validator("type")
-    def type_valid(cls, v, values):
-        if v.lower() not in [el.name.lower() for el in AnalyticsType]:
-            raise ValueError("not valid analytics type: " + values["name"])
-        return v
+    # @validator("type")
+    # def type_valid(cls, v, values):
+    #     if v.lower() not in [el.name.lower() for el in AnalyticsType]:
+    #         raise ValueError("not valid analytics type: " + values["name"])
+    #     return v
 
     @validator('how_to_implement', 'search', 'known_false_positives')
     def encode_error(cls, v, values, field):
@@ -170,6 +167,10 @@ class Detection_Abstract(SecurityContentObject):
         # Found everything
         return v
 
+    # TODO (cmcginley): Fix detection_abstract.tests_validate so that it surfaces validation errors
+    #   (e.g. a lack of tests) to the final results, instead of just showing a failed detection w/
+    #   no tests (maybe have a message propagated at the detection level? do a separate coverage
+    #   check as part of validation?):
     @validator("tests")
     def tests_validate(cls, v, values):
         if values.get("status", "") == DetectionStatus.production.value and not v:
@@ -185,18 +186,36 @@ class Detection_Abstract(SecurityContentObject):
                 raise ValueError("not valid data model: " + values["name"])
         return v
 
-    # TODO: if all of a detections tests are skipped, this will return True (is this desirable?)
     def all_tests_successful(self) -> bool:
+        """
+        Checks that all tests in the detection succeeded. If no tests are defined, consider that a
+        failure; if any test fails (FAIL, ERROR), consider that a failure; if any test has
+        no result or no status, consider that a failure. If all tests succeed (PASS, SKIP), consider
+        the detection a success
+        :returns: bool where True indicates all tests succeeded (they existed, complete and were
+            PASS/SKIP)
+        """
+        # If no tests are defined, we consider it a failure for the detection
         if len(self.tests) == 0:
             return False
-        for test in self.tests:
-            # Ignore any skipped tests
-            if (test.result is not None) and (test.result.status == TestResultStatus.SKIP):
-                continue
 
-            # If any result is missing or if any has a failure, the return False
-            if test.result is None or test.result.success is False:
+        # Iterate over tests
+        for test in self.tests:
+            # Check that test.result is not None
+            if test.result is not None:
+                # Check status is set (complete)
+                if test.result.complete:
+                    # Check for failure (FAIL, ERROR)
+                    if test.result.failed:
+                        return False
+                else:
+                    # If no stauts, return False
+                    return False
+            else:
+                # If no result, return False
                 return False
+
+        # If all tests are successful (PASS/SKIP), return True
         return True
 
     def get_summary(
@@ -242,7 +261,7 @@ class Detection_Abstract(SecurityContentObject):
             else:
                 # If no test result, consider it a failure
                 result["success"] = False
-                result["message"] = "RESULT WAS NONE"
+                result["message"] = "NO RESULT - Test not run"
 
             # Add the result to our list
             summary_dict["tests"].append(result)

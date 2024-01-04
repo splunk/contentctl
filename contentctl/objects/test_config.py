@@ -327,7 +327,7 @@ class VersionControlConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
         default="https://github.com/your_organization/your_repo",
         title="HTTP(s) path to the repo for repo_path.  If this field is blank, it will be inferred from the repo",
     )
-    main_branch: str = Field(default="main", title="Main branch of the repo, if applicable.")
+    target_branch: str = Field(default="main", title="Main branch of the repo or target of a Pull Request/Merge Request.")
     test_branch: str = Field(default="main", title="Branch of the repo to be tested, if applicable.")
     commit_hash: Union[str,None] = Field(default=None, title="Commit hash of the repo state to be tested, if applicable")
     pr_number: Union[int,None] = Field(default=None, title="The number of the PR to test")
@@ -385,27 +385,27 @@ class VersionControlConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
 
         return v
     
-    @validator('main_branch')
-    def valid_main_branch(cls, v, values):
+    @validator('target_branch')
+    def valid_target_branch(cls, v, values):
         if v is None:
-            print(f"main_branch is not supplied.  Inferring from '{values['repo_path']}'...",end='')
+            print(f"target_branch is not supplied.  Inferring from '{values['repo_path']}'...",end='')
 
-            main_branch = Utils.get_default_branch_name(values['repo_path'], values['repo_url'])
-            print(f"main_branch name '{main_branch}' inferred'")
+            target_branch = Utils.get_default_branch_name(values['repo_path'], values['repo_url'])
+            print(f"target_branch name '{target_branch}' inferred'")
             #continue with the validation
-            v = main_branch
+            v = target_branch
 
         try:
             Utils.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
         except Exception as e:
-            raise ValueError(f"Error validating main_branch: {str(e)}")
+            raise ValueError(f"Error validating target_branch: {str(e)}")
         return v
 
     @validator('test_branch')
     def validate_test_branch(cls, v, values):
         if v is None:
-            print(f"No test_branch provided, so we will default to using the main_branch '{values['main_branch']}'")
-            v = values['main_branch']
+            print(f"No test_branch provided, so we will default to using the target_branch '{values['target_branch']}'")
+            v = values['target_branch']
         try:
             Utils.validate_git_branch_name(values['repo_path'],values['repo_url'], v)
         except Exception as e:
@@ -491,8 +491,7 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
         title="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk"
         " instance with ES installed)"
     )
-    # TODO: add setting to skip listing skips
-    
+
 
 
 

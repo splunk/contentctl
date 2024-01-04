@@ -18,6 +18,7 @@ class TestType(str, Enum):
         return self.value
 
 
+# TODO (cmcginley): enforce distinct test names w/in detections
 class BaseTest(BaseModel, ABC):
     """
     A test case for a detection
@@ -38,7 +39,10 @@ class BaseTest(BaseModel, ABC):
     result: Union[None, BaseTestResult] = None
 
     @abstractmethod
-    def skip(self) -> None:
+    def skip(self, message: str) -> None:
+        """
+        Skip a test
+        """
         raise NotImplementedError(
             "BaseTest test is an abstract class; skip must be implemented by subclasses"
         )

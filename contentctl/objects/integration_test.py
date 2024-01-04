@@ -1,4 +1,4 @@
-from typing import Union, Self
+from typing import Union
 
 from pydantic import Field
 
@@ -18,9 +18,8 @@ class IntegrationTest(BaseTest):
     # The test result
     result: Union[None, IntegrationTestResult] = None
 
-    # TODO: how often do we actually encounter tests w/ an earliest/latest time defined?
     @classmethod
-    def derive_from_unit_test(cls, unit_test: UnitTest) -> Self:
+    def derive_from_unit_test(cls, unit_test: UnitTest) -> "IntegrationTest":
         """
         Given a UnitTest, construct an IntegrationTest
         :param unit_test: the UnitTest

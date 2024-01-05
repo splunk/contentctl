@@ -70,10 +70,9 @@ class Lookup(SecurityContentObject):
     
     
     @staticmethod
-    def get_lookups(text_field: str, all_lookups: list[Lookup], ignore_lookups:set[str]=LOOKUPS_TO_IGNORE)->Tuple[list[Lookup], set[str]]:
+    def get_lookups(text_field: str, all_lookups: list[Lookup], ignore_lookups:set[str]=LOOKUPS_TO_IGNORE)->list[Lookup]:
         lookups_to_get = set(re.findall(r'[^output]lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', text_field))
         lookups_to_ignore = set([lookup for lookup in lookups_to_get if any(to_ignore in lookups_to_get for to_ignore in ignore_lookups)])
         lookups_to_get -= lookups_to_ignore
-        found_lookups, missing_lookups = SecurityContentObject.get_objects_by_name(lookups_to_get, all_lookups)
-        return found_lookups, missing_lookups
+        return SecurityContentObject.mapNamesToSecurityContentObjects(list(lookups_to_get), info.context.get("output_dto",None), type(Lookup))
     

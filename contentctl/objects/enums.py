@@ -28,9 +28,11 @@ class DataModel(str,enum.Enum):
     UPDATES = "Updates"
     VULNERABILITIES = "Vulnerabilities"
     WEB = "Web"
-    ENDPOINT_PROCESSES = "Endpoint_Processes"
-    ENDPOINT_FILESYSTEM = "Endpoint_Filesystem"
-    ENDPOINT_REGISTRY = "Endpoint_Registry"
+    #Should the following more specific DMs be added? 
+    #Or should they just fall under endpoint?
+    #ENDPOINT_PROCESSES = "Endpoint_Processes"
+    #ENDPOINT_FILESYSTEM = "Endpoint_Filesystem"
+    #ENDPOINT_REGISTRY = "Endpoint_Registry"
     RISK = "Risk"
     SPLUNK_AUDIT = "Splunk_Audit"
 

@@ -90,8 +90,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         return v
     
     @classmethod
-    def mapNamesToSecurityContentObjects(cls, v: list[str], info:ValidationInfo)->list[SecurityContentObject]:
-        director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
+    def mapNamesToSecurityContentObjects(cls, v: list[str], director:Union[DirectorOutputDto,None], allowed_type:type)->list[SecurityContentObject]:
         if director is not None:
             name_map = director.name_to_content_map
         else:
@@ -99,7 +98,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         
 
 
-        mappedObjects: list[SecurityContentObject] = []
+        mappedObjects: list[SecurityContentObject] = []]
         missing_objects: list[str] = []
         for object_name in v:
             found_object = name_map.get(object_name,None)
@@ -109,13 +108,20 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
                 mappedObjects.append(found_object)
         
         if len(missing_objects) > 0:
-            raise ValueError(f"Failed to find the following objects: {missing_objects}")
+            raise ValueError(f"Failed to find the following {allowed_type}: {missing_objects}")
+        
+        mistyped_objects = [f"{obj.name}: ACTUAL TYPE: '{type(obj)}'" for obj in mappedObjects if type(obj) != allowed_type]
+        if len(mistyped_objects) > 0:
+            bad_types_string = '\n - '.join([f"Bad object for obj.name: Expected type '{allowed_type}' but got type '{type(obj)}'" for obj in mistyped_objects])
+            raise ValueError(f"Expected objects of type {allowed_type}, but got {len(mistyped_objects)} objects with unexpected types:\n - {bad_types_string}")
+
 
         return mappedObjects
 
 
     @staticmethod
     def get_objects_by_name(names_to_find:set[str], objects_to_search:list[SecurityContentObject_Abstract])->Tuple[list[SecurityContentObject_Abstract], set[str]]:
+        raise Exception("get_objects_by_name deprecated")
         found_objects = list(filter(lambda obj: obj.name in names_to_find, objects_to_search))
         found_names = set([obj.name for obj in found_objects])
         missing_names = names_to_find - found_names
@@ -124,10 +130,8 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     @staticmethod
     def create_filename_to_content_dict(all_objects:list[SecurityContentObject_Abstract])->dict[str,SecurityContentObject_Abstract]:
         name_dict:dict[str,SecurityContentObject_Abstract] = dict()
-        
         for object in all_objects:
             name_dict[str(pathlib.Path(object.file_path))] = object
-        
         return name_dict
     
 

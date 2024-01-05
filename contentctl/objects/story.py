@@ -10,6 +10,7 @@ from pydantic import field_validator, Field, ValidationInfo
 from contentctl.objects.story_tags import StoryTags
 
 #from contentctl.objects.investigation import Investigation
+
 from typing import List
 
 class Story(SecurityContentObject):
@@ -37,6 +38,7 @@ class Story(SecurityContentObject):
 
     def getDetectionNames(self, detections:List[Detection])->List[str]:
         return [detection.name for detection in self.getDetections(detections)]
+    
     
     # def getInvestigationNames(self)->List[str]:
     #     if self.investigations:

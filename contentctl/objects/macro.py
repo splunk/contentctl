@@ -1,6 +1,10 @@
 # Used so that we can have a staticmethod that takes the class 
 # type Macro as an argument
 from __future__ import annotations
+
+
+from contentctl.input.director import DirectorOutputDto
+
 import re
 from pydantic import Field
 
@@ -24,7 +28,7 @@ class Macro(SecurityContentObject):
     
 
     @staticmethod
-    def get_macros(text_field:str, all_macros: list[Macro], ignore_macros:set[str]=MACROS_TO_IGNORE)->Tuple[list[Macro], set[str]]:
+    def get_macros(text_field:str, director:DirectorOutputDto , ignore_macros:set[str]=MACROS_TO_IGNORE)->list[Macro]:
                 
         #Simple regex to remove comments which can cause issues with
         #the macro pasing logic below
@@ -37,5 +41,6 @@ class Macro(SecurityContentObject):
         macros_to_ignore = set([macro for macro in macros_to_get if any(to_ignore in macro for to_ignore in ignore_macros)])
         #remove the ones that we will ignore
         macros_to_get -= macros_to_ignore
-        found_macros, missing_macros = SecurityContentObject.get_objects_by_name(macros_to_get, all_macros)
-        return found_macros, missing_macros
+
+        return SecurityContentObject.mapNamesToSecurityContentObjects(list(macros_to_get), director, type(Macro))
+    

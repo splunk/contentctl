@@ -15,8 +15,8 @@ class DetectionTags(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=False)
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
-    #enum is intentionally Cis18 even though field is named cis20 for legacy reasons
-    cis20: Optional[List[Cis18Value]] = None 
+    
+    
     confidence: NonNegativeInt = Field(...,le=100)
     impact: NonNegativeInt = Field(...,le=100)
     @computed_field
@@ -24,7 +24,7 @@ class DetectionTags(BaseModel):
     def risk_score(self)->int:
         return round((self.confidence * self.impact)/100)
     
-    kill_chain_phases: Optional[list[KillChainPhase]] = None
+    
     mitre_attack_id: Optional[List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]]] = None
     nist: Optional[list[NistCategory]] = None
     observable: Optional[list[Observable]] = []
@@ -48,7 +48,27 @@ class DetectionTags(BaseModel):
     risk_level: Optional[RiskLevel] = None
     #observable_str: str = None
     evidence_str: Optional[str] = None
-    kill_chain_phases_id: Optional[dict[KillChainPhase,dict[str,int]]] = None
+
+    @computed_field
+    @property
+    def kill_chain_phases(self)->list[KillChainPhase]:
+        from contentctl.helper.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
+        phases:set[str] = set()
+        for enrichment in self.mitre_attack_enrichments:
+            for tactic in enrichment.mitre_attack_tactics:
+                phase = KillChainPhase(ATTACK_TACTICS_KILLCHAIN_MAPPING[tactic])
+                phases.add(phase)
+        return list(phases)
+    
+    #enum is intentionally Cis18 even though field is named cis20 for legacy reasons
+    @computed_field
+    @property
+    def cis20(self)->list[Cis18Value]:
+        if self.security_domain == SecurityDomain.NETWORK:
+            return [Cis18Value.CIS_13]
+        else:
+            return [Cis18Value.CIS_10]
+
     
     research_site_url: Optional[HttpUrl] = None
     event_schema: str = "ocsf"
@@ -88,4 +108,4 @@ class DetectionTags(BaseModel):
     @field_validator('analytic_story',mode="before")
     @classmethod
     def mapStoryNamesToStoryObjects(cls, v:Union[list[str], list[Story]], info:ValidationInfo)->list[Story]:
-        return SecurityContentObject.mapNamesToSecurityContentObjects(v,info)
+        return SecurityContentObject.mapNamesToSecurityContentObjects(info.context.get("output_dto",None),info, type(Story))

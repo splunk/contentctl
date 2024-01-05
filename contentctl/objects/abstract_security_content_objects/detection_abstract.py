@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 import pathlib
-from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field, computed_field
 from dataclasses import dataclass
 from typing import Union, Optional, List, Any
 from datetime import datetime, timedelta
@@ -13,6 +13,8 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
 from contentctl.objects.enums import DetectionStatus
+from contentctl.objects.enums import NistCategory
+
 from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
@@ -39,8 +41,13 @@ class Detection_Abstract(SecurityContentObject):
     
     tests: list[UnitTest] = []
 
-    # enrichments
-    datamodel: Optional[List[DataModel]] = None
+    @computed_field
+    @property
+    def datamodel(self)->List[DataModel]:
+        if isinstance(self.search, str):
+            return [dm for dm in DataModel if dm.value in self.search]
+        else:
+            return []
     
 
     deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
@@ -128,6 +135,14 @@ class Detection_Abstract(SecurityContentObject):
         return SecurityContentObject.free_text_field_valid(v,info)
 
     
+    @model_validator(mode="after")
+    def addTags_nist(self):
+        if self.type == AnalyticsType.TTP:
+            self.tags.nist = [NistCategory.DE_CM]
+        else:
+            self.tags.nist = [NistCategory.DE_AE]
+        return self
+
     @model_validator(mode="after")
     def search_observables_exist_validate(self):
         

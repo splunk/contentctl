@@ -4,24 +4,18 @@ import pathlib
 from pydantic import ValidationError
 
 from contentctl.objects.story import Story
-from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.config import Config
 from contentctl.input.yml_reader import YmlReader
-
+from contentctl.input.director import DirectorOutputDto
 
 class StoryBuilder():
     story: Story
 
-    def setObject(self, path: pathlib.Path) -> None:
+    def setObject(self, path: str,
+                    output_dto:DirectorOutputDto) -> None:
         yml_dict = YmlReader.load_file(path)
-        yml_dict["tags"]["name"] = yml_dict["name"]
-
-        try:
-            self.story = Story.parse_obj(yml_dict)
-        except ValidationError as e:
-            print('Validation Error for file ' + str(path))
-            print(e)
-            sys.exit(1)
+        self.story = Story.model_validate(yml_dict, context={"output_dto":output_dto})
+        
 
     def reset(self) -> None:
         self.story = None
@@ -49,7 +43,7 @@ class StoryBuilder():
                         tags_obj = {"mitre_attack_enrichments": mitre_attack_enrichments_list}
                         matched_detections.append({
                             "name": detection.name,
-                            "source": detection.source,
+                            "source": detection.getSource(),
                             "type": detection.type,
                             "tags": tags_obj
                         })
@@ -63,7 +57,6 @@ class StoryBuilder():
                                 if attack_enrichment.mitre_attack_id not in [attack.mitre_attack_id for attack in mitre_attack_enrichments]:
                                     mitre_attack_enrichments.append(attack_enrichment)
 
-        self.story.detection_names = matched_detection_names
         self.story.detections = matched_detections
         self.story.tags.datamodels = sorted(list(datamodels))
         self.story.tags.kill_chain_phases = sorted(list(kill_chain_phases))
@@ -86,18 +79,16 @@ class StoryBuilder():
         for investigation in investigations:
             for investigation_analytic_story in  investigation.tags.analytic_story:
                 if investigation_analytic_story == self.story.name:
-                    matched_investigation_names.append(str(f'ESCU - ' + investigation.name + ' - Response Task'))
                     matched_investigations.append(investigation)
 
-        self.story.investigation_names = matched_investigation_names
         self.story.investigations = matched_investigations
 
     def addAuthorCompanyName(self) -> None:
         match_author = re.search(r'^([^,]+)', self.story.author)
         if match_author is None:
-            self.story.author_name = 'no'
+            self.story.author = 'no'
         else:
-            self.story.author_name = match_author.group(1)
+            self.story.author = match_author.group(1)
 
         match_company = re.search(r',\s?(.*)$', self.story.author)
         if match_company is None:

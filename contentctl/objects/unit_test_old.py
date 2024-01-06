@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel
 
 
 from contentctl.objects.unit_test import UnitTest

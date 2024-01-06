@@ -5,7 +5,7 @@ import requests
 import splunklib.client as client
 from contentctl.objects.enums import PostTestBehavior, DetectionStatus
 from contentctl.objects.detection import Detection
-from contentctl.objects.unit_test_test import UnitTestTest
+from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.test_config import TestConfig, Infrastructure
@@ -409,7 +409,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         return new_string
 
     def execute_test(
-        self, detection: Detection, test: UnitTestTest, FORCE_ALL_TIME: bool = True
+        self, detection: Detection, test: UnitTest, FORCE_ALL_TIME: bool = True
     ):
         start_time = time.time()
         self.pbar.reset()
@@ -439,9 +439,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
-        for baseline in test.baselines:
-
-            self.retry_search_until_timeout(detection, test, kwargs, start_time)
 
         if not FORCE_ALL_TIME:
             if test.earliest_time is not None:
@@ -516,7 +513,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def retry_search_until_timeout(
         self,
         detection: Detection,
-        test: UnitTestTest,
+        test: UnitTest,
         kwargs: dict,
         start_time: float,
     ):
@@ -654,7 +651,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def replay_attack_data_files(
         self,
         attack_data_files: list[UnitTestAttackData],
-        test: UnitTestTest,
+        test: UnitTest,
         start_time: float,
     ):
         with TemporaryDirectory(prefix="contentctl_attack_data") as attack_data_dir:
@@ -667,7 +664,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self,
         attack_data_file: UnitTestAttackData,
         tmp_dir: str,
-        test: UnitTestTest,
+        test: UnitTest,
         start_time: float,
     ):
         tempfile = mktemp(dir=tmp_dir)

@@ -6,12 +6,16 @@ import random
 import string
 from timeit import default_timer
 import pathlib
-import datetime
+
 from typing import Union, Tuple
-from pydantic import ValidationError
 import tqdm
-from contentctl.objects.security_content_object import SecurityContentObject
 from math import ceil
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.security_content_object import SecurityContentObject
+
 
 TOTAL_BYTES = 0
 ALWAYS_PULL = True

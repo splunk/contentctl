@@ -15,11 +15,11 @@ class AttackNavOutput():
                     if not mitre_attack_enrichment.mitre_attack_id in techniques:
                         techniques[mitre_attack_enrichment.mitre_attack_id] = {
                                 'score': 1,
-                                'file_paths': ['https://github.com/splunk/security_content/blob/develop/detections/' + detection.source + '/' + self.convertNameToFileName(detection.name)]
+                                'file_paths': ['https://github.com/splunk/security_content/blob/develop/detections/' + detection.getSource() + '/' + self.convertNameToFileName(detection.name)]
                             }
                     else:
                         techniques[mitre_attack_enrichment.mitre_attack_id]['score'] = techniques[mitre_attack_enrichment.mitre_attack_id]['score'] + 1
-                        techniques[mitre_attack_enrichment.mitre_attack_id]['file_paths'].append('https://github.com/splunk/security_content/blob/develop/detections/' + detection.source + '/' + self.convertNameToFileName(detection.name))
+                        techniques[mitre_attack_enrichment.mitre_attack_id]['file_paths'].append('https://github.com/splunk/security_content/blob/develop/detections/' + detection.getSource() + '/' + self.convertNameToFileName(detection.name))
 
         AttackNavWriter.writeAttackNavFile(techniques, os.path.join(output_path, 'coverage.json'))
 

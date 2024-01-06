@@ -1,38 +1,24 @@
-
-
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel, Field
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
-from contentctl.objects.enums import StoryCategory
+from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhase, SecurityContentProductName
+from typing import List
+from typing_extensions import Annotated
+from enum import Enum
+
+class StoryUseCase(str,Enum):
+   FRAUD_DETECTION = "Fraud Detection"
+   COMPLIANCE = "Compliance"
+   APPLICATION_SECURITY = "Application Security"
+   SECURITY_MONITORING = "Security Monitoring"
+   ADVANCED_THREAD_DETECTION = "Advanced Threat Detection"
 
 class StoryTags(BaseModel):
-    # story spec
-    name: str
-    analytic_story: str
-    category: list[StoryCategory]
-    product: list
-    usecase: str
+    category: list[StoryCategory] = Field(...,min_length=1)
+    product: list[SecurityContentProductName] = Field(...,min_length=1)
+    usecase: StoryUseCase = Field(...)
 
     # enrichment
-    mitre_attack_enrichments: list[MitreAttackEnrichment] = []
-    mitre_attack_tactics: list = []
-    datamodels: list = []
-    kill_chain_phases: list = []
-
-
-    @validator('product')
-    def tags_product(cls, v, values):
-        valid_products = [
-            "Splunk Enterprise", "Splunk Enterprise Security", "Splunk Cloud",
-            "Splunk Security Analytics for AWS", "Splunk Behavioral Analytics"
-        ]
-
-        for value in v:
-            if value not in valid_products:
-                raise ValueError('product is not valid for ' + values['name'] + '. valid products are ' + str(valid_products))
-        return v
-
-    @validator('category')
-    def category_validate(cls,v,values):
-        if len(v) == 0:
-            raise ValueError(f"Error for Story '{values['name']}' - at least one 'category' MUST be provided.")
-        return v
+    mitre_attack_enrichments: List[MitreAttackEnrichment] = []
+    mitre_attack_tactics: List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]] = []
+    datamodels: List[DataModel] = []
+    kill_chain_phases: List[KillChainPhase] = []

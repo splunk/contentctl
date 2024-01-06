@@ -1,56 +1,51 @@
-import csv
-import glob
 import logging
 import os
 import pathlib
-import subprocess
-import sys
-from typing import Union, Tuple
-from docker import types
-import datetime
 import git
-import yaml
-from git.objects import base
 
-from contentctl.objects.detection import Detection
+
+
+
+
+
+from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
+
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
+    
 from contentctl.objects.story import Story
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.playbook import Playbook
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
-from contentctl.objects.unit_test import UnitTest
-
-from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
-import random
-import pathlib
-from contentctl.helper.utils import Utils
-
+from contentctl.objects.detection import Detection
 from contentctl.objects.test_config import TestConfig
-from contentctl.actions.generate import DirectorOutputDto
-
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)
 
 
 SSA_PREFIX = "ssa___"
-
+from contentctl.input.director import DirectorOutputDto
 
 class GitService:
     def get_all_content(self, director: DirectorOutputDto) -> DirectorOutputDto:
         # get a new director that will be used for testing.
-        return DirectorOutputDto(
-            self.get_detections(director),
-            self.get_stories(director),
-            self.get_baselines(director),
-            self.get_investigations(director),
-            self.get_playbooks(director),
-            self.get_macros(director),
-            self.get_lookups(director),
-            [],
-            []
-        )
+        return director
+        # return DirectorOutputDto(
+        #     self.get_detections(director),
+        #     self.get_stories(director),
+        #     self.get_baselines(director),
+        #     self.get_investigations(director),
+        #     self.get_playbooks(director),
+        #     self.get_macros(director),
+        #     self.get_lookups(director),
+        #     [],
+        #     []
+        # )
 
     def get_stories(self, director: DirectorOutputDto) -> list[Story]:
         stories: list[Story] = []

@@ -1,134 +1,81 @@
-import re
+from contentctl.objects.story import Story
 
-from pydantic import BaseModel, validator, ValidationError, root_validator
+from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
+from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
+from typing import List, Optional, Annotated, Union
+from contentctl.objects.security_content_object import SecurityContentObject
+
+
 
 class DetectionTags(BaseModel):
     # detection spec
-    name: str
-    analytic_story: list
-    asset_type: str
-    automated_detection_testing: str = None
-    cis20: list = None
-    confidence: str
-    impact: int
-    kill_chain_phases: list = None
-    mitre_attack_id: list = None
-    nist: list = None
-    observable: list[Observable] = []
-    message: str
-    product: list
-    required_fields: list
-    risk_score: int
-    security_domain: str
-    risk_severity: str = None
-    cve: list = None
-    supported_tas: list = None
-    atomic_guid: list = None
-    drilldown_search: str = None
-    manual_test: str = None
+    model_config = ConfigDict(use_enum_values=True,validate_default=False)
+    analytic_story: list[Story] = Field(...)
+    asset_type: AssetType = Field(...)
+    
+    
+    confidence: NonNegativeInt = Field(...,le=100)
+    impact: NonNegativeInt = Field(...,le=100)
+    @computed_field
+    @property
+    def risk_score(self)->int:
+        return round((self.confidence * self.impact)/100)
+    
+    
+    mitre_attack_id: Optional[List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]]] = None
+    nist: Optional[list[NistCategory]] = None
+    observable: Optional[list[Observable]] = []
+    message: Optional[str] = Field(...)
+    product: list[SecurityContentProductName] = Field(...,min_length=1)
+    required_fields: list[str] = Field(min_length=1)
+    
+    security_domain: SecurityDomain = Field(...)
+    risk_severity: Optional[RiskSeverity] = None
+    cve: Optional[List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]]] = None
+    atomic_guid: Optional[list[UUID4]] = None
+    drilldown_search: Optional[str] = None
 
 
     # enrichment
     mitre_attack_enrichments: list[MitreAttackEnrichment] = []
-    confidence_id: int = None
-    impact_id: int = None
-    context_ids: list = None
-    risk_level_id: int = None
-    risk_level: str = None
-    observable_str: str = None
-    evidence_str: str = None
-    kill_chain_phases_id: list = None
-    research_site_url: str = None
-    event_schema: str = None
-    mappings: list = None
-    annotations: dict = None
+    confidence_id: Optional[PositiveInt] = Field(None,ge=1,le=3)
+    impact_id: Optional[PositiveInt] = Field(None,ge=1,le=5)
+    # context_ids: list = None
+    risk_level_id: Optional[NonNegativeInt] = Field(None,le=4)
+    risk_level: Optional[RiskLevel] = None
+    #observable_str: str = None
+    evidence_str: Optional[str] = None
 
-
-    @validator('cis20')
-    def tags_cis20(cls, v, values):
-        pattern = '^CIS ([0-9]|1[0-9]|20)$' #DO NOT match leading zeroes and ensure no extra characters before or after the string
-        for value in v:
-            if not re.match(pattern, value):
-                raise ValueError(f"CIS control '{value}' is not a valid Control ('CIS 1' -> 'CIS 20'):  {values['name']}")
-        return v
+    @computed_field
+    @property
+    def kill_chain_phases(self)->list[KillChainPhase]:
+        from contentctl.helper.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
+        phases:set[str] = set()
+        for enrichment in self.mitre_attack_enrichments:
+            for tactic in enrichment.mitre_attack_tactics:
+                phase = KillChainPhase(ATTACK_TACTICS_KILLCHAIN_MAPPING[tactic])
+                phases.add(phase)
+        return list(phases)
     
-    @validator('nist')
-    def tags_nist(cls, v, values):
-        # Sourced Courtest of NIST: https://www.nist.gov/system/files/documents/cyberframework/cybersecurity-framework-021214.pdf (Page 19)
-        IDENTIFY = [f'ID.{category}' for category in ["AM", "BE", "GV", "RA", "RM"]      ]
-        PROTECT  = [f'PR.{category}' for category in ["AC", "AT", "DS", "IP", "MA", "PT"]]
-        DETECT   = [f'DE.{category}' for category in ["AE", "CM", "DP"]                  ]
-        RESPOND  = [f'RS.{category}' for category in ["RP", "CO", "AN", "MI", "IM"]      ]
-        RECOVER  = [f'RC.{category}' for category in ["RP", "IM", "CO"]                  ]
-        ALL_NIST_CATEGORIES = IDENTIFY + PROTECT + DETECT + RESPOND + RECOVER
-
-        
-        for value in v:
-            if not value in ALL_NIST_CATEGORIES:
-                raise ValueError(f"NIST Category '{value}' is not a valid category")
-        return v
-
-    @validator('confidence')
-    def tags_confidence(cls, v, values):
-        v = int(v)
-        if not (v > 0 and v <= 100):
-             raise ValueError('confidence score is out of range 1-100: ' + values["name"])
+    #enum is intentionally Cis18 even though field is named cis20 for legacy reasons
+    @computed_field
+    @property
+    def cis20(self)->list[Cis18Value]:
+        if self.security_domain == SecurityDomain.NETWORK:
+            return [Cis18Value.CIS_13]
         else:
-            return v
+            return [Cis18Value.CIS_10]
 
-    @validator('context_ids')
-    def tags_context(cls, v, values):
-        context_list = SES_CONTEXT_MAPPING.keys()
-        for value in v:
-            if value not in context_list:
-                raise ValueError('context value not valid for ' + values["name"] + '. valid options are ' + str(context_list) )
-        return v
-
-    @validator('impact')
-    def tags_impact(cls, v, values):
-        if not (v > 0 and v <= 100):
-             raise ValueError('impact score is out of range 1-100: ' + values["name"])
-        else:
-            return v
-
-    @validator('kill_chain_phases')
-    def tags_kill_chain_phases(cls, v, values):
-        valid_kill_chain_phases = SES_KILL_CHAIN_MAPPINGS.keys()
-        for value in v:
-            if value not in valid_kill_chain_phases:
-                raise ValueError('kill chain phase not valid for ' + values["name"] + '. valid options are ' + str(valid_kill_chain_phases))
-        return v
-
-    @validator('mitre_attack_id')
-    def tags_mitre_attack_id(cls, v, values):
-        pattern = 'T[0-9]{4}'
-        for value in v:
-            if not re.match(pattern, value):
-                raise ValueError('Mitre Attack ID are not following the pattern Txxxx: ' + values["name"])
-        return v
-
-    @validator('product')
-    def tags_product(cls, v, values):
-        valid_products = [
-            "Splunk Enterprise", "Splunk Enterprise Security", "Splunk Cloud",
-            "Splunk Security Analytics for AWS", "Splunk Behavioral Analytics"
-        ]
-
-        for value in v:
-            if value not in valid_products:
-                raise ValueError('product is not valid for ' + values['name'] + '. valid products are ' + str(valid_products))
-        return v
-
-    @validator('risk_score')
-    def tags_calculate_risk_score(cls, v, values):
-        calculated_risk_score = round(values['impact'] * values['confidence'] / 100)
-        if calculated_risk_score != int(v):
-            raise ValueError(f"Risk Score must be calculated as round(confidence * impact / 100)"
-                             f"\n  Expected risk_score={calculated_risk_score}, found risk_score={int(v)}: {values['name']}")
-        return v
+    
+    research_site_url: Optional[HttpUrl] = None
+    event_schema: str = "ocsf"
+    mappings: Optional[List] = None
+    annotations: Optional[dict] = None
+    manual_test: Optional[str] = None
+    
     
     # The following validator is temporarily disabled pending further discussions
     # @validator('message')
@@ -158,3 +105,7 @@ class DetectionTags(BaseModel):
     #     return v
 
     
+    @field_validator('analytic_story',mode="before")
+    @classmethod
+    def mapStoryNamesToStoryObjects(cls, v:Union[list[str], list[Story]], info:ValidationInfo)->list[Story]:
+        return SecurityContentObject.mapNamesToSecurityContentObjects(info.context.get("output_dto",None),info, type(Story))

@@ -1,15 +1,15 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+from contentctl.objects.macro import Macro
+from contentctl.objects.lookup import Lookup
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 
-import uuid
-import string
-import requests
-import time
-import sys
 import re
 import pathlib
-from pydantic import BaseModel, validator, root_validator, Extra
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field, computed_field
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Optional, List, Any
 from datetime import datetime, timedelta
 
 
@@ -17,58 +17,88 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
 from contentctl.objects.enums import DetectionStatus
+from contentctl.objects.enums import NistCategory
+
 from contentctl.objects.detection_tags import DetectionTags
-from contentctl.objects.config import ConfigDetectionConfiguration
+from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
-from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import Lookup
-from contentctl.objects.baseline import Baseline
-from contentctl.objects.playbook import Playbook
-from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType
+
+#from contentctl.objects.baseline import Baseline
+#from contentctl.objects.playbook import Playbook
+from contentctl.objects.enums import DataSource,ProvidingTechnology
+
 
 
 class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
-    type: AnalyticsType = ...
-    file_path: str = None
-    #status field is REQUIRED (the way to denote this with pydantic is ...)
-    status: DetectionStatus = ...
-    data_source: list[str]
-    tags: DetectionTags
-    search: Union[str, dict]
-    how_to_implement: str
-    known_false_positives: str
+    type: AnalyticsType = Field(...)
+    status: DetectionStatus = Field(...)
+    data_source: Optional[List[str]] = None
+    tags: DetectionTags = Field(...)
+    search: Union[str, dict] = Field(...)
+    how_to_implement: str = Field(..., min_length=4)
+    known_false_positives: str = Field(..., min_length=4)
     check_references: bool = False  
-    references: list
     
     tests: list[UnitTest] = []
 
-    # enrichments
-    datamodel: list = None
-    deployment: ConfigDetectionConfiguration = None
-    annotations: dict = None
-    risk: list = None
-    playbooks: list[Playbook] = []
-    baselines: list[Baseline] = []
-    mappings: dict = None
+    @computed_field
+    @property
+    def datamodel(self)->List[DataModel]:
+        if isinstance(self.search, str):
+            return [dm for dm in DataModel if dm.value in self.search]
+        else:
+            return []
+    
+
+    deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
+    annotations: dict = {}
+    #playbooks: list[Playbook] = []
+    #baselines: list[Baseline] = []
+    mappings: Optional[dict] = None
     macros: list[Macro] = []
     lookups: list[Lookup] = []
-    cve_enrichment: list = None
-    splunk_app_enrichment: list = None
+    cve_enrichment: Optional[List[dict]] = None
+    splunk_app_enrichment: Optional[List[dict]] = None
     
-    source: str = None
-    nes_fields: str = None
-    providing_technologies: list = None
-    runtime: str = None
-
+    nes_fields: Optional[str] = None
+    providing_technologies: Optional[List[ProvidingTechnology]] = None
+    risk: Optional[list[dict]] = None
+    
     class Config:
         use_enum_values = True
 
 
-    def get_content_dependencies(self)->list[SecurityContentObject]:    
-        return self.playbooks + self.baselines + self.macros + self.lookups
+    def get_content_dependencies(self)->list[SecurityContentObject]:
+        #Do this separately to satisfy type checker
+        objects: list[SecurityContentObject] = []
+        objects += self.playbooks 
+        objects += self.baselines
+        objects += self.macros 
+        objects += self.lookups     
+        return objects
     
+    def getSource(self)->str:
+        return self.file_path.parts[-2]
+    
+    @field_validator("deployment", mode="before")
+    def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
+        director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
+        if not director:
+            raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
+        
+        typeField = info.data.get("type",None)
+        deps = [deployment for deployment in director.deployments if deployment.type == typeField]
+        if len(deps) == 1:
+            return deps[0]
+        elif len(deps) == 0:
+            raise ValueError(f"Failed to find Deployment for type '{typeField}' "\
+                             f"from  possible {[deployment.type for deployment in director.deployments]}")
+        else:
+            raise ValueError(f"Found more than 1 ({len(deps)}) Deployment for type '{typeField}' "\
+                             f"from  possible {[deployment.type for deployment in director.deployments]}")
+
+
     @staticmethod
     def get_detections_from_filenames(detection_filenames:set[str], all_detections:list[Detection_Abstract])->list[Detection_Abstract]:
         detection_filenames = set(str(pathlib.Path(filename).absolute()) for filename in detection_filenames)
@@ -86,96 +116,79 @@ class Detection_Abstract(SecurityContentObject):
     #         raise ValueError("not valid analytics type: " + values["name"])
     #     return v
 
-    @validator('how_to_implement', 'search', 'known_false_positives')
-    def encode_error(cls, v, values, field):
-        if not isinstance(v,str):
-            if isinstance(v,dict) and field.name == "search":
-                #This is a special case of the search field.  It can be a dict, containing
-                #a sigma search, if we are running the converter. So we will not
-                #validate the field further. Additional validation will be done
-                #during conversion phase later on
-                return v
-            else:
-                #No other fields should contain a non-str type:
-                raise ValueError(f"Error validating field '{field.name}'. Field MUST be be a string, not type '{type(v)}' ")
 
-        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
-
-    @validator("status")
-    def validation_for_ba_only(cls, v, values):
-        # Ensure that only a BA detection can have status: validation
-        p = pathlib.Path(values['file_path'])
-        if v == DetectionStatus.validation.value:
-            if p.name.startswith("ssa___"): 
-                pass
-            else:
-                raise ValueError(f"The following is NOT an ssa_ detection, but has 'status: {v}' which may ONLY be used for ssa_ detections: {values['file_path']}")
+    @field_validator('search')
+    @classmethod
+    def encode_error_search(cls, v: Union[str,dict], info: ValidationInfo):
+        if isinstance(v,dict):
+            #This is a special case of the search field.  It can be a dict, containing
+            #a sigma search, if we are running the converter. So we will not
+            #validate the field further. Additional validation will be done
+            #during conversion phase later on
+            return v
         
-        return v
+        return SecurityContentObject.free_text_field_valid(v,info)
 
-    # @root_validator
-    # def search_validation(cls, values):
-    #     if 'ssa_' not in values['file_path']:
-    #         if not '_filter' in values['search']:
-    #             raise ValueError('filter macro missing in: ' + values["name"])
-    #         if any(x in values['search'] for x in ['eventtype=', 'sourcetype=', ' source=', 'index=']):
-    #             if not 'index=_internal' in values['search']:
-    #                 raise ValueError('Use source macro instead of eventtype, sourcetype, source or index in detection: ' + values["name"])
-    #     return values
 
-    # disable it because of performance reasons
-    # @validator('references')
-    # def references_check(cls, v, values):
-    #     return LinkValidator.check_references(v, values["name"])
-    #     return v
+    @field_validator('how_to_implement', 'known_false_positives')
+    @classmethod
+    def encode_error(cls, v: str, info: ValidationInfo):
+        return SecurityContentObject.free_text_field_valid(v,info)
+
     
+    @model_validator(mode="after")
+    def addTags_nist(self):
+        if self.type == AnalyticsType.TTP:
+            self.tags.nist = [NistCategory.DE_CM]
+        else:
+            self.tags.nist = [NistCategory.DE_AE]
+        return self
 
-    @validator("search")
-    def search_obsersables_exist_validate(cls, v, values):
-        if type(v) is str:
-            tags:DetectionTags = values.get("tags")
-            if tags == None:
-                raise ValueError("Unable to parse Detection Tags.  Please resolve Detection Tags errors")
+    @model_validator(mode="after")
+    def search_observables_exist_validate(self):
+        
+        if isinstance(self.search, str):
             
-            observable_fields = [ob.name.lower() for ob in tags.observable]
+            observable_fields = [ob.name.lower() for ob in self.tags.observable]
             
             #All $field$ fields from the message must appear in the search
             field_match_regex = r"\$([^\s.]*)\$"
             
-            message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, tags.message.lower())]
-            missing_fields = set([field for field in observable_fields if field not in v.lower()])
+            
+            if self.tags.message:
+                message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, self.tags.message.lower())]
+                missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
+            else:
+                message_fields = []
+                missing_fields = set()
+            
 
             error_messages = []
             if len(missing_fields) > 0:
                 error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
 
             
-            missing_fields = set([field for field in message_fields if field not in v.lower()])
+            missing_fields = set([field for field in message_fields if field not in self.search.lower()])
             if len(missing_fields) > 0:
                 error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
             
-            if len(error_messages) > 0 and values.get("status") == DetectionStatus.production.value:
-                msg = "\n\t".join(error_messages)
+            if len(error_messages) > 0 and self.status == DetectionStatus.production.value:
+                msg = "Use of fields in observables/messages that do not appear in search:\n\t- "+ "\n\t- ".join(error_messages)
                 raise(ValueError(msg))
         
         # Found everything
-        return v
+        return self
 
-    @validator("tests")
-    def tests_validate(cls, v, values):
-        if values.get("status","") == DetectionStatus.production.value and not v:
+    @model_validator(mode="after")
+    def tests_validate(self):
+        # Only Production detections are required to have test(s).
+        # If the manual_test filed is defined, then the lack of test(s) is allowed.
+        if self.status == DetectionStatus.production.value and not self.tags.manual_test and not self.tests:
             raise ValueError(
-                "At least one test is REQUIRED for production detection: " + values["name"]
+                "At least one test is REQUIRED for production detection: " + self.name
             )
-        return v
-    
-    @validator("datamodel")
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError("not valid data model: " + values["name"])
-        return v
-    
+        return self
+        
     def all_tests_successful(self) -> bool:
         if len(self.tests) == 0:
             return False

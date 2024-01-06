@@ -1,8 +1,8 @@
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel
 
 
 from typing import Union
-from datetime import timedelta
+
 from splunklib.data import Record
 from contentctl.objects.test_config import Infrastructure
 from contentctl.helper.utils import Utils

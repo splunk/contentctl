@@ -1,49 +1,48 @@
-import string
-import uuid
-import requests
-
-from pydantic import BaseModel, validator, ValidationError
-from datetime import datetime
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from contentctl.objects.story_tags import StoryTags
+if TYPE_CHECKING:
+    from contentctl.objects.detection import Detection
+    
 
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.story_tags import StoryTags
-from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType
+from pydantic import field_validator, Field, ValidationInfo
+
+
+
+
+#from contentctl.objects.investigation import Investigation
+
+from typing import List
+
 class Story(SecurityContentObject):
-    # story spec
-    #name: str
-    #id: str
-    #version: int
-    #date: str
-    #author: str
-    #description: str
-    #contentType: SecurityContentType = SecurityContentType.stories
-    narrative: str
-    check_references: bool = False #Validation is done in order, this field must be defined first
-    references: list
-    tags: StoryTags
+    narrative: str = Field(...)
+    tags: StoryTags = Field(...)
 
     # enrichments
-    detection_names: list = None
-    investigation_names: list = None
-    baseline_names: list = None
-    author_company: str = None
-    author_name: str = None
-    detections: list = None
-    investigations: list = None
+    #detection_names: List[str] = []
+    #investigation_names: List[str] = []
+    #baseline_names: List[str] = []
+    author_company: str = "no"
     
-
-    # Allow long names for macros
-    @validator('name',check_fields=False)
-    def name_max_length(cls, v):
-        #if len(v) > 67:
-        #    raise ValueError('name is longer then 67 chars: ' + v)
-        return v
+    #detections: List[Detection] = []
+    #investigations: Optional[List[Investigation]] = None
     
-    @validator('narrative')
-    def encode_error(cls, v, values, field):
-        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+    
+    @field_validator('narrative')
+    @classmethod
+    def encode_error(cls, v:str, info:ValidationInfo)->str:
+        return super().free_text_field_valid(v,info)
 
-    @validator('references')
-    def references_check(cls, v, values):
-        return LinkValidator.SecurityContentObject_validate_references(v, values)
+    def getDetections(self, detections:List[Detection])->list[Detection]:
+        return [detection for detection in detections if self in detection.tags.analytic_story]
+
+    def getDetectionNames(self, detections:List[Detection])->List[str]:
+        return [detection.name for detection in self.getDetections(detections)]
+    
+    
+    # def getInvestigationNames(self)->List[str]:
+    #     if self.investigations:
+    #         return [investigation.name for investigation in self.investigations]
+    #     return []
+ 

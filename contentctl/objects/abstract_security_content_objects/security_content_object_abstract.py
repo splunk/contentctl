@@ -1,71 +1,127 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.security_content_object import SecurityContentObject
+    from contentctl.objects.config import Config
+    from contentctl.input.director import DirectorOutputDto
+
 import re
 import abc
-import string
 import uuid
-from datetime import datetime
-from pydantic import BaseModel, validator, ValidationError, Field
-from contentctl.objects.enums import SecurityContentType
-from typing import Tuple
-
-import uuid
+import datetime
+from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict, model_validator
+from typing import Tuple, Optional, List, Union
 import pathlib
 
-NO_FILE_BUILT_AT_RUNTIME = "NO_FILE_BUILT_AT_RUNTIME"
+
+
+
+
+NO_FILE_NAME = "NO_FILE_NAME"
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    #contentType: SecurityContentType
-    name: str
-    author: str = "UNKNOWN_AUTHOR"
-    date: str = "1990-01-01"
-    version: int = 1
+    model_config = ConfigDict(use_enum_values=True,validate_default=True)
+    # name: str = ...
+    # author: str = Field(...,max_length=255)
+    # date: datetime.date = Field(...)
+    # version: NonNegativeInt = ...
+    # id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
+    # description: str = Field(...,max_length=1000)
+    # file_path: FilePath = Field(...)
+    # references: Optional[List[HttpUrl]] = None
+    
+    name: str = Field("NO_NAME")
+    author: str = Field("Content Author",max_length=255)
+    date: datetime.date = Field(datetime.date.today())
+    version: NonNegativeInt = 1
     id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
-    description: str = "UNKNOWN_DESCRIPTION"
-    file_path: str = "NO_FILE_BUILT_AT_RUNTIME"
+    description: str = Field("Enter Description Here",max_length=10000)
+    file_path: Optional[FilePath] = None
+    references: Optional[List[HttpUrl]] = None
 
-    @validator('name')
-    def name_max_length(cls, v):
-        if len(v) > 67:
-            raise ValueError('name is longer then 67 chars: ' + v)
-        return v
-
-    @validator('name')
-    def name_invalid_chars(cls, v):
-        invalidChars = set(string.punctuation.replace("-", ""))
-        if any(char in invalidChars for char in v):
-            raise ValueError('invalid chars used in name: ' + v)
-        return v
-
-    @validator('date')
-    def date_valid(cls, v, values):
-        try:
-            datetime.strptime(v, "%Y-%m-%d")
-        except:
-            raise ValueError('date is not in format YYYY-MM-DD: ' + values["name"])
-        return v
 
     @staticmethod
-    def free_text_field_valid(input_cls, v, values, field):
+    def objectListToNameList(objects:list[SecurityContentObject], config:Optional[Config]=None)->list[str]:
+        return [object.getName(config) for object in objects]
+
+    # This function is overloadable by specific types if they want to redefine names, for example
+    # to have the format ESCU - NAME - Rule (config.tag - self.name - Rule)
+    def getName(self, config:Optional[Config])->str:
+        return self.name
+
+    @model_validator(mode="after")
+    def ensureFileNameMatchesSearchName(self):
+        file_name = self.name \
+            .replace(' ', '_') \
+            .replace('-','_') \
+            .replace('.','_') \
+            .replace('/','_') \
+            .lower() + ".yml"
+        
+        if (self.file_path is not None and file_name != self.file_path.name):
+            raise ValueError(f"The file name MUST be based off the content 'name' field:\n"\
+                            f"\t- Expected File Name: {file_name}\n"\
+                            f"\t- Actual File Name  : {self.file_path.name}")
+
+        return self
+
+    @field_validator('file_path')
+    @classmethod
+    def file_path_valid(cls, v: Optional[pathlib.PosixPath], info: ValidationInfo):
+        if not v:
+            #It's possible that the object has no file path - for example filter macros that are created at runtime
+            return v
+        if not v.name.endswith(".yml"):
+            raise ValueError(f"All Security Content Objects must be YML files and end in .yml.  The following file does not: '{v}'")
+        return v
+
+    @field_validator('name','author','description')
+    @classmethod
+    def free_text_field_valid(cls, v: str, info:ValidationInfo)->str:
         try:
             v.encode('ascii')
         except UnicodeEncodeError as e:
-            print(f"Potential Ascii encoding error in {values['name']}:{field.name} - {str(e)}")
+            print(f"Potential Ascii encoding error in {info.field_name}:'{v}' - {str(e)}")
         except Exception as e:
-            print(f"Unknown encoding error in {values['name']}:{field.name} - {str(e)}")
+            print(f"Unknown encoding error in {info.field_name}:'{v}' - {str(e)}")
         
         
         if bool(re.search(r"[^\\]\n", v)):
-                raise ValueError(f"Unexpected newline(s) in {values['name']}:{field.name}.  Newline characters MUST be prefixed with \\")
+                raise ValueError(f"Unexpected newline(s) in {info.field_name}:'{v}'.  Newline characters MUST be prefixed with \\")
         return v
     
-    
-    @validator("name", "author", 'description')
-    def description_valid(cls, v, values, field):
+    @classmethod
+    def mapNamesToSecurityContentObjects(cls, v: list[str], director:Union[DirectorOutputDto,None], allowed_type:type)->list[SecurityContentObject]:
+        if director is not None:
+            name_map = director.name_to_content_map
+        else:
+            name_map = {}
         
-        return SecurityContentObject_Abstract.free_text_field_valid(cls,v,values,field)
-    
+
+
+        mappedObjects: list[SecurityContentObject] = []
+        missing_objects: list[str] = []
+        for object_name in v:
+            found_object = name_map.get(object_name,None)
+            if not found_object:
+                missing_objects.append(object_name)
+            else:
+                mappedObjects.append(found_object)
+        
+        if len(missing_objects) > 0:
+            raise ValueError(f"Failed to find the following {allowed_type}: {missing_objects}")
+        
+        mistyped_objects = [f"{obj.name}: ACTUAL TYPE: '{type(obj)}'" for obj in mappedObjects if type(obj) != allowed_type]
+        if len(mistyped_objects) > 0:
+            bad_types_string = '\n - '.join([f"Bad object for obj.name: Expected type '{allowed_type}' but got type '{type(obj)}'" for obj in mistyped_objects])
+            raise ValueError(f"Expected objects of type {allowed_type}, but got {len(mistyped_objects)} objects with unexpected types:\n - {bad_types_string}")
+
+
+        return mappedObjects
+
 
     @staticmethod
     def get_objects_by_name(names_to_find:set[str], objects_to_search:list[SecurityContentObject_Abstract])->Tuple[list[SecurityContentObject_Abstract], set[str]]:
+        raise Exception("get_objects_by_name deprecated")
         found_objects = list(filter(lambda obj: obj.name in names_to_find, objects_to_search))
         found_names = set([obj.name for obj in found_objects])
         missing_names = names_to_find - found_names
@@ -74,10 +130,10 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     @staticmethod
     def create_filename_to_content_dict(all_objects:list[SecurityContentObject_Abstract])->dict[str,SecurityContentObject_Abstract]:
         name_dict:dict[str,SecurityContentObject_Abstract] = dict()
-        
         for object in all_objects:
             name_dict[str(pathlib.Path(object.file_path))] = object
-        
         return name_dict
+    
+
     
     

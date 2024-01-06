@@ -31,7 +31,7 @@ class BAYmlOutput():
 
             # add research object
             RESEARCH_SITE_BASE = 'https://research.splunk.com/'
-            research_site_url = RESEARCH_SITE_BASE + obj.source + "/" + obj.id + "/"
+            research_site_url = RESEARCH_SITE_BASE + obj.getSource() + "/" + obj.id + "/"
             obj.tags.research_site_url = research_site_url
 
             # add ocsf schema tag
@@ -48,7 +48,10 @@ class BAYmlOutput():
                 for count in range(len(test_dict["tests"][0]["attack_data"])):
                     a = urlparse(test_dict["tests"][0]["attack_data"][count]["data"])
                     test_dict["tests"][0]["attack_data"][count]["file_name"] = os.path.basename(a.path)
-                test = UnitTestOld.parse_obj(test_dict)
+                test = UnitTestOld.model_validate(test_dict)
+                print("UNIT_TEST_OLD_DEBUGGING_BREAKPOINT")
+                import code
+                code.interact(local=locals())
 
                 obj.test = test
 

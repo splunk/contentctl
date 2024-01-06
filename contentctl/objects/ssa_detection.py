@@ -61,6 +61,7 @@ class SSADetection(BaseModel):
     class Config:
         use_enum_values = True
 
+    '''
     @validator("name")
     def name_invalid_chars(cls, v):
         invalidChars = set(string.punctuation.replace("-", ""))
@@ -150,3 +151,5 @@ class SSADetection(BaseModel):
                 "At least one test is required for a production or validation detection: " + values["name"]
             )
         return v
+
+    '''

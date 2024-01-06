@@ -6,11 +6,14 @@ from pydantic import ValidationError
 from typing import Union
 
 from contentctl.objects.enums import SecurityContentProduct
+from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import SecurityContentObject_Abstract
 from contentctl.input.director import (
     Director,
     DirectorInputDto,
     DirectorOutputDto,
 )
+
+
 
 
 @dataclass(frozen=True)
@@ -26,7 +29,7 @@ class Validate:
 
         # uuid validation all objects
         try:
-            security_content_objects = (
+            security_content_objects:list[SecurityContentObject_Abstract] = (
                 director_output_dto.detections
                 + director_output_dto.stories
                 + director_output_dto.baselines
@@ -41,7 +44,7 @@ class Validate:
 
         return None
 
-    def validate_duplicate_uuids(self, security_content_objects):
+    def validate_duplicate_uuids(self, security_content_objects:list[SecurityContentObject_Abstract]):
         all_uuids = set()
         duplicate_uuids = set()
         for elem in security_content_objects:
@@ -54,28 +57,15 @@ class Validate:
 
         if len(duplicate_uuids) == 0:
             return
-
+        
         # At least once duplicate uuid has been found. Enumerate all
         # the pieces of content that use duplicate uuids
-        content_with_duplicate_uuid = [
-            content_object
-            for content_object in security_content_objects
-            if content_object.id in duplicate_uuids
-        ]
-
+        duplicate_messages = []
+        for uuid in duplicate_uuids:
+            duplicate_uuid_content = [str(content.file_path) for content in security_content_objects if content.id in duplicate_uuids]
+            duplicate_messages.append(f"Duplicate UUID [{uuid}] in {duplicate_uuid_content}")
+        
         raise ValueError(
-            "ERROR: Duplicate ID found in objects:\n"
-            + "\n".join([obj.name for obj in content_with_duplicate_uuid])
+            "ERROR: Duplicate ID(s) found in objects:\n"
+            + "\n - ".join(duplicate_messages)
         )
-
-    # def validate_detection_exist_for_test(self, tests: list, detections: list):
-    #     for test in tests:
-    #         found_detection = False
-    #         for detection in detections:
-    #             if test.tests[0].file in detection.file_path:
-    #                 found_detection = True
-
-    #         if not found_detection:
-    #             raise ValueError(
-    #                 "ERROR: detection doesn't exist for test file: " + test.name
-    #             )

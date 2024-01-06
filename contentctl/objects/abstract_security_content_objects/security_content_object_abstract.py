@@ -98,7 +98,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         
 
 
-        mappedObjects: list[SecurityContentObject] = []]
+        mappedObjects: list[SecurityContentObject] = []
         missing_objects: list[str] = []
         for object_name in v:
             found_object = name_map.get(object_name,None)

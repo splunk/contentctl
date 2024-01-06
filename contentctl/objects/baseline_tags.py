@@ -1,16 +1,17 @@
-
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
-from contentctl.objects.enums import SecurityContentProductName
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from contentctl.objects.story import Story
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.detection import Detection
+from contentctl.objects.enums import SecurityContentProductName
 from contentctl.objects.enums import SecurityDomain
-
-from typing import List, Optional, Any
-
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
+
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from typing import List, Optional, Any
+
+
 
 
 class BaselineTags(BaseModel):

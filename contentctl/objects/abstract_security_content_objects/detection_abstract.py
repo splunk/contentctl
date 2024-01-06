@@ -1,5 +1,9 @@
 from __future__ import annotations
-
+from typing import TYPE_CHECKING
+from contentctl.objects.macro import Macro
+from contentctl.objects.lookup import Lookup
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 
 import re
 import pathlib
@@ -18,15 +22,12 @@ from contentctl.objects.enums import NistCategory
 from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
-from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import Lookup
-from contentctl.objects.baseline import Baseline
-from contentctl.objects.playbook import Playbook
+
+#from contentctl.objects.baseline import Baseline
+#from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import DataSource,ProvidingTechnology
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from contentctl.input.director import DirectorOutputDto
+
 
 class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
@@ -52,8 +53,8 @@ class Detection_Abstract(SecurityContentObject):
 
     deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
     annotations: dict = {}
-    playbooks: list[Playbook] = []
-    baselines: list[Baseline] = []
+    #playbooks: list[Playbook] = []
+    #baselines: list[Baseline] = []
     mappings: Optional[dict] = None
     macros: list[Macro] = []
     lookups: list[Lookup] = []

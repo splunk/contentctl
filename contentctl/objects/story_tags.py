@@ -1,5 +1,3 @@
-
-
 from pydantic import BaseModel, Field
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhase, SecurityContentProductName

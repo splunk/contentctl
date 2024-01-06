@@ -1,9 +1,9 @@
 # Used so that we can have a staticmethod that takes the class 
 # type Macro as an argument
 from __future__ import annotations
-
-
-from contentctl.input.director import DirectorOutputDto
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 
 import re
 from pydantic import Field

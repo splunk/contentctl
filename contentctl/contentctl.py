@@ -144,7 +144,12 @@ def test(args: argparse.Namespace):
     args = configure_unattended(args)
 
     config = start(args, read_test_file=True)
-    
+    #Don't do enrichment
+    if args.dry_run:
+        config.enrichments.attack_enrichment = False
+        config.enrichments.cve_enrichment = False
+        config.enrichments.splunk_app_enrichment = False
+
     if config.test is None:
         raise Exception("Error parsing test configuration. Test Object was None.")
 
@@ -223,15 +228,39 @@ def test(args: argparse.Namespace):
     test_director_output_dto = gitService.get_all_content(director_output_dto)
     
     if args.dry_run:
+        #set the proper values in the config
         config.test.mode = DetectionTestingMode.selected
         config.test.detections_list = [d.file_path for d in test_director_output_dto.detections]
-        with open("contentctl_test.yml.plan", "w") as plan_config:
+        config.test.apps = []
+        config.test.post_test_behavior = PostTestBehavior.never_pause
+        
+        #Disable enrichments to save time
+        config.enrichments.attack_enrichment = False
+        config.enrichments.cve_enrichment = False
+        config.enrichments.splunk_app_enrichment = False
+        
+        #Create a directory for artifacts.
+        artifacts_directoy = pathlib.Path("artifacts")
+        
+        #It's okay if it already exists
+        artifacts_directoy.mkdir(exist_ok=True)
+
+        #Write out the test plan file
+        with open(artifacts_directoy/"contentctl_test.yml", "w") as test_plan_config:
             d = config.test.dict()
             d['infrastructure_config']['infrastructure_type'] = d['infrastructure_config']['infrastructure_type'].value
             d['mode'] = d['mode'].value
             d['post_test_behavior'] = d['post_test_behavior'].value
-            yaml.safe_dump(d, plan_config)
-        print("Wrote test plan to contentctl_test.yml.plan")
+            yaml.safe_dump(d, test_plan_config)
+        
+        with open(artifacts_directoy/"contentctl.yml", "w") as contentctl_cfg:
+            d = config.dict()
+            del d["test"]
+            yaml.safe_dump(d, contentctl_cfg)
+        
+
+        
+        print(f"Wrote test plan to '{artifacts_directoy/'contentctl_test.yml'}' and '{artifacts_directoy/'contentctl.yml'}'")
         return
 
 

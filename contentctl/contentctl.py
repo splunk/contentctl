@@ -240,27 +240,27 @@ def test(args: argparse.Namespace):
         config.enrichments.splunk_app_enrichment = False
         
         #Create a directory for artifacts.
-        artifacts_directoy = pathlib.Path("artifacts")
+        dry_run_config_dir = pathlib.Path("dry_run_config")
         
         #It's okay if it already exists
-        artifacts_directoy.mkdir(exist_ok=True)
+        dry_run_config_dir.mkdir(exist_ok=True)
 
         #Write out the test plan file
-        with open(artifacts_directoy/"contentctl_test.yml", "w") as test_plan_config:
+        with open(dry_run_config_dir/"contentctl_test.yml", "w") as test_plan_config:
             d = config.test.dict()
             d['infrastructure_config']['infrastructure_type'] = d['infrastructure_config']['infrastructure_type'].value
             d['mode'] = d['mode'].value
             d['post_test_behavior'] = d['post_test_behavior'].value
             yaml.safe_dump(d, test_plan_config)
         
-        with open(artifacts_directoy/"contentctl.yml", "w") as contentctl_cfg:
+        with open(dry_run_config_dir/"contentctl.yml", "w") as contentctl_cfg:
             d = config.dict()
             del d["test"]
             yaml.safe_dump(d, contentctl_cfg)
         
 
         
-        print(f"Wrote test plan to '{artifacts_directoy/'contentctl_test.yml'}' and '{artifacts_directoy/'contentctl.yml'}'")
+        print(f"Wrote test plan to '{dry_run_config_dir/'contentctl_test.yml'}' and '{dry_run_config_dir/'contentctl.yml'}'")
         return
 
 
@@ -577,7 +577,8 @@ def main():
     
     test_parser.add_argument("--target_branch", required=False, default=None, type=str)
     test_parser.add_argument("--test_branch", required=False, default=None, type=str)
-    test_parser.add_argument("--dry_run", action=argparse.BooleanOptionalAction, help="Used to emit a contentctl_test.yml.plan file.")
+    test_parser.add_argument("--dry_run", action=argparse.BooleanOptionalAction, help="Used to emit dry_run_config/contentctl_test.yml "\
+                             "and dry_run_config/contentctl.yml files.  These are used for CI/CD-driven internal testing workflows and are not intended for public use at this time.")
     
     #Even though these are also options to build, make them available to test_parser
     #as well to make the tool easier to use

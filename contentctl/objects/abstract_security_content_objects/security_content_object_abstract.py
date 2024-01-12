@@ -1,10 +1,13 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
+    from contentctl.objects.deployment import Deployment        
     from contentctl.objects.security_content_object import SecurityContentObject
     from contentctl.objects.config import Config
     from contentctl.input.director import DirectorOutputDto
-
+    
+from contentctl.objects.enums import AnalyticsType
 import re
 import abc
 import uuid
@@ -12,7 +15,7 @@ import datetime
 from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict, model_validator
 from typing import Tuple, Optional, List, Union
 import pathlib
-
+       
 
 
 
@@ -112,11 +115,44 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         
         mistyped_objects = [f"{obj.name}: ACTUAL TYPE: '{type(obj)}'" for obj in mappedObjects if type(obj) != allowed_type]
         if len(mistyped_objects) > 0:
-            bad_types_string = '\n - '.join([f"Bad object for obj.name: Expected type '{allowed_type}' but got type '{type(obj)}'" for obj in mistyped_objects])
+            bad_types_string = '\n - '.join([f"Bad object for {obj.name}: Expected type '{allowed_type}' but got type '{type(obj)}'" for obj in mistyped_objects])
             raise ValueError(f"Expected objects of type {allowed_type}, but got {len(mistyped_objects)} objects with unexpected types:\n - {bad_types_string}")
 
 
         return mappedObjects
+
+    @staticmethod
+    def getDeploymentFromType(typeField:Union[str,None], info:ValidationInfo)->Deployment:
+        if typeField is None:
+            raise ValueError("'type:' field is missing from YML.")
+        director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
+        if not director:
+            raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
+        
+        type_to_deployment_name_map = {AnalyticsType.TTP.value:"ESCU Default Configuration TTP", 
+                                       AnalyticsType.Hunting.value:"ESCU Default Configuration Hunting", 
+                                       AnalyticsType.Correlation.value: "ESCU Default Configuration Correlation", 
+                                       AnalyticsType.Anomaly.value: "ESCU Default Configuration Anomaly", 
+                                       "Baseline": "ESCU Default Configuration Baseline", 
+        }
+        converted_type_field = type_to_deployment_name_map[typeField]
+        
+        #TODO: This is clunky, but is imported here to resolve some circular import errors
+        from contentctl.objects.deployment import Deployment 
+
+        deployments = SecurityContentObject_Abstract.mapNamesToSecurityContentObjects([converted_type_field], director, Deployment)
+        if len(deployments) == 1:
+            return deployments[0]
+        elif len(deployments) == 0:
+            raise ValueError(f"Failed to find Deployment for type '{converted_type_field}' "\
+                             f"from  possible {[deployment.type for deployment in director.deployments]}")
+        else:
+            raise ValueError(f"Found more than 1 ({len(deployments)}) Deployment for type '{converted_type_field}' "\
+                             f"from  possible {[deployment.type for deployment in director.deployments]}")
+
+
+
+
 
 
     @staticmethod

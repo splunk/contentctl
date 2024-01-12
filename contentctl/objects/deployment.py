@@ -3,7 +3,6 @@ import uuid
 import string
 
 
-
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.deployment_scheduling import DeploymentScheduling
 from contentctl.objects.deployment_email import DeploymentEmail

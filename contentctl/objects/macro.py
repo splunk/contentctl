@@ -41,6 +41,6 @@ class Macro(SecurityContentObject):
         macros_to_ignore = set([macro for macro in macros_to_get if any(to_ignore in macro for to_ignore in ignore_macros)])
         #remove the ones that we will ignore
         macros_to_get -= macros_to_ignore
-
-        return SecurityContentObject.mapNamesToSecurityContentObjects(list(macros_to_get), director, type(Macro))
+        return SecurityContentObject.mapNamesToSecurityContentObjects(list(macros_to_get), director, Macro)
+        
     

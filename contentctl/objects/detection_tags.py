@@ -108,4 +108,4 @@ class DetectionTags(BaseModel):
     @field_validator('analytic_story',mode="before")
     @classmethod
     def mapStoryNamesToStoryObjects(cls, v:Union[list[str], list[Story]], info:ValidationInfo)->list[Story]:
-        return SecurityContentObject.mapNamesToSecurityContentObjects(info.context.get("output_dto",None),info, type(Story))
+        return SecurityContentObject.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None), Story)

@@ -113,8 +113,8 @@ class Director():
             self.createSecurityContent(SecurityContentType.deployments)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
-            self.createSecurityContent(SecurityContentType.baselines)
             self.createSecurityContent(SecurityContentType.stories)
+            self.createSecurityContent(SecurityContentType.baselines)
             self.createSecurityContent(SecurityContentType.investigations)
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
@@ -230,19 +230,19 @@ class Director():
         builder.setObject(file_path, self.output_dto)
         #builder.addDeployment(self.output_dto.deployments)
         builder.addMitreAttackEnrichment(self.attack_enrichment)
-        builder.addKillChainPhase()
-        builder.addCIS()
-        builder.addNist()
-        builder.addDatamodel()
+        #builder.addKillChainPhase()
+        #builder.addCIS()
+        #builder.addNist()
+        #builder.addDatamodel()
         builder.addRBA()
         builder.addProvidingTechnologies()
         builder.addNesFields()
         builder.addAnnotations()
         builder.addMappings()
-        builder.addBaseline(self.output_dto.baselines)
-        builder.addPlaybook(self.output_dto.playbooks)
-        builder.addMacros(self.output_dto.macros)
-        builder.addLookups(self.output_dto.lookups)
+        #builder.addBaseline(self.output_dto.baselines)
+        #builder.addPlaybook(self.output_dto.playbooks)
+        #builder.addMacros(self.output_dto.macros)
+        #builder.addLookups(self.output_dto.lookups)
         
         if self.input_dto.config.enrichments.attack_enrichment:
             builder.addMitreAttackEnrichment(self.attack_enrichment)
@@ -280,7 +280,7 @@ class Director():
     def constructBaseline(self, builder: BaselineBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path,self.output_dto)
-        builder.addDeployment(self.output_dto.deployments)
+        #builder.addDeployment(self.output_dto.deployments)
 
 
     def constructDeployment(self, builder: BasicBuilder, file_path: str) -> None:

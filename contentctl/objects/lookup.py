@@ -74,5 +74,5 @@ class Lookup(SecurityContentObject):
         lookups_to_get = set(re.findall(r'[^output]lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', text_field))
         lookups_to_ignore = set([lookup for lookup in lookups_to_get if any(to_ignore in lookups_to_get for to_ignore in ignore_lookups)])
         lookups_to_get -= lookups_to_ignore
-        return SecurityContentObject.mapNamesToSecurityContentObjects(list(lookups_to_get), info.context.get("output_dto",None), type(Lookup))
+        return SecurityContentObject.mapNamesToSecurityContentObjects(list(lookups_to_get), info.context.get("output_dto",None), Lookup)
     

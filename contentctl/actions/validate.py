@@ -41,7 +41,6 @@ class Validate:
         except ValueError as e:
             print(e)
             sys.exit(1)
-
         return None
 
     def validate_duplicate_uuids(self, security_content_objects:list[SecurityContentObject_Abstract]):

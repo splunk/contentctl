@@ -17,6 +17,7 @@ class BaselineBuilder():
         self.baseline = Baseline.model_validate(yml_dict, context={"output_dto":output_dto})
 
 
+
     def addDeployment(self, deployments: list) -> None:
         if not self.baseline.deployment:
 

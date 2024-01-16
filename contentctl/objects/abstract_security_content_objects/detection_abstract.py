@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 import re
 import pathlib
+import json
 from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field, computed_field
 from dataclasses import dataclass
 from typing import Union, Optional, List, Any
@@ -52,7 +53,7 @@ class Detection_Abstract(SecurityContentObject):
     
 
     deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
-    annotations: dict = {}
+    annotations: dict[str,Union[List[Any],int]] = {}
     #playbooks: list[Playbook] = []
     #baselines: list[Baseline] = []
     mappings: Optional[dict] = None
@@ -68,6 +69,16 @@ class Detection_Abstract(SecurityContentObject):
     class Config:
         use_enum_values = True
 
+
+    def getAnnotationsDictForJson(self)->dict[str,Union[List[Any],int]]:
+        result_dict:dict[str,Union[List[Any],int]] = {}
+        for k in self.annotations:
+            ls = self.annotations.get(k,[])
+            if isinstance(ls, List) and True in [True for obj in ls if isinstance(obj, SecurityContentObject)]:
+                result_dict[k] = [obj.name for obj in ls]
+            else:
+                result_dict[k] = ls
+        return result_dict
 
     def get_content_dependencies(self)->list[SecurityContentObject]:
         #Do this separately to satisfy type checker

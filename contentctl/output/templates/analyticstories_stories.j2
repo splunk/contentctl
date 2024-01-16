@@ -7,7 +7,7 @@
 category = {{ story.tags.category[0].value }}
 last_updated = {{ story.date }}
 version = {{ story.version }}
-references = {{ story.references | tojson }}
+references = {{ story.getReferencesListForJson() | tojson }}
 maintainers = [{"company": "{{ story.author_company }}", "email": "-", "name": "{{ story.author }}"}]
 spec_version = 3
 searches = {{ (story.getDetectionNames() + story.getInvestigationNames()) | tojson }}

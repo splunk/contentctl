@@ -73,7 +73,7 @@ class DetectionTags(BaseModel):
     research_site_url: Optional[HttpUrl] = None
     event_schema: str = "ocsf"
     mappings: Optional[List] = None
-    annotations: Optional[dict] = None
+    #annotations: Optional[dict] = None
     manual_test: Optional[str] = None
     
     

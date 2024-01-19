@@ -6,6 +6,8 @@ import functools
 from typing import Union
 import yaml
 import pathlib
+from git import Repo
+import re
 
 from contentctl.actions.detection_testing.GitService import (
     GitService,
@@ -210,11 +212,7 @@ def test(args: argparse.Namespace):
             for server in args.server_info:
                 address,username,password,web_ui_port,hec_port,api_port = server.split(",")
                 config.test.infrastructure_config.infrastructures.append(Infrastructure(splunk_app_username=username,
-                                                                                        splunk_app_password=password,
-                                                                                        instance_address=address, 
-                                                                                        hec_port=int(hec_port),
-                                                                                        web_ui_port=int(web_ui_port),
-                                                                                        api_port=int(api_port)))
+                                                                api_port=int(api_port)))
             
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
@@ -305,7 +303,6 @@ def test(args: argparse.Namespace):
         return
     else:
         sys.exit(1)
-
     
 
 def validate(args) -> None:
@@ -328,6 +325,90 @@ def validate(args) -> None:
     validate = Validate()
     return validate.execute(validate_input_dto)
 
+def create_notes(file_paths):
+    repo_path = '/Users/bpatel/Research/malware/gitlab/security_content_gitlab/'
+    for file_path in file_paths:
+        # Check if the file exists
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            # Check if the file is a YAML file
+            if file_path.endswith('.yaml') or file_path.endswith('.yml'):
+                # Read and parse the YAML file
+                with open(file_path, 'r') as file:
+                    try:
+                        data = yaml.safe_load(file)
+                        # Check and create story link
+                        if 'name' in data and'stories/' in file_path:
+                            story_link = "https://research.splunk.com/" + file_path.replace(repo_path,"")
+                            print("- "+"["+f"{data['name']}"+"]"+"("+story_link+")")
+                        # Check and create detection link
+                        if 'name' in data and 'id' in data and 'detections/' in file_path:
+                            temp_link = "https://research.splunk.com/" + file_path.replace(repo_path,"")
+                            pattern = r'(?<=/)[^/]*$'
+                            detection_link = re.sub(pattern, data['id'], temp_link)
+                            detection_link = detection_link.replace("detections/","" )
+
+                            print("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")")               
+                    except yaml.YAMLError as exc:
+                        print(f"Error parsing YAML file {file_path}: {exc}")
+        else:
+            print(f"File not found or is not a file: {file_path}")
+
+def release_notes(args)-> None:
+    config = start(args)
+    ### Remove hard coded path
+    print("Generating Release Notes - Compared with previous tag")
+    repo_path = '/Users/bpatel/Research/malware/gitlab/security_content_gitlab/'
+    directories = ['detections/','stories/']
+    repo = Repo(repo_path)
+    latest_tag=args.tag
+    previous_tag= new_version = ".".join([latest_tag.split('.')[0], str(int(latest_tag.split('.')[1]) - 1), latest_tag.split('.')[2]]) if latest_tag else latest_tag
+    if latest_tag not in repo.tags or previous_tag not in repo.tags:
+        raise ValueError("One of the tags does not exist in the repository.")
+    commit1 = repo.commit(latest_tag)
+    commit2 = repo.commit(previous_tag)
+    diff_index = commit2.diff(commit1)
+    modified_files = []
+    added_files = []
+    for diff in diff_index:
+        file_path = diff.a_path
+
+        # Check if the file is in the specified directories
+        if any(file_path.startswith(directory) for directory in directories):
+            # Check if a file is Modified
+            if diff.change_type == 'M':
+                modified_files.append(file_path)
+            # Check if a file is Added
+            elif diff.change_type == 'A':
+                added_files.append(file_path)
+    detections_modified = []
+    detections_added = []
+    stories_added = []
+    stories_modified = []
+
+    for file in modified_files:
+        file=repo_path+file
+        if 'detections/' in file:
+            detections_modified.append(file)
+        if 'stories/' in file:
+            stories_modified.append(file)
+
+    for file in added_files:
+        file=repo_path+file
+        if 'detections/' in file:
+            detections_added.append(file)
+        if 'stories/' in file:
+            stories_added.append(file)
+    print("\n## Release notes for ESCU" + latest_tag + "##")
+
+    print("\n### New Analytics Story###")
+    create_notes(stories_added)
+    print("\n### Updated Analytics Story###")
+    create_notes(stories_modified)
+    print("\n### New Analytics###")
+    create_notes(detections_added)
+    print("\n### Updated Analytics###")    
+    create_notes(detections_modified)
+    print("\n### Other Updates###") 
 
 def doc_gen(args) -> None:
     config = start(args)
@@ -455,6 +536,11 @@ def main():
         help="Run a test of the detections against a Splunk Server or Splunk Docker Container",
     )
 
+    release_notes_parser = actions_parser.add_parser(
+        "release_notes",
+        help="Compares two tags and create release notes of what ESCU/BA content is added"
+    )
+
     convert_parser = actions_parser.add_parser("convert", help="Convert a sigma detection to a Splunk ESCU detection.")
 
     init_parser.set_defaults(func=initialize)
@@ -512,8 +598,6 @@ def main():
     new_content_parser.set_defaults(func=new_content)
 
     reporting_parser.set_defaults(func=reporting)
-
-
 
     api_deploy_parser.set_defaults(func=api_deploy)
 
@@ -607,6 +691,9 @@ def main():
     convert_parser.add_argument("-o", "--output", required=True, type=str, help="output path to store the detections")
     convert_parser.set_defaults(func=convert)
 
+
+    release_notes_parser.add_argument("--tag", "--tag", required=True, type=str, default="v4.20.0", help="Choose the tag and compare with previous tag")
+    release_notes_parser.set_defaults(func=release_notes)
 
     # parse them
     args = parser.parse_args()

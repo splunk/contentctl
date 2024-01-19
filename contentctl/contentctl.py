@@ -212,7 +212,11 @@ def test(args: argparse.Namespace):
             for server in args.server_info:
                 address,username,password,web_ui_port,hec_port,api_port = server.split(",")
                 config.test.infrastructure_config.infrastructures.append(Infrastructure(splunk_app_username=username,
-                                                                api_port=int(api_port)))
+                                                                                        splunk_app_password=password,
+                                                                                        instance_address=address, 
+                                                                                        hec_port=int(hec_port),
+                                                                                        web_ui_port=int(web_ui_port),
+                                                                                        api_port=int(api_port)))
             
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist

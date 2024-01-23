@@ -14,10 +14,12 @@ from contentctl.actions.detection_testing.GitService import (
 )
 from contentctl.actions.validate import ValidateInputDto, Validate
 from contentctl.actions.generate import (
+
     GenerateInputDto,
     DirectorOutputDto,
     Generate,
 )
+from contentctl.actions.release_notes import ReleaseNotesInputDto, ReleaseNotes
 from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.new_content import NewContentInputDto, NewContent
 from contentctl.actions.doc_gen import DocGenInputDto, DocGen
@@ -329,90 +331,19 @@ def validate(args) -> None:
     validate = Validate()
     return validate.execute(validate_input_dto)
 
-def create_notes(file_paths):
-    repo_path = '/Users/bpatel/Research/malware/gitlab/security_content_gitlab/'
-    for file_path in file_paths:
-        # Check if the file exists
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            # Check if the file is a YAML file
-            if file_path.endswith('.yaml') or file_path.endswith('.yml'):
-                # Read and parse the YAML file
-                with open(file_path, 'r') as file:
-                    try:
-                        data = yaml.safe_load(file)
-                        # Check and create story link
-                        if 'name' in data and'stories/' in file_path:
-                            story_link = "https://research.splunk.com/" + file_path.replace(repo_path,"")
-                            print("- "+"["+f"{data['name']}"+"]"+"("+story_link+")")
-                        # Check and create detection link
-                        if 'name' in data and 'id' in data and 'detections/' in file_path:
-                            temp_link = "https://research.splunk.com/" + file_path.replace(repo_path,"")
-                            pattern = r'(?<=/)[^/]*$'
-                            detection_link = re.sub(pattern, data['id'], temp_link)
-                            detection_link = detection_link.replace("detections/","" )
-
-                            print("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")")               
-                    except yaml.YAMLError as exc:
-                        print(f"Error parsing YAML file {file_path}: {exc}")
-        else:
-            print(f"File not found or is not a file: {file_path}")
 
 def release_notes(args)-> None:
+
     config = start(args)
-    ### Remove hard coded path
-    print("Generating Release Notes - Compared with previous tag")
-    repo_path = '/Users/bpatel/Research/malware/gitlab/security_content_gitlab/'
-    directories = ['detections/','stories/']
-    repo = Repo(repo_path)
-    latest_tag=args.tag
-    previous_tag= new_version = ".".join([latest_tag.split('.')[0], str(int(latest_tag.split('.')[1]) - 1), latest_tag.split('.')[2]]) if latest_tag else latest_tag
-    if latest_tag not in repo.tags or previous_tag not in repo.tags:
-        raise ValueError("One of the tags does not exist in the repository.")
-    commit1 = repo.commit(latest_tag)
-    commit2 = repo.commit(previous_tag)
-    diff_index = commit2.diff(commit1)
-    modified_files = []
-    added_files = []
-    for diff in diff_index:
-        file_path = diff.a_path
+    director_input_dto = DirectorInputDto(
+        input_path=pathlib.Path(args.path), product=SecurityContentProduct.SPLUNK_APP, config=config
+    )
 
-        # Check if the file is in the specified directories
-        if any(file_path.startswith(directory) for directory in directories):
-            # Check if a file is Modified
-            if diff.change_type == 'M':
-                modified_files.append(file_path)
-            # Check if a file is Added
-            elif diff.change_type == 'A':
-                added_files.append(file_path)
-    detections_modified = []
-    detections_added = []
-    stories_added = []
-    stories_modified = []
+    release_notes_input_dto = ReleaseNotesInputDto(director_input_dto=director_input_dto)
 
-    for file in modified_files:
-        file=repo_path+file
-        if 'detections/' in file:
-            detections_modified.append(file)
-        if 'stories/' in file:
-            stories_modified.append(file)
+    release_notes = ReleaseNotes()
+    release_notes.release_notes(release_notes_input_dto, args.tag)
 
-    for file in added_files:
-        file=repo_path+file
-        if 'detections/' in file:
-            detections_added.append(file)
-        if 'stories/' in file:
-            stories_added.append(file)
-    print("\n## Release notes for ESCU" + latest_tag + "##")
-
-    print("\n### New Analytics Story###")
-    create_notes(stories_added)
-    print("\n### Updated Analytics Story###")
-    create_notes(stories_modified)
-    print("\n### New Analytics###")
-    create_notes(detections_added)
-    print("\n### Updated Analytics###")    
-    create_notes(detections_modified)
-    print("\n### Other Updates###") 
 
 def doc_gen(args) -> None:
     config = start(args)

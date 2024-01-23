@@ -19,7 +19,6 @@ class ReleaseNotes:
 
         def create_notes(file_paths):
 
-            # repo_path = '/Users/bpatel/Research/malware/gitlab/security_content_gitlab/'
             for file_path in file_paths:
                 # Check if the file exists
                 if os.path.exists(file_path) and os.path.isfile(file_path):
@@ -38,7 +37,7 @@ class ReleaseNotes:
                                     temp_link = "https://research.splunk.com/" + file_path.replace(repo_path,"")
                                     pattern = r'(?<=/)[^/]*$'
                                     detection_link = re.sub(pattern, data['id'], temp_link)
-                                    detection_link = detection_link.replace("detections/","" )
+                                    detection_link = detection_link.replace("detections","" )
 
                                     print("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")")               
                             except yaml.YAMLError as exc:
@@ -46,13 +45,9 @@ class ReleaseNotes:
                 else:
                     print(f"File not found or is not a file: {file_path}")
 
-        # print(tag)
-        # print(input_dto)
-        # #print(input_dto.path)
-
-              ### Remove hard coded path
+        ### Remove hard coded path
         print("Generating Release Notes - Compared with previous tag")
-        repo_path = '/Users/bpatel/Research/malware/gitlab/security_content_gitlab/'
+        repo_path = os.getcwd()
         directories = ['detections/','stories/']
         repo = Repo(repo_path)
         latest_tag=tag
@@ -81,47 +76,31 @@ class ReleaseNotes:
         stories_modified = []
 
         for file in modified_files:
-            file=repo_path+file
+            file=repo_path +"/"+file
             if 'detections/' in file:
                 detections_modified.append(file)
             if 'stories/' in file:
                 stories_modified.append(file)
 
         for file in added_files:
-            file=repo_path+file
+            file=repo_path +"/"+file
             if 'detections/' in file:
                 detections_added.append(file)
             if 'stories/' in file:
                 stories_added.append(file)
 
-
         release_notes = ReleaseNotes()
-        print("\n## Release notes for ESCU" + latest_tag + "##")
+        print("\n## Release notes for ESCU" + latest_tag)
 
-        print("\n### New Analytics Story###")
+        print("\n### New Analytics Story")
         create_notes(stories_added)
-        print("\n### Updated Analytics Story###")
+        print("\n### Updated Analytics Story")
         create_notes(stories_modified)
-        print("\n### New Analytics###")
+        print("\n### New Analytics")
         create_notes(detections_added)
-        print("\n### Updated Analytics###")    
+        print("\n### Updated Analytics")    
         create_notes(detections_modified)
-        print("\n### Other Updates###") 
+        print("\n### Other Updates") 
 
-        # director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
-        # director = Director(director_output_dto)
-        # director.execute(input_dto.director_input_dto)
 
-        # svg_output = SvgOutput()
-        # svg_output.writeObjects(
-        #     director_output_dto.detections, 
-        #     os.path.join(input_dto.director_input_dto.input_path, "reporting")
-        # )
-        
-        # attack_nav_output = AttackNavOutput()        
-        # attack_nav_output.writeObjects(
-        #     director_output_dto.detections, 
-        #     os.path.join(input_dto.director_input_dto.input_path, "reporting")
-        # )
-        
-        print('Actions called succesfully!')
+        print('Release notes completed called succesfully!')

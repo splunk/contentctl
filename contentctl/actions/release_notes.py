@@ -15,10 +15,7 @@ class ReleaseNotesInputDto:
     director_input_dto: DirectorInputDto
 
 class ReleaseNotes:
-    def release_notes(self, input_dto: DirectorInputDto, tag) -> None:
-
-        def create_notes(file_paths):
-
+    def create_notes(self,repo_path, file_paths):
             for file_path in file_paths:
                 # Check if the file exists
                 if os.path.exists(file_path) and os.path.isfile(file_path):
@@ -44,6 +41,8 @@ class ReleaseNotes:
                                 print(f"Error parsing YAML file {file_path}: {exc}")
                 else:
                     print(f"File not found or is not a file: {file_path}")
+
+    def release_notes(self, input_dto: DirectorInputDto, tag) -> None:
 
         ### Remove hard coded path
         print("Generating Release Notes - Compared with previous tag")
@@ -89,17 +88,16 @@ class ReleaseNotes:
             if 'stories/' in file:
                 stories_added.append(file)
 
-        release_notes = ReleaseNotes()
         print("\n## Release notes for ESCU" + latest_tag)
 
         print("\n### New Analytics Story")
-        create_notes(stories_added)
+        self.create_notes(repo_path, stories_added)
         print("\n### Updated Analytics Story")
-        create_notes(stories_modified)
+        self.create_notes(repo_path,stories_modified)
         print("\n### New Analytics")
-        create_notes(detections_added)
+        self.create_notes(repo_path,detections_added)
         print("\n### Updated Analytics")    
-        create_notes(detections_modified)
+        self.create_notes(repo_path,detections_modified)
         print("\n### Other Updates") 
 
 

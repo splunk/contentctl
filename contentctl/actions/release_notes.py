@@ -46,8 +46,8 @@ class ReleaseNotes:
 
         ### Remove hard coded path
         print("Generating Release Notes - Compared with previous tag")
-        repo_path = os.getcwd()
         directories = ['detections/','stories/']
+        repo_path = os.path.abspath(input_dto.director_input_dto.input_path)
         repo = Repo(repo_path)
         latest_tag=tag
         previous_tag= new_version = ".".join([latest_tag.split('.')[0], str(int(latest_tag.split('.')[1]) - 1), latest_tag.split('.')[2]]) if latest_tag else latest_tag

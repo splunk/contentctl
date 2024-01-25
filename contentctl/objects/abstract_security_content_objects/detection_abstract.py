@@ -40,6 +40,8 @@ class Detection_Abstract(SecurityContentObject):
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     check_references: bool = False  
+    #data_source: Optional[List[DataSource]] = None
+
     
     tests: list[UnitTest] = []
 

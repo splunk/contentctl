@@ -77,6 +77,9 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             raise ValueError(f"All Security Content Objects must be YML files and end in .yml.  The following file does not: '{v}'")
         return v
 
+    def getReferencesListForJson(self)->List[str]:
+        return [str(url) for url in self.references or []]
+        
     @field_validator('name','author','description')
     @classmethod
     def free_text_field_valid(cls, v: str, info:ValidationInfo)->str:

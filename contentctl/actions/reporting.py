@@ -14,7 +14,7 @@ class ReportingInputDto:
 class Reporting:
 
     def execute(self, input_dto: ReportingInputDto) -> None:
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
+        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[],[])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)
 

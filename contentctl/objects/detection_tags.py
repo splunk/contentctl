@@ -7,7 +7,7 @@ from contentctl.objects.observable import Observable
 from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
 from typing import List, Optional, Annotated, Union
 from contentctl.objects.security_content_object import SecurityContentObject
-
+from contentctl.objects.atomic import AtomicTest
 
 
 class DetectionTags(BaseModel):
@@ -35,7 +35,7 @@ class DetectionTags(BaseModel):
     security_domain: SecurityDomain = Field(...)
     risk_severity: Optional[RiskSeverity] = None
     cve: Optional[List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]]] = None
-    atomic_guid: Optional[list[UUID4]] = None
+    atomic_guid: Optional[list[AtomicTest]] = None
     drilldown_search: Optional[str] = None
 
 
@@ -109,3 +109,26 @@ class DetectionTags(BaseModel):
     @classmethod
     def mapStoryNamesToStoryObjects(cls, v:Union[list[str], list[Story]], info:ValidationInfo)->list[Story]:
         return SecurityContentObject.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None), Story)
+    
+    @field_validator('atomic_guid',mode="before")
+    @classmethod
+    def mapAtomicGuidsToAtomicTests(cls, v:Union[list[UUID4],None], info:ValidationInfo)->Union[None,list[AtomicTest]]:
+        if v is None:
+            return v
+        
+        all_tests:Union[List[AtomicTest], None] = info.context.get("atomic_tests",None)
+        if all_tests is None:
+            raise ValueError("Atomic Red Team Tests not provided to detection.detection_tags.atomic_guid validator")
+        
+        matched_tests:List[AtomicTest] = []
+        missing_tests:List[UUID4] = []
+        for atomic_guid in v:
+            try:
+                matched_tests.append(AtomicTest.getAtomicByAtomicGuid(atomic_guid,all_tests))
+            except Exception as _:
+                missing_tests.append(atomic_guid)
+        if len(missing_tests) > 0:
+            raise ValueError(f"Failed to find {len(missing_tests)} Atomic Tests with the following atomic_guids (called auto-generated_guid in the ART Repo): {missing_tests}")
+
+        return matched_tests
+    

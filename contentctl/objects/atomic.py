@@ -1,6 +1,6 @@
 from __future__ import annotations
 from contentctl.input.yml_reader import YmlReader
-from pydantic import BaseModel, model_validator, ConfigDict
+from pydantic import BaseModel, model_validator, ConfigDict, FilePath, UUID4
 from uuid import UUID
 from typing import List, Optional, Dict, Union
 import pathlib
@@ -129,22 +129,27 @@ class AtomicTest(BaseModel):
         return atomic_file
     
     @classmethod
-    def getAtomicTestsFromArtRepo(cls, repo_path:pathlib.Path)->List[AtomicTest]:
+    def getAtomicTestsFromArtRepo(cls, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->List[AtomicTest]:
         atomic_files = cls.getAtomicFilesFromArtRepo(repo_path)
         atomic_tests:List[AtomicTest] = []
         for atomic_file in atomic_files:
             atomic_tests.extend(atomic_file.atomic_tests)
+        print(f"Found {len(atomic_tests)} Atomic Simulations in the Atomic Red Team Repo")
         return atomic_tests
 
     
     @classmethod
-    def getAtomicFilesFromArtRepo(cls, repo_path:pathlib.Path)->List[AtomicFile]:
+    def getAtomicFilesFromArtRepo(cls, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->List[AtomicFile]:
         return cls.parseArtRepo(repo_path)
+
+    
+    
 
 
 
 class AtomicFile(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    file_path: FilePath
     attack_technique: str
     display_name: str
     atomic_tests: List[AtomicTest]

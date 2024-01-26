@@ -19,6 +19,7 @@ from contentctl.objects.deployment import Deployment
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.ssa_detection import SSADetection
+from contentctl.objects.atomic import AtomicTest
 from contentctl.objects.security_content_object import SecurityContentObject
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class DirectorOutputDto:
      lookups: list[Lookup]
      deployments: list[Deployment]
      ssa_detections: list[SSADetection]
+     atomic_tests: list[AtomicTest]
      name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
      uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
 
@@ -96,6 +98,10 @@ class Director():
          self.output_dto.name_to_content_map[content.name] = content 
          self.output_dto.uuid_to_content_map[content.id] = content 
     
+    def getAtomicTests(self)->None:
+         self.output_dto.atomic_tests = AtomicTest.getAtomicTestsFromArtRepo()
+         
+    
     def execute(self, input_dto: DirectorInputDto) -> None:
         self.input_dto = input_dto
         
@@ -109,6 +115,10 @@ class Director():
         self.story_builder = StoryBuilder()
         self.detection_builder = DetectionBuilder()
         self.ssa_detection_builder = SSADetectionBuilder()
+
+        # Fetch and load all the atomic tests
+        self.getAtomicTests()
+
         if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
             self.createSecurityContent(SecurityContentType.deployments)
             self.createSecurityContent(SecurityContentType.lookups)

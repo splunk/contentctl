@@ -1,5 +1,9 @@
 from contentctl.objects.story import Story
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 
+import uuid
 from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
@@ -8,6 +12,7 @@ from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, Risk
 from typing import List, Optional, Annotated, Union
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.atomic import AtomicTest
+
 
 
 class DetectionTags(BaseModel):
@@ -116,15 +121,20 @@ class DetectionTags(BaseModel):
         if v is None:
             return v
         
-        all_tests:Union[List[AtomicTest], None] = info.context.get("atomic_tests",None)
-        if all_tests is None:
+
+        output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
+        if output_dto is None:
             raise ValueError("Atomic Red Team Tests not provided to detection.detection_tags.atomic_guid validator")
+
+        
+        all_tests:List[AtomicTest]= output_dto.atomic_tests
         
         matched_tests:List[AtomicTest] = []
         missing_tests:List[UUID4] = []
         for atomic_guid in v:
             try:
-                matched_tests.append(AtomicTest.getAtomicByAtomicGuid(atomic_guid,all_tests))
+                
+                matched_tests.append(AtomicTest.getAtomicByAtomicGuid(uuid.UUID(atomic_guid),all_tests))
             except Exception as _:
                 missing_tests.append(atomic_guid)
         if len(missing_tests) > 0:

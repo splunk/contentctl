@@ -1,7 +1,6 @@
 from __future__ import annotations
 from contentctl.input.yml_reader import YmlReader
 from pydantic import BaseModel, model_validator, ConfigDict, FilePath, UUID4
-from uuid import UUID
 from typing import List, Optional, Dict, Union
 import pathlib
 # We should determine if we want to use StrEnum, which is only present in Python3.11+
@@ -80,7 +79,7 @@ class AtomicDependency(BaseModel):
 class AtomicTest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str
-    auto_generated_guid: UUID
+    auto_generated_guid: UUID4
     description: str
     supported_platforms: List[SupportedPlatform]
     executor: AtomicExecutor
@@ -90,13 +89,13 @@ class AtomicTest(BaseModel):
 
 
     @classmethod
-    def getAtomicByAtomicGuid(cls, guid: UUID, all_atomics:List[AtomicTest])->AtomicTest:
+    def getAtomicByAtomicGuid(cls, guid: UUID4, all_atomics:List[AtomicTest])->AtomicTest:
         matching_atomics = [atomic for atomic in all_atomics if atomic.auto_generated_guid == guid]
         if len(matching_atomics) == 0:
             raise ValueError(f"Unable to find atomic_guid {guid} in {len(all_atomics)} atomic_tests from ART Repo")
         elif len(matching_atomics) > 1:
             raise ValueError(f"Found {len(matching_atomics)} matching tests for atomic_guid {guid} in {len(all_atomics)} atomic_tests from ART Repo")
-
+        
         return matching_atomics[0]
     
     @classmethod

@@ -1,4 +1,5 @@
 from contentctl.objects.story import Story
+import questionary
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
@@ -45,7 +46,7 @@ class DetectionTags(BaseModel):
 
 
     # enrichment
-    mitre_attack_enrichments: list[MitreAttackEnrichment] = []
+    mitre_attack_enrichments: Optional[List[MitreAttackEnrichment]] = []
     confidence_id: Optional[PositiveInt] = Field(None,ge=1,le=3)
     impact_id: Optional[PositiveInt] = Field(None,ge=1,le=5)
     # context_ids: list = None

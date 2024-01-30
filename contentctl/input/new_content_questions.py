@@ -12,6 +12,21 @@ class NewContentQuestions():
                 'default': 'Powershell Encoded Command',
             },
             {
+                'type': 'select',
+                'message': 'what kind of detection is this',
+                'name': 'detection_kind',
+                'choices': [
+                    'endpoint',
+                    'cloud',
+                    'application',
+                    'network',
+                    'web',
+                    'experimental'
+                ],
+                'default': 'endpoint'
+            },
+            
+            {
                 'type': 'text',
                 'message': 'enter author name',
                 'name': 'detection_author',

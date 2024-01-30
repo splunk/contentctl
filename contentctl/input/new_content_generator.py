@@ -16,6 +16,7 @@ class NewContentGeneratorInputDto:
 @dataclass(frozen=True)
 class NewContentGeneratorOutputDto:
     obj: dict
+    answers: dict
 
 
 class NewContentGenerator():
@@ -29,6 +30,7 @@ class NewContentGenerator():
         if input_dto.type == SecurityContentType.detections:
             questions = NewContentQuestions.get_questions_detection()
             answers = questionary.prompt(questions)
+            self.output_dto.answers.update(answers)
             self.output_dto.obj['name'] = answers['detection_name']
             self.output_dto.obj['id'] = str(uuid.uuid4())
             self.output_dto.obj['version'] = 1
@@ -74,6 +76,7 @@ class NewContentGenerator():
 
         elif input_dto.type == SecurityContentType.stories:
             questions = NewContentQuestions.get_questions_story()
+            self.output_dto.answers=answers
             answers = questionary.prompt(questions)
             self.output_dto.obj['name'] = answers['story_name']
             self.output_dto.obj['id'] = str(uuid.uuid4())

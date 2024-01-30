@@ -1,5 +1,5 @@
 import os
-
+import pathlib
 from contentctl.objects.enums import SecurityContentType
 from contentctl.output.yml_writer import YmlWriter
 
@@ -11,10 +11,13 @@ class NewContentYmlOutput():
         self.output_path = output_path
     
     
-    def writeObjectNewContent(self, object: dict, type: SecurityContentType) -> None:
+    def writeObjectNewContent(self, object: dict, subdirectory_name: str, type: SecurityContentType) -> None:
         if type == SecurityContentType.detections:
-            file_path = os.path.join(self.output_path, 'detections', self.convertNameToFileName(object['name'], object['tags']['product']))
-            #object.pop('source')
+            file_path = os.path.join(self.output_path, 'detections', subdirectory_name, self.convertNameToFileName(object['name'], object['tags']['product']))
+            output_folder = pathlib.Path(self.output_path)/'detections'/subdirectory_name
+            #make sure the output folder exists for this detection
+            output_folder.mkdir(exist_ok=True)
+
             YmlWriter.writeYmlFile(file_path, object)
             print("Successfully created detection " + file_path)
         

@@ -39,6 +39,7 @@ class NewContentGenerator():
             self.output_dto.obj['data_source'] = answers['data_source']
             self.output_dto.obj['type'] = answers['detection_type']
             self.output_dto.obj['description'] = 'UPDATE_DESCRIPTION'   
+            self.output_dto.obj['description'] = "production" #start everything as production since that's what we INTEND the content to become   
             file_name = self.output_dto.obj['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
             self.output_dto.obj['search'] = answers['detection_search'] + ' | `' + file_name + '_filter`'
             self.output_dto.obj['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'

@@ -20,12 +20,10 @@ class NewContentQuestions():
                     'cloud',
                     'application',
                     'network',
-                    'web',
-                    'experimental'
+                    'web'
                 ],
                 'default': 'endpoint'
             },
-            
             {
                 'type': 'text',
                 'message': 'enter author name',

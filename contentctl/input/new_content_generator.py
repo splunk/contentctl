@@ -88,3 +88,4 @@ class NewContentGenerator():
             self.output_dto.obj['tags']['category'] = answers['category']
             self.output_dto.obj['tags']['product'] = ['Splunk Enterprise','Splunk Enterprise Security','Splunk Cloud']
             self.output_dto.obj['tags']['usecase'] = answers['usecase']
+            self.output_dto.obj['tags']['cve'] = ['UPDATE WITH CVE(S) IF APPLICABLE']

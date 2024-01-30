@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
-from typing import List, Optional, Any, Union
+from typing import List, Any, Union
 from contentctl.objects.security_content_object import SecurityContentObject
 
 

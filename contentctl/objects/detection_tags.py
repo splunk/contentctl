@@ -115,11 +115,17 @@ class DetectionTags(BaseModel):
     def mapStoryNamesToStoryObjects(cls, v:Union[list[str], list[Story]], info:ValidationInfo)->list[Story]:
         return SecurityContentObject.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None), Story)
     
+    def getAtomicGuidStringArray(self)->List[str]:
+        if self.atomic_guid:
+            return [str(atomic_guid.auto_generated_guid) for atomic_guid in self.atomic_guid]
+        else:
+            return []
+
     @field_validator('atomic_guid',mode="before")
     @classmethod
     def mapAtomicGuidsToAtomicTests(cls, v:Union[list[UUID4],None], info:ValidationInfo)->Union[None,list[AtomicTest]]:
-        if v is None:
-            return v
+        if v is None or len(v) == 0:
+            return None
         
 
         output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)

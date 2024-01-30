@@ -1,8 +1,8 @@
-from pydantic import BaseModel
-
+from pydantic import BaseModel, Field
+from typing import Set,List
 
 class MitreAttackEnrichment(BaseModel):
-    mitre_attack_id: str
-    mitre_attack_technique: str
-    mitre_attack_tactics: list
-    mitre_attack_groups: list
+    mitre_attack_id: str = Field(...)
+    mitre_attack_technique: str = Field(...)
+    mitre_attack_tactics: List[str] = Field(...)
+    mitre_attack_groups: List[str] = Field(...)

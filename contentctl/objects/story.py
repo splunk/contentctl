@@ -1,8 +1,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from contentctl.objects.story_tags import StoryTags
+from typing import List, Optional
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
+    from contentctl.objects.investigation import Investigation
     
 
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -13,7 +15,7 @@ from pydantic import field_validator, Field, ValidationInfo
 
 #from contentctl.objects.investigation import Investigation
 
-from typing import List
+
 
 class Story(SecurityContentObject):
     narrative: str = Field(...)
@@ -25,7 +27,10 @@ class Story(SecurityContentObject):
     #baseline_names: List[str] = []
     author_company: str = "no"
     
-    #detections: List[Detection] = []
+
+    #These enrichments will occur at the very end
+    print("enable enrichments for story")
+    #detections: Optional[List[Detection]] = None
     #investigations: Optional[List[Investigation]] = None
     
     

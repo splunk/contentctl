@@ -2,16 +2,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
+from typing import Union, Optional, List, Any
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
 import re
 import pathlib
-import json
+
 from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field, computed_field
-from dataclasses import dataclass
-from typing import Union, Optional, List, Any
-from datetime import datetime, timedelta
 
 
 from contentctl.objects.security_content_object import SecurityContentObject

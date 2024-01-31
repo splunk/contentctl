@@ -161,12 +161,26 @@ class Detection_Abstract(SecurityContentObject):
         # Found everything
         return v
 
-    @validator("tests")
+    @validator("tests", always=True)
     def tests_validate(cls, v, values):
-        if values.get("status","") == DetectionStatus.production.value and not v:
-            raise ValueError(
-                "At least one test is REQUIRED for production detection: " + values["name"]
-            )
+        #Only production analytics require tests
+        if values.get("status","") != DetectionStatus.production.value:
+            return v
+        
+        #Only certain types of analytics must have tests
+        if values.get("type","") not in set([AnalyticsType.Anomaly.value, AnalyticsType.Hunting.value, AnalyticsType.TTP.value]):
+            return v
+        
+        #check and see if the manual_test flag is present
+        tags_obj = values.get("tags")
+        if tags_obj and tags_obj.manual_test:
+            #If any tests are present while manual_test is set, replace them with the manual_test placeholder
+            return [{"name":"MANUAL_TEST_ONLY"}]
+
+        if len(v) < 1:
+            raise ValueError("At least one test is REQUIRED for production detection: " + values.get("name", "NO NAME FOUND"))
+        
+        #No issues - at least one test provided            
         return v
     
     @validator("datamodel")

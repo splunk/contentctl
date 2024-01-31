@@ -375,7 +375,20 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.sync_obj.currentTestingQueue[self.get_name()] = None
 
     def test_detection(self, detection: Detection):
-        if detection.tests is None:
+        if detection.tags.manual_test:
+            if len(detection.tests) != 1:
+                raise Exception(f"Detection {detection.name} configured for manual_test, but no "
+                                "manual_test was found in tests section. It should have been "
+                                f"added automatically: {detection.tests}")
+            elif detection.tests[0].name != "MANUAL_TEST_ONLY":
+                raise Exception(f"Detection {detection.name} configured for manual_test, but a test "
+                                f"{detection.tests[0]}was found INSTEAD of the automatically added "
+                                "MANUAL_TEST_ONLY")
+            else:
+                detection.tests[0].result = UnitTestResult()
+                detection.tests[0].result.set_manual_test(detection.tags.manual_test)
+                return
+        elif detection.tests is None:
             self.pbar.write(f"No test(s) found for {detection.name}")
             return
 

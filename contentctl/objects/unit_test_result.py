@@ -54,6 +54,15 @@ class UnitTestResult(BaseModel):
 
         return results_dict
 
+    def set_manual_test(self,manual_test_text:str):
+        self.duration = 0
+        self.exception = None
+        self.message = f"manual_test: {manual_test_text}"
+        self.success = True
+        self.job_content = None
+        self.sid_link = "manual_test - NO Search ID"
+        return self.success
+    
     def set_job_content(
         self,
         content: Union[Record, None],

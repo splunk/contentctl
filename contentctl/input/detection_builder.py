@@ -66,13 +66,13 @@ class DetectionBuilder():
                 for entity in self.security_content_obj.tags.observable:
 
                     risk_object = dict()
-                    if entity.type.lower() in risk_object_user_types:
+                    if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
                         risk_object['risk_object_type'] = 'user'
                         risk_object['risk_object_field'] = entity.name
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
                         risk_objects.append(risk_object)
 
-                    elif entity.type.lower() in risk_object_system_types:
+                    elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
                         risk_object['risk_object_type'] = 'system'
                         risk_object['risk_object_field'] = entity.name
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score

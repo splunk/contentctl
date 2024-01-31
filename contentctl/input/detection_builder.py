@@ -58,6 +58,9 @@ class DetectionBuilder():
             risk_objects = []
             risk_object_user_types = {'user', 'username', 'email address'}
             risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
+            process_threat_object_types = {'process name','process'}
+            file_threat_object_types = {'file name','file', 'file hash'}
+            url_threat_object_types = {'url string','url'}
 
             if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
                 for entity in self.security_content_obj.tags.observable:
@@ -75,10 +78,21 @@ class DetectionBuilder():
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
                         risk_objects.append(risk_object)
 
-                    elif 'Attacker' in entity.role:
+                    elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
                         risk_object['threat_object_field'] = entity.name
-                        risk_object['threat_object_type'] = entity.type.lower()
+                        risk_object['threat_object_type'] = "process"
                         risk_objects.append(risk_object) 
+
+                    elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
+                        risk_object['threat_object_field'] = entity.name
+                        risk_object['threat_object_type'] = "file_name"
+                        risk_objects.append(risk_object) 
+
+                    elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
+                        risk_object['threat_object_field'] = entity.name
+                        risk_object['threat_object_type'] = "url"
+                        risk_objects.append(risk_object) 
+
                     else:
                         risk_object['risk_object_type'] = 'other'
                         risk_object['risk_object_field'] = entity.name

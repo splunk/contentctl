@@ -175,7 +175,7 @@ class Detection_Abstract(SecurityContentObject):
         tags_obj = values.get("tags")
         if tags_obj and tags_obj.manual_test:
             #If any tests are present while manual_test is set, replace them with the manual_test placeholder
-            return [{"name":"MANUAL_TEST_ONLY"}]
+            return [UnitTest(name="MANUAL_TEST_ONLY",attack_data=[])]
 
         if len(v) < 1:
             raise ValueError("At least one test is REQUIRED for production detection: " + values.get("name", "NO NAME FOUND"))

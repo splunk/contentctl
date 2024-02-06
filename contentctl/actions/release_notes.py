@@ -27,16 +27,28 @@ class ReleaseNotes:
                                 data = yaml.safe_load(file)
                                 # Check and create story link
                                 if 'name' in data and'stories/' in file_path:
-                                    story_link = "https://research.splunk.com/" + file_path.replace(repo_path,"")
+                                    story_link = "https://research.splunk.com" + file_path.replace(repo_path,"")
+                                    story_link=story_link.replace(".yml","/")
                                     print("- "+"["+f"{data['name']}"+"]"+"("+story_link+")")
                                 # Check and create detection link
                                 if 'name' in data and 'id' in data and 'detections/' in file_path:
-                                    temp_link = "https://research.splunk.com/" + file_path.replace(repo_path,"")
+                                    temp_link = "https://research.splunk.com" + file_path.replace(repo_path,"")
                                     pattern = r'(?<=/)[^/]*$'
                                     detection_link = re.sub(pattern, data['id'], temp_link)
                                     detection_link = detection_link.replace("detections","" )
+                                    detection_link = detection_link.replace(".com//",".com/" )
+                                    print("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")")    
+                                if 'name' in data and'playbooks/' in file_path:
+                                    playbook_link = "https://research.splunk.com" + file_path.replace(repo_path,"")
+                                    playbook_link=playbook_link.replace(".yml","/").lower()
+                                    print("- "+"["+f"{data['name']}"+"]"+"("+playbook_link+")")
 
-                                    print("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")")               
+                                if 'name' in data and'macros/' in file_path:
+                                    print("- " + f"{data['name']}")
+
+                                if 'name' in data and'lookups/' in file_path:
+                                    print("- " + f"{data['name']}")
+
                             except yaml.YAMLError as exc:
                                 print(f"Error parsing YAML file {file_path}: {exc}")
                 else:
@@ -46,7 +58,7 @@ class ReleaseNotes:
 
         ### Remove hard coded path
         print("Generating Release Notes - Compared with previous tag")
-        directories = ['detections/','stories/']
+        directories = ['detections/','stories/','macros/','lookups/','playbooks']
         repo_path = os.path.abspath(input_dto.director_input_dto.input_path)
         repo = Repo(repo_path)
         latest_tag=tag
@@ -69,10 +81,18 @@ class ReleaseNotes:
                 # Check if a file is Added
                 elif diff.change_type == 'A':
                     added_files.append(file_path)
-        detections_modified = []
+                    # print(added_files)
+
         detections_added = []
         stories_added = []
+        macros_added = []
+        lookups_added = []
+        playbooks_added = []      
+        detections_modified = []
         stories_modified = []
+        macros_modified = []
+        lookups_modified = []
+        playbooks_modified = []
 
         for file in modified_files:
             file=repo_path +"/"+file
@@ -80,6 +100,12 @@ class ReleaseNotes:
                 detections_modified.append(file)
             if 'stories/' in file:
                 stories_modified.append(file)
+            if 'macros/' in file:
+                macros_modified.append(file)
+            if 'lookups/' in file:
+                lookups_modified.append(file)
+            if 'playbooks/' in file:
+                playbooks_modified.append(file)
 
         for file in added_files:
             file=repo_path +"/"+file
@@ -87,6 +113,12 @@ class ReleaseNotes:
                 detections_added.append(file)
             if 'stories/' in file:
                 stories_added.append(file)
+            if 'macros/' in file:
+                macros_added.append(file)
+            if 'lookups/' in file:
+                lookups_added.append(file)
+            if 'playbooks/' in file:
+                playbooks_added.append(file)
 
         print("\n## Release notes for ESCU" + latest_tag)
 
@@ -98,6 +130,19 @@ class ReleaseNotes:
         self.create_notes(repo_path,detections_added)
         print("\n### Updated Analytics")    
         self.create_notes(repo_path,detections_modified)
+        print("\n### Macros Added")    
+        self.create_notes(repo_path,macros_added)
+        print("\n### Macros Updated")    
+        self.create_notes(repo_path,macros_modified)
+        print("\n### Lookups Added")    
+        self.create_notes(repo_path,lookups_added)
+        print("\n### Lookups Updated")    
+        self.create_notes(repo_path,lookups_modified)
+        print("\n### Playbooks Added")    
+        self.create_notes(repo_path,playbooks_added)
+        print("\n### Playbooks Updated")    
+        self.create_notes(repo_path,playbooks_modified)
+
         print("\n### Other Updates") 
 
 

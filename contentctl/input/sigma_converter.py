@@ -16,7 +16,6 @@ from sigma.processing.pipeline import ProcessingItem, ProcessingPipeline
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 from contentctl.objects.data_source import DataSource
-from contentctl.helper.constants import *
 from contentctl.objects.enums import *
 from contentctl.helper.utils import Utils
 from contentctl.input.backend_splunk_ba import SplunkBABackend

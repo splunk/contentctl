@@ -1,20 +1,20 @@
-ATTACK_TACTICS_KILLCHAIN_MAPPING = {
-    "Reconnaissance": "Reconnaissance",
-    "Resource Development": "Weaponization",
-    "Initial Access": "Delivery",
-    "Execution": "Installation",
-    "Persistence": "Installation",
-    "Privilege Escalation": "Exploitation",
-    "Defense Evasion": "Exploitation",
-    "Credential Access": "Exploitation",
-    "Discovery": "Exploitation", 
-    "Lateral Movement": "Exploitation",
-    "Collection": "Exploitation",
-    "Command And Control": "Command And Control",
-    "Command And Control": "Command And Control",
-    "Exfiltration": "Actions on Objectives",
-    "Impact": "Actions on Objectives"
-}
+# ATTACK_TACTICS_KILLCHAIN_MAPPING = {
+#     "Reconnaissance": "Reconnaissance",
+#     "Resource Development": "Weaponization",
+#     "Initial Access": "Delivery",
+#     "Execution": "Installation",
+#     "Persistence": "Installation",
+#     "Privilege Escalation": "Exploitation",
+#     "Defense Evasion": "Exploitation",
+#     "Credential Access": "Exploitation",
+#     "Discovery": "Exploitation", 
+#     "Lateral Movement": "Exploitation",
+#     "Collection": "Exploitation",
+#     "Command And Control": "Command And Control",
+#     "Command And Control": "Command And Control",
+#     "Exfiltration": "Actions on Objectives",
+#     "Impact": "Actions on Objectives"
+# }
 
 SES_CONTEXT_MAPPING = {
     "Unknown": 0,

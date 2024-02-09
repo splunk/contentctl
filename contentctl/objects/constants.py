@@ -74,7 +74,7 @@ SES_KILL_CHAIN_MAPPINGS = {
     "Delivery": 3,
     "Exploitation": 4,
     "Installation": 5,
-    "Command And Control": 6,
+    "Command and Control": 6,
     "Actions on Objectives": 7
 }
 

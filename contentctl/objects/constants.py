@@ -11,8 +11,8 @@ ATTACK_TACTICS_KILLCHAIN_MAPPING = {
     "Discovery": "Exploitation", 
     "Lateral Movement": "Exploitation",
     "Collection": "Exploitation",
-    "Command And Control": "Command And Control",
-    "Command And Control": "Command And Control",
+    "Command And Control": "Command and Control",
+    "Command And Control": "Command and Control",
     "Exfiltration": "Actions on Objectives",
     "Impact": "Actions on Objectives"
 }

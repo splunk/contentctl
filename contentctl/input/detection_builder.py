@@ -13,8 +13,7 @@ from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.config import ConfigDetectionConfiguration
-from contentctl.helper.constants import *
-
+from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
 
 class DetectionBuilder():
     security_content_obj : SecurityContentObject

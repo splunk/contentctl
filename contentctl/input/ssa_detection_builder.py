@@ -12,7 +12,7 @@ from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.ssa_detection import SSADetection
-from contentctl.helper.constants import *
+from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
 
 
 class SSADetectionBuilder():

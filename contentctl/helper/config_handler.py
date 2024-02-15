@@ -39,6 +39,8 @@ class ConfigHandler:
             sys.exit(1)
 
         try: 
+            if args.dry_run:
+                yml_dict['apps'] = []
             if args.mode != DetectionTestingMode.changes:
                 yml_dict['version_control_config'] = None
             if yml_dict.get("version_control_config", None) is not None:

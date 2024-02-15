@@ -1,7 +1,7 @@
 import sys
 import argparse
 import os
-import tqdm                                                                                         # type: ignore
+import tqdm
 import functools
 from typing import Union
 import pathlib
@@ -150,6 +150,11 @@ def test(args: argparse.Namespace):
     args = configure_unattended(args)
 
     config = start(args, read_test_file=True)
+    #Don't do enrichment
+    if args.dry_run:
+        config.enrichments.attack_enrichment = False
+        config.enrichments.cve_enrichment = False
+        config.enrichments.splunk_app_enrichment = False
 
     if config.test is None:
         raise Exception("Error parsing test configuration. Test Object was None.")
@@ -235,31 +240,71 @@ def test(args: argparse.Namespace):
     # For example, if the detection(s) we are trying to test do not exist
     gitService = GitService(config.test)
 
+    
 
     director_output_dto = build(args, config)
 
     test_director_output_dto = gitService.get_all_content(director_output_dto)
     
-    # All this information will later come from the config, so we will
-    # be able to do it in Test().execute. For now, we will do it here
-    app = App(
-        uid=9999,
-        appid=config.build.title,
-        title=config.build.title,
-        release=config.build.version,
-        http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
-        description=config.build.description,
-        splunkbase_path=None,
-        force_local=True
-    )
+    if args.dry_run:
+        #set the proper values in the config
+        config.test.mode = DetectionTestingMode.selected
+        config.test.detections_list = [d.file_path for d in test_director_output_dto.detections]
+        config.test.apps = []
+        config.test.post_test_behavior = PostTestBehavior.never_pause
+        
+        #Disable enrichments to save time
+        config.enrichments.attack_enrichment = False
+        config.enrichments.cve_enrichment = False
+        config.enrichments.splunk_app_enrichment = False
+        
+        #Create a directory for artifacts.
+        dry_run_config_dir = pathlib.Path("dry_run_config")
+        
+        #It's okay if it already exists
+        dry_run_config_dir.mkdir(exist_ok=True)
 
-    # We need to do this instead of appending to retrigger validation.
-    # It does not happen the first time since validation does not run for default values
-    # unless we use always=True in the validator
-    # we always want to keep CIM as the last app installed
+        #Write out the test plan file
+        with open(dry_run_config_dir/"contentctl_test.yml", "w") as test_plan_config:
+            d = config.test.dict()
+            d['infrastructure_config']['infrastructure_type'] = d['infrastructure_config']['infrastructure_type'].value
+            d['mode'] = d['mode'].value
+            d['post_test_behavior'] = d['post_test_behavior'].value
+            yaml.safe_dump(d, test_plan_config)
+        
+        with open(dry_run_config_dir/"contentctl.yml", "w") as contentctl_cfg:
+            d = config.dict()
+            del d["test"]
+            yaml.safe_dump(d, contentctl_cfg)
+        
 
-    config.test.apps = [app] + config.test.apps
+        
+        print(f"Wrote test plan to '{dry_run_config_dir/'contentctl_test.yml'}' and '{dry_run_config_dir/'contentctl.yml'}'")
+        return
+
+
+
+    else:
+        # All this information will later come from the config, so we will
+        # be able to do it in Test().execute. For now, we will do it here
+        app = App(
+            uid=9999,
+            appid=config.build.title,
+            title=config.build.title,
+            release=config.build.version,
+            http_path=None,
+            local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
+            description=config.build.description,
+            splunkbase_path=None,
+            force_local=True
+        )
+
+        # We need to do this instead of appending to retrigger validation.
+        # It does not happen the first time since validation does not run for default values
+        # unless we use always=True in the validator
+        # we always want to keep CIM as the last app installed
+
+        config.test.apps = [app] + config.test.apps
 
     test_input_dto = TestInputDto(
         test_director_output_dto=test_director_output_dto,
@@ -563,6 +608,8 @@ def main():
     
     test_parser.add_argument("--target_branch", required=False, default=None, type=str)
     test_parser.add_argument("--test_branch", required=False, default=None, type=str)
+    test_parser.add_argument("--dry_run", action=argparse.BooleanOptionalAction, help="Used to emit dry_run_config/contentctl_test.yml "\
+                             "and dry_run_config/contentctl.yml files.  These are used for CI/CD-driven internal testing workflows and are not intended for public use at this time.")
     
     # Even though these are also options to build, make them available to test_parser
     # as well to make the tool easier to use
@@ -597,6 +644,7 @@ def main():
     # TODO (cmcginley): add flag for changing max_sleep time for integration tests
     # TODO (cmcginley): add setting to skip listing skips -> test_config.TestConfig,
     #   contentctl.test, contentctl.main
+
 
 
     test_parser.set_defaults(func=test)

@@ -289,7 +289,7 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
             v = [Infrastructure()]
 
         if len(v) < 1:
-            print("Fix number of infrastructure validation later")
+            #print("Fix number of infrastructure validation later")
             return v
             raise (
                 ValueError(

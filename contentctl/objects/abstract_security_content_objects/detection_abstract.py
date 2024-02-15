@@ -43,6 +43,7 @@ class Detection_Abstract(SecurityContentObject):
     references: list
     
     tests: list[UnitTest] = []
+    disabled: bool = True
 
     # enrichments
     datamodel: list = None

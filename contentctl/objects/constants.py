@@ -8,7 +8,7 @@ ATTACK_TACTICS_KILLCHAIN_MAPPING = {
     "Privilege Escalation": "Exploitation",
     "Defense Evasion": "Exploitation",
     "Credential Access": "Exploitation",
-    "Discovery": "Exploitation", 
+    "Discovery": "Exploitation",
     "Lateral Movement": "Exploitation",
     "Collection": "Exploitation",
     "Command And Control": "Command and Control",

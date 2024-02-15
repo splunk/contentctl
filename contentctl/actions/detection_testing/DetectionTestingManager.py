@@ -121,7 +121,7 @@ class DetectionTestingManager(BaseModel):
                     instance_pool.submit(instance.execute): instance
                     for instance in self.detectionTestingInfrastructureObjects
                 }
-                # What for execution to finish
+                # Wait for execution to finish
                 for future in concurrent.futures.as_completed(future_instances_execute):
                     try:
                         result = future.result()
@@ -131,6 +131,7 @@ class DetectionTestingManager(BaseModel):
 
             self.output_dto.terminate = True
 
+            # Shut down all the views and wait for the shutdown to finish
             future_views_shutdowner = {
                 view_shutdowner.submit(view.stop): view for view in self.input_dto.views
             }
@@ -140,6 +141,7 @@ class DetectionTestingManager(BaseModel):
                 except Exception as e:
                     print(f"Error stopping view: {str(e)}")
 
+            # Wait for original view-related threads to complete
             for future in concurrent.futures.as_completed(future_views):
                 try:
                     result = future.result()

@@ -141,7 +141,7 @@ class DetectionBuilder():
             if '`o365_' in self.security_content_obj.search:
                 self.security_content_obj.providing_technologies = ["Microsoft Office 365"]
 
-            if '`gsuite`' in self.security_content_obj.search or 'google_' in self.security_content_obj.search or 'gws_' in self.security_content_obj.search:
+            if '`gsuite' in self.security_content_obj.search or '`google_' in self.security_content_obj.search or '`gws_' in self.security_content_obj.search:
                 self.security_content_obj.providing_technologies = ["Google Workspace","Google Cloud Platform"]
 
             if '`splunkd_' in self.security_content_obj.search or 'audit_searches' in self.security_content_obj.search:

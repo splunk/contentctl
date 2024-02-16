@@ -82,6 +82,8 @@ class GitService:
         #print()
         return [detection for detection in detections if DetectionStatus(detection.status) in statuses_to_test]
 
+    # TODO (cmcginley): consider listing Correlation type detections as skips rather than excluding
+    #   them from results altogether?
     def filter_detections_by_type(self, detections: list[Detection], 
                                   types_to_test: set[AnalyticsType] = {AnalyticsType.Anomaly, AnalyticsType.TTP, AnalyticsType.Hunting})->list[Detection]:
         #print("\n".join(sorted([f"{detection.file_path[92:]} - {detection.type}" for detection in detections if AnalyticsType(detection.type) not in types_to_test])))

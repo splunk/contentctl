@@ -4,7 +4,6 @@ import os
 import tqdm
 import functools
 from typing import Union
-import yaml
 import pathlib
 
 from contentctl.actions.detection_testing.GitService import (
@@ -28,7 +27,8 @@ from contentctl.objects.enums import (
     SecurityContentProduct,
     DetectionTestingMode,
     PostTestBehavior,
-    DetectionTestingTargetInfrastructure
+    DetectionTestingTargetInfrastructure,
+    SigmaConverterTarget
 )
 from contentctl.input.new_content_generator import NewContentGeneratorInputDto
 from contentctl.helper.config_handler import ConfigHandler
@@ -36,14 +36,14 @@ from contentctl.helper.config_handler import ConfigHandler
 from contentctl.objects.config import Config
 
 from contentctl.objects.app import App
-from contentctl.objects.test_config import TestConfig, Infrastructure
-from contentctl.actions.test import Test, TestInputDto, TestOutputDto
-from contentctl.objects.enums import *
-from contentctl.input.sigma_converter import *
-from contentctl.actions.convert import *
+from contentctl.objects.test_config import Infrastructure
+from contentctl.actions.test import Test, TestInputDto
+from contentctl.input.sigma_converter import SigmaConverterInputDto
+from contentctl.actions.convert import ConvertInputDto, Convert
 
 
 SERVER_ARGS_ENV_VARIABLE = "CONTENTCTL_TEST_INFRASTRUCTURES"
+
 
 def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
     # disable all calls to tqdm - this is so that CI/CD contexts don't
@@ -54,7 +54,9 @@ def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
     if args.unattended:
         if args.behavior != PostTestBehavior.never_pause.name:
             print(
-                f"For unattended mode, --behavior MUST be {PostTestBehavior.never_pause.name}.\nUpdating the behavior from '{args.behavior}' to '{PostTestBehavior.never_pause.name}'"
+                f"For unattended mode, --behavior MUST be {PostTestBehavior.never_pause.name}.\n"
+                f"Updating the behavior from '{args.behavior}' to "
+                f"'{PostTestBehavior.never_pause.name}'"
             )
             args.behavior = PostTestBehavior.never_pause.name
 
@@ -64,7 +66,7 @@ def configure_unattended(args: argparse.Namespace) -> argparse.Namespace:
 def print_ascii_art():
     print(
         """
-Running Splunk Security Content Control Tool (contentctl) 
+Running Splunk Security Content Control Tool (contentctl)
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⢶⠛⡇⠀⠀⠀⠀⠀⠀⣠⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⣀⠼⠖⠛⠋⠉⠉⠓⠢⣴⡻⣾⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -92,21 +94,19 @@ Running Splunk Security Content Control Tool (contentctl)
     )
 
 
-def start(args:argparse.Namespace, read_test_file:bool = False) -> Config:
+def start(args: argparse.Namespace, read_test_file: bool = False) -> Config:
     base_config = ConfigHandler.read_config(args)
     if read_test_file:
-        base_config.test = ConfigHandler.read_test_config( args)
+        base_config.test = ConfigHandler.read_test_config(args)
     return base_config
-
-
 
 
 def initialize(args) -> None:
     Initialize().execute(InitializeInputDto(path=pathlib.Path(args.path), demo=args.demo))
 
 
-def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
-    if config == None:
+def build(args, config: Union[Config, None] = None) -> DirectorOutputDto:
+    if config is None:
         config = start(args)
     if args.type == "app":
         product_type = SecurityContentProduct.SPLUNK_APP
@@ -115,14 +115,18 @@ def build(args, config:Union[Config,None]=None) -> DirectorOutputDto:
     elif args.type == "api":
         product_type = SecurityContentProduct.API
     else:
-        print(f"Invalid build type. Valid options app, ssa or api")
+        print("Invalid build type. Valid options app, ssa or api")
         sys.exit(1)
     director_input_dto = DirectorInputDto(
         input_path=pathlib.Path(os.path.abspath(args.path)), 
         product=product_type, 
         config=config
     )
-    generate_input_dto = GenerateInputDto(director_input_dto, args.appinspect_api_username, args.appinspect_api_password)
+    generate_input_dto = GenerateInputDto(
+        director_input_dto,
+        args.appinspect_api_username,
+        args.appinspect_api_password
+    )
 
     generate = Generate()
 
@@ -133,12 +137,14 @@ def api_deploy(args) -> None:
     config = start(args)
     deploy_input_dto = API_DeployInputDto(path=pathlib.Path(args.path), config=config)
     deploy = API_Deploy()
-    
+
     deploy.execute(deploy_input_dto)
 
+
 def acs_deploy(args) -> None:
-    config = start(args)
+    _ = start(args)
     raise NotImplementedError("ACS Deploy is not yet implemented.")
+
 
 def test(args: argparse.Namespace):
     args = configure_unattended(args)
@@ -152,7 +158,6 @@ def test(args: argparse.Namespace):
 
     if config.test is None:
         raise Exception("Error parsing test configuration. Test Object was None.")
-
 
     if args.test_branch is not None:
         if config.test.version_control_config is not None:
@@ -169,60 +174,74 @@ def test(args: argparse.Namespace):
     # yet exposed/written properly in
     # the config file
     if args.infrastructure is not None:
-        config.test.infrastructure_config.infrastructure_type = DetectionTestingTargetInfrastructure(args.infrastructure)
+        config.test.infrastructure_config.infrastructure_type = DetectionTestingTargetInfrastructure(
+            args.infrastructure
+        )
     if args.mode is not None:
-        config.test.mode=DetectionTestingMode(args.mode) 
+        config.test.mode = DetectionTestingMode(args.mode)
     if args.behavior is not None:
-        config.test.post_test_behavior=PostTestBehavior(args.behavior)
+        config.test.post_test_behavior = PostTestBehavior(args.behavior)
     if args.detections_list is not None:
-        config.test.detections_list=args.detections_list
+        config.test.detections_list = args.detections_list
+    if args.enable_integration_testing or config.test.enable_integration_testing:
+        config.test.enable_integration_testing = True
 
-
-    
+    # validate and setup according to infrastructure type
     if config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.container:
         if args.num_containers is None:
-            raise Exception("Error - trying to start a test using container infrastructure but no value for --num_containers was found")
-        config.test.infrastructure_config.infrastructures = Infrastructure.get_infrastructure_containers(args.num_containers)
+            raise Exception(
+                "Error - trying to start a test using container infrastructure but no value for --num_containers was "
+                "found"
+            )
+        config.test.infrastructure_config.infrastructures = Infrastructure.get_infrastructure_containers(
+            args.num_containers
+        )
     elif config.test.infrastructure_config.infrastructure_type == DetectionTestingTargetInfrastructure.server:
         if args.server_info is None and os.environ.get(SERVER_ARGS_ENV_VARIABLE) is None:
             if len(config.test.infrastructure_config.infrastructures) == 0:
-                raise Exception("Error - trying to start a test using server infrastructure, but server information was not stored "
-                                "in contentctl_test.yml or passed on the command line. Please see the documentation for --server_info "
-                                "at the command line or 'infrastructures' in contentctl.yml.")
+                raise Exception(
+                    "Error - trying to start a test using server infrastructure, but server information was not stored "
+                    "in contentctl_test.yml or passed on the command line. Please see the documentation for "
+                    "--server_info at the command line or 'infrastructures' in contentctl.yml."
+                )
             else:
                 print("Using server configuration from: [contentctl_test.yml infrastructures section]")
-        
+
         else:
             if args.server_info is not None:
                 print("Using server configuration from: [command line]")
                 pass
             elif os.environ.get(SERVER_ARGS_ENV_VARIABLE) is not None:
-                args.server_info = os.environ.get(SERVER_ARGS_ENV_VARIABLE,"").split(';')
+                args.server_info = os.environ.get(SERVER_ARGS_ENV_VARIABLE, "").split(';')
                 print(f"Using server configuration from: [{SERVER_ARGS_ENV_VARIABLE} environment variable]")
             else:
-                raise Exception(f"Server infrastructure information not passed in contentctl_test.yml file, using --server_info switch on the command line, or in the {SERVER_ARGS_ENV_VARIABLE} environment variable")
+                raise Exception(
+                    "Server infrastructure information not passed in contentctl_test.yml file, using --server_info "
+                    f"switch on the command line, or in the {SERVER_ARGS_ENV_VARIABLE} environment variable"
+                )
                 # if server info was provided on the command line, us that. Otherwise use the env
-            
-            
-            
+
             config.test.infrastructure_config.infrastructures = []
-            
+
             for server in args.server_info:
-                address,username,password,web_ui_port,hec_port,api_port = server.split(",")
-                config.test.infrastructure_config.infrastructures.append(Infrastructure(splunk_app_username=username,
-                                                                                        splunk_app_password=password,
-                                                                                        instance_address=address, 
-                                                                                        hec_port=int(hec_port),
-                                                                                        web_ui_port=int(web_ui_port),
-                                                                                        api_port=int(api_port)))
-            
+                address, username, password, web_ui_port, hec_port, api_port = server.split(",")
+                config.test.infrastructure_config.infrastructures.append(
+                    Infrastructure(
+                        splunk_app_username=username,
+                        splunk_app_password=password,
+                        instance_address=address,
+                        hec_port=int(hec_port),
+                        web_ui_port=int(web_ui_port),
+                        api_port=int(api_port)
+                    )
+                )
+
     # We do this before generating the app to save some time if options are incorrect.
     # For example, if the detection(s) we are trying to test do not exist
     gitService = GitService(config.test)
 
     
 
-    
     director_output_dto = build(args, config)
 
     test_director_output_dto = gitService.get_all_content(director_output_dto)
@@ -287,16 +306,14 @@ def test(args: argparse.Namespace):
 
         config.test.apps = [app] + config.test.apps
 
-    
     test_input_dto = TestInputDto(
         test_director_output_dto=test_director_output_dto,
         gitService=gitService,
         config=config.test,
     )
-    
+
     test = Test()
 
-    
     result = test.execute(test_input_dto)
     # This return code is important.  Even if testing
     # fully completes, if everything does not pass then
@@ -306,7 +323,6 @@ def test(args: argparse.Namespace):
     else:
         sys.exit(1)
 
-    
 
 def validate(args) -> None:
     config = start(args)
@@ -317,11 +333,11 @@ def validate(args) -> None:
     elif args.type == "api":
         product_type = SecurityContentProduct.API
     else:
-        print(f"Invalid build type. Valid options app, ssa or api")
+        print("Invalid build type. Valid options app, ssa or api")
         sys.exit(1)
     director_input_dto = DirectorInputDto(
-        input_path=pathlib.Path(args.path), 
-        product=product_type, 
+        input_path=pathlib.Path(args.path),
+        product=product_type,
         config=config
     )
     validate_input_dto = ValidateInputDto(director_input_dto=director_input_dto)
@@ -383,16 +399,16 @@ def convert(args) -> None:
         sys.exit(1)
 
     sigma_converter_input_dto = SigmaConverterInputDto(
-        data_model = data_model,
-        detection_path = args.detection_path,
-        detection_folder = args.detection_folder, 
-        input_path = args.path,
-        log_source = args.log_source
+        data_model=data_model,
+        detection_path=args.detection_path,
+        detection_folder=args.detection_folder,
+        input_path=args.path,
+        log_source=args.log_source
     )
 
     convert_input_dto = ConvertInputDto(
-        sigma_converter_input_dto = sigma_converter_input_dto,
-        output_path = os.path.abspath(args.output)
+        sigma_converter_input_dto=sigma_converter_input_dto,
+        output_path=os.path.abspath(args.output)
     )
     convert = Convert()
     convert.execute(convert_input_dto)
@@ -404,7 +420,7 @@ def main():
     :param args: arguments passed by the user on command line while calling the script.
     :return: returns the output of the function called.
     """
-    
+
     # grab arguments
     parser = argparse.ArgumentParser(
         description="Use `contentctl action -h` to get help with any Splunk content action"
@@ -415,6 +431,13 @@ def main():
         required=False,
         default=".",
         help="path to the content path containing the contentctl.yml",
+    )
+
+    parser.add_argument(
+        "--disable_enrichment",
+        required=False,
+        action="store_true",
+        help="Enrichment is only REQUIRED when building a release (or testing a release). In most cases, it is not required. Disabling enrichment will significantly speed up all contentctl commands."
     )
 
     parser.set_defaults(func=lambda _: parser.print_help())
@@ -439,6 +462,7 @@ def main():
     reporting_parser = actions_parser.add_parser(
         "report", help="create Splunk content report of the current pack"
     )
+    # TODO: is this action dead?
     inspect_parser = actions_parser.add_parser(
         "inspect",
         help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.",
@@ -458,11 +482,16 @@ def main():
     convert_parser = actions_parser.add_parser("convert", help="Convert a sigma detection to a Splunk ESCU detection.")
 
     init_parser.set_defaults(func=initialize)
-    init_parser.add_argument("--demo", action=argparse.BooleanOptionalAction, 
-                             help="Use this flag to pre-populate the content pack "
-                             "with one additional detection that will fail 'contentctl validate' "
-                             "and on detection that will fail 'contentctl test'.  This is useful "
-                             "for demonstrating contentctl functionality.")
+    init_parser.add_argument(
+        "--demo",
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Use this flag to pre-populate the content pack "
+            "with one additional detection that will fail 'contentctl validate' "
+            "and on detection that will fail 'contentctl test'.  This is useful "
+            "for demonstrating contentctl functionality."
+        )
+    )
 
     validate_parser.add_argument(
         "-t",
@@ -488,14 +517,20 @@ def main():
         required=False,
         type=str,
         default=None,
-        help=f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+        help=(
+            f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, "
+            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+        )
     )
     build_parser.add_argument(
         "--appinspect_api_password",
         required=False,
         type=str,
         default=None,
-        help=f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+        help=(
+            f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, "
+            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+        )
     )
 
     build_parser.set_defaults(func=build)
@@ -512,8 +547,6 @@ def main():
     new_content_parser.set_defaults(func=new_content)
 
     reporting_parser.set_defaults(func=reporting)
-
-
 
     api_deploy_parser.set_defaults(func=api_deploy)
 
@@ -561,17 +594,22 @@ def main():
         "of detections to test. Their paths should be relative to the app path.",
     )
 
-
     test_parser.add_argument("--unattended", action=argparse.BooleanOptionalAction)
-    
-    
-    test_parser.add_argument("--infrastructure", required=False, type=str, 
-                                                 choices=DetectionTestingTargetInfrastructure._member_names_, default=None, 
-                                                 help="Determines what infrastructure to use for testing. The options are "
-                                                 "container and server.  Container will set up Splunk Container(s) at runtime, "
-                                                 "install all relevant apps, and perform configurations.  Server will use "
-                                                 "preconfigured server(s) either specified on the command line or in "
-                                                 "contentctl_test.yml.")
+
+    test_parser.add_argument(
+        "--infrastructure",
+        required=False,
+        type=str,
+        choices=DetectionTestingTargetInfrastructure._member_names_,
+        default=None,
+        help=(
+            "Determines what infrastructure to use for testing. The options are "
+            "container and server.  Container will set up Splunk Container(s) at runtime, "
+            "install all relevant apps, and perform configurations.  Server will use "
+            "preconfigured server(s) either specified on the command line or in "
+            "contentctl_test.yml."
+        )
+    )
     test_parser.add_argument("--num_containers", required=False, default=1, type=int)
     test_parser.add_argument("--server_info", required=False, default=None, type=str, nargs='+')
     
@@ -580,33 +618,64 @@ def main():
     test_parser.add_argument("--dry_run", action=argparse.BooleanOptionalAction, help="Used to emit dry_run_config/contentctl_test.yml "\
                              "and dry_run_config/contentctl.yml files.  These are used for CI/CD-driven internal testing workflows and are not intended for public use at this time.")
     
-    #Even though these are also options to build, make them available to test_parser
-    #as well to make the tool easier to use
+    # Even though these are also options to build, make them available to test_parser
+    # as well to make the tool easier to use
     test_parser.add_argument(
         "--appinspect_api_username",
         required=False,
         type=str,
         default=None,
-        help=f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+        help=(
+            f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, "
+            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+        )
     )
     test_parser.add_argument(
         "--appinspect_api_password",
         required=False,
         type=str,
         default=None,
-        help=f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+        help=(
+            f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, "
+            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+        )
     )
+    test_parser.add_argument(
+        "--enable_integration_testing",
+        required=False,
+        action="store_true",
+        help="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk "
+        "instance with ES installed)"
+    )
+
+    # TODO (cmcginley): add flag for enabling logging for correlation_search logging
+    # TODO (cmcginley): add flag for changing max_sleep time for integration tests
+    # TODO (cmcginley): add setting to skip listing skips -> test_config.TestConfig,
+    #   contentctl.test, contentctl.main
+
 
 
     test_parser.set_defaults(func=test)
 
-    convert_parser.add_argument("-dm", "--data_model", required=False, type=str, default="cim", help="converter target, choose between cim, raw, ocsf")
+    convert_parser.add_argument(
+        "-dm",
+        "--data_model",
+        required=False,
+        type=str,
+        default="cim",
+        help="converter target, choose between cim, raw, ocsf"
+    )
     convert_parser.add_argument("-lo", "--log_source", required=False, type=str, help="converter log source")
     convert_parser.add_argument("-dp", "--detection_path", required=False, type=str, help="path to a single detection")
-    convert_parser.add_argument("-df", "--detection_folder", required=False, type=str, help="path to a detection folder")
+    convert_parser.add_argument(
+        "-df",
+        "--detection_folder",
+        required=False,
+        type=str,
+        help="path to a detection folder"
+    )
     convert_parser.add_argument("-o", "--output", required=True, type=str, help="output path to store the detections")
     convert_parser.set_defaults(func=convert)
-
 
     # parse them
     args = parser.parse_args()
@@ -619,6 +688,5 @@ def main():
         print(f"Error during contentctl:\n{str(e)}")
         import traceback
         traceback.print_exc()
-        #traceback.print_stack()
+        # traceback.print_stack()
         sys.exit(1)
-    

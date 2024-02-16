@@ -484,6 +484,10 @@ def main():
     docs_parser = actions_parser.add_parser(
         "docs", help="create documentation in docs folder"
     )
+    release_notes_parser = actions_parser.add_parser(
+        "release_notes",
+        help="Compares two tags and create release notes of what ESCU/BA content is added"
+    )
 
     test_parser = actions_parser.add_parser(
         "test",

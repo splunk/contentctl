@@ -15,6 +15,16 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
     container: docker.models.resource.Model = None
 
     def start(self):
+        if self.global_config.infrastructure_config.persist_and_reuse_container:
+            # If we are configured to use the persistent container, then check and see if it's already
+            # running. If so, just use it without additional configuration.
+            try:
+                self.container = self.get_docker_client().containers.get(self.get_name())
+                return
+            except Exception:
+                #We did not find the container running, we will set it up
+                pass
+
         self.container = self.make_container()
         self.container.start()
 
@@ -99,6 +109,9 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         return container
 
     def removeContainer(self, removeVolumes: bool = True, forceRemove: bool = True):
+        if self.global_config.infrastructure_config.persist_and_reuse_container:
+            print(f"\nContainer [{self.get_name()}] has NOT been terminated because 'contentctl_test.yml ---> infrastructure_config ---> persist_and_reuse_container = True'\n")
+            return
         try:
             container: docker.models.containers.Container = (
                 self.get_docker_client().containers.get(self.get_name())

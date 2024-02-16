@@ -8,6 +8,7 @@ from contentctl.output.attack_nav_output import AttackNavOutput
 from git import Repo
 import re
 import yaml
+from typing import Union
 
 
 @dataclass(frozen=True)
@@ -54,27 +55,29 @@ class ReleaseNotes:
                 else:
                     print(f"File not found or is not a file: {file_path}")
 
-    def release_notes(self, input_dto: DirectorInputDto, old_tag, new_tag) -> None:
+    def release_notes(self, input_dto: DirectorInputDto, old_tag:Union[str,None], new_tag:str) -> None:
 
         ### Remove hard coded path
         directories = ['detections/','stories/','macros/','lookups/','playbooks']
         repo_path = os.path.abspath(input_dto.director_input_dto.input_path)
         repo = Repo(repo_path)
-        if new_tag not in repo.tags or old_tag not in repo.tags:
-            raise ValueError("One of the tags does not exist in the repository. Make sure your version number follow the convention - v4.X.x")
-        tags_sorted = sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
-        tags_names_sorted = [tag.name for tag in tags_sorted]        
-
-        for i, tag_name in enumerate(tags_names_sorted):
-            if tag_name == new_tag:
-                if i + 1 < len(tags_names_sorted):
-                    if old_tag == "v4.0.0":
-                        previous_tag = tags_names_sorted[i + 1]
-                    else:
-                        previous_tag = old_tag
-                    break
+        #Ensure the new tag is in the tags
+        if new_tag not in repo.tags:
+            raise ValueError(f"new_tag {new_tag} does not exist in the repository. Make sure your version number follows the convention - v4.X.x")
+        if old_tag is None:
+            #Old tag was not supplied, so find the index of the new tag, then get the tag before it
+            tags_sorted = sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
+            tags_names_sorted = [tag.name for tag in tags_sorted]            
+            print(tags_names_sorted)
+            new_tag_index = tags_names_sorted.index(new_tag)
+            try:
+                old_tag = tags_names_sorted[new_tag_index+1]
+            except Exception:
+                raise ValueError(f"old_tag cannot be inferred.  {new_tag} is the oldest tag in the repo!")
+            
+        
         latest_tag = new_tag
-        previous_tag = previous_tag
+        previous_tag = old_tag
         
         commit1 = repo.commit(latest_tag)
         commit2 = repo.commit(previous_tag)       

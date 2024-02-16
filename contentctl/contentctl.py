@@ -344,6 +344,17 @@ def validate(args) -> None:
     validate = Validate()
     return validate.execute(validate_input_dto)
 
+def release_notes(args)-> None:
+
+    config = start(args)
+    director_input_dto = DirectorInputDto(
+        input_path=pathlib.Path(args.path), product=SecurityContentProduct.SPLUNK_APP, config=config
+    )
+
+    release_notes_input_dto = ReleaseNotesInputDto(director_input_dto=director_input_dto)
+
+    release_notes = ReleaseNotes()
+    release_notes.release_notes(release_notes_input_dto, args.old_tag, args.new_tag)
 
 def doc_gen(args) -> None:
     config = start(args)
@@ -676,6 +687,11 @@ def main():
     )
     convert_parser.add_argument("-o", "--output", required=True, type=str, help="output path to store the detections")
     convert_parser.set_defaults(func=convert)
+
+    release_notes_parser.add_argument("--old_tag", "--old_tag", required=False, type=str, default="v4.0.0", help="Choose the tag and compare with previous tag")
+    release_notes_parser.add_argument("--new_tag", "--new_tag", required=True, type=str, default="v4.24.0", help="Choose the tag and compare with previous tag")
+    
+    release_notes_parser.set_defaults(func=release_notes)
 
     # parse them
     args = parser.parse_args()

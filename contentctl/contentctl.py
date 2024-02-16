@@ -692,7 +692,7 @@ def main():
     convert_parser.add_argument("-o", "--output", required=True, type=str, help="output path to store the detections")
     convert_parser.set_defaults(func=convert)
 
-    release_notes_parser.add_argument("--old_tag", "--old_tag", required=False, type=str, default="v4.0.0", help="Choose the tag and compare with previous tag")
+    release_notes_parser.add_argument("--old_tag", "--old_tag", required=False, type=str, help="Choose the tag and compare with previous tag")
     release_notes_parser.add_argument("--new_tag", "--new_tag", required=True, type=str, default="v4.24.0", help="Choose the tag and compare with previous tag")
     
     release_notes_parser.set_defaults(func=release_notes)

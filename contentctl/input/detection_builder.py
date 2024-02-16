@@ -148,7 +148,7 @@ class DetectionBuilder():
             self.security_content_obj.mappings = mappings
 
 
-   def addAnnotations(self) -> None:
+    def addAnnotations(self) -> None:
         if self.security_content_obj:
             annotations = {}
             annotation_keys = ['mitre_attack', 'kill_chain_phases', 'cis20', 'nist', 

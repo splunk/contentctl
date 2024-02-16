@@ -433,6 +433,13 @@ def main():
         help="path to the content path containing the contentctl.yml",
     )
 
+    parser.add_argument(
+        "--disable_enrichment",
+        required=False,
+        action="store_true",
+        help="Enrichment is only REQUIRED when building a release (or testing a release). In most cases, it is not required. Disabling enrichment will significantly speed up all contentctl commands."
+    )
+
     parser.set_defaults(func=lambda _: parser.print_help())
     actions_parser = parser.add_subparsers(
         title="Splunk content actions", dest="action"
@@ -640,6 +647,7 @@ def main():
         help="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk "
         "instance with ES installed)"
     )
+
     # TODO (cmcginley): add flag for enabling logging for correlation_search logging
     # TODO (cmcginley): add flag for changing max_sleep time for integration tests
     # TODO (cmcginley): add setting to skip listing skips -> test_config.TestConfig,

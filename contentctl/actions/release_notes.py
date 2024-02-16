@@ -68,7 +68,6 @@ class ReleaseNotes:
             #Old tag was not supplied, so find the index of the new tag, then get the tag before it
             tags_sorted = sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
             tags_names_sorted = [tag.name for tag in tags_sorted]            
-            print(tags_names_sorted)
             new_tag_index = tags_names_sorted.index(new_tag)
             try:
                 old_tag = tags_names_sorted[new_tag_index+1]

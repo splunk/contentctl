@@ -20,7 +20,7 @@ from contentctl.actions.new_content import NewContentInputDto, NewContent
 from contentctl.actions.doc_gen import DocGenInputDto, DocGen
 from contentctl.actions.initialize import Initialize, InitializeInputDto
 from contentctl.actions.api_deploy import API_Deploy, API_DeployInputDto
-
+from contentctl.actions.release_notes import ReleaseNotesInputDto, ReleaseNotes
 from contentctl.input.director import DirectorInputDto
 from contentctl.objects.enums import (
     SecurityContentType,

@@ -4,7 +4,7 @@ import sys
 import pathlib
 
 from contentctl.input.yml_reader import YmlReader
-from contentctl.objects.config import Config, TestConfig
+from contentctl.objects.config import Config, TestConfig, ConfigEnrichments
 from contentctl.objects.enums import DetectionTestingMode
 from typing import Union
 import argparse
@@ -23,6 +23,8 @@ class ConfigHandler:
 
         try: 
             config = Config.parse_obj(yml_dict)
+            if args.disable_enrichment:
+                config.enrichments = ConfigEnrichments(attack_enrichment=False,cve_enrichment=False,splunk_app_enrichment=False)
         except Exception as e:
             raise Exception(f"Error reading config file: {str(e)}")
             

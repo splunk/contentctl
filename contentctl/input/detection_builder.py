@@ -148,21 +148,23 @@ class DetectionBuilder():
             self.security_content_obj.mappings = mappings
 
 
-    def addAnnotations(self) -> None:
+   def addAnnotations(self) -> None:
         if self.security_content_obj:
             annotations = {}
             annotation_keys = ['mitre_attack', 'kill_chain_phases', 'cis20', 'nist', 
-                'analytic_story', 'context', 'impact', 'confidence', 'cve']
+                'analytic_story', 'context', 'impact', 'confidence', 'cve','version']
             for key in annotation_keys:
                 if key == 'mitre_attack':
                     if getattr(self.security_content_obj.tags, 'mitre_attack_id'):
                         annotations[key] = getattr(self.security_content_obj.tags, 'mitre_attack_id')
+                if key == 'version':
+                        annotations[key] = self.security_content_obj.version
                 try:
                     if getattr(self.security_content_obj.tags, key):
                         annotations[key] = getattr(self.security_content_obj.tags, key)
                 except AttributeError as e:
                     continue
-            self.security_content_obj.annotations = annotations    
+            self.security_content_obj.annotations = annotations   
 
 
     def addPlaybook(self, playbooks: list) -> None:

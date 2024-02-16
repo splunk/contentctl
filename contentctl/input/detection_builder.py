@@ -10,7 +10,6 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
-from contentctl.objects.integration_test import IntegrationTest
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.config import ConfigDetectionConfiguration
@@ -152,11 +151,13 @@ class DetectionBuilder():
         if self.security_content_obj:
             annotations = {}
             annotation_keys = ['mitre_attack', 'kill_chain_phases', 'cis20', 'nist', 
-                'analytic_story', 'context', 'impact', 'confidence', 'cve']
+                'analytic_story', 'context', 'impact', 'confidence', 'cve','version']
             for key in annotation_keys:
                 if key == 'mitre_attack':
                     if getattr(self.security_content_obj.tags, 'mitre_attack_id'):
                         annotations[key] = getattr(self.security_content_obj.tags, 'mitre_attack_id')
+                if key == 'version':
+                        annotations[key] = self.security_content_obj.version
                 try:
                     if getattr(self.security_content_obj.tags, key):
                         annotations[key] = getattr(self.security_content_obj.tags, key)
@@ -301,20 +302,6 @@ class DetectionBuilder():
                 if data_model in self.security_content_obj.search:
                     self.security_content_obj.datamodel.append(data_model)
 
-    def skipIntegrationTests(self) -> None:
-        """
-        Skip all integration tests
-        """
-        # Sanity check for typing and in setObject wasn't called yet 
-        if self.security_content_obj is not None and isinstance(self.security_content_obj, Detection):
-            for test in self.security_content_obj.tests:
-                if isinstance(test, IntegrationTest):
-                    test.skip("TEST SKIPPED: Skipping all integration tests")
-        else:
-            raise ValueError(
-                "security_content_obj must be an instance of Detection to skip integration tests, "
-                f"not {type(self.security_content_obj)}"
-                )
 
     def reset(self) -> None:
         self.security_content_obj = None

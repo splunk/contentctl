@@ -1,11 +1,9 @@
-from pydantic import BaseModel, root_validator, validator
-
-
 from typing import Union
-from datetime import timedelta
+
 from splunklib.data import Record
+
 from contentctl.objects.test_config import Infrastructure
-from contentctl.helper.utils import Utils
+from contentctl.objects.base_test_result import BaseTestResult, TestResultStatus
 
 FORCE_TEST_FAILURE_FOR_MISSING_OBSERVABLE = False
 
@@ -13,46 +11,8 @@ NO_SID = "Testing Failed, NO Search ID"
 SID_TEMPLATE = "{server}:{web_port}/en-US/app/search/search?sid={sid}"
 
 
-class UnitTestResult(BaseModel):
-    job_content: Union[Record, None] = None
+class UnitTestResult(BaseTestResult):
     missing_observables: list[str] = []
-    sid_link: Union[None, str] = None
-    message: Union[None, str] = None
-    exception: Union[Exception,None] = None
-    success: bool = False
-    duration: float = 0
-
-    class Config:
-        validate_assignment = True
-        arbitrary_types_allowed = True
-
-    def get_summary_dict(
-        self,
-        model_fields: list[str] = ["success", "exception", "message", "sid_link"],
-        job_fields: list[str] = ["search", "resultCount", "runDuration"],
-    ) -> dict:
-        results_dict = {}
-        for field in model_fields:
-            if getattr(self, field) is not None:
-                if isinstance(getattr(self, field), Exception):
-                    #Exception cannot be serialized, so convert to str
-                    results_dict[field] = str(getattr(self, field))
-                else:
-                    results_dict[field] = getattr(self, field)
-
-        for field in job_fields:
-            if self.job_content is not None:
-                value = self.job_content.get(field, None)
-                if field == "runDuration":
-                    try:
-                        value = Utils.getFixedWidth(float(value), 3)
-                    except Exception as e:
-                        value = Utils.getFixedWidth(0, 3)
-                results_dict[field] = value
-            else:
-                results_dict[field] = None
-
-        return results_dict
 
     def set_manual_test(self,manual_test_text:str):
         self.duration = 0
@@ -67,22 +27,38 @@ class UnitTestResult(BaseModel):
         self,
         content: Union[Record, None],
         config: Infrastructure,
+        status: TestResultStatus,
         exception: Union[Exception, None] = None,
-        success: bool = False,
         duration: float = 0,
-    ):
+    ) -> bool:
+        """
+        Sets various fields in the result, pulling some fields from the provided search job's
+        content
+        :param content: search job content
+        :param config: the Infrastructure config
+        :param status: the test status (TestResultStatus)
+        :param exception: an Exception raised during the test (may be None)
+        :param duration: the overall duration of the test, including data replay and cleanup time
+            (float, in seconds)
+        :returns: bool indicating test success (inclusive of PASS and SKIP)
+        """
+        # Set duration, exception and status
         self.duration = round(duration, 2)
         self.exception = exception
-        self.success = success
+        self.status = status
 
+        # Set the job content, if given
         if content is not None:
             self.job_content = content
-            
-            if success:
+
+            if self.status == TestResultStatus.PASS:
                 self.message = "TEST PASSED"
-            else:
+            elif self.status == TestResultStatus.FAIL:
                 self.message = "TEST FAILED"
-            
+            elif self.status == TestResultStatus.ERROR:
+                self.message == "TEST FAILED (ERROR)"
+            elif self.status == TestResultStatus.SKIP:
+                self.message = "TEST SKIPPED"
 
             if not config.instance_address.startswith("http://"):
                 sid_template = f"http://{SID_TEMPLATE}"
@@ -96,11 +72,9 @@ class UnitTestResult(BaseModel):
 
         elif content is None:
             self.job_content = None
-            self.success = False
+            self.status = TestResultStatus.ERROR
             if self.exception is not None:
                 self.message = f"EXCEPTION: {str(self.exception)}"
             self.sid_link = NO_SID
 
         return self.success
-
-    

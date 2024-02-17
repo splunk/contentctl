@@ -10,11 +10,11 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
+from contentctl.objects.integration_test import IntegrationTest
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.config import ConfigDetectionConfiguration
-from contentctl.helper.constants import *
-
+from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
 
 class DetectionBuilder():
     security_content_obj : SecurityContentObject
@@ -58,27 +58,41 @@ class DetectionBuilder():
             risk_objects = []
             risk_object_user_types = {'user', 'username', 'email address'}
             risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
+            process_threat_object_types = {'process name','process'}
+            file_threat_object_types = {'file name','file', 'file hash'}
+            url_threat_object_types = {'url string','url'}
 
             if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
                 for entity in self.security_content_obj.tags.observable:
 
                     risk_object = dict()
-                    if entity.type.lower() in risk_object_user_types:
+                    if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
                         risk_object['risk_object_type'] = 'user'
                         risk_object['risk_object_field'] = entity.name
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
                         risk_objects.append(risk_object)
 
-                    elif entity.type.lower() in risk_object_system_types:
+                    elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
                         risk_object['risk_object_type'] = 'system'
                         risk_object['risk_object_field'] = entity.name
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
                         risk_objects.append(risk_object)
 
-                    elif 'Attacker' in entity.role:
+                    elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
                         risk_object['threat_object_field'] = entity.name
-                        risk_object['threat_object_type'] = entity.type.lower()
+                        risk_object['threat_object_type'] = "process"
                         risk_objects.append(risk_object) 
+
+                    elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
+                        risk_object['threat_object_field'] = entity.name
+                        risk_object['threat_object_type'] = "file_name"
+                        risk_objects.append(risk_object) 
+
+                    elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
+                        risk_object['threat_object_field'] = entity.name
+                        risk_object['threat_object_type'] = "url"
+                        risk_objects.append(risk_object) 
+
                     else:
                         risk_object['risk_object_type'] = 'other'
                         risk_object['risk_object_field'] = entity.name
@@ -100,11 +114,41 @@ class DetectionBuilder():
         if self.security_content_obj:
             if 'Endpoint' in str(self.security_content_obj.search):
                 self.security_content_obj.providing_technologies = ["Sysmon", "Microsoft Windows","Carbon Black Response","CrowdStrike Falcon", "Symantec Endpoint Protection"]
+
+            if "`sysmon`" in str(self.security_content_obj.search):
+                self.security_content_obj.providing_technologies = ["Microsoft Sysmon"]
+
             if "`cloudtrail`" in str(self.security_content_obj.search):
                 self.security_content_obj.providing_technologies = ["Amazon Web Services - Cloudtrail"]
+
             if '`wineventlog_security`' in self.security_content_obj.search or '`powershell`' in self.security_content_obj.search:
                 self.security_content_obj.providing_technologies = ["Microsoft Windows"]
 
+            if '`ms_defender`' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Microsoft Defender"]
+            if '`pingid`' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Ping ID"]
+            if '`okta' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Okta"]
+            if '`zeek_' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Zeek"]
+            if '`amazon_security_lake`' in self.security_content_obj.search: 
+                self.security_content_obj.providing_technologies = ["Amazon Security Lake"]
+
+            if '`azure_monitor_aad`' in self.security_content_obj.search :
+                self.security_content_obj.providing_technologies = ["Azure AD", "Entra ID"]
+
+            if '`o365_' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Microsoft Office 365"]
+
+            if '`gsuite' in self.security_content_obj.search or '`google_' in self.security_content_obj.search or '`gws_' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Google Workspace","Google Cloud Platform"]
+
+            if '`splunkd_' in self.security_content_obj.search or 'audit_searches' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Splunk Internal Logs"]
+
+            if '`kube' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Kubernetes"]
     
     def addNesFields(self) -> None:
         if self.security_content_obj:
@@ -280,6 +324,20 @@ class DetectionBuilder():
                 if data_model in self.security_content_obj.search:
                     self.security_content_obj.datamodel.append(data_model)
 
+    def skipIntegrationTests(self) -> None:
+        """
+        Skip all integration tests
+        """
+        # Sanity check for typing and in setObject wasn't called yet 
+        if self.security_content_obj is not None and isinstance(self.security_content_obj, Detection):
+            for test in self.security_content_obj.tests:
+                if isinstance(test, IntegrationTest):
+                    test.skip("TEST SKIPPED: Skipping all integration tests")
+        else:
+            raise ValueError(
+                "security_content_obj must be an instance of Detection to skip integration tests, "
+                f"not {type(self.security_content_obj)}"
+                )
 
     def reset(self) -> None:
         self.security_content_obj = None

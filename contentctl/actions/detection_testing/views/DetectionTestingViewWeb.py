@@ -1,9 +1,8 @@
-from bottle import route, run, template, Bottle, ServerAdapter
+from bottle import template, Bottle, ServerAdapter
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
 
-from contentctl.objects.unit_test_result import UnitTestResult
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 import jinja2
 import webbrowser
@@ -137,7 +136,7 @@ class DetectionTestingViewWeb(DetectionTestingView):
 
         jinja2_template = jinja2.Environment().from_string(STATUS_TEMPLATE)
         summary_dict = self.getSummaryObject(
-            test_model_fields=["success", "message", "sid_link"]
+            test_result_fields=["success", "message", "sid_link"]
         )
 
         res = jinja2_template.render(

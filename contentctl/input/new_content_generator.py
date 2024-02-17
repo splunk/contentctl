@@ -38,8 +38,8 @@ class NewContentGenerator():
             self.output_dto.obj['author'] = answers['detection_author']
             self.output_dto.obj['data_source'] = answers['data_source']
             self.output_dto.obj['type'] = answers['detection_type']
+            self.output_dto.obj['status'] = "production" #start everything as production since that's what we INTEND the content to become   
             self.output_dto.obj['description'] = 'UPDATE_DESCRIPTION'   
-            self.output_dto.obj['description'] = "production" #start everything as production since that's what we INTEND the content to become   
             file_name = self.output_dto.obj['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
             self.output_dto.obj['search'] = answers['detection_search'] + ' | `' + file_name + '_filter`'
             self.output_dto.obj['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
@@ -77,8 +77,8 @@ class NewContentGenerator():
 
         elif input_dto.type == SecurityContentType.stories:
             questions = NewContentQuestions.get_questions_story()
-            self.output_dto.answers=answers
             answers = questionary.prompt(questions)
+            self.output_dto.answers.update(answers)
             self.output_dto.obj['name'] = answers['story_name']
             self.output_dto.obj['id'] = str(uuid.uuid4())
             self.output_dto.obj['version'] = 1

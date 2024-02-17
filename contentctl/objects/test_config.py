@@ -7,7 +7,6 @@ import pathlib
 import yaml
 import os
 from pydantic import BaseModel, validator, root_validator, Extra, Field
-from dataclasses import dataclass
 from typing import Union
 import re
 import docker
@@ -39,6 +38,7 @@ def getTestConfigFromYMLFile(path: pathlib.Path):
 
     except Exception as e:
         print(f"Error loading test configuration file '{path}': {str(e)}")
+
 
 class Infrastructure(BaseModel, extra=Extra.forbid, validate_assignment=True):
     splunk_app_username: Union[str, None] = Field(
@@ -163,6 +163,9 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
         default=DetectionTestingTargetInfrastructure.container,
         title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}",
     )
+
+    persist_and_reuse_container:bool = True
+
     full_image_path: str = Field(
         default="registry.hub.docker.com/splunk/splunk:latest",
         title="Full path to the container image to be used",
@@ -486,7 +489,12 @@ class TestConfig(BaseModel, extra=Extra.forbid, validate_assignment=True):
         default=App.get_default_apps(),
         title="A list of all the apps to be installed on each container",
     )
-    
+    enable_integration_testing: bool = Field(
+        default=False,
+        title="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk"
+        " instance with ES installed)"
+    )
+
 
 
 

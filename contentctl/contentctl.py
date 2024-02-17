@@ -20,7 +20,7 @@ from contentctl.actions.new_content import NewContentInputDto, NewContent
 from contentctl.actions.doc_gen import DocGenInputDto, DocGen
 from contentctl.actions.initialize import Initialize, InitializeInputDto
 from contentctl.actions.api_deploy import API_Deploy, API_DeployInputDto
-
+from contentctl.actions.release_notes import ReleaseNotesInputDto, ReleaseNotes
 from contentctl.input.director import DirectorInputDto
 from contentctl.objects.enums import (
     SecurityContentType,
@@ -344,6 +344,17 @@ def validate(args) -> None:
     validate = Validate()
     return validate.execute(validate_input_dto)
 
+def release_notes(args)-> None:
+
+    config = start(args)
+    director_input_dto = DirectorInputDto(
+        input_path=pathlib.Path(args.path), product=SecurityContentProduct.SPLUNK_APP, config=config
+    )
+
+    release_notes_input_dto = ReleaseNotesInputDto(director_input_dto=director_input_dto)
+
+    release_notes = ReleaseNotes()
+    release_notes.release_notes(release_notes_input_dto, args.old_tag, args.new_tag)
 
 def doc_gen(args) -> None:
     config = start(args)
@@ -472,6 +483,10 @@ def main():
     )
     docs_parser = actions_parser.add_parser(
         "docs", help="create documentation in docs folder"
+    )
+    release_notes_parser = actions_parser.add_parser(
+        "release_notes",
+        help="Compares two tags and create release notes of what ESCU/BA content is added"
     )
 
     test_parser = actions_parser.add_parser(
@@ -676,6 +691,11 @@ def main():
     )
     convert_parser.add_argument("-o", "--output", required=True, type=str, help="output path to store the detections")
     convert_parser.set_defaults(func=convert)
+
+    release_notes_parser.add_argument("--old_tag", "--old_tag", required=False, type=str, help="Choose the tag and compare with previous tag")
+    release_notes_parser.add_argument("--new_tag", "--new_tag", required=True, type=str, default="v4.24.0", help="Choose the tag and compare with previous tag")
+    
+    release_notes_parser.set_defaults(func=release_notes)
 
     # parse them
     args = parser.parse_args()

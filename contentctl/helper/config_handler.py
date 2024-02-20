@@ -5,9 +5,14 @@ import pathlib
 
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.config import Config, TestConfig, ConfigEnrichments
+from contentctl.objects.test_config import InfrastructureConfig, Infrastructure
 from contentctl.objects.enums import DetectionTestingMode
 from typing import Union
 import argparse
+
+from contentctl.objects.enums import (
+    DetectionTestingTargetInfrastructure,
+)
 
 class ConfigHandler:
 
@@ -43,6 +48,9 @@ class ConfigHandler:
         try: 
             if args.dry_run:
                 yml_dict['apps'] = []
+                yml_dict['infrastructure_config'] = InfrastructureConfig(infrastructure_type=DetectionTestingTargetInfrastructure.server, ).__dict__
+                if args.server_info is None:
+                    yml_dict['infrastructure_config']['infrastructures'] = [Infrastructure().__dict__]
             if args.mode != DetectionTestingMode.changes:
                 yml_dict['version_control_config'] = None
             if yml_dict.get("version_control_config", None) is not None:
@@ -50,6 +58,8 @@ class ConfigHandler:
                 yml_dict.get("version_control_config", None)['target_branch'] = args.target_branch or yml_dict.get("version_control_config", None)['target_branch']
                 yml_dict.get("version_control_config", None)['test_branch'] = args.test_branch or yml_dict.get("version_control_config", None)['test_branch']
             if yml_dict.get("infrastructure_config", None) is not None:
+                import pprint
+                pprint.pprint(yml_dict)
                 yml_dict.get("infrastructure_config", None)['infrastructure_type'] = args.infrastructure or yml_dict.get("infrastructure_config", None)['infrastructure_type']
             test_config = TestConfig.parse_obj(yml_dict)
         except Exception as e:

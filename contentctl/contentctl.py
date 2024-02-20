@@ -445,10 +445,10 @@ def main():
     )
 
     parser.add_argument(
-        "--disable_enrichment",
+        "--enable_enrichment",
         required=False,
         action="store_true",
-        help="Enrichment is only REQUIRED when building a release (or testing a release). In most cases, it is not required. Disabling enrichment will significantly speed up all contentctl commands."
+        help="Enrichment is only REQUIRED when building a release (or testing a release). In most cases, it is not required. Disabling enrichment BY DEFAULT (which is the default setting in contentctl.yml) is a signifcant time savings."
     )
 
     parser.set_defaults(func=lambda _: parser.print_help())

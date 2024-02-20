@@ -28,8 +28,11 @@ class ConfigHandler:
 
         try: 
             config = Config.parse_obj(yml_dict)
-            if args.disable_enrichment:
-                config.enrichments = ConfigEnrichments(attack_enrichment=False,cve_enrichment=False,splunk_app_enrichment=False)
+            if args.enable_enrichment:
+                config.enrichments = ConfigEnrichments(attack_enrichment=True,cve_enrichment=True,splunk_app_enrichment=False)
+            else:
+                # Use whatever setting is in contentctl.yml
+                pass
         except Exception as e:
             raise Exception(f"Error reading config file: {str(e)}")
             

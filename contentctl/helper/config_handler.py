@@ -58,8 +58,6 @@ class ConfigHandler:
                 yml_dict.get("version_control_config", None)['target_branch'] = args.target_branch or yml_dict.get("version_control_config", None)['target_branch']
                 yml_dict.get("version_control_config", None)['test_branch'] = args.test_branch or yml_dict.get("version_control_config", None)['test_branch']
             if yml_dict.get("infrastructure_config", None) is not None:
-                import pprint
-                pprint.pprint(yml_dict)
                 yml_dict.get("infrastructure_config", None)['infrastructure_type'] = args.infrastructure or yml_dict.get("infrastructure_config", None)['infrastructure_type']
             test_config = TestConfig.parse_obj(yml_dict)
         except Exception as e:

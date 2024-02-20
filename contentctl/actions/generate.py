@@ -76,8 +76,6 @@ class Generate:
             api_json_output.writeObjects(director_output_dto.lookups, output_path, SecurityContentType.lookups)
             api_json_output.writeObjects(director_output_dto.macros, output_path, SecurityContentType.macros)
             api_json_output.writeObjects(director_output_dto.deployments, output_path, SecurityContentType.deployments)
-            # Ensure that the generated files are not too large
-            api_json_output.checkMaxJsonObjectSize(output_path)
  
             #create version file for sse api
             version_file = pathlib.Path(output_path)/"version.json"

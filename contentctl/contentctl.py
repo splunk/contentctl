@@ -15,6 +15,8 @@ from contentctl.actions.generate import (
     DirectorOutputDto,
     Generate,
 )
+from contentctl.actions.acs_deploy import ACSDeployInputDto, Deploy
+
 from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.new_content import NewContentInputDto, NewContent
 from contentctl.actions.doc_gen import DocGenInputDto, DocGen
@@ -124,8 +126,8 @@ def build(args, config: Union[Config, None] = None) -> DirectorOutputDto:
     )
     generate_input_dto = GenerateInputDto(
         director_input_dto,
-        args.appinspect_api_username,
-        args.appinspect_api_password
+        args.splunk_api_username,
+        args.splunk_api_password,
     )
 
     generate = Generate()
@@ -142,8 +144,23 @@ def api_deploy(args) -> None:
 
 
 def acs_deploy(args) -> None:
-    _ = start(args)
-    raise NotImplementedError("ACS Deploy is not yet implemented.")
+    config = start(args)
+    director_input_dto = DirectorInputDto(
+        input_path=pathlib.Path(os.path.abspath(args.path)), 
+        product=SecurityContentProduct.SPLUNK_APP, 
+        config=config
+    )
+    acs_deply_dto = ACSDeployInputDto(director_input_dto, 
+                      args.splunk_api_username, 
+                      args.splunk_api_password, 
+                      args.splunk_cloud_jwt_token, 
+                      args.splunk_cloud_stack, 
+                      args.stack_type)
+    
+    deploy = Deploy()
+    deploy.execute(acs_deply_dto)
+
+    
 
 
 def test(args: argparse.Namespace):
@@ -289,7 +306,7 @@ def test(args: argparse.Namespace):
         # be able to do it in Test().execute. For now, we will do it here
         app = App(
             uid=9999,
-            appid=config.build.title,
+            appid=config.build.name,
             title=config.build.title,
             release=config.build.version,
             http_path=None,
@@ -467,20 +484,22 @@ def main():
     build_parser = actions_parser.add_parser(
         "build", help="builds a Splunk content pack package to be distributed"
     )
+
+    acs_deploy_parser = actions_parser.add_parser(
+        "acs_deploy", help="Deploys a previously built package via ACS.  Note that 'contentctl build' command MUST have been run prior to running this command. It will NOT build a package itself."
+    )
+
     new_content_parser = actions_parser.add_parser(
         "new", help="create new Splunk content object (detection, or story)"
     )
     reporting_parser = actions_parser.add_parser(
         "report", help="create Splunk content report of the current pack"
     )
-    # TODO: is this action dead?
-    inspect_parser = actions_parser.add_parser(
-        "inspect",
-        help="runs Splunk appinspect on a build Splunk app to ensure that an app meets Splunkbase requirements.",
-    )
+
     api_deploy_parser = actions_parser.add_parser(
         "api_deploy", help="Deploy content via API to a target Splunk Instance."
     )
+
     docs_parser = actions_parser.add_parser(
         "docs", help="create documentation in docs folder"
     )
@@ -528,27 +547,79 @@ def main():
     )
 
     build_parser.add_argument(
-        "--appinspect_api_username",
+        "--splunk_api_username",
         required=False,
         type=str,
         default=None,
         help=(
-            f"Username for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, "
-            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+            f"Username for running AppInspect and, if desired, installing your app via Admin Config Service (ACS). For documentation, "
+            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref and https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps"
         )
     )
     build_parser.add_argument(
-        "--appinspect_api_password",
+        "--splunk_api_password",
         required=False,
         type=str,
         default=None,
         help=(
-            f"Password for running AppInspect on {SecurityContentProduct.SPLUNK_APP.name} ONLY. For documentation, "
-            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref"
+            f"Username for running AppInspect and, if desired, installing your app via Admin Config Service (ACS). For documentation, "
+            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref and https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps"
         )
     )
 
+
     build_parser.set_defaults(func=build)
+
+
+    acs_deploy_parser.add_argument(
+        "--splunk_api_username",
+        required=True,
+        type=str,
+        help=(
+            f"Username for running AppInspect and, if desired, installing your app via Admin Config Service (ACS). For documentation, "
+            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref and https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps"
+        )
+    )
+    acs_deploy_parser.add_argument(
+        "--splunk_api_password",
+        required=True,
+        type=str,
+        help=(
+            f"Username for running AppInspect and, if desired, installing your app via Admin Config Service (ACS). For documentation, "
+            "please review https://dev.splunk.com/enterprise/reference/appinspect/appinspectapiepref and https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps"
+        )
+    )
+    
+    acs_deploy_parser.add_argument(
+        "--splunk_cloud_jwt_token",
+        required=True,
+        type=str,
+        help=(
+            f"Target Splunk Cloud Stack JWT Token for app deployment.  Note that your stack MUST Support Admin Config Server (ACS) and Automated Private App Vetting (APAV). For documentation, "
+            "on creating this token, please review https://docs.splunk.com/Documentation/SplunkCloud/9.1.2312/Security/CreateAuthTokens#Use_Splunk_Web_to_create_authentication_tokens"
+        )
+    )
+
+    acs_deploy_parser.add_argument(
+        "--splunk_cloud_stack",
+        required=True,
+        type=str,
+        help=(
+            f"Target Splunk Cloud Stack for app deployment.  Note that your stack MUST Support Admin Config Server (ACS) and Automated Private App Vetting (APAV). For documentation, "
+            "please review https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps"
+        )
+    )
+
+    acs_deploy_parser.add_argument(
+        "--stack_type",
+        required=True,
+        type=str,
+        choices=["classic","victoria"],
+        help="Identifies your Splunk Cloud Stack as 'classic' or 'victoria' experience"
+    )
+
+
+    acs_deploy_parser.set_defaults(func=acs_deploy)
 
     docs_parser.set_defaults(func=doc_gen)
 
@@ -636,7 +707,7 @@ def main():
     # Even though these are also options to build, make them available to test_parser
     # as well to make the tool easier to use
     test_parser.add_argument(
-        "--appinspect_api_username",
+        "--splunk_api_username",
         required=False,
         type=str,
         default=None,
@@ -646,7 +717,7 @@ def main():
         )
     )
     test_parser.add_argument(
-        "--appinspect_api_password",
+        "--splunk_api_password",
         required=False,
         type=str,
         default=None,
@@ -696,6 +767,8 @@ def main():
     release_notes_parser.add_argument("--new_tag", "--new_tag", required=True, type=str, default="v4.24.0", help="Choose the tag and compare with previous tag")
     
     release_notes_parser.set_defaults(func=release_notes)
+
+
 
     # parse them
     args = parser.parse_args()

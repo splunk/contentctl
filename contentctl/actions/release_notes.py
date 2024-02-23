@@ -27,9 +27,11 @@ class ReleaseNotes:
                             try:
                                 data = yaml.safe_load(file)
                                 # Check and create story link
-                                if 'name' in data and'stories/' in file_path:
-                                    story_link = "https://research.splunk.com" + file_path.replace(repo_path,"")
-                                    story_link=story_link.replace(".yml","/")
+                                if 'name' in data and 'stories/' in file_path:
+                                    story_link = "https://research.splunk.com/stories/" + data['name']
+                                    story_link=story_link.replace(" ","_")
+                                    story_link=story_link.replace("- ","_")
+                                    story_link = story_link.lower()
                                     print("- "+"["+f"{data['name']}"+"]"+"("+story_link+")")
                                 # Check and create detection link
                                 if 'name' in data and 'id' in data and 'detections/' in file_path:

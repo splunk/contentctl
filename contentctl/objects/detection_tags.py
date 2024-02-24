@@ -29,6 +29,7 @@ class DetectionTags(BaseModel):
     atomic_guid: list = None
     drilldown_search: str = None
     manual_test: str = None
+    drill_downs: list = None
 
 
     # enrichment
@@ -45,6 +46,13 @@ class DetectionTags(BaseModel):
     event_schema: str = None
     mappings: list = None
     annotations: dict = None
+
+    @root_validator
+    def check_drilldowns(cls, values):
+        drilldowns = values.get('drilldowns', None)
+        if drilldowns:
+            print(f"Tags of drilldowns: {drilldowns}")
+        return values
 
 
     @validator('cis20')

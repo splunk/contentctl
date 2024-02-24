@@ -9,6 +9,7 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
+from contentctl.objects.drilldowns import Drilldowns
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.enrichments.cve_enrichment import CveEnrichment
@@ -25,13 +26,19 @@ class DetectionBuilder():
         yml_dict["tags"]["name"] = yml_dict["name"]
         self.security_content_obj = Detection.parse_obj(yml_dict)
         self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
-
+    
+    def addDrillDowns(self, deployments: list) -> None:
+        if self.security_content_obj.tags.drill_downs:
+            print(self.security_content_obj.tags.drill_downs)
+            # self.security_content_obj.tags.drill_downs = drill_downs
+            # print(drill_downs)
 
     def addDeployment(self, deployments: list) -> None:
         if self.security_content_obj:
             if not self.security_content_obj.deployment:
                 matched_deployments = []
                 for d in deployments:
+                    # print(deployments)
                     d_tags = dict(d.tags)
                     for d_tag in d_tags.keys():
                         for attr in dir(self.security_content_obj):

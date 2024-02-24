@@ -39,6 +39,7 @@ class SecurityContentType(enum.Enum):
     investigations = 8
     unit_tests = 9
     ssa_detections = 10
+    drilldowns = 11
 
 # Bringing these changes back in line will take some time after
 # the initial merge is complete

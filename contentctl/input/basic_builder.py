@@ -5,7 +5,8 @@ from pydantic import ValidationError
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.enums import SecurityContentType
-from contentctl.objects.deployment import Deployment
+from contentctl.objects.deployment import Deployment   
+from contentctl.objects.drilldowns import Drilldowns
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.playbook import Playbook
@@ -43,6 +44,17 @@ class BasicBuilder():
                 print('Validation Error for file ' + str(path))
                 print(e)
                 sys.exit(1)
+
+        elif type == SecurityContentType.drilldowns:
+            try:
+                self.security_content_obj = Drilldowns.parse_obj(yml_dict)
+                print(self.security_content_obj)
+                
+            except ValidationError as e:
+                print('Validation Error for file ' + str(path))
+                print(e)
+                sys.exit(1)
+
         elif type == SecurityContentType.unit_tests:
             try:
                 self.security_content_obj = UnitTest.parse_obj(yml_dict)

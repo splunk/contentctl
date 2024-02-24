@@ -24,7 +24,7 @@ class GenerateInputDto:
 class Generate:
 
     def execute(self, input_dto: GenerateInputDto) -> DirectorOutputDto:
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
+        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[],[])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)
 

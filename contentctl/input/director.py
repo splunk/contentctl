@@ -29,8 +29,7 @@ from contentctl.objects.enums import DetectionStatus
 from contentctl.helper.utils import Utils
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.objects.config import Config
-
-from contentctl.objects.config import Config
+from contentctl.objects.drilldowns import Drilldowns
 
 
 
@@ -51,6 +50,7 @@ class DirectorOutputDto:
      macros: list[Macro]
      lookups: list[Lookup]
      deployments: list[Deployment]
+     drilldowns: list[Drilldowns]
      ssa_detections: list[SSADetection]
 
 
@@ -95,6 +95,8 @@ class Director():
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
             self.createSecurityContent(SecurityContentType.stories)
+            self.createSecurityContent(SecurityContentType.drilldowns)
+
         elif self.input_dto.product == SecurityContentProduct.SSA:
             self.createSecurityContent(SecurityContentType.ssa_detections)
         
@@ -138,6 +140,11 @@ class Director():
                         self.constructDeployment(self.basic_builder, file)
                         deployment = self.basic_builder.getObject()
                         self.output_dto.deployments.append(deployment)
+
+                elif type == SecurityContentType.drilldowns:
+                        self.constructDrilldowns(self.basic_builder, file)
+                        drilldowns = self.basic_builder.getObject()
+                        self.output_dto.drilldowns.append(drilldowns)
                 
                 elif type == SecurityContentType.playbooks:
                         self.constructPlaybook(self.playbook_builder, file)
@@ -199,6 +206,7 @@ class Director():
         builder.addNist()
         builder.addDatamodel()
         builder.addRBA()
+        builder.addDrillDowns(self.output_dto.drilldowns)
         builder.addProvidingTechnologies()
         builder.addNesFields()
         builder.addAnnotations()
@@ -255,6 +263,9 @@ class Director():
         builder.reset()
         builder.setObject(file_path, SecurityContentType.deployments)
 
+    def constructDrilldowns(self, builder: BasicBuilder, file_path: str) -> None:
+        builder.reset()
+        builder.setObject(file_path, SecurityContentType.drilldowns)
 
     def constructLookup(self, builder: BasicBuilder, file_path: str) -> None:
         builder.reset()

@@ -25,7 +25,7 @@ class BaselineTags(BaseModel):
 
     @field_validator("analytic_story",mode="before")
     def getStories(cls, v:Any, info:ValidationInfo)->List[Story]:
-        return SecurityContentObject.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None), Story)
+        return Story.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None))
 
     # @field_validator("deployment", mode="before")
     # def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:         

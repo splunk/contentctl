@@ -16,6 +16,6 @@ class InvestigationTags(BaseModel):
 
     @field_validator('analytic_story',mode="before")
     @classmethod
-    def mapStoryNamesToStoryObjects(cls, v:Union[list[str], list[Story]], info:ValidationInfo)->list[Story]:
-        return SecurityContentObject.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None), Story)
+    def mapStoryNamesToStoryObjects(cls, v:list[str], info:ValidationInfo)->list[Story]:
+        return Story.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None))
         

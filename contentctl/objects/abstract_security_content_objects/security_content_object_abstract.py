@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment        
@@ -21,6 +21,8 @@ import pathlib
 
 
 NO_FILE_NAME = "NO_FILE_NAME"
+
+
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     model_config = ConfigDict(use_enum_values=True,validate_default=True)
     # name: str = ...
@@ -96,7 +98,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         return v
     
     @classmethod
-    def mapNamesToSecurityContentObjects(cls, v: list[str], director:Union[DirectorOutputDto,None], allowed_type:type)->list[SecurityContentObject]:
+    def mapNamesToSecurityContentObjects(cls, v: list[str], director:Union[DirectorOutputDto,None])->list[Self]:
         if director is not None:
             name_map = director.name_to_content_map
         else:
@@ -104,24 +106,29 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         
 
 
-        mappedObjects: list[SecurityContentObject] = []
+        mappedObjects: list[Self] = []
+        mistyped_objects: list[SecurityContentObject_Abstract] = []
         missing_objects: list[str] = []
         for object_name in v:
             found_object = name_map.get(object_name,None)
             if not found_object:
                 missing_objects.append(object_name)
+            elif not isinstance(found_object,cls):
+                mistyped_objects.append(found_object)
             else:
                 mappedObjects.append(found_object)
         
+        errors:list[str] = []
         if len(missing_objects) > 0:
-            raise ValueError(f"Failed to find the following {allowed_type}: {missing_objects}")
+            errors.append(f"Failed to find the following {type(cls)}: {missing_objects}")
+        if len(missing_objects) > 0:
+            for mistyped_object in mistyped_objects:
+                errors.append(f"'{mistyped_object.name}' expected to have type '{type(Self)}', but actually had type '{type(mistyped_object)}'")
         
-        mistyped_objects = [f"{obj.name}: ACTUAL TYPE: '{type(obj)}'" for obj in mappedObjects if type(obj) != allowed_type]
-        if len(mistyped_objects) > 0:
-            bad_types_string = '\n - '.join([f"Bad object for {obj.name}: Expected type '{allowed_type}' but got type '{type(obj)}'" for obj in mistyped_objects])
-            raise ValueError(f"Expected objects of type {allowed_type}, but got {len(mistyped_objects)} objects with unexpected types:\n - {bad_types_string}")
-
-
+        if len(errors) > 0:
+            error_string = "\n  - ".join(errors)
+            raise ValueError(f"Found {len(errors)} issues when resolving references Security Content Object names:\n  - {error_string}")
+        
         return mappedObjects
 
     @staticmethod
@@ -143,7 +150,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         #TODO: This is clunky, but is imported here to resolve some circular import errors
         from contentctl.objects.deployment import Deployment 
 
-        deployments = SecurityContentObject_Abstract.mapNamesToSecurityContentObjects([converted_type_field], director, Deployment)
+        deployments = Deployment.mapNamesToSecurityContentObjects([converted_type_field], director)
         if len(deployments) == 1:
             return deployments[0]
         elif len(deployments) == 0:

@@ -297,8 +297,13 @@ def doc_gen(args) -> None:
 
 
 def new_content(args) -> None:
+    args.type = "app"
+    args.appinspect_api_username = None
+    args.appinspect_api_password = None
+    b = build(args)
 
     if args.type == "detection":
+        Detection.objectFromQuestionary(b)
         contentType = SecurityContentType.detections
     elif args.type == "story":
         contentType = SecurityContentType.stories

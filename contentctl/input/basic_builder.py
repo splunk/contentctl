@@ -6,7 +6,11 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.deployment import Deployment   
+<<<<<<< Updated upstream
 from contentctl.objects.drilldowns import Drilldowns
+=======
+from contentctl.objects.drilldown import Drilldown
+>>>>>>> Stashed changes
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.playbook import Playbook
@@ -47,9 +51,15 @@ class BasicBuilder():
 
         elif type == SecurityContentType.drilldowns:
             try:
+<<<<<<< Updated upstream
                 self.security_content_obj = Drilldowns.parse_obj(yml_dict)
                 print(self.security_content_obj)
                 
+=======
+                self.security_content_obj = Drilldown.parse_obj(yml_dict)
+                # print("hello")
+                # print(self.security_content_obj)
+>>>>>>> Stashed changes
             except ValidationError as e:
                 print('Validation Error for file ' + str(path))
                 print(e)

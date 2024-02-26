@@ -55,6 +55,7 @@ class Detection_Abstract(SecurityContentObject):
     nes_fields: str = None
     providing_technologies: list = None
     runtime: str = None
+    # drilldowns: list = None
 
     class Config:
         use_enum_values = True

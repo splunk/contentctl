@@ -4,6 +4,7 @@ from pydantic import BaseModel, validator, ValidationError, root_validator
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
+from typing import Optional, List
 
 class DetectionTags(BaseModel):
     # detection spec
@@ -27,10 +28,13 @@ class DetectionTags(BaseModel):
     cve: list = None
     supported_tas: list = None
     atomic_guid: list = None
-    drilldown_search: str = None
     manual_test: str = None
+<<<<<<< Updated upstream
     drill_downs: list = None
 
+=======
+    drilldowns: list = None 
+>>>>>>> Stashed changes
 
     # enrichment
     mitre_attack_enrichments: list[MitreAttackEnrichment] = []
@@ -47,12 +51,22 @@ class DetectionTags(BaseModel):
     mappings: list = None
     annotations: dict = None
 
+<<<<<<< Updated upstream
     @root_validator
     def check_drilldowns(cls, values):
         drilldowns = values.get('drilldowns', None)
         if drilldowns:
             print(f"Tags of drilldowns: {drilldowns}")
         return values
+=======
+    # @root_validator('drilldowns')
+    # def check_drilldowns(cls, values):
+    #     # print(values)
+    #     # drilldowns = values.get('drilldowns', None)
+    #     # if drilldowns:
+    #     #     print(f"Tags of drilldowns: {drilldowns}")
+    #     return values
+>>>>>>> Stashed changes
 
 
     @validator('cis20')

@@ -12,6 +12,7 @@ from contentctl.objects.baseline import Baseline
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.playbook import Playbook
 from contentctl.objects.deployment import Deployment
+from contentctl.objects.drilldown import Drilldown
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.ssa_detection import SSADetection
@@ -29,7 +30,11 @@ from contentctl.objects.enums import DetectionStatus
 from contentctl.helper.utils import Utils
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.objects.config import Config
+<<<<<<< Updated upstream
 from contentctl.objects.drilldowns import Drilldowns
+=======
+
+>>>>>>> Stashed changes
 
 
 
@@ -50,7 +55,11 @@ class DirectorOutputDto:
      macros: list[Macro]
      lookups: list[Lookup]
      deployments: list[Deployment]
+<<<<<<< Updated upstream
      drilldowns: list[Drilldowns]
+=======
+     drilldowns: list[Drilldown]
+>>>>>>> Stashed changes
      ssa_detections: list[SSADetection]
 
 
@@ -142,10 +151,20 @@ class Director():
                         self.output_dto.deployments.append(deployment)
 
                 elif type == SecurityContentType.drilldowns:
+<<<<<<< Updated upstream
                         self.constructDrilldowns(self.basic_builder, file)
                         drilldowns = self.basic_builder.getObject()
                         self.output_dto.drilldowns.append(drilldowns)
                 
+=======
+                        self.constructDrilldown(self.basic_builder, file)
+                        drilldown = self.basic_builder.getObject()
+                        print(f"Appending drilldown: {drilldown}")
+                        self.output_dto.drilldowns.append(drilldown)
+                        print(f"Current drilldowns count: {len(self.output_dto.drilldowns)}")
+                        self.output_dto.drilldowns.append(drilldown)
+                        
+>>>>>>> Stashed changes
                 elif type == SecurityContentType.playbooks:
                         self.constructPlaybook(self.playbook_builder, file)
                         playbook = self.playbook_builder.getObject()
@@ -200,6 +219,7 @@ class Director():
         builder.reset()
         builder.setObject(file_path)
         builder.addDeployment(self.output_dto.deployments)
+        builder.addDrilldown(self.output_dto.drilldowns)
         builder.addMitreAttackEnrichment(self.attack_enrichment)
         builder.addKillChainPhase()
         builder.addCIS()
@@ -263,7 +283,11 @@ class Director():
         builder.reset()
         builder.setObject(file_path, SecurityContentType.deployments)
 
+<<<<<<< Updated upstream
     def constructDrilldowns(self, builder: BasicBuilder, file_path: str) -> None:
+=======
+    def constructDrilldown(self, builder: BasicBuilder, file_path: str) -> None:
+>>>>>>> Stashed changes
         builder.reset()
         builder.setObject(file_path, SecurityContentType.drilldowns)
 

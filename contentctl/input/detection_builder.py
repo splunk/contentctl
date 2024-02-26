@@ -9,7 +9,11 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
+<<<<<<< Updated upstream
 from contentctl.objects.drilldowns import Drilldowns
+=======
+from contentctl.objects.drilldown import Drilldown
+>>>>>>> Stashed changes
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.enrichments.cve_enrichment import CveEnrichment
@@ -20,19 +24,27 @@ from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
 class DetectionBuilder():
     security_content_obj : SecurityContentObject
 
-
     def setObject(self, path: str) -> None:
         yml_dict = YmlReader.load_file(path)
         yml_dict["tags"]["name"] = yml_dict["name"]
         self.security_content_obj = Detection.parse_obj(yml_dict)
         self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
     
+<<<<<<< Updated upstream
     def addDrillDowns(self, deployments: list) -> None:
         if self.security_content_obj.tags.drill_downs:
             print(self.security_content_obj.tags.drill_downs)
             # self.security_content_obj.tags.drill_downs = drill_downs
             # print(drill_downs)
 
+=======
+    def addDrilldown(self, drilldowns: list) -> None:
+        if self.security_content_obj.tags.drilldowns:
+            detection_instance = Detection()  # Assuming Detection is already instantiated
+            print(vars(detection_instance))
+
+            
+>>>>>>> Stashed changes
     def addDeployment(self, deployments: list) -> None:
         if self.security_content_obj:
             if not self.security_content_obj.deployment:

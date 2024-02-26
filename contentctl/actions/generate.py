@@ -40,6 +40,7 @@ class Generate:
             conf_output = ConfOutput(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config)
             conf_output.writeHeaders()
             conf_output.writeObjects(director_output_dto.detections, SecurityContentType.detections)
+            # conf_output.writeObjects(director_output_dto.ddrilldowns, SecurityContentType.detections)
             conf_output.writeObjects(director_output_dto.stories, SecurityContentType.stories)
             conf_output.writeObjects(director_output_dto.baselines, SecurityContentType.baselines)
             conf_output.writeObjects(director_output_dto.investigations, SecurityContentType.investigations)

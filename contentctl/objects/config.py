@@ -20,6 +20,12 @@ class ConfigScheduling(BaseModel):
     schedule_window: str
 
 
+class ConfigDrilldown(BaseModel):
+    drilldown_name: str
+    drilldown_search: str
+    earliest_offset: str = "$info_min_time$"
+    latest_offset: str = "$info_max_time$"
+
 class ConfigNotable(BaseModel):
     rule_description: str
     rule_title: str

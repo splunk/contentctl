@@ -13,7 +13,7 @@ description = {{ detection.description }}
 action.escu.creation_date = {{ detection.date }}
 action.escu.modification_date = {{ detection.date }}
 {% if detection.tags.analytic_story is defined %}
-action.escu.analytic_story = {{ detection.tags.analytic_story | tojson }}
+action.escu.analytic_story = {{ objectListToNameList(detection.tags.analytic_story) | tojson }}
 {% else %}
 action.escu.analytic_story = []
 {% endif %}

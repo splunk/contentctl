@@ -133,7 +133,7 @@ class AtomicTest(BaseModel):
         atomic_tests:List[AtomicTest] = []
         for atomic_file in atomic_files:
             atomic_tests.extend(atomic_file.atomic_tests)
-        print(f"Found {len(atomic_tests)} Atomic Simulations in the Atomic Red Team Repo")
+        print(f"Found [{len(atomic_tests)}] Atomic Simulations in the Atomic Red Team Repo!")
         return atomic_tests
 
     

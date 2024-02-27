@@ -55,8 +55,9 @@ jobs:
 
       - name: Clone the AtomicRedTeam Repo
         run: |
+          cd my_splunk_content_pack
           git clone --depth 1 https://github.com/redcanaryco/atomic-red-team
-          
+
       - name: Run contentctl validate
         run: |
           cd my_splunk_content_pack

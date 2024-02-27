@@ -16,7 +16,7 @@ from contentctl.objects.enums import (
 )
 
 from contentctl.helper.utils import Utils
-
+from contentctl.objects.app import App
 
 ALWAYS_PULL_REPO = False
 PREVIOUSLY_ALLOCATED_PORTS: set[int] = set()
@@ -387,10 +387,10 @@ class TestConfig(BaseModel, extra="forbid", validate_assignment=True):
         default=None,
         title="The password for logging into Splunkbase in case apps must be downloaded",
     )
-    # apps: list[App] = Field(
-    #     default=App.get_default_apps(),
-    #     title="A list of all the apps to be installed on each container",
-    # )
+    apps: list[App] = Field(
+        default=App.get_default_apps(),
+        title="A list of all the apps to be installed on each container",
+    )
     
 
     # # Ensure that at least 1 of test_branch, commit_hash, and/or pr_number were passed.

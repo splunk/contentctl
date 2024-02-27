@@ -32,7 +32,6 @@ references:
 tags:
   analytic_story:
   - Cobalt Strike
-  - NOBELIUM Group
   asset_type: Endpoint
   confidence: 80
   impact: 80

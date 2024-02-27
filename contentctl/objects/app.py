@@ -10,6 +10,7 @@ from pydantic import BaseModel, validator
 from typing import Union
 from contentctl.helper.utils import Utils
 import yaml
+import validators
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{release}/download"
 ENVIRONMENT_PATH_NOT_SET = "ENVIRONMENT_PATH_NOT_SET"
@@ -27,13 +28,13 @@ class App(BaseModel, extra="forbid"):
     title: str
 
     # Self explanatory
-    description: Union[str, None]
+    description: str = "App description"
     release: str
 
-    local_path: Union[str, None]
-    http_path: Union[str, None]
+    local_path: Union[str, None] = None
+    http_path: Union[str, None] = None
     # Splunkbase path is made of the combination of uid and release fields
-    splunkbase_path: Union[str, None]
+    splunkbase_path: Union[str, None] = None
 
     # Ultimate source of the app. Can be a local path or a Splunkbase Path.
     # This will be set via a function call and should not be provided in the YML

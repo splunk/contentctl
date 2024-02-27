@@ -11,22 +11,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python_version: ["3.9", "3.10", "3.11"]
-        operating_system: ["ubuntu-20.04", "ubuntu-22.04"]
+        python_version: ["3.11", "3.12"]
+        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14"]
         #operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
 
 
     runs-on: ${{ matrix.operating_system }}
     steps:
-      - name: Install Docker for macOS
-        run: |
-          brew install docker
-          #import magic fails on macos runner
-          brew install libmagic
-          colima start
-          # Mapping below is required to get the Python docker library working
-          sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
-        if: matrix.operating_system == 'macos-latest'
+      # - name: Install Docker for macOS
+      #   run: |
+      #     brew install docker
+      #     #import magic fails on macos runner
+      #     brew install libmagic
+      #     colima start
+      #     # Mapping below is required to get the Python docker library working
+      #     sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
+      #   if: matrix.operating_system == 'macos-latest'
 
       #Checkout the current branch
       - name: Checkout repo
@@ -53,6 +53,10 @@ jobs:
           cd my_splunk_content_pack
           poetry run contentctl init
 
+      - name: Clone the AtomicRedTeam Repo
+        run: |
+          git clone --depth 1 https://github.com/redcanaryco/atomic-red-team
+          
       - name: Run contentctl validate
         run: |
           cd my_splunk_content_pack

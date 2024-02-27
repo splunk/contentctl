@@ -70,6 +70,15 @@ class Detection_Abstract(SecurityContentObject):
         use_enum_values = True
 
 
+    def model_post_init(self, ctx:dict[str,Any]):
+        # director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
+        # if not isinstance(director,DirectorOutputDto):
+        #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")
+        director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
+        for story in self.tags.analytic_story:
+            story.detections.append(self)
+
+
     def getAnnotationsDictForJson(self)->dict[str,Union[List[Any],int]]:
         result_dict:dict[str,Union[List[Any],int]] = {}
         for k in self.annotations:
@@ -95,7 +104,7 @@ class Detection_Abstract(SecurityContentObject):
     @field_validator("deployment", mode="before")
     def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
         return SecurityContentObject.getDeploymentFromType(info.data.get("type",None), info)
-        # director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
+        # director: Optional[DirectorOutputDto] = info.context.get("output_dto",None) 
         # if not director:
         #     raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
         
@@ -129,19 +138,6 @@ class Detection_Abstract(SecurityContentObject):
     #     if v.lower() not in [el.name.lower() for el in AnalyticsType]:
     #         raise ValueError("not valid analytics type: " + values["name"])
     #     return v
-
-
-    @field_validator('search')
-    @classmethod
-    def encode_error_search(cls, v: Union[str,dict], info: ValidationInfo):
-        if isinstance(v,dict):
-            #This is a special case of the search field.  It can be a dict, containing
-            #a sigma search, if we are running the converter. So we will not
-            #validate the field further. Additional validation will be done
-            #during conversion phase later on
-            return v
-        
-        return SecurityContentObject.free_text_field_valid(v,info)
 
 
     @field_validator('how_to_implement', 'known_false_positives')

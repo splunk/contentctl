@@ -1,3 +1,7 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 
 from pydantic import field_validator, computed_field, Field, ValidationInfo, ConfigDict
 from typing import Optional, List
@@ -27,7 +31,13 @@ class Investigation(SecurityContentObject):
         return self.name.replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower().replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
 
 
-
+    def model_post_init(self, ctx:dict[str,Any]):
+        # director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
+        # if not isinstance(director,DirectorOutputDto):
+        #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")
+        director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
+        for story in self.tags.analytic_story:
+            story.investigations.append(self)
     
 
 

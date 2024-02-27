@@ -163,8 +163,6 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
 
 
-
-
     @staticmethod
     def get_objects_by_name(names_to_find:set[str], objects_to_search:list[SecurityContentObject_Abstract])->Tuple[list[SecurityContentObject_Abstract], set[str]]:
         raise Exception("get_objects_by_name deprecated")

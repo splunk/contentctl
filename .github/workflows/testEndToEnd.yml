@@ -51,6 +51,7 @@ jobs:
       - name: Check our security content repo
         run: |
           git clone --depth 1 https://github.com/splunk/security_content --branch updates_with_new_contentctl
+          rmdir my_splunk_content_pack
           mv security_content my_splunk_content_pack
 
       # - name: Run contentctl init

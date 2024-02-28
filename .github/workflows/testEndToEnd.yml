@@ -48,10 +48,15 @@ jobs:
           poetry install --no-interaction
           mkdir my_splunk_content_pack
 
-      - name: Run contentctl init
+      - name: Check our security content repo
         run: |
-          cd my_splunk_content_pack
-          poetry run contentctl init
+          git clone --depth 1 https://github.com/splunk/security_content --branch updates_with_new_contentctl
+          mv security_content my_splunk_content_pack
+
+      # - name: Run contentctl init
+      #   run: |
+      #     cd my_splunk_content_pack
+      #     poetry run contentctl init
 
       - name: Clone the AtomicRedTeam Repo
         run: |

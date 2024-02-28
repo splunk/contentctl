@@ -295,6 +295,7 @@ class AssetType(str, enum.Enum):
     GSUITE = "GSuite"
     GITHUB = "GitHub"
     GOOGLE_CLOUD_PLATFORM_TENANT = "Google Cloud Platform tenant"
+    IDENTITY = "Identity"
     INFRASTRUCTURE = "Infrastructure"
     INSTANCE = "Instance"
     KUBERNETES = "Kubernetes"
@@ -304,7 +305,9 @@ class AssetType(str, enum.Enum):
     PROXY = "Proxy"
     S3_BUCKET = "S3 Bucket"
     SPLUNK_SERVER = "Splunk Server"
+    VPN_Appliance = "VPN Appliance"
     WEB_SERVER = "Web Server"
+    WEB_APPLICATION = "Web Application"
     WINDOWS = "Windows"
 
 class NistCategory(str, enum.Enum):

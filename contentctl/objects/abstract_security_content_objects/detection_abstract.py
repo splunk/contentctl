@@ -57,7 +57,7 @@ class Detection_Abstract(SecurityContentObject):
     #playbooks: list[Playbook] = []
     #baselines: list[Baseline] = []
     mappings: Optional[dict] = None
-    macros: list[Macro] = []
+    macros: list[Macro] = Field([],validate_default=True)
     lookups: list[Lookup] = []
     cve_enrichment: Optional[List[dict]] = None
     splunk_app_enrichment: Optional[List[dict]] = None
@@ -78,7 +78,34 @@ class Detection_Abstract(SecurityContentObject):
         for story in self.tags.analytic_story:
             story.detections.append(self)
 
+    
+    @field_validator('lookups',mode="before")
+    @classmethod
+    def getDetectionLookups(cls, v:list[str], info:ValidationInfo)->list[Lookup]:
+        return Lookup.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None))
 
+    @field_validator('macros',mode="before")
+    @classmethod
+    def getDetectionMacros(cls, v:list[str], info:ValidationInfo)->list[Macro]:
+        director:DirectorOutputDto = info.context.get("output_dto",None)
+        search_name:Union[str,Any] = info.data.get("name")
+        assert(isinstance(search_name,str))
+        filter_macro_name = search_name.replace(' ', '_').replace('-', '_').replace('.', '_').replace('/', '_').lower() + '_filter'
+        try:        
+            filter_macro = Macro.mapNamesToSecurityContentObjects([filter_macro_name], director)[0]
+        except:
+            # Filter macro did not exist, so create one at runtime
+            filter_macro = Macro.model_validate({"name":filter_macro_name, 
+                                                "definition":'search *', 
+                                                "description":'Update this macro to limit the output results to filter out false positives.'})
+            director.macros.append(filter_macro)
+        
+        macros_from_search = Macro.get_macros(search_name, director)
+        return  macros_from_search + [filter_macro]
+        
+
+        
+        
     def getAnnotationsDictForJson(self)->dict[str,Union[List[Any],int]]:
         result_dict:dict[str,Union[List[Any],int]] = {}
         for k in self.annotations:

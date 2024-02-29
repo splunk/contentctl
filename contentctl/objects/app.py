@@ -1,14 +1,16 @@
 # Needed for a staticmethod to be able to return an instance of the class it belongs to
 from __future__ import annotations
-
+from urllib.parse import urlparse
 
 import pathlib
 import re
 import os
 
-from pydantic import BaseModel, validator
-from typing import Union
+from pydantic import BaseModel, validator, FilePath, FileUrl, computed_field, HttpUrl,Field
+from typing import Union,Optional, Annotated
 from contentctl.helper.utils import Utils
+from contentctl.objects.config import Config
+from contentctl.objects.test_config import TestConfig
 import yaml
 import validators
 
@@ -19,183 +21,75 @@ class App(BaseModel, extra="forbid"):
 
     # uid is a numeric identifier assigned by splunkbase, so
     # homemade applications will not have this
-    uid: Union[int, None]
+    uid: Annotated[int, Field(gt=1,lt=100000)]
 
     # appid is basically the internal name of your app
-    appid: str
+    appid: Optional[Annotated[str,Field(pattern="^[a-zA-Z0-9_-]+$")]]
 
     # Title is the human readable name for your application
-    title: str
+    title: Annotated[str,Field(min_length=1)]
 
     # Self explanatory
-    description: str = "App description"
-    release: str
+    description: Optional[Annotated[str,Field(min_length=1)]]
+    release: Optional[Annotated[str,Field(min_length=1)]]
 
-    local_path: Union[str, None] = None
-    http_path: Union[str, None] = None
+    hardcoded_path: Optional[Union[FilePath,FileUrl]]
+    
     # Splunkbase path is made of the combination of uid and release fields
-    splunkbase_path: Union[str, None] = None
+    @computed_field
+    @property
+    def splunkbase_path(self)->Optional[HttpUrl]:
+        if self.uid is not None and self.release is not None:
+            return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid,release=self.release))
+        return None
 
-    # Ultimate source of the app. Can be a local path or a Splunkbase Path.
-    # This will be set via a function call and should not be provided in the YML
-    # Note that this is the path relative to the container mount
-    environment_path: str = ENVIRONMENT_PATH_NOT_SET
-    force_local:bool = False
-
-    def configure_app_source_for_container(
+    
+    
+    def get_app_source(
         self,
-        splunkbase_username: Union[str, None],
-        splunkbase_password: Union[str, None],
+        config:Config,
         apps_directory: pathlib.Path,
         container_mount_path: pathlib.Path,
-    ):
+    )->str:
 
-        splunkbase_creds_provided = (
-            splunkbase_username is not None and splunkbase_password is not None
-        )
+        assert config.test is not None, f"Error - config.test was 'None'. It should be an instance of TestConfig."
 
-        if splunkbase_creds_provided and self.splunkbase_path is not None and not self.force_local:
-            self.environment_path = self.splunkbase_path
+        test_config:TestConfig = config.test
 
-        elif self.local_path is not None:
-            # local path existence already validated
-            filename = pathlib.Path(self.local_path)
-            destination = str(apps_directory / filename.name)
-            Utils.copy_local_file(self.local_path, destination, verbose_print=True)
-            self.environment_path = str(container_mount_path / filename.name)
 
-        elif self.http_path is not None:
-            from urllib.parse import urlparse
+        if test_config.splunkbase_password is not None and \
+            test_config.splunkbase_username is not None:
+            return str(self.splunkbase_path)
 
-            path_on_server = str(urlparse(self.http_path).path)
-            filename = pathlib.Path(path_on_server)
-            download_path = str(apps_directory / filename.name)
-            Utils.download_file_from_http(self.http_path, download_path)
-            self.environment_path = str(container_mount_path / filename.name)
 
+        if isinstance(self.hardcoded_path, FilePath):
+            filename = pathlib.Path(self.hardcoded_path)
+            destination = apps_directory / filename.name
+            Utils.copy_local_file(str(self.hardcoded_path), str(destination), verbose_print=True)
+        
+        elif isinstance(self.hardcoded_path, FileUrl):
+            
+            file_url_string = str(self.hardcoded_path)
+            server_path = pathlib.Path(urlparse(file_url_string).path)
+            destination = apps_directory / server_path.name
+            Utils.download_file_from_http(file_url_string, str(destination))
+        
         else:
             raise (
                 Exception(
                     f"Unable to download app {self.title}:\n"
                     f"Splunkbase Path : {self.splunkbase_path}\n"
-                    f"local_path      : {self.local_path}\n"
-                    f"http_path       : {self.http_path}\n"
-                    f"Splunkbase Creds: {splunkbase_creds_provided}\n"
+                    f"hardcoded_path  : {self.hardcoded_path}\n"
+                    f"Splunkbase Creds: {False}\n"
                 )
             )
 
-    @staticmethod
-    def validate_string_alphanumeric_with_underscores(input: str) -> bool:
-        if len(input) == 0:
-            raise (ValueError(f"String was length 0"))
+            raise Exception(f"Expected app hardcoded_path to be FilePath or "
+                            f"FileURL, but instead it was {type(self.hardcoded_path)}")
 
-        for letter in input:
-            if not (letter.isalnum() or letter in "_-"):
-                raise (
-                    ValueError(
-                        f"String '{input}' can only contain alphanumeric characters, underscores, and hyphens."
-                    )
-                )
-        return True
 
-    @validator("uid")
-    def validate_uid(cls, v):
-        return v
-
-    @validator("appid")
-    def validate_appid(cls, v):
-        # Called function raises exception on failure, so we don't need to raise it here
-        cls.validate_string_alphanumeric_with_underscores(v)
-        return v
-
-    @validator("title")
-    def validate_title(cls, v):
-        # Basically, a title can be any string
-        return v
-
-    @validator("description")
-    def validate_description(cls, v):
-        # description can be anything
-        return v
-
-    @validator("release")
-    def validate_release(cls, v):
-        # release can be any string
-        return v
-
-    @validator("local_path")
-    def validate_local_path(cls, v):
-        if v is not None:
-            p = pathlib.Path(v)
-            if not p.exists():
-                raise (ValueError(f"The path local_path {p} does not exist"))
-            elif not p.is_file():
-                raise (ValueError(f"The path local_path {p} exists, but is not a file"))
-
-        # release can be any string
-        return v
-
-    @validator("http_path")
-    def validate_http_path(cls, v, values):
-        if v is not None:
-            try:
-                if bool(validators.url(v)) == False:
-                    raise ValueError(f"URL '{v}' is not a valid URL")
-            except Exception as e:
-                raise (ValueError(f"Error validating the http_path: {str(e)}"))
-        return v
-
-    @validator("splunkbase_path")
-    def validate_splunkbase_path(cls, v, values):
-
-        if v is not None:
-            try:
-                if bool(validators.url(v)) == False:
-                    raise ValueError(f"splunkbase_url {v} is not a valid URL")
-            except Exception as e:
-                raise (ValueError(f"Error validating the splunkbase_url: {str(e)}"))
-
-            if (
-                bool(
-                    re.match(
-                        "^https://splunkbase\.splunk\.com/app/\d+/release/.+/download$",
-                        v,
-                    )
-                )
-                == False
-            ):
-                raise (
-                    ValueError(
-                        f"splunkbase_url {v} does not match the format {SPLUNKBASE_URL}"
-                    )
-                )
-
-        # Try to form the URL and error out if Splunkbase is the only place to get the app
-        if values["uid"] is None:
-            if values["must_download_from_splunkbase"]:
-                raise (
-                    ValueError(
-                        f"Error building splunkbase_url. Attempting to"
-                        f" build the url for '{values['title']}', but no "
-                        f"uid was supplied."
-                    )
-                )
-            else:
-                return None
-
-        if values["release"] is None:
-            if values["must_download_from_splunkbase"]:
-                raise (
-                    ValueError(
-                        f"Error building splunkbase_url. Attempting to"
-                        f" build the url for '{values['title']}', but no "
-                        f"release was supplied."
-                    )
-                )
-            else:
-                return None
-        return SPLUNKBASE_URL.format(uid=values["uid"], release=values["release"])
-
+        return str(container_mount_path/destination.name)
+        
     @staticmethod
     def get_default_apps() -> list[App]:
         all_app_objs: list[App] = []

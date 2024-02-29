@@ -1,16 +1,20 @@
 # Needed for a staticmethod to be able to return an instance of the class it belongs to
 from __future__ import annotations
+from typing import Union,Optional, Annotated, TYPE_CHECKING, Self
+if TYPE_CHECKING:
+    from contentctl.objects.config import Config
+    from contentctl.objects.test_config import TestConfig
+
 from urllib.parse import urlparse
 
 import pathlib
 import re
 import os
 
-from pydantic import BaseModel, validator, FilePath, FileUrl, computed_field, HttpUrl,Field
-from typing import Union,Optional, Annotated
+from pydantic import BaseModel, validator, FilePath, computed_field, HttpUrl,Field
+
+
 from contentctl.helper.utils import Utils
-from contentctl.objects.config import Config
-from contentctl.objects.test_config import TestConfig
 import yaml
 import validators
 
@@ -30,10 +34,10 @@ class App(BaseModel, extra="forbid"):
     title: Annotated[str,Field(min_length=1)]
 
     # Self explanatory
-    description: Optional[Annotated[str,Field(min_length=1)]]
-    release: Optional[Annotated[str,Field(min_length=1)]]
+    description: Optional[Annotated[str,Field(min_length=1)]] = None
+    release: Annotated[str,Field(min_length=1)]
 
-    hardcoded_path: Optional[Union[FilePath,FileUrl]]
+    hardcoded_path: Optional[Union[FilePath,HttpUrl]]
     
     # Splunkbase path is made of the combination of uid and release fields
     @computed_field
@@ -43,8 +47,16 @@ class App(BaseModel, extra="forbid"):
             return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid,release=self.release))
         return None
 
-    
-    
+    '''
+    @classmethod
+    def appFromConfig(cls, config:Config)->Self:
+        return cls(config.build.uid, 
+                   config.build.name, 
+                   config.build.title, 
+                   config.build.description, 
+                   config.build.version)
+    '''
+
     def get_app_source(
         self,
         config:Config,
@@ -59,7 +71,13 @@ class App(BaseModel, extra="forbid"):
 
         if test_config.splunkbase_password is not None and \
             test_config.splunkbase_username is not None:
-            return str(self.splunkbase_path)
+            if self.appid == config.build.name:
+                # This is a special case.  This is the app that we have
+                # just built, which we obviously CANNOT get from splunkbase!
+
+                pass
+            else:
+                return str(self.splunkbase_path)
 
 
         if isinstance(self.hardcoded_path, FilePath):
@@ -67,7 +85,7 @@ class App(BaseModel, extra="forbid"):
             destination = apps_directory / filename.name
             Utils.copy_local_file(str(self.hardcoded_path), str(destination), verbose_print=True)
         
-        elif isinstance(self.hardcoded_path, FileUrl):
+        elif isinstance(self.hardcoded_path, HttpUrl):
             
             file_url_string = str(self.hardcoded_path)
             server_path = pathlib.Path(urlparse(file_url_string).path)
@@ -84,14 +102,11 @@ class App(BaseModel, extra="forbid"):
                 )
             )
 
-            raise Exception(f"Expected app hardcoded_path to be FilePath or "
-                            f"FileURL, but instead it was {type(self.hardcoded_path)}")
-
-
         return str(container_mount_path/destination.name)
         
     @staticmethod
     def get_default_apps() -> list[App]:
+        return []
         all_app_objs: list[App] = []
         with open(
             os.path.join(os.path.dirname(__file__), "../", "templates/app_default.yml"),

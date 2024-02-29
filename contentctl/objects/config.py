@@ -97,6 +97,7 @@ class ConfigBuildBa(BaseModel):
 
 
 
+
 class ConfigBuild(BaseModel):
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
@@ -106,6 +107,7 @@ class ConfigBuild(BaseModel):
     build: int = Field(default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
                        title="Build number for your app.  This will always be a number that corresponds to the time of the build in the format YYYYMMDDHHMMSS")
     version: str = Field(default="0.0.1",title="The version of your Content Pack.  This must follow semantic versioning guidelines.")
+    uid: int = Field(ge=20000, lt=100000, default_factory=lambda:random.randint(20000,100000))
     # id has many restrictions:
     # * Omit this setting for apps that are for internal use only and not intended
     # for upload to Splunkbase.

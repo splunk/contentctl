@@ -77,7 +77,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         environment["SPLUNK_START_ARGS"] = "--accept-license"
         environment["SPLUNK_PASSWORD"] = self.infrastructure.splunk_app_password
         environment["SPLUNK_APPS_URL"] = ",".join(
-            p.environment_path for p in self.global_config.apps 
+            str(p.hardcoded_path) for p in self.global_config.apps 
         )
         if (
             self.global_config.splunkbase_password is not None

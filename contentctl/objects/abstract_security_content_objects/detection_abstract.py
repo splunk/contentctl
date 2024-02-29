@@ -88,8 +88,8 @@ class Detection_Abstract(SecurityContentObject):
     @classmethod
     def getDetectionMacros(cls, v:list[str], info:ValidationInfo)->list[Macro]:
         director:DirectorOutputDto = info.context.get("output_dto",None)
-        search_name:Union[str,Any] = info.data.get("name")
-        assert(isinstance(search_name,str))
+        search_name:Union[str,Any] = info.data.get("name",None)
+        assert isinstance(search_name,str), f"Expected 'search_name' to be a string, instead it was [{type(search_name)}]"
         filter_macro_name = search_name.replace(' ', '_').replace('-', '_').replace('.', '_').replace('/', '_').lower() + '_filter'
         try:        
             filter_macro = Macro.mapNamesToSecurityContentObjects([filter_macro_name], director)[0]

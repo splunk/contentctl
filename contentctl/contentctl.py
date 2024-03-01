@@ -354,7 +354,7 @@ def release_notes(args)-> None:
     release_notes_input_dto = ReleaseNotesInputDto(director_input_dto=director_input_dto)
 
     release_notes = ReleaseNotes()
-    release_notes.release_notes(release_notes_input_dto, args.old_tag, args.new_tag)
+    release_notes.release_notes(release_notes_input_dto, args.old_tag, args.new_tag, args.latest_branch)
 
 def doc_gen(args) -> None:
     config = start(args)
@@ -693,7 +693,8 @@ def main():
     convert_parser.set_defaults(func=convert)
 
     release_notes_parser.add_argument("--old_tag", "--old_tag", required=False, type=str, help="Choose the tag and compare with previous tag")
-    release_notes_parser.add_argument("--new_tag", "--new_tag", required=True, type=str, default="v4.24.0", help="Choose the tag and compare with previous tag")
+    release_notes_parser.add_argument("--new_tag", "--new_tag", required=False, type=str, help="Choose the tag and compare with previous tag")
+    release_notes_parser.add_argument("--latest_branch", "--latest_branch", required=False, type=str, help="Choose the tag and compare with previous tag")
     
     release_notes_parser.set_defaults(func=release_notes)
 

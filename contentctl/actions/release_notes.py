@@ -57,32 +57,43 @@ class ReleaseNotes:
                 else:
                     print(f"File not found or is not a file: {file_path}")
 
-    def release_notes(self, input_dto: DirectorInputDto, old_tag:Union[str,None], new_tag:str) -> None:
+    def release_notes(self, input_dto: DirectorInputDto, old_tag:Union[str,None], new_tag:str, latest_branch:str) -> None:
 
         ### Remove hard coded path
         directories = ['detections/','stories/','macros/','lookups/','playbooks']
         repo_path = os.path.abspath(input_dto.director_input_dto.input_path)
         repo = Repo(repo_path)
-        #Ensure the new tag is in the tags
-        if new_tag not in repo.tags:
-            raise ValueError(f"new_tag {new_tag} does not exist in the repository. Make sure your version number follows the convention - v4.X.x")
-        if old_tag is None:
-            #Old tag was not supplied, so find the index of the new tag, then get the tag before it
-            tags_sorted = sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
-            tags_names_sorted = [tag.name for tag in tags_sorted]            
-            new_tag_index = tags_names_sorted.index(new_tag)
-            try:
-                old_tag = tags_names_sorted[new_tag_index+1]
-            except Exception:
-                raise ValueError(f"old_tag cannot be inferred.  {new_tag} is the oldest tag in the repo!")
-            
+        # Ensure the new tag is in the tags if tags are supplied
+      
+        if new_tag:    
+            if new_tag not in repo.tags:
+                raise ValueError(f"new_tag {new_tag} does not exist in the repository. Make sure your branch nameis ")
+            if old_tag is None:
+                #Old tag was not supplied, so find the index of the new tag, then get the tag before it
+                tags_sorted = sorted(repo.tags, key=lambda t: t.commit.committed_datetime, reverse=True)
+                tags_names_sorted = [tag.name for tag in tags_sorted]            
+                new_tag_index = tags_names_sorted.index(new_tag)
+                try:
+                    old_tag = tags_names_sorted[new_tag_index+1]
+                except Exception:
+                    raise ValueError(f"old_tag cannot be inferred.  {new_tag} is the oldest tag in the repo!")   
+            latest_tag = new_tag
+            previous_tag = old_tag   
+            commit1 = repo.commit(latest_tag)
+            commit2 = repo.commit(previous_tag)       
+            diff_index = commit2.diff(commit1)
+
+        # Ensure the branch is in the repo          
+        if latest_branch:
+            #If a branch name is supplied, compare against develop
+            if latest_branch not in repo.branches:
+                raise ValueError(f"latest branch {latest_branch} does not exist in the repository. Make sure your branch name is correct")
+            latest_branch = latest_branch
+            compare_against = "develop"
+            commit1 = repo.commit(latest_branch)
+            commit2 = repo.commit(compare_against)    
+            diff_index = commit2.diff(commit1)
         
-        latest_tag = new_tag
-        previous_tag = old_tag
-        
-        commit1 = repo.commit(latest_tag)
-        commit2 = repo.commit(previous_tag)       
-        diff_index = commit2.diff(commit1)
         modified_files = []
         added_files = []
         for diff in diff_index:
@@ -134,10 +145,17 @@ class ReleaseNotes:
                 lookups_added.append(file)
             if 'playbooks/' in file:
                 playbooks_added.append(file)
+        if new_tag:
 
-        print(f"Generating release notes       - \033[92m{latest_tag}\033[0m")
-        print(f"Compared against               - \033[92m{previous_tag}\033[0m")
-        print("\n## Release notes for ESCU " + latest_tag)
+            print(f"Generating release notes       - \033[92m{latest_tag}\033[0m")
+            print(f"Compared against               - \033[92m{previous_tag}\033[0m")
+            print("\n## Release notes for ESCU " + latest_tag)
+
+        if latest_branch:
+            print(f"Generating release notes       - \033[92m{latest_branch}\033[0m")
+            print(f"Compared against               - \033[92m{compare_against}\033[0m")
+            print("\n## Release notes for ESCU " + latest_branch)
+
         print("\n### New Analytics Story")
         self.create_notes(repo_path, stories_added)
         print("\n### Updated Analytics Story")
@@ -159,6 +177,6 @@ class ReleaseNotes:
         print("\n### Playbooks Updated")    
         self.create_notes(repo_path,playbooks_modified)
 
-        print("\n### Other Updates\n\n") 
+        print("\n### Other Updates\n-\n") 
         
-        print(f"Release notes completed called succesfully for - \033[92m{latest_tag}\033[0m")
+        print(f"Release notes completed succesfully")

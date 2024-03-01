@@ -47,15 +47,18 @@ class App(BaseModel, extra="forbid"):
             return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid,release=self.release))
         return None
 
-    '''
+    
     @classmethod
-    def appFromConfig(cls, config:Config)->Self:
-        return cls(config.build.uid, 
-                   config.build.name, 
-                   config.build.title, 
-                   config.build.description, 
-                   config.build.version)
-    '''
+    def appFromConfig(cls, config:Config):
+        
+        return cls(uid=config.build.uid, 
+                   appid=config.build.name, 
+                   title=config.build.title, 
+                   description=config.build.description, 
+                   release=config.build.version,
+                   hardcoded_path=FilePath("dist/DA-ESS-ContentUpdate-latest.tar.gz"))
+    
+
 
     def get_app_source(
         self,

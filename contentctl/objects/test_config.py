@@ -46,7 +46,7 @@ class Infrastructure(BaseModel, extra="forbid", validate_assignment=True):
         default="password", title="Password for logging into Splunk Server"
     )
     instance_address: AnyHttpUrl = Field(
-        default="http://127.0.0.1",
+        default="localhost",
         title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'",
     )
     @field_serializer('instance_address')

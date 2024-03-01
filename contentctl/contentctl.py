@@ -220,19 +220,17 @@ def test(args: argparse.Namespace):
     director_output_dto = build(args, config)
 
     test_director_output_dto = gitService.get_all_content(director_output_dto)
+    App.appFromConfig(config)
     
     # All this information will later come from the config, so we will
     # be able to do it in Test().execute. For now, we will do it here
     app = App(
-        uid=9999,
-        appid=config.build.title,
+        uid=config.build.uid,
+        appid=config.build.name,
         title=config.build.title,
-        release=config.build.version,
-        http_path=None,
-        local_path=str(pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"),
         description=config.build.description,
-        splunkbase_path=None,
-        force_local=True
+        release=config.build.version,
+        hardcoded_path=pathlib.Path(config.build.path_root)/f"{config.build.name}-{config.build.version}.tar.gz"
     )
 
     # We need to do this instead of appending to retrigger validation.
@@ -570,12 +568,13 @@ def main():
     
 
     print_ascii_art()
+    #args.func(args)
     try:
         args.func(args)
     except Exception as e:
         print(f"Error during contentctl:\n{str(e)}")
         import traceback
         traceback.print_exc()
-        #traceback.print_stack()
+        traceback.print_stack()
         sys.exit(1)
     

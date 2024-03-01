@@ -1,5 +1,5 @@
 from pydantic import BaseModel, PrivateAttr, Field
-from dataclasses import dataclass
+from pydantic.dataclasses import dataclass
 import abc
 import requests
 import splunklib.client as client
@@ -53,7 +53,7 @@ class ContainerStoppedException(Exception):
 
 
 @dataclass(frozen=False)
-class DetectionTestingManagerOutputDto:
+class DetectionTestingManagerOutputDto():
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
     skippedQueue: list[Detection] = Field(default_factory=list)
@@ -218,6 +218,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.pbar.write(
                     f"Error getting API connection (not quitting) '{type(e).__name__}': {str(e)}"
                 )
+                print("wow")
                 # self.pbar.write(
                 #     f"Unhandled exception getting connection to splunk server: {str(e)}"
                 # )

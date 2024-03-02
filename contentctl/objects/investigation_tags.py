@@ -1,11 +1,7 @@
 from __future__ import annotations
-from contentctl.objects.story import Story
-    
-
-from typing import Union
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from contentctl.objects.story import Story
 from contentctl.objects.enums import SecurityContentInvestigationProductName, SecurityDomain
-from contentctl.objects.security_content_object import SecurityContentObject
 
 class InvestigationTags(BaseModel):
     analytic_story: list[Story] = Field([],min_length=1)

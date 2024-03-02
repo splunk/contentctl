@@ -1,12 +1,9 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+from pydantic import BaseModel, Field
+import enum
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
-
-from pydantic import BaseModel, Field
-from typing import Optional
-
-import enum
 
 
 class PlaybookProduct(str,enum.Enum):

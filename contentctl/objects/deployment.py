@@ -1,7 +1,5 @@
-
-import uuid
-import string
-
+from pydantic import Field, computed_field
+from typing import Optional
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.deployment_scheduling import DeploymentScheduling
@@ -10,8 +8,6 @@ from contentctl.objects.deployment_notable import DeploymentNotable
 from contentctl.objects.deployment_rba import DeploymentRBA
 from contentctl.objects.deployment_slack import DeploymentSlack
 from contentctl.objects.deployment_phantom import DeploymentPhantom
-from pydantic import Field, computed_field
-from typing import Optional
 from contentctl.objects.enums import DeploymentType
 
 class Deployment(SecurityContentObject):

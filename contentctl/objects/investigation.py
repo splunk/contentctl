@@ -1,11 +1,8 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, List
+from pydantic import field_validator, computed_field, Field, ValidationInfo, ConfigDict
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
-
-from pydantic import field_validator, computed_field, Field, ValidationInfo, ConfigDict
-from typing import Optional, List
-
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
 from contentctl.objects.investigation_tags import InvestigationTags

@@ -1,17 +1,17 @@
+
+import uuid
+from typing import TYPE_CHECKING, List, Optional, Annotated, Union
+from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo
 from contentctl.objects.story import Story
-import questionary
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
-import uuid
-from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo
+
+
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
 from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
-from typing import List, Optional, Annotated, Union
-from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.atomic import AtomicTest
 
 

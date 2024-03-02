@@ -1,14 +1,14 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING,List
 from contentctl.objects.story_tags import StoryTags
-from typing import List, Optional
+from pydantic import field_validator, Field, ValidationInfo
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
     
 
 from contentctl.objects.security_content_object import SecurityContentObject
-from pydantic import field_validator, Field, ValidationInfo
+
 
 
 

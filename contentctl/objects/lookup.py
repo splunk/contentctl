@@ -1,8 +1,8 @@
 from __future__ import annotations
-
 from pydantic import field_validator, ValidationInfo, model_validator, FilePath
 from typing import Optional, Any, Union
 import re
+
 from contentctl.objects.security_content_object import SecurityContentObject
 
 LOOKUPS_TO_IGNORE = set(["outputlookup"])

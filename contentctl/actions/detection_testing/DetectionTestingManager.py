@@ -22,8 +22,6 @@ import datetime
 
 # from queue import Queue
 
-CONTAINER_APP_PATH = pathlib.Path("apps")
-
 from dataclasses import dataclass
 
 # import threading

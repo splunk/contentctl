@@ -1,16 +1,13 @@
 # Used so that we can have a staticmethod that takes the class 
 # type Macro as an argument
 from __future__ import annotations
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from contentctl.input.director import DirectorOutputDto
-
+from typing import TYPE_CHECKING, List
 import re
 from pydantic import Field
-
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.security_content_object import SecurityContentObject
 
-from typing import Tuple, List
 
 
 MACROS_TO_IGNORE = set(["_filter", "drop_dm_object_name"])

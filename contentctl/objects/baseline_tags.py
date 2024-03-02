@@ -1,5 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from typing import List, Any, Union
+
 from contentctl.objects.story import Story
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.detection import Detection
@@ -8,8 +11,7 @@ from contentctl.objects.enums import SecurityDomain
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
-from typing import List, Any, Union
+
 from contentctl.objects.security_content_object import SecurityContentObject
 
 

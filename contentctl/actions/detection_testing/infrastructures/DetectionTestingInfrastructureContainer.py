@@ -86,6 +86,20 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             environment["SPLUNKBASE_USERNAME"] = self.global_config.splunkbase_username
             environment["SPLUNKBASE_PASSWORD"] = self.global_config.splunkbase_password
 
+
+        def emit_docker_run_equivalent():
+            environment_string = " ".join([f'-e "{k}={environment.get(k)}"' for k in environment.keys()])
+            print(f"docker run -d "\
+                  f"-p {self.infrastructure.web_ui_port}:8000 "
+                  f"-p {self.infrastructure.hec_port}:8088 "
+                  f"-p {self.infrastructure.api_port}:8089 "
+                  f"{environment_string} "            
+                  f" --name {self.get_name()} "
+                  f"--platform linux/amd64"
+                  f"{self.global_config.infrastructure_config.full_image_path}")
+        emit_docker_run_equivalent()
+        import sys
+        sys.exit(1)
         container = self.get_docker_client().containers.create(
             self.global_config.infrastructure_config.full_image_path,
             ports=ports_dict,

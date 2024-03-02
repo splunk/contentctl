@@ -1,9 +1,9 @@
 import re
-
+from typing import List
 from pydantic import BaseModel, validator, ValidationError, model_validator, Field
+
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
-from typing import List, Optional
 from contentctl.objects.enums import SecurityContentProductName
 
 class SSADetectionTags(BaseModel):

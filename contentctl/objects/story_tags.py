@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field
+from typing import List,Set,Optional, Annotated
+
+from enum import Enum
+
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhase, SecurityContentProductName
-from typing import List,Set,Optional
-from typing_extensions import Annotated
-from enum import Enum
+
 
 class StoryUseCase(str,Enum):
    FRAUD_DETECTION = "Fraud Detection"

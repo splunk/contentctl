@@ -175,15 +175,11 @@ class ConfOutput:
         #     except SystemExit as e:
         #         raise Exception(f"Error building package with slim: {str(e)}")
         # else:
-        with tarfile.open(self.getPackagePath(include_version=True), "w:gz") as app_archive:
-            app_archive.add(self.output_path, arcname=os.path.basename(self.output_path)) 
+        with tarfile.open(self.config.getPackageFilePath(include_version=True), "w:gz") as app_archive:
+            app_archive.add(self.config.getPackageDirectoryPath(), arcname=self.config.getPackageDirectoryPath().name) 
                        
-        
-        if not self.output_path.exists():
-            raise (Exception(f"The expected output app path '{self.getPackagePath(include_version=True)}' does not exist"))
-        
-        shutil.copy2(self.getPackagePath(include_version=True), 
-                     self.getPackagePath(include_version=False), 
+        shutil.copy2(self.config.getPackageFilePath(include_version=True), 
+                     self.config.getPackageFilePath(include_version=False), 
                      follow_symlinks=False)
         
         
@@ -205,7 +201,7 @@ class ConfOutput:
             "Cache-Control": "no-cache"
         }
         files = {
-            "app_package": open(self.getPackagePath(include_version=False),"rb"),
+            "app_package": open(self.config.getPackageFilePath(include_version=False),"rb"),
             "included_tags":(None,"cloud")
         } 
         
@@ -256,14 +252,15 @@ class ConfOutput:
         res.raise_for_status()
         report_json = res.json()
         
-        
-        with open(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.html", "wb") as report:
+        appinspect_html_results = pathlib.Path(str(self.config.getPackageFilePath(include_version=True))+"appinspect_api_results.html")
+        appinspect_json_results = pathlib.Path(str(self.config.getPackageFilePath(include_version=True))+"appinspect_api_results.json")
+        with open(appinspect_html_results, "wb") as report:
             report.write(report_html)
-        with open(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.json", "w") as report:
+        with open(appinspect_json_results, "w") as report:
             json.dump(report_json, report)
         
         
-        self.parseAppinspectJsonLogFile(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.json")
+        self.parseAppinspectJsonLogFile(appinspect_json_results)
       
         return None
     

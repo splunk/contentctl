@@ -2,7 +2,7 @@ import os
 import re
 
 from urllib.parse import urlparse
-
+import pathlib
 from contentctl.output.yml_writer import YmlWriter
 from contentctl.objects.enums import SecurityContentType
 from contentctl.output.finding_report_writer import FindingReportObject
@@ -21,7 +21,7 @@ class BAYmlOutput():
             YmlWriter.writeYmlFile(file_path, object)
 
 
-    def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
+    def writeObjects(self, objects: list, output_path: pathlib.Path, type: SecurityContentType = None) -> None:
         for obj in objects: 
             file_name = "ssa___" + self.convertNameToFileName(obj.name, obj.tags)
             if self.isComplexBARule(obj.search):

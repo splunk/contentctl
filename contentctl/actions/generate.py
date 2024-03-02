@@ -26,51 +26,55 @@ class Generate:
 
     def execute(self, input_dto: GenerateInputDto) -> DirectorOutputDto:
         if input_dto.config.build_app or input_dto.config.build_api:    
-            conf_output = ConfOutput(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config)
+            conf_output = ConfOutput(input_dto.config)
             conf_output.writeHeaders()
-            conf_output.writeObjects(director_output_dto.detections, SecurityContentType.detections)
-            conf_output.writeObjects(director_output_dto.stories, SecurityContentType.stories)
-            conf_output.writeObjects(director_output_dto.baselines, SecurityContentType.baselines)
-            conf_output.writeObjects(director_output_dto.investigations, SecurityContentType.investigations)
-            conf_output.writeObjects(director_output_dto.lookups, SecurityContentType.lookups)
-            conf_output.writeObjects(director_output_dto.macros, SecurityContentType.macros)
+            conf_output.writeObjects(input_dto.director_output_dto.detections, SecurityContentType.detections)
+            conf_output.writeObjects(input_dto.director_output_dto.stories, SecurityContentType.stories)
+            conf_output.writeObjects(input_dto.director_output_dto.baselines, SecurityContentType.baselines)
+            conf_output.writeObjects(input_dto.director_output_dto.investigations, SecurityContentType.investigations)
+            conf_output.writeObjects(input_dto.director_output_dto.lookups, SecurityContentType.lookups)
+            conf_output.writeObjects(input_dto.director_output_dto.macros, SecurityContentType.macros)
             conf_output.writeAppConf()
             conf_output.packageApp()
 
             conf_output.inspectAppCLI()
-            if input_dto.appinspect_api_username and input_dto.appinspect_api_password:
-                conf_output.inspectAppAPI(input_dto.appinspect_api_username, input_dto.appinspect_api_password)
+            conf_output.inspectAppAPI()
             
-            print(f'Generate of security content successful to {conf_output.output_path}')
-            return director_output_dto
+            print(f'Generate of security content successful to {conf_output.config.getPackageFilePath()}')
+            return input_dto.director_output_dto
 
-        elif input_dto.director_input_dto.product == SecurityContentProduct.SSA:
-            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_ssa.path_root)
-            shutil.rmtree(output_path + '/srs/', ignore_errors=True)
-            shutil.rmtree(output_path + '/complex/', ignore_errors=True)
-            os.makedirs(output_path + '/complex/')
-            os.makedirs(output_path + '/srs/')     
-            ba_yml_output = BAYmlOutput()
-            ba_yml_output.writeObjects(director_output_dto.ssa_detections, output_path)
-
-        elif input_dto.director_input_dto.product == SecurityContentProduct.API:
-            output_path = os.path.join(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config.build_api.path_root)
-            shutil.rmtree(output_path, ignore_errors=True)
-            os.makedirs(output_path)
+        elif input_dto.config.build_api:    
+            shutil.rmtree(input_dto.config.getAPIPath(), ignore_errors=True)
+            input_dto.config.getAPIPath().mkdir(parents=True)
             api_json_output = ApiJsonOutput()
-            api_json_output.writeObjects(director_output_dto.detections, output_path, SecurityContentType.detections)
-            api_json_output.writeObjects(director_output_dto.stories, output_path, SecurityContentType.stories)
-            api_json_output.writeObjects(director_output_dto.baselines, output_path, SecurityContentType.baselines)
-            api_json_output.writeObjects(director_output_dto.investigations, output_path, SecurityContentType.investigations)
-            api_json_output.writeObjects(director_output_dto.lookups, output_path, SecurityContentType.lookups)
-            api_json_output.writeObjects(director_output_dto.macros, output_path, SecurityContentType.macros)
-            api_json_output.writeObjects(director_output_dto.deployments, output_path, SecurityContentType.deployments)
+            for output_objects, output_type in [(input_dto.director_output_dto.detections, SecurityContentType.detections),
+                                                (input_dto.director_output_dto.stories, SecurityContentType.stories),
+                                                (input_dto.director_output_dto.baselines, SecurityContentType.baselines),
+                                                (input_dto.director_output_dto.investigations, SecurityContentType.investigations),
+                                                (input_dto.director_output_dto.lookups, SecurityContentType.lookups),
+                                                (input_dto.director_output_dto.macros, SecurityContentType.macros),
+                                                (input_dto.director_output_dto.deployments, SecurityContentType.deployments)]:
+                api_json_output.writeObjects(output_objects, input_dto.config.getAPIPath(), output_type)
+           
             
             #create version file for sse api
-            version_file = pathlib.Path(output_path)/"version.json"
+            version_file = input_dto.config.getAPIPath()/"version.json"
             utc_time = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
-            version_dict = {"version":{"name":f"v{input_dto.director_input_dto.config.build.version}","published_at": f"{utc_time}Z"  }}
+            version_dict = {"version":{"name":f"v{input_dto.config.app.version}","published_at": f"{utc_time}Z"  }}
             with open(version_file,"w") as version_f:
                 json.dump(version_dict,version_f)
+
+        elif input_dto.config.build_ssa:
+            
+            srs_path = input_dto.config.getSSAPath() / 'srs'
+            complex_path = input_dto.config.getSSAPath() / 'complex'
+            shutil.rmtree(srs_path, ignore_errors=True)
+            shutil.rmtree(complex_path, ignore_errors=True)
+            srs_path.mkdir(parents=True)
+            complex_path.mkdir(parents=True)
+            ba_yml_output = BAYmlOutput()
+            ba_yml_output.writeObjects(input_dto.director_output_dto.ssa_detections, srs_path)
+
+        
                 
-        return director_output_dto
+        return input_dto.director_output_dto

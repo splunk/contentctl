@@ -98,13 +98,13 @@ class ConfOutput:
                     investigation.search = investigation.search.replace(">","&gt;")
                     investigation.search = investigation.search.replace("<","&lt;")
                     
-                    ConfWriter.writeConfFileHeaderEmpty(
-                        self.output_path/f'default/data/ui/panels/workbench_panel_{response_file_name_xml}', 
-                        self.config)
                     
-                    ConfWriter.writeConfFile( self.output_path/f'default/data/ui/panels/workbench_panel_{response_file_name_xml}',
-                        'panel.j2',
-                        self.config,[investigation.search])
+                    ConfWriter.writeConfFileHeaderEmpty(pathlib.Path(f'default/data/ui/panels/workbench_panel_{response_file_name_xml}'), 
+                                                        self.config)
+                    
+                    ConfWriter.writeConfFile(   pathlib.Path(f'default/data/ui/panels/workbench_panel_{response_file_name_xml}'),
+                                                'panel.j2',
+                                                self.config,[investigation.search])
 
             for output_app_path, template_name in [ ('default/es_investigations.conf', 'es_investigations_investigations.j2'),
                                                     ('default/workflow_actions.conf', 'workflow_actions.j2')]:
@@ -186,9 +186,12 @@ class ConfOutput:
     def getElapsedTime(self, startTime:float)->datetime.timedelta:
         return datetime.timedelta(seconds=round(timeit.default_timer() - startTime))
         
-    def inspectAppAPI(self, username:str, password:str)->None:
+    def inspectAppAPI(self)->None:
+        if self.config.splunk_api_username is None or self.config.splunk_api_password is None:
+            print("splunk_api_username and splunk_api_password not passed on command line")
+            return None
         session = Session()
-        session.auth = HTTPBasicAuth(username, password)
+        session.auth = HTTPBasicAuth(self.config.splunk_api_username, self.config.splunk_api_password)
         APPINSPECT_API_LOGIN = "https://api.splunk.com/2.0/rest/login/splunk"
         res = session.get(APPINSPECT_API_LOGIN)
         #If login failed or other failure, raise an exception

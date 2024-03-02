@@ -179,16 +179,25 @@ class build(validate):
             v.mkdir(parents=True)
         return v
     
+    def getBuildDir(self)->pathlib.Path:
+        return self.path / self.build_path
+
     def getPackageDirectoryPath(self)->pathlib.Path:
-        return self.build_path /  f"{self.app.appid}"
+        return self.getBuildDir() /  f"{self.app.appid}"
         
 
     def getPackageFilePath(self, include_version:bool=False)->pathlib.Path:
         if include_version:
-            return self.build_path / f"{self.app.appid}-{self.app.version}.tar.gz"
+            return self.getBuildDir() / f"{self.app.appid}-{self.app.version}.tar.gz"
         else:
-            return self.build_path / f"{self.app.appid}-latest.tar.gz"
+            return self.getBuildDir() / f"{self.app.appid}-latest.tar.gz"
     
+    def getSSAPath(self)->pathlib.Path:
+        return self.getBuildDir() / "ssa"
+
+    def getAPIPath(self)->pathlib.Path:
+        return self.getBuildDir() / "api"
+
     def getAppTemplatePath(self)->pathlib.Path:
         return self.path/"app_template"
 

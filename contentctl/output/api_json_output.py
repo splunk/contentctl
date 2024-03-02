@@ -1,6 +1,6 @@
 import os
 import json
-
+import pathlib
 
 from contentctl.output.json_writer import JsonWriter
 from contentctl.objects.enums import SecurityContentType
@@ -8,7 +8,7 @@ from contentctl.objects.enums import SecurityContentType
 
 class ApiJsonOutput():
 
- def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
+ def writeObjects(self, objects: list, output_path: pathlib.Path, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:
             obj_array = []
             for detection in objects:

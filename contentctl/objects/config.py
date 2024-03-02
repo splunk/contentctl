@@ -178,6 +178,20 @@ class build(validate):
         elif not v.exists():
             v.mkdir(parents=True)
         return v
+    
+    def getPackageDirectoryPath(self)->pathlib.Path:
+        return self.build_path /  f"{self.app.appid}"
+        
+
+    def getPackageFilePath(self, include_version:bool=False)->pathlib.Path:
+        if include_version:
+            return self.build_path / f"{self.app.appid}-{self.app.version}.tar.gz"
+        else:
+            return self.build_path / f"{self.app.appid}-latest.tar.gz"
+    
+    def getAppTemplatePath(self)->pathlib.Path:
+        return self.path/"app_template"
+
 
 #class Config_Test(BaseModel):
 #    pass

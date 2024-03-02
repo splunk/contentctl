@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 
 from contentctl.objects.enums import SecurityContentProduct, SecurityContentType
-from contentctl.input.director import Director, DirectorInputDto, DirectorOutputDto
+from contentctl.input.director import Director, DirectorOutputDto
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.ba_yml_output import BAYmlOutput
 from contentctl.output.api_json_output import ApiJsonOutput
@@ -14,29 +14,18 @@ import json
 import datetime
 from typing import Union
 
+from contentctl.objects.config import build
+
 @dataclass(frozen=True)
 class GenerateInputDto:
-    director_input_dto: DirectorInputDto
-    appinspect_api_username: Union[str,None] = None
-    appinspect_api_password: Union[str,None] = None
+    director_output_dto: DirectorOutputDto
+    config:build
 
 
 class Generate:
 
     def execute(self, input_dto: GenerateInputDto) -> DirectorOutputDto:
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[],[])
-        director = Director(director_output_dto)
-        director.execute(input_dto.director_input_dto)
-
-        if input_dto.director_input_dto.product == SecurityContentProduct.SPLUNK_APP:
-            if input_dto.appinspect_api_username and input_dto.appinspect_api_password:
-                pass
-            elif input_dto.appinspect_api_username or input_dto.appinspect_api_password:
-                if input_dto.appinspect_api_password:
-                    raise Exception("appinspect_api_password was provided, but appinspect_api_username was not. Please provide both or neither")
-                else:
-                    raise Exception("appinspect_api_username was provided, but appinspect_api_password was not. Please provide both or neither")            
-            
+        if input_dto.config.build_app or input_dto.config.build_api:    
             conf_output = ConfOutput(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config)
             conf_output.writeHeaders()
             conf_output.writeObjects(director_output_dto.detections, SecurityContentType.detections)

@@ -67,6 +67,12 @@ from contentctl.objects.config import Config_Base, Config_App, init, validate, b
 from typing import Union
 from contentctl.actions.validate import Validate
 
+from contentctl.actions.generate import (
+     GenerateInputDto,
+     DirectorOutputDto,
+     Generate,
+)
+
 # def print_ascii_art():
 #     print(
 #         """
@@ -370,7 +376,11 @@ def validate_func(config:validate):
 
 
 def build_func(config:build):
-    print("build")
+    # First, perform validation. Remember that the validate
+    # configuration is actually a subset of the build configuration
+    director_output_dto = validate_func(config)
+    generate = Generate()
+    generate.execute(GenerateInputDto(director_output_dto, config))
 
 def new_func(config:new):
     print("new")

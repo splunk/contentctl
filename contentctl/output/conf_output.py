@@ -14,45 +14,41 @@ import shutil
 import json
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
-from contentctl.objects.config import Config
+from contentctl.objects.config import build
 from requests import Session, post, get
 from requests.auth import HTTPBasicAuth
 
 class ConfOutput:
-
-    input_path: str
-    config: Config
-    output_path: pathlib.Path
+    config: build    
 
 
-    def __init__(self, input_path: str, config: Config):
-        self.input_path = input_path
+    def __init__(self, config: build):
         self.config = config
-        self.dist = pathlib.Path(self.input_path, self.config.build.path_root)
-        self.output_path = self.dist/self.config.build.name
-        self.output_path.mkdir(parents=True, exist_ok=True)
-        template_splunk_app_path = os.path.join(os.path.dirname(__file__), 'templates/splunk_app')
-        shutil.copytree(template_splunk_app_path, self.output_path, dirs_exist_ok=True)
+
+        #Remove the app path, if it exists
+        shutil.rmtree(config.getPackageDirectoryPath(), ignore_errors=True)
+        #Create the output directory, along with parents as required
+        config.getPackageDirectoryPath().mkdir(parents=True, exist_ok=False)
+
+        shutil.copytree(config.getAppTemplatePath(), config.getPackageDirectoryPath())
         
-    def getPackagePath(self, include_version:bool=False)->pathlib.Path:
-        if include_version:
-            return self.dist / f"{self.config.build.name}-{self.config.build.version}.tar.gz"
-        else:
-            return self.dist / f"{self.config.build.name}-latest.tar.gz"
 
     def writeHeaders(self) -> None:
-        ConfWriter.writeConfFileHeader(self.output_path/'default/analyticstories.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'default/savedsearches.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'default/collections.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'default/es_investigations.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'default/macros.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'default/transforms.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'default/workflow_actions.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'default/app.conf', self.config)
-        ConfWriter.writeConfFileHeader(self.output_path/'default/content-version.conf', self.config)
+        for file_path in [  'default/analyticstories.conf', 
+                            'default/savedsearches.conf', 
+                            'default/collections.conf', 
+                            'default/es_investigations.conf', 
+                            'default/macros.conf', 
+                            'default/transforms.conf', 
+                            'default/workflow_actions.conf', 
+                            'default/app.conf',
+                            'default/content-version.conf']:
+            ConfWriter.writeConfFileHeader(pathlib.Path(file_path),self.config)
+
+        
         #The contents of app.manifest are not a conf file, but json.
         #DO NOT write a header for this file type, simply create the file
-        with open(self.output_path/'app.manifest', 'w') as f:
+        with open(self.config.getPackageDirectoryPath() / pathlib.Path('app.manifest'), 'w') as f:
             pass
             
 

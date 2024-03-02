@@ -18,7 +18,7 @@ from contentctl.objects.config import validate
 
 
 class Validate:
-    def execute(self, input_dto: validate) -> None:
+    def execute(self, input_dto: validate) -> DirectorOutputDto:
         director_output_dto = DirectorOutputDto([], [], [], [], [], [], [], [], [],[])
         director = Director(director_output_dto)
         director.execute(input_dto)
@@ -37,7 +37,7 @@ class Validate:
         except ValueError as e:
             print(e)
             sys.exit(1)
-        return None
+        return director_output_dto
 
     def validate_duplicate_uuids(self, security_content_objects:list[SecurityContentObject_Abstract]):
         all_uuids = set()

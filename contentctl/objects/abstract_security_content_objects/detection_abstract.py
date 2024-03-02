@@ -8,6 +8,7 @@ from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
+    
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel

@@ -25,11 +25,13 @@ class ConfOutput:
     def __init__(self, config: build):
         self.config = config
 
+        #Create the build directory if it does not exist
+        config.getPackageDirectoryPath().parent.mkdir(parents=True, exist_ok=True)
+        
         #Remove the app path, if it exists
         shutil.rmtree(config.getPackageDirectoryPath(), ignore_errors=True)
-        #Create the output directory, along with parents as required
-        config.getPackageDirectoryPath().mkdir(parents=True, exist_ok=False)
-
+        
+        #Copy all the template files into the app
         shutil.copytree(config.getAppTemplatePath(), config.getPackageDirectoryPath())
         
 

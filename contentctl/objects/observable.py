@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, validator
 
 from contentctl.objects.constants import *

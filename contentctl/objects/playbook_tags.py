@@ -2,8 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from pydantic import BaseModel, Field
 import enum
-if TYPE_CHECKING:
-    from contentctl.objects.detection import Detection
+from contentctl.objects.detection import Detection
 
 
 class PlaybookProduct(str,enum.Enum):
@@ -29,11 +28,11 @@ class DefendTechnique(str,enum.Enum):
     D3_IRA = "D3-IRA"
     D3_OTF = "D3-OTF"
 class PlaybookTag(BaseModel):
-    analytic_story: list = None
-    detections: list = None
+    analytic_story: Optional[list] = None
+    detections: Optional[list] = None
     platform_tags: list[str] = Field(...,min_length=0)
-    playbook_type: PlaybookType = ...
-    vpe_type: VpeType = ...
+    playbook_type: PlaybookType = Field(...)
+    vpe_type: VpeType = Field(...)
     playbook_fields: list[str] = Field([], min_length=0)
     product: list[PlaybookProduct] = Field([],min_length=0)
     use_cases: list[PlaybookUseCase] = Field([],min_length=0)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, validator, Field, field_validator, field_serializer, ConfigDict, SecretStr, DirectoryPath
 
 from datetime import datetime

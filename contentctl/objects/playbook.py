@@ -1,9 +1,10 @@
 from __future__ import annotations
-
+from typing import TYPE_CHECKING
 from pydantic import field_validator, model_validator, ValidationInfo, Field, FilePath
 
-from contentctl.objects.security_content_object import SecurityContentObject
+
 from contentctl.objects.playbook_tags import PlaybookTag
+from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import PlaybookType
 
 

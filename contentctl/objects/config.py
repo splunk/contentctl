@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator, Field, field_validator, ConfigDict, SecretStr, DirectoryPath
+from pydantic import BaseModel, validator, Field, field_validator, field_serializer, ConfigDict, SecretStr, DirectoryPath
 
 from datetime import datetime
 from typing import Optional,Any,Dict
@@ -90,7 +90,6 @@ class Config_App(BaseModel):
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
     title: str = Field(default="ContentPack",description="Internal name used by your app.  No spaces or special characters.")
-
     prefix: str = Field(default="ContentPack",description="A short prefix to easily identify all your content.")
     build: int = Field(default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
                        description="Build number for your app.  This will always be a number that corresponds to the time of the build in the format YYYYMMDDHHMMSS")
@@ -136,9 +135,12 @@ class Config_App(BaseModel):
 
 class Config_Base(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=False, arbitrary_types_allowed=True)
-    path: DirectoryPath = Field(default=pathlib.Path("."), description="The root of your app.")
+    path: DirectoryPath = Field(default=DirectoryPath("."), description="The root of your app.")
     app:Config_App = Field(default_factory=Config_App)
     
+    @field_serializer('path',when_used='always')
+    def serialize_path(path: DirectoryPath)->str:
+        return str(path)
 
 class init(Config_Base):
     pass

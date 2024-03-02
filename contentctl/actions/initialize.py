@@ -15,8 +15,9 @@ class Initialize:
 
     def execute(self, input_dto: init) -> None:
 
-    
-        YmlWriter.writeYmlFile(os.path.join(init.path, 'contentctl.yml'), RootModel[init](input_dto).model_dump())
+        import pprint
+        pprint.pprint(RootModel[init](input_dto).model_dump())
+        YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl.yml'), RootModel[init](input_dto).model_dump())
 
         
         # This field serialization hack is required to get

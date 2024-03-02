@@ -34,16 +34,16 @@ class ConfOutput:
         
 
     def writeHeaders(self) -> None:
-        for file_path in [  'default/analyticstories.conf', 
-                            'default/savedsearches.conf', 
-                            'default/collections.conf', 
-                            'default/es_investigations.conf', 
-                            'default/macros.conf', 
-                            'default/transforms.conf', 
-                            'default/workflow_actions.conf', 
-                            'default/app.conf',
-                            'default/content-version.conf']:
-            ConfWriter.writeConfFileHeader(pathlib.Path(file_path),self.config)
+        for output_app_path in ['default/analyticstories.conf', 
+                                'default/savedsearches.conf', 
+                                'default/collections.conf', 
+                                'default/es_investigations.conf', 
+                                'default/macros.conf', 
+                                'default/transforms.conf', 
+                                'default/workflow_actions.conf', 
+                                'default/app.conf',
+                                'default/content-version.conf']:
+            ConfWriter.writeConfFileHeader(pathlib.Path(output_app_path),self.config)
 
         
         #The contents of app.manifest are not a conf file, but json.
@@ -53,43 +53,43 @@ class ConfOutput:
             
 
     def writeAppConf(self):
-        ConfWriter.writeConfFile(self.output_path/"default"/"app.conf", "app.conf.j2", self.config, [self.config.build] )
-        ConfWriter.writeConfFile(self.output_path/"default"/"content-version.conf", "content-version.j2", self.config, [self.config.build] )
-        ConfWriter.writeConfFile(self.output_path/"app.manifest", "app.manifest.j2", self.config, [self.config.build])
+        for output_app_path, template_name in [ ("default/app.conf", "app.conf.j2"),
+                                                ("default/content-version.conf", "content-version.j2"),
+                                                ("app.manifest", "app.manifest.j2")]:
+            ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                                    template_name,
+                                    self.config,
+                                    [self.config.app])
 
+        
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:
-            ConfWriter.writeConfFile(self.output_path/'default/savedsearches.conf', 
-                'savedsearches_detections.j2',  
-                self.config, objects)
-
-            ConfWriter.writeConfFile(self.output_path/'default/analyticstories.conf',
-                'analyticstories_detections.j2',
-                self.config, objects)
-
-            ConfWriter.writeConfFile(self.output_path/'default/macros.conf',
-                'macros_detections.j2', 
-                self.config, objects)
+            for output_app_path, template_name in [ ('default/savedsearches.conf', 'savedsearches_detections.j2'),
+                                                    ('default/analyticstories.conf', 'analyticstories_detections.j2'),
+                                                    ('default/macros.conf', 'macros_detections.j2')]:
+                ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                                         template_name,
+                                         self.config,
+                                         objects)
         
         elif type == SecurityContentType.stories:
-            ConfWriter.writeConfFile(self.output_path/'default/analyticstories.conf', 
-                'analyticstories_stories.j2',
-                self.config, objects)
+            ConfWriter.writeConfFile(pathlib.Path('default/analyticstories.conf'), 
+                                    'analyticstories_stories.j2',
+                                    self.config, objects)
 
         elif type == SecurityContentType.baselines:
-            ConfWriter.writeConfFile(self.output_path/'default/savedsearches.conf',
-                'savedsearches_baselines.j2', 
-                self.config, objects)
+            ConfWriter.writeConfFile(pathlib.Path('default/savedsearches.conf'),
+                                    'savedsearches_baselines.j2', 
+                                    self.config, objects)
 
         elif type == SecurityContentType.investigations:
-            ConfWriter.writeConfFile(self.output_path/'default/savedsearches.conf',
-                'savedsearches_investigations.j2',
-                self.config, objects)
-            
-            ConfWriter.writeConfFile(self.output_path/'default/analyticstories.conf',
-                'analyticstories_investigations.j2', 
-                self.config, objects)
-
+            for output_app_path, template_name in [ ('default/savedsearches.conf', 'savedsearches_investigations.j2'),
+                                                    ('default/analyticstories.conf', 'analyticstories_investigations.j2')]:
+                ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                                         template_name,
+                                         self.config,
+                                         objects)
+                
             workbench_panels = []
             for investigation in objects:
                 if investigation.inputs:
@@ -97,6 +97,7 @@ class ConfOutput:
                     workbench_panels.append(investigation)
                     investigation.search = investigation.search.replace(">","&gt;")
                     investigation.search = investigation.search.replace("<","&lt;")
+                    
                     ConfWriter.writeConfFileHeaderEmpty(
                         self.output_path/f'default/data/ui/panels/workbench_panel_{response_file_name_xml}', 
                         self.config)
@@ -105,38 +106,25 @@ class ConfOutput:
                         'panel.j2',
                         self.config,[investigation.search])
 
-            ConfWriter.writeConfFile(self.output_path/'default/es_investigations.conf',
-                'es_investigations_investigations.j2',  
-                self.config, workbench_panels)
-
-            ConfWriter.writeConfFile(self.output_path/'default/workflow_actions.conf',
-                'workflow_actions.j2',  
-                self.config, workbench_panels)   
+            for output_app_path, template_name in [ ('default/es_investigations.conf', 'es_investigations_investigations.j2'),
+                                                    ('default/workflow_actions.conf', 'workflow_actions.j2')]:
+                ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                                            template_name,
+                                            self.config,
+                                            workbench_panels)
 
         elif type == SecurityContentType.lookups:
-            ConfWriter.writeConfFile(self.output_path/'default/collections.conf',
-                'collections.j2', 
-                self.config, objects)
-
-            ConfWriter.writeConfFile(self.output_path/'default/transforms.conf',
-                'transforms.j2', 
-                self.config, objects)
-
+            for output_app_path, template_name in [ ('default/collections.conf', 'collections.j2'),
+                                                    ('default/transforms.conf', 'transforms.j2')]:
+                ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                                            template_name,
+                                            self.config,
+                                            objects)
             
-            if self.input_path is None:
-                raise(Exception(f"input_path is required for lookups, but received [{self.input_path}]"))
-
+        
             #we want to copy all *.mlmodel files as well, not just csvs
-            files = list(glob.iglob(os.path.join(self.input_path, 'lookups', '*.csv'))) + list(glob.iglob(os.path.join(self.input_path, 'lookups', '*.mlmodel')))
-            lookup_folder = self.output_path/"lookups"
-            if lookup_folder.exists():
-                # Remove it since we want to remove any previous lookups that are not
-                # currently part of the app
-                if lookup_folder.is_dir():
-                    shutil.rmtree(lookup_folder)
-                else:
-                    #it's a file, but there should not be a file called lookups
-                    lookup_folder.unlink()
+            files = list(glob.iglob(str(self.config.path/ 'lookups/*.csv'))) + list(glob.iglob(str(self.config.path / 'lookups/*.mlmodel')))
+            lookup_folder = self.config.getPackageDirectoryPath()/"lookups"
             
             # Make the new folder for the lookups 
             lookup_folder.mkdir()
@@ -145,15 +133,14 @@ class ConfOutput:
             for lookup_name in files:
                 lookup_path = pathlib.Path(lookup_name)
                 if lookup_path.is_file():
-                    lookup_target_path = self.output_path/"lookups"/lookup_path.name
-                    shutil.copy(lookup_path, lookup_target_path)
+                    shutil.copy(lookup_path, lookup_folder/lookup_path.name)
                 else:
                     raise(Exception(f"Error copying lookup/mlmodel file.  Path {lookup_path} does not exist or is not a file."))
 
         elif type == SecurityContentType.macros:
-            ConfWriter.writeConfFile(self.output_path/'default/macros.conf',
-                'macros.j2',
-                self.config, objects)
+            ConfWriter.writeConfFile(pathlib.Path('default/macros.conf'),
+                                    'macros.j2',
+                                    self.config, objects)
 
 
     def packageApp(self) -> None:

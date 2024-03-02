@@ -10,7 +10,7 @@ from uuid import UUID
     
 from contentctl.objects.detection import Detection
 from contentctl.objects.story import Story
-from contentctl.objects.config import Config
+
 from contentctl.objects.enums import SecurityContentProduct
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.investigation import Investigation
@@ -22,11 +22,8 @@ from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.atomic import AtomicTest
 from contentctl.objects.security_content_object import SecurityContentObject
 
-@dataclass(frozen=True)
-class DirectorInputDto:
-    input_path: pathlib.Path
-    product: SecurityContentProduct
-    config: Config
+from contentctl.objects.config import validate
+
 
 
 @dataclass()
@@ -68,7 +65,7 @@ from contentctl.enrichments.attack_enrichment import AttackEnrichment
 
 
 class Director():
-    input_dto: DirectorInputDto
+    input_dto: validate
     output_dto: DirectorOutputDto
     basic_builder: BasicBuilder
     playbook_builder: PlaybookBuilder
@@ -78,7 +75,7 @@ class Director():
     detection_builder: DetectionBuilder
     ssa_detection_builder: SSADetectionBuilder
     attack_enrichment: dict
-    config: Config
+    
 
 
     def __init__(self, output_dto: DirectorOutputDto) -> None:
@@ -102,14 +99,14 @@ class Director():
          self.output_dto.atomic_tests = AtomicTest.getAtomicTestsFromArtRepo()
          
     
-    def execute(self, input_dto: DirectorInputDto) -> None:
+    def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
         
-        if self.input_dto.config.enrichments.attack_enrichment:
-            self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path)
+        if self.input_dto.enrichments:
+            self.attack_enrichment = AttackEnrichment.get_attack_lookup(str(self.input_dto.path))
         
         self.basic_builder = BasicBuilder()
-        self.playbook_builder = PlaybookBuilder(self.input_dto.input_path)
+        self.playbook_builder = PlaybookBuilder(self.input_dto.path)
         self.baseline_builder = BaselineBuilder()
         self.investigation_builder = InvestigationBuilder()
         self.story_builder = StoryBuilder()
@@ -119,7 +116,7 @@ class Director():
         # Fetch and load all the atomic tests
         self.getAtomicTests()
 
-        if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
+        if self.input_dto.build_app or self.input_dto.build_app:
             self.createSecurityContent(SecurityContentType.deployments)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
@@ -128,29 +125,27 @@ class Director():
             self.createSecurityContent(SecurityContentType.investigations)
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
-        elif self.input_dto.product == SecurityContentProduct.SSA:
+        elif self.input_dto.build_ssa == SecurityContentProduct.SSA:
             self.createSecurityContent(SecurityContentType.ssa_detections)
         
 
     def createSecurityContent(self, type: SecurityContentType) -> None:
         if type == SecurityContentType.ssa_detections:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
-        elif type == SecurityContentType.unit_tests:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, 'ssa_detections'))
         else:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, str(type.name)))
 
         validation_errors = []
                 
         already_ran = False
         progress_percent = 0
 
-        if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
+        if self.input_dto.build_app or self.input_dto.build_app:
             security_content_files = [f for f in files if not f.name.startswith('ssa___')]
-        elif self.input_dto.product == SecurityContentProduct.SSA:
+        elif self.input_dto.build_ssa:
             security_content_files = [f for f in files if f.name.startswith('ssa___')]
         else:
-            raise(Exception(f"Cannot createSecurityContent for unknown product '{self.input_dto.product}'"))
+            raise(Exception(f"Cannot createSecurityContent for unknown product."))
 
         
         for index,file in enumerate(security_content_files):
@@ -220,7 +215,7 @@ class Director():
                         print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
             
             except (ValidationError, ValueError) as e:
-                relative_path = file.absolute().relative_to(self.input_dto.input_path.absolute())
+                relative_path = file.absolute().relative_to(self.input_dto.path.absolute())
                 validation_errors.append((relative_path,e))
                 
 
@@ -254,14 +249,11 @@ class Director():
         #builder.addMacros(self.output_dto.macros)
         #builder.addLookups(self.output_dto.lookups)
         
-        if self.input_dto.config.enrichments.attack_enrichment:
+        if self.input_dto.enrichments:
             builder.addMitreAttackEnrichment(self.attack_enrichment)
-
-        if self.input_dto.config.enrichments.cve_enrichment:
             builder.addCve()
     
-        if self.input_dto.config.enrichments.splunk_app_enrichment:
-            builder.addSplunkApp()
+        
 
 
     def constructSSADetection(self, builder: DetectionBuilder, file_path: str) -> None:

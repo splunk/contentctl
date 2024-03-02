@@ -159,14 +159,6 @@ class DetectionBuilder():
                     self.security_content_obj.cve_enrichment.append(CveEnrichment.enrich_cve(cve))
 
 
-    def addSplunkApp(self) -> None:
-        if self.security_content_obj:
-            self.security_content_obj.splunk_app_enrichment = []
-            if self.security_content_obj.tags.supported_tas:
-                for splunk_app in self.security_content_obj.tags.supported_tas:
-                    self.security_content_obj.splunk_app_enrichment.append(SplunkAppEnrichment.enrich_splunk_app(splunk_app))
-
-
 
     def reset(self) -> None:
         self.security_content_obj = None

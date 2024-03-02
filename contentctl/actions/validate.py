@@ -9,23 +9,19 @@ from contentctl.objects.enums import SecurityContentProduct
 from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import SecurityContentObject_Abstract
 from contentctl.input.director import (
     Director,
-    DirectorInputDto,
     DirectorOutputDto,
 )
 
+from contentctl.objects.config import validate
 
 
-
-@dataclass(frozen=True)
-class ValidateInputDto:
-    director_input_dto: DirectorInputDto
 
 
 class Validate:
-    def execute(self, input_dto: ValidateInputDto) -> None:
+    def execute(self, input_dto: validate) -> None:
         director_output_dto = DirectorOutputDto([], [], [], [], [], [], [], [], [],[])
         director = Director(director_output_dto)
-        director.execute(input_dto.director_input_dto)
+        director.execute(input_dto)
 
         # uuid validation all objects
         try:

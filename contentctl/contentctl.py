@@ -65,6 +65,7 @@ from contentctl.actions.initialize import Initialize
 from tyro import cli
 from contentctl.objects.config import Config_Base, Config_App, init, validate, build,  new, deploy_acs, deploy_rest
 from typing import Union
+from contentctl.actions.validate import Validate
 
 # def print_ascii_art():
 #     print(
@@ -364,7 +365,9 @@ def init_func(config:init):
 
 
 def validate_func(config:validate):
-    print("validate")
+    validate = Validate()
+    return validate.execute(config)
+
 
 def build_func(config:build):
     print("build")

@@ -109,15 +109,15 @@ class AtomicTest(BaseModel):
         print("Found the Atomic Red Team Repo! We will validate the presence of any atomic_guid fields referenced in your detections.")
 
         atomic_files:List[AtomicFile] = []
-        exceptions:List[Exception] = []
+        error_messages:List[str] = []
         for obj_path in atomics_path.glob("**/T*.yaml"):
             try:
                 atomic_files.append(cls.constructAtomicFile(obj_path))
             except Exception as e:
-                exceptions.append(e)
-        if len(exceptions) > 0:
-            exceptions_string = '\n - '.join([str(e) for e in exceptions])
-            raise ValueError(f"The following {len(exceptions)} were generated when parsing the Atomic Red Team Repo:\n - {exceptions_string}")
+                error_messages.append(f"File [{obj_path}]\n{str(e)}")
+        if len(error_messages) > 0:
+            exceptions_string = '\n - '.join(error_messages)
+            raise ValueError(f"The following {len(error_messages)} were generated when parsing the Atomic Red Team Repo:\n\n{exceptions_string}")
         
         return atomic_files
     

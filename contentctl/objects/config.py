@@ -17,49 +17,49 @@ import pathlib
 #     log_level: str
 
 
-# class ConfigScheduling(BaseModel):
-#     cron_schedule: str
-#     earliest_time: str
-#     latest_time: str
-#     schedule_window: str
+class ConfigScheduling(BaseModel):
+    cron_schedule: str
+    earliest_time: str
+    latest_time: str
+    schedule_window: str
 
 
-# class ConfigNotable(BaseModel):
-#     rule_description: str
-#     rule_title: str
-#     nes_fields: list
+class ConfigNotable(BaseModel):
+    rule_description: str
+    rule_title: str
+    nes_fields: list
 
 
-# class ConfigEmail(BaseModel):
-#     subject: str
-#     to: str
-#     message: str
+class ConfigEmail(BaseModel):
+    subject: str
+    to: str
+    message: str
 
 
-# class ConfigSlack(BaseModel):
-#     channel: str
-#     message: str
+class ConfigSlack(BaseModel):
+    channel: str
+    message: str
 
 
-# class ConfigPhantom(BaseModel):
-#     cam_workers: str
-#     label: str
-#     phantom_server: str
-#     sensitivity: str
-#     severity: str
+class ConfigPhantom(BaseModel):
+    cam_workers: str
+    label: str
+    phantom_server: str
+    sensitivity: str
+    severity: str
 
 
-# class ConfigRba(BaseModel):
-#     enabled: str
+class ConfigRba(BaseModel):
+    enabled: str
 
 
-# class ConfigDetectionConfiguration(BaseModel):
-#     scheduling: ConfigScheduling = ConfigScheduling(cron_schedule="0 * * * *", earliest_time="-70m@m", latest_time="-10m@m", schedule_window="auto")
-#     notable: ConfigNotable = ConfigNotable(rule_description="%description%", rule_title="%name%", nes_fields=["user", "dest", "src"])
-#     email: Optional[ConfigEmail] = None
-#     slack: Optional[ConfigSlack] = None
-#     phantom: Optional[ConfigPhantom] = None
-#     rba: Optional[ConfigRba] = None
+class ConfigDetectionConfiguration(BaseModel):
+    scheduling: ConfigScheduling = ConfigScheduling(cron_schedule="0 * * * *", earliest_time="-70m@m", latest_time="-10m@m", schedule_window="auto")
+    notable: ConfigNotable = ConfigNotable(rule_description="%description%", rule_title="%name%", nes_fields=["user", "dest", "src"])
+    email: Optional[ConfigEmail] = None
+    slack: Optional[ConfigSlack] = None
+    phantom: Optional[ConfigPhantom] = None
+    rba: Optional[ConfigRba] = None
 
 
 # class ConfigAlertAction(BaseModel):
@@ -151,14 +151,13 @@ class validate(Config_Base):
                                                          "This is useful when outputting a release build "\
                                                          "and validating these values, but should otherwise "\
                                                          "be avoided for performance reasons.")
-
+    build_app: bool = Field(default=True, description="Should an app be built and output in the {build_path}?")
+    build_api: bool = Field(default=False, description="Should api objects be built and output in the {build_path}?")
+    build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the {build_path}?")
 
 
 class build(validate):
     build_path: DirectoryPath = Field(default=pathlib.Path("dist"), title="Target path for all build outputs")
-    build_app: bool = Field(default=True, description="Should an app be built and output in the {build_path}?")
-    build_api: bool = Field(default=False, description="Should api objects be built and output in the {build_path}?")
-    build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the {build_path}?")
     splunk_api_username: Optional[str] = Field(default=None,description="Splunk API username used for running appinspect.")
     splunk_api_password: Optional[str] = Field(default=None, exclude=True, description="Splunk API password used for running appinspect.")
 

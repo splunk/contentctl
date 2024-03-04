@@ -61,7 +61,8 @@ class ConfWriter():
 
         j2_env.filters['custom_jinja2_enrichment_filter'] = custom_jinja2_enrichment_filter
         template = j2_env.get_template(template_name)
-        output = template.render(objects=objects, APP_NAME=build.app.prefix)
+        
+        output = template.render(objects=objects, APP_NAME=config.app.label)
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'a') as f:

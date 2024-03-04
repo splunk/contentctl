@@ -22,9 +22,6 @@ from sys import stdout
 from tempfile import TemporaryDirectory, mktemp
 import pathlib
 from contentctl.helper.utils import Utils
-from contentctl.actions.detection_testing.DataManipulation import (
-    DataManipulation,
-)
 import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
@@ -710,12 +707,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     )
                 )
 
-        # Update timestamps before replay
-        if attack_data_file.update_timestamp:
-            data_manipulation = DataManipulation()
-            data_manipulation.manipulate_timestamp(
-                tempfile, attack_data_file.sourcetype, attack_data_file.source
-            )
 
         # Upload the data
         self.format_pbar_string(test.name, "Replaying Data", start_time)

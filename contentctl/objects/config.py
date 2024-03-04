@@ -2,7 +2,7 @@ from __future__ import annotations
 from pydantic import BaseModel, validator, Field, field_validator, field_serializer, ConfigDict, SecretStr, DirectoryPath
 
 from datetime import datetime
-from typing import Optional,Any,Dict
+from typing import Optional,Any,Dict,Annotated
 import semantic_version
 import string
 import random
@@ -111,7 +111,7 @@ class Config_App(BaseModel):
     # * must not be any of the following names: CON, PRN, AUX, NUL,
     #   COM1, COM2, COM3, COM4, COM5, COM6, COM7, COM8, COM9,
     #   LPT1, LPT2, LPT3, LPT4, LPT5, LPT6, LPT7, LPT8, LPT9
-    appid: str = Field(default="ContentPack",description="Internal name used by your app.  No spaces or special characters.")
+    appid: Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]= Field(default="ContentPack",description="Internal name used by your app.  No spaces or special characters.")
     label: str = Field(default="Custom Splunk Content Pack",description="This is the app name that shows in the launcher.")
     author_name: str = Field(default="author name",description="Name of the Content Pack Author.")
     author_email: str = Field(default="author@contactemailaddress.com",description="Contact email for the Content Pack Author")

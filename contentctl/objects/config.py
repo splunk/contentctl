@@ -6,7 +6,7 @@ from typing import Optional,Any,Dict
 import semantic_version
 import string
 import random
-from enum import StrEnum
+from enum import StrEnum, auto
 import pathlib
 #from contentctl.objects.test_config import TestConfig
 
@@ -206,17 +206,19 @@ class build(validate):
 #    pass
 
 class NewContentType(StrEnum):
-    DETECTION = "detection"
-    STORY = "story"
+    detection = auto()
+    story = auto()
+
+
 
 
 class new(BaseModel):
     type: NewContentType
 
-
+  
 class StackType(StrEnum):
-    CLASSIC = "classic"
-    VICTORIA = "victoria"
+    classic = auto()
+    victoria = auto()
 
 
 class deploy_acs(build):

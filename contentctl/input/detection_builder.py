@@ -61,6 +61,7 @@ class DetectionBuilder():
             process_threat_object_types = {'process name','process'}
             file_threat_object_types = {'file name','file', 'file hash'}
             url_threat_object_types = {'url string','url'}
+            ip_threat_object_types = {'ip address'}
 
             if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
                 for entity in self.security_content_obj.tags.observable:
@@ -86,6 +87,11 @@ class DetectionBuilder():
                     elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
                         risk_object['threat_object_field'] = entity.name
                         risk_object['threat_object_type'] = "file_name"
+                        risk_objects.append(risk_object) 
+
+                    elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
+                        risk_object['threat_object_field'] = entity.name
+                        risk_object['threat_object_type'] = "ip_address"
                         risk_objects.append(risk_object) 
 
                     elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:

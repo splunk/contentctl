@@ -1,13 +1,19 @@
 from __future__ import annotations
-from pydantic import BaseModel, validator, Field, field_validator, field_serializer, ConfigDict, SecretStr, DirectoryPath
+from pydantic import (
+    BaseModel, validator, Field, field_validator, 
+    field_serializer, ConfigDict, SecretStr, DirectoryPath,
+    PositiveInt, FilePath, HttpUrl, computed_field
+)
 
 from datetime import datetime
-from typing import Optional,Any,Dict,Annotated
+from typing import Optional,Any,Dict,Annotated,List,Union
 import semantic_version
-import string
 import random
 from enum import StrEnum, auto
 import pathlib
+from contentctl.helper.utils import Utils
+from urllib.parse import urlparse
+from abc import ABC, abstractmethod
 #from contentctl.objects.test_config import TestConfig
 
 
@@ -18,49 +24,7 @@ import pathlib
 #     log_level: str
 
 
-class ConfigScheduling(BaseModel):
-    cron_schedule: str
-    earliest_time: str
-    latest_time: str
-    schedule_window: str
 
-
-class ConfigNotable(BaseModel):
-    rule_description: str
-    rule_title: str
-    nes_fields: list
-
-
-class ConfigEmail(BaseModel):
-    subject: str
-    to: str
-    message: str
-
-
-class ConfigSlack(BaseModel):
-    channel: str
-    message: str
-
-
-class ConfigPhantom(BaseModel):
-    cam_workers: str
-    label: str
-    phantom_server: str
-    sensitivity: str
-    severity: str
-
-
-class ConfigRba(BaseModel):
-    enabled: str
-
-
-class ConfigDetectionConfiguration(BaseModel):
-    scheduling: ConfigScheduling = ConfigScheduling(cron_schedule="0 * * * *", earliest_time="-70m@m", latest_time="-10m@m", schedule_window="auto")
-    notable: ConfigNotable = ConfigNotable(rule_description="%description%", rule_title="%name%", nes_fields=["user", "dest", "src"])
-    email: Optional[ConfigEmail] = None
-    slack: Optional[ConfigSlack] = None
-    phantom: Optional[ConfigPhantom] = None
-    rba: Optional[ConfigRba] = None
 
 
 # class ConfigAlertAction(BaseModel):
@@ -85,17 +49,54 @@ class ConfigDetectionConfiguration(BaseModel):
 #     acs_deployments: list[ConfigDeployACS] = []
 #     rest_api_deployments: list[ConfigDeployRestAPI] = [ConfigDeployRestAPI()]
 
+SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/download"
+
+class App_Base(BaseModel,ABC):
+    uid: int = Field(ge=2, lt=100000, default_factory=lambda:random.randint(20000,100000))
+    title: str = Field(default="Content Pack",description="Human-readable name used by the app. This can have special characters.")
+    appid: Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]= Field(default="ContentPack",description="Internal name used by your app. "
+                                                                    "It may ONLY have characters, numbers, and underscores. No other characters are allowed.")
+    version: str = Field(default="0.0.1",description="The version of your Content Pack.  This must follow semantic versioning guidelines.")
+    
+    
+   
+    def getSplunkbasePath(self)->HttpUrl:
+        return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid, release=self.version))
+
+    @abstractmethod
+    def getApp(self, target_directory:pathlib.Path, config:test)->str:
+        ...
+
+class TestApp(App_Base):
+    hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
+
+    def getApp(self, target_directory:pathlib.Path, config:test)->str:
+        if config.splunk_api_password is not None and config.splunk_api_username is not None:
+            destination = self.getSplunkbasePath()
+        
+        elif isinstance(self.hardcoded_path, FilePath):
+            destination = config.getAppDir() / self.hardcoded_path.name
+            Utils.copy_local_file(str(self.hardcoded_path), 
+                                  str(destination), 
+                                  verbose_print=True)
+
+        elif isinstance(self.hardcoded_path,HttpUrl):
+            file_url_string = str(self.hardcoded_path)
+            server_path = pathlib.Path(urlparse(file_url_string).path)
+            destination = config.getAppDir() / server_path.name
+            Utils.download_file_from_http(file_url_string, str(destination))
+        else:
+            raise Exception(f"Unknown path for app '{self.title}'")
+        
+        return str(destination)
 
 
-class Config_App(BaseModel):
+class CustomApp(App_Base):
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
-    title: str = Field(default="ContentPack",description="Internal name used by your app.  No spaces or special characters.")
     prefix: str = Field(default="ContentPack",description="A short prefix to easily identify all your content.")
-    build: int = Field(default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
+    build: int = Field(exclude=True, default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
                        description="Build number for your app.  This will always be a number that corresponds to the time of the build in the format YYYYMMDDHHMMSS")
-    version: str = Field(default="0.0.1",description="The version of your Content Pack.  This must follow semantic versioning guidelines.")
-    uid: int = Field(ge=20000, lt=100000, default_factory=lambda:random.randint(20000,100000))
     # id has many restrictions:
     # * Omit this setting for apps that are for internal use only and not intended
     # for upload to Splunkbase.
@@ -111,7 +112,7 @@ class Config_App(BaseModel):
     # * must not be any of the following names: CON, PRN, AUX, NUL,
     #   COM1, COM2, COM3, COM4, COM5, COM6, COM7, COM8, COM9,
     #   LPT1, LPT2, LPT3, LPT4, LPT5, LPT6, LPT7, LPT8, LPT9
-    appid: Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]= Field(default="ContentPack",description="Internal name used by your app.  No spaces or special characters.")
+    
     label: str = Field(default="Custom Splunk Content Pack",description="This is the app name that shows in the launcher.")
     author_name: str = Field(default="author name",description="Name of the Content Pack Author.")
     author_email: str = Field(default="author@contactemailaddress.com",description="Contact email for the Content Pack Author")
@@ -132,12 +133,18 @@ class Config_App(BaseModel):
     def validate_build(cls, v, values):
         return int(datetime.utcnow().strftime("%Y%m%d%H%M%S"))
     
+    def getApp(self, target_directory:pathlib.Path, config:test)->str:
+        destination = config.getAppDir() / (config.getPackageFilePath(include_version=True).name)
+        Utils.copy_local_file(str(config.getPackageFilePath(include_version=True)), 
+                              str(destination), 
+                              verbose_print=True)
+        return str(destination)
 
 
 class Config_Base(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=False, arbitrary_types_allowed=True)
     path: DirectoryPath = Field(default=DirectoryPath("."), description="The root of your app.")
-    app:Config_App = Field(default_factory=Config_App)
+    app:CustomApp = Field(default_factory=CustomApp)
     
     @field_serializer('path',when_used='always')
     def serialize_path(path: DirectoryPath)->str:
@@ -212,7 +219,7 @@ class NewContentType(StrEnum):
 
 
 
-class new(BaseModel):
+class new(Config_Base):
     type: NewContentType
 
   
@@ -249,13 +256,35 @@ class deploy_rest(build):
 
 
 
-# class Config(BaseModel, extra="forbid"):
-#     deployments: Deployments = Deployments()
-#     build: Config_App = Config_App()
-#     build_ssa: bool = False
-#     build_api: bool = False
-#     enrichments: ConfigEnrichments = ConfigEnrichments()
-#     test: Optional[TestConfig] = None 
+class Infrastructure(BaseModel):
+    splunk_app_username:str = Field(default="admin", description="Username for logging in to your Splunk Server")
+    splunk_app_password:str = Field(default="password", description="Password for logging in to your Splunk Server.")
+    instance_address:str = Field(..., description="Address of your splunk server.")
+    hec_port: int = Field(default=8088, gt=1, lt=65536, title="HTTP Event Collector Port")
+    web_ui_port: int = Field(default=8000, gt=1, lt=65536, title="Web UI Port")
+    api_port: int = Field(default=8089, gt=1, lt=65536, title="REST API Port")
     
+class Container(Infrastructure):
+    instance_address:str = Field(default="localhost", description="Address of your splunk server.")
+    full_image_path:str = Field(default="https://registry.hub.docker.com/splunk/splunk:latest",
+                                title="Full path to the container image to be used")
+
+class ContainerSettings(BaseModel):
+    leave_running: bool = Field(default=True, description="Leave container running after it is first "
+                                "set up to speed up subsequent test runs.")
+    num_containers: PositiveInt = Field(default=1, description="Number of containers to start in parallel. "
+                                        "Please note that each container is quite expensive to run.  It is not "
+                                        "recommended to run more than 4 containers unless you have a very "
+                                        "well-resourced environment.")
+
+class test(build):
+    test_instance:Container = Container()
+    container_settings:ContainerSettings = ContainerSettings()
+
+    def getAppDir(self)->pathlib.Path:
+        return self.path / "apps"
+
+class test_servers(build):
+    servers:List[Infrastructure] = Field([Infrastructure(instance_address="splunkServerAddress.com")],description="Test against one or more preconfigured servers.")
 
 

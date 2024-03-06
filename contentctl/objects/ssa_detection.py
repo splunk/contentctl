@@ -15,7 +15,6 @@ from contentctl.objects.enums import DataModel
 from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.ssa_detection_tags import SSADetectionTags
-from contentctl.objects.config import ConfigDetectionConfiguration
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup

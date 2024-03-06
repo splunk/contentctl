@@ -53,14 +53,20 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     def getName(self, config:Optional[Config])->str:
         return self.name
 
-    @model_validator(mode="after")
-    def ensureFileNameMatchesSearchName(self):
-        file_name = self.name \
+
+    @classmethod
+    def contentNameToFileName(cls, content_name:str)->str:
+        return content_name \
             .replace(' ', '_') \
             .replace('-','_') \
             .replace('.','_') \
             .replace('/','_') \
             .lower() + ".yml"
+
+
+    @model_validator(mode="after")
+    def ensureFileNameMatchesSearchName(self):
+        file_name = self.contentNameToFileName(self.name)
         
         if (self.file_path is not None and file_name != self.file_path.name):
             raise ValueError(f"The file name MUST be based off the content 'name' field:\n"\

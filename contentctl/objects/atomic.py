@@ -101,7 +101,7 @@ class AtomicTest(BaseModel):
     @classmethod
     def parseArtRepo(cls, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->List[AtomicFile]:
         if not repo_path.is_dir():
-            raise ValueError(f"Atomic Red Team repo does NOT exist at {repo_path.absolute()}. You can check it out with 'git clone https://github.com/redcanaryco/atomic-red-team")
+            raise ValueError(f"Atomic Red Team repo does NOT exist at {repo_path.absolute()}. You can check it out with:\n * git clone --single-branch https://github.com/redcanaryco/atomic-red-team")
         atomics_path = repo_path/"atomics"
         if not atomics_path.is_dir():
             raise ValueError(f"Atomic Red Team repo exists at {repo_path.absolute}, but atomics directory does NOT exist at {atomics_path.absolute()}. Was it deleted or renamed?")

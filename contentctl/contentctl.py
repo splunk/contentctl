@@ -63,9 +63,10 @@
 
 from contentctl.actions.initialize import Initialize
 from tyro import cli
-from contentctl.objects.config import Config_Base, Config_App, init, validate, build,  new, deploy_acs, deploy_rest
+from contentctl.objects.config import Config_Base, CustomApp, init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers
 from typing import Union
 from contentctl.actions.validate import Validate
+from contentctl.actions.new_content import NewContent
 
 from contentctl.actions.generate import (
      GenerateInputDto,
@@ -375,15 +376,15 @@ def validate_func(config:validate):
     return validate.execute(config)
 
 
-def build_func(config:build):
+def build_func(config:build)->DirectorOutputDto:
     # First, perform validation. Remember that the validate
     # configuration is actually a subset of the build configuration
     director_output_dto = validate_func(config)
     generate = Generate()
-    generate.execute(GenerateInputDto(director_output_dto, config))
+    return generate.execute(GenerateInputDto(director_output_dto, config))
 
 def new_func(config:new):
-    print("new")
+    NewContent().execute(config)
 
 def deploy_acs_func(config:deploy_acs):
     print("deploy_acs")
@@ -391,8 +392,14 @@ def deploy_acs_func(config:deploy_acs):
 def deploy_rest_func(config:deploy_rest):
     print("deploy_rest")
 
+def test_func(config:test):
+    director_output_dto = build_func(config)
+
+def test_servers_func(config:test_servers):
+    pass
+
 def main():
-    config = cli(Union[init, validate, build, new, deploy_acs, deploy_rest])
+    config = cli(Union[init, validate, build, new, test, test_servers, deploy_acs, deploy_rest])
     
     if type(config) == init:
         init_func(config)
@@ -406,6 +413,9 @@ def main():
         deploy_acs_func(config)
     elif type(config) == deploy_rest:
         deploy_rest_func(config)
+    elif type(config) == test:
+        test_func(config)
+    
 
 # def legacy_main():
 #     """

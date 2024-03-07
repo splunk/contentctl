@@ -68,10 +68,10 @@ from typing import Union
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
 
-from contentctl.actions.generate import (
-     GenerateInputDto,
+from contentctl.actions.build import (
+     BuildInputDto,
      DirectorOutputDto,
-     Generate,
+     Build,
 )
 
 # def print_ascii_art():
@@ -380,17 +380,18 @@ def build_func(config:build)->DirectorOutputDto:
     # First, perform validation. Remember that the validate
     # configuration is actually a subset of the build configuration
     director_output_dto = validate_func(config)
-    generate = Generate()
-    return generate.execute(GenerateInputDto(director_output_dto, config))
+    builder = Build()
+    return builder.execute(BuildInputDto(director_output_dto, config))
 
 def new_func(config:new):
     NewContent().execute(config)
 
 def deploy_acs_func(config:deploy_acs):
-    print("deploy_acs")
+    raise Exception("deploy acs not yet implemented")
 
 def deploy_rest_func(config:deploy_rest):
-    print("deploy_rest")
+    raise Exception("deploy rest not yet implemented")
+    
 
 def test_func(config:test):
     director_output_dto = build_func(config)

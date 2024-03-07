@@ -17,14 +17,14 @@ from typing import Union
 from contentctl.objects.config import build
 
 @dataclass(frozen=True)
-class GenerateInputDto:
+class BuildInputDto:
     director_output_dto: DirectorOutputDto
     config:build
 
 
-class Generate:
+class Build:
 
-    def execute(self, input_dto: GenerateInputDto) -> DirectorOutputDto:
+    def execute(self, input_dto: BuildInputDto) -> DirectorOutputDto:
         if input_dto.config.build_app or input_dto.config.build_api:    
             conf_output = ConfOutput(input_dto.config)
             conf_output.writeHeaders()
@@ -40,7 +40,7 @@ class Generate:
             conf_output.inspectAppCLI()
             conf_output.inspectAppAPI()
             
-            print(f'Generate of security content successful to {conf_output.config.getPackageFilePath()}')
+            print(f'Build of security content successful to {conf_output.config.getPackageFilePath()}')
             return input_dto.director_output_dto
 
         elif input_dto.config.build_api:    

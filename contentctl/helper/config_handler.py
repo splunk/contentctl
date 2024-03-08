@@ -29,7 +29,7 @@ class ConfigHandler:
         try: 
             config = Config.parse_obj(yml_dict)
             if args.enable_enrichment:
-                config.enrichments = ConfigEnrichments(attack_enrichment=True,cve_enrichment=True,splunk_app_enrichment=False)
+                config.enrichments.attack_enrichment = True
             else:
                 # Use whatever setting is in contentctl.yml
                 pass

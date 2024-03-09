@@ -22,7 +22,7 @@ from contentctl.objects.playbook import Playbook
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.detection import Detection
-from contentctl.objects.test_config import TestConfig
+from contentctl.objects.config import test
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)
@@ -31,221 +31,118 @@ LOGGER = logging.getLogger(__name__)
 SSA_PREFIX = "ssa___"
 from contentctl.input.director import DirectorOutputDto
 
-class GitService:
-    def get_all_content(self, director: DirectorOutputDto) -> DirectorOutputDto:
-        # get a new director that will be used for testing.
-        return director
-        # return DirectorOutputDto(
-        #     self.get_detections(director),
-        #     self.get_stories(director),
-        #     self.get_baselines(director),
-        #     self.get_investigations(director),
-        #     self.get_playbooks(director),
-        #     self.get_macros(director),
-        #     self.get_lookups(director),
-        #     [],
-        #     []
-        # )
+from enum import StrEnum, auto
+import pygit2
+from pygit2.enums import DeltaStatus
+from typing import List
+class Mode(StrEnum):
+    all = auto()
+    changes = auto()
+    selected = auto()
 
-    def get_stories(self, director: DirectorOutputDto) -> list[Story]:
-        stories: list[Story] = []
-        return stories
-
-    def get_baselines(self, director: DirectorOutputDto) -> list[Baseline]:
-        baselines: list[Baseline] = []
-        return baselines
-
-    def get_investigations(self, director: DirectorOutputDto) -> list[Investigation]:
-        investigations: list[Investigation] = []
-        return investigations
-
-    def get_playbooks(self, director: DirectorOutputDto) -> list[Playbook]:
-        playbooks: list[Playbook] = []
-        return playbooks
-
-    def get_macros(self, director: DirectorOutputDto) -> list[Macro]:
-        macros: list[Macro] = []
-        return macros
-
-    def get_lookups(self, director: DirectorOutputDto) -> list[Lookup]:
-        lookups: list[Lookup] = []
-        return lookups
-
-    def filter_detections_by_status(self, detections: list[Detection], 
-                                    statuses_to_test: set[DetectionStatus] = {DetectionStatus.production})->list[Detection]:
-        #print("\n".join(sorted([f"{detection.file_path[92:]} - {detection.status}" for detection in detections if DetectionStatus(detection.status) not in statuses_to_test])))
-        #print()
-        return [detection for detection in detections if DetectionStatus(detection.status) in statuses_to_test]
-
-    def filter_detections_by_type(self, detections: list[Detection], 
-                                  types_to_test: set[AnalyticsType] = {AnalyticsType.Anomaly, AnalyticsType.TTP, AnalyticsType.Hunting})->list[Detection]:
-        #print("\n".join(sorted([f"{detection.file_path[92:]} - {detection.type}" for detection in detections if AnalyticsType(detection.type) not in types_to_test])))
-        #print()
-        return [detection for detection in detections if AnalyticsType(detection.type) in types_to_test]
-    def get_detections(self, director: DirectorOutputDto) -> list[Detection]:
-        if self.config.mode == DetectionTestingMode.selected:
-            detections =  self.get_detections_selected(director)
-        elif self.config.mode == DetectionTestingMode.all:
-            detections =  self.get_detections_all(director)
-        elif self.config.mode == DetectionTestingMode.changes:
-            detections =  self.get_detections_changed(director)
-        else:
-            raise (
-                Exception(
-                    f"Error: Unsupported detection testing mode in GitService: {self.config.mode}"
-                )
-            )
-        
-        
-        detections = self.filter_detections_by_status(detections)
-        
-        detections = self.filter_detections_by_type(detections)
-        return detections
-
-    def get_detections_selected(self, director: DirectorOutputDto) -> list[Detection]:
-        detections_to_test: list[Detection] = []
-        requested_set = set(self.requested_detections)
-        missing_detections: set[pathlib.Path] = set()
-
-        for requested in requested_set:
-            matching = list(
-                filter(
-                    lambda detection: pathlib.Path(detection.file_path).resolve()
-                    == requested.resolve(),
-                    director.detections,
-                )
-            )
-            if len(matching) == 1:
-                detections_to_test.append(matching.pop())
-            elif len(matching) == 0:
-                missing_detections.add(requested)
-            else:
-                raise (
-                    Exception(
-                        f"Error: multiple detection files found when attemping to resolve [{str(requested)}]"
-                    )
-                )
-
-        if len(missing_detections) > 0:
-            missing_detections_str = "\n\t - ".join(
-                [str(path.absolute()) for path in missing_detections]
-            )
-            print(director.detections)
-            raise (
-                Exception(
-                    f"Failed to find the following detection file(s) for testing:\n\t - {missing_detections_str}"
-                )
-            )
-
-        return detections_to_test
-
-    def get_detections_all(self, director: DirectorOutputDto) -> list[Detection]:
-        # Assume we don't need to remove anything, like deprecated or experimental from this
-        return director.detections
-
-    def get_detections_changed(self, director: DirectorOutputDto) -> list[Detection]:
-        if self.repo is None:
-            raise (
-                Exception(
-                    f"Error: self.repo must be initialized before getting changed detections."
-                )
-            )
-        
-        target_branch_repo_object = self.repo.commit(f"origin/{self.config.version_control_config.target_branch}")
-        test_branch_repo_object = self.repo.commit(self.config.version_control_config.test_branch)
-        differences = target_branch_repo_object.diff(test_branch_repo_object)
-        
-        new_content = []
-        modified_content =  []
-        deleted_content = []
-        renamed_content = []
-
-        for content in differences.iter_change_type("M"):
-            modified_content.append(content.b_path)
-        for content in differences.iter_change_type("A"):
-            new_content.append(content.b_path)
-        for content in differences.iter_change_type("D"):
-            deleted_content.append(content.b_path)
-        for content in differences.iter_change_type("R"):
-            renamed_content.append(content.b_path)
-            
-        #Changes to detections, macros, and lookups should trigger a re-test for anything which uses them
-        changed_lookups_list = list(filter(lambda x: x.startswith("lookups"), new_content+modified_content))
-        changed_lookups = set()
-        
-        #We must account for changes to the lookup yml AND for the underlying csv
-        for lookup in changed_lookups_list:
-            if lookup.endswith(".csv"): 
-                lookup = lookup.replace(".csv", ".yml")
-            changed_lookups.add(lookup)
-
-        # At some point we should account for macros which contain other macros...
-        changed_macros = set(filter(lambda x: x.startswith("macros"), new_content+modified_content))
-        changed_macros_and_lookups = set([str(pathlib.Path(filename).absolute()) for filename in changed_lookups.union(changed_macros)])
-
-        changed_detections = set(filter(lambda x: x.startswith("detections"), new_content+modified_content+renamed_content))
-
-        #Check and see if content that has been modified uses any of the changed macros or lookups
-        for detection in director.detections:
-            deps = set([content.file_path for content in detection.get_content_dependencies()])
-            if not deps.isdisjoint(changed_macros_and_lookups):
-                changed_detections.add(detection.file_path)
-
-        changed_detections_string = '\n - '.join(changed_detections)
-        #print(f"The following [{len(changed_detections)}] detections, or their dependencies (macros/lookups), have changed:\n - {changed_detections_string}")
-        return Detection.get_detections_from_filenames(changed_detections, director.detections)
-
-    def __init__(self, config: TestConfig):
-        
-        self.requested_detections: list[pathlib.Path] = []
+class simpleGit:
+    def __init__(self, director:DirectorOutputDto, config:test):
+        self.director = director
         self.config = config
-        if config.version_control_config is not None:
-            self.repo = git.Repo(config.version_control_config.repo_path)
+        self.repo = pygit2.Repository(path=str(self.config.path))
+
+    def getContent(self, mode:Mode)->List[Detection]:
+        if mode == Mode.all:
+            return self.getAll()
+        elif mode == Mode.selected:
+            return self.getSelected()
+        elif mode == Mode.changes:
+            return self.getChanges()
         else:
-            self.repo = None
-            
+            raise Exception(f"Unsupported Mode '{mode}'")
+
+    def getChanges(self,target_branch:str)->List[Detection]:
+        #diffs = self.repo.diff("updates_for_pydantic2","removeTest", context_lines=0, interhunk_lines=0)
+        try:
+            target_tree = self.repo.revparse_single(target_branch).tree
+            diffs = self.repo.index.diff_to_tree(target_tree)
+        except Exception as e:
+            raise Exception(f"Error parsing diff target_branch '{target_branch}'. Are you certain that it exists?")
         
-        if config.mode == DetectionTestingMode.changes: 
-            if self.repo is None:
-                raise Exception("You are using detection mode 'changes', but the app does not have a version_control_config in contentctl_test.yml.")
-            return
-        elif config.mode == DetectionTestingMode.all:
-            return
-        elif config.mode == DetectionTestingMode.selected:
-            if config.detections_list is None or len(config.detections_list) < 1:
-                raise (
-                    Exception(
-                        f"Error: detection mode [{config.mode}] REQUIRES that [{config.detections_list}] contains 1 or more detections, but the value is [{config.detections_list}]"
-                    )
-                )
+        #Get the uncommitted changes in the current directory
+        diffs2 = self.repo.index.diff_to_workdir()
+        
+        #Combine the uncommitted changes with the committed changes
+        all_diffs = list(diffs) + list(diffs2)
+
+        #Make a filename to content map
+        filepath_to_content_map = { obj.file_path:obj for (_,obj) in self.director.name_to_content_map.items()} 
+        updated_detections:List[Detection] = []
+        updated_macros:List[Macro] = []
+        updated_lookups:List[Lookup] =[]
+
+        for diff in all_diffs:
+            if type(diff) == pygit2.Patch:
+                if diff.delta.status in (DeltaStatus.ADDED, DeltaStatus.MODIFIED, DeltaStatus.RENAMED):
+                    print(f"{diff.delta.new_file.raw_path}:{DeltaStatus(diff.delta.status).name}")
+                    decoded_path = pathlib.Path(diff.delta.new_file.raw_path.decode('utf-8'))
+                    if 'detections/' in str(decoded_path) and decoded_path.suffix == ".yml":
+                        detectionObject = filepath_to_content_map.get(decoded_path, None)
+                        if isinstance(detectionObject, Detection):
+                            updated_detections.append(detectionObject)
+                        else:
+                            raise Exception(f"Error getting detection object for file {str(decoded_path)}")
+                        
+                    elif 'macros/' in str(decoded_path) and decoded_path.suffix == ".yml":
+                        macroObject = filepath_to_content_map.get(decoded_path, None)
+                        if isinstance(macroObject, Macro):
+                            updated_macros.append(macroObject)
+                        else:
+                            raise Exception(f"Error getting macro object for file {str(decoded_path)}")
+
+                    elif 'lookups/' in str(decoded_path):
+                        # We need to convert this to a yml. This means we will catch
+                        # both changes to a csv AND changes to the YML that uses it
+                        decoded_path = decoded_path.with_suffix(".yml")    
+                        lookupObject = filepath_to_content_map.get(decoded_path, None)
+                        if isinstance(lookupObject, Lookup):
+                            # If the CSV and YML were changed, it is possible that 
+                            # both could be added to the list. Only add it once
+                            if lookupObject not in updated_lookups:
+                                updated_lookups.append(lookupObject)
+                        else:
+                            raise Exception(f"Error getting lookup object for file {str(decoded_path)}")
+
+                    else:
+                        print(f"Ignore changes to file {decoded_path} since it is not a detection, macro, or lookup.")
+                
+                # else:
+                #     print(f"{diff.delta.new_file.raw_path}:{DeltaStatus(diff.delta.status).name} (IGNORED)")
+                #     pass
             else:
-                # Ensure that all of the detections exist
-                missing_files = [
-                    detection
-                    for detection in config.detections_list
-                    if not pathlib.Path(detection).is_file()
-                ]
-                if len(missing_files) > 0:
-                    missing_string = "\n\t - ".join(missing_files)
-                    raise (
-                        Exception(
-                            f"Error: The following detection(s) test do not exist:\n\t - {missing_files}"
-                        )
-                    )
-                else:
-                    self.requested_detections = [
-                        pathlib.Path(detection_file_name)
-                        for detection_file_name in config.detections_list
-                    ]
-                    
-        else:
-            raise Exception(f"Unsupported detection testing mode [{config.mode}].  "\
-                            "Supported detection testing modes are [{DetectionTestingMode._member_names_}]")
-        return
+                raise Exception(f"Unrecognized type {type(diff)}")
+
+
+        # If a detection has at least one dependency on changed content,
+        # then we must test it again
+        changed_macros_and_lookups = updated_macros + updated_lookups
+        
+        for detection in self.director.detections:
+            if detection in updated_detections:
+                # we are already planning to test it, don't need 
+                # to add it again
+                continue
+
+            for obj in changed_macros_and_lookups:
+                if obj in detection.get_content_dependencies():
+                   updated_detections.append(detection)
+                   break
+        
+        print([d.name for d in updated_detections])
+        return updated_detections
+
+
             
 
-    def clone_project(self, url, project, branch):
-        LOGGER.info(f"Clone Security Content Project")
-        repo_obj = git.Repo.clone_from(url, project, branch=branch)
-        return repo_obj
+    def getAll(self)->List[Detection]:
+        return self.director.detections
+        
+    def getSelected(self)->List[Detection]:
+        raise Exception("Not implemented")
+        pass
 

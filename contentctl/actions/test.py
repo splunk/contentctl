@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from contentctl.objects.test_config import TestConfig
+from contentctl.objects.config import test
 from contentctl.objects.enums import DetectionTestingMode
 
 from contentctl.input.director import DirectorOutputDto
@@ -42,7 +42,7 @@ MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 class TestInputDto:
     test_director_output_dto: DirectorOutputDto
     gitService: GitService
-    config: TestConfig
+    config: test
     
 
 class TestOutputDto:

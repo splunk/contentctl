@@ -395,9 +395,18 @@ def deploy_rest_func(config:deploy_rest):
 
 def test_func(config:test):
     director_output_dto = build_func(config)
+    #from contentctl.actions.test import Test, TestInputDto
+    from contentctl.actions.detection_testing.GitService import simpleGit,Mode
+    gitServer = simpleGit(director_output_dto,config)
+    gitServer.getContent(Mode.changes)
+    #test_input_dto = TestInputDto(director_output_dto, gitService, config)
+    
+    #t = Test()
+
+    #t.execute(test_input_dto)
 
 def test_servers_func(config:test_servers):
-    pass
+    raise Exception("Not yet done")
 
 def main():
     config = cli(Union[init, validate, build, new, test, test_servers, deploy_acs, deploy_rest])

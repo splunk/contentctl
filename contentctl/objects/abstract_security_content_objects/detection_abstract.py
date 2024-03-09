@@ -85,8 +85,17 @@ class Detection_Abstract(SecurityContentObject):
     @classmethod
     def getDetectionMacros(cls, v:list[str], info:ValidationInfo)->list[Macro]:
         director:DirectorOutputDto = info.context.get("output_dto",None)
+        
+        search:Union[str,dict] = info.data.get("search",None)
+        if isinstance(search,dict):
+            #The search was sigma formatted, so we will not validate macros in it
+            return []
+        
         search_name:Union[str,Any] = info.data.get("name",None)
         assert isinstance(search_name,str), f"Expected 'search_name' to be a string, instead it was [{type(search_name)}]"
+        
+        
+        
         filter_macro_name = search_name.replace(' ', '_').replace('-', '_').replace('.', '_').replace('/', '_').lower() + '_filter'
         try:        
             filter_macro = Macro.mapNamesToSecurityContentObjects([filter_macro_name], director)[0]
@@ -97,7 +106,8 @@ class Detection_Abstract(SecurityContentObject):
                                                 "description":'Update this macro to limit the output results to filter out false positives.'})
             director.macros.append(filter_macro)
         
-        macros_from_search = Macro.get_macros(search_name, director)
+        macros_from_search = Macro.get_macros(search, director)
+        
         return  macros_from_search + [filter_macro]
         
 
@@ -116,14 +126,10 @@ class Detection_Abstract(SecurityContentObject):
     def get_content_dependencies(self)->list[SecurityContentObject]:
         #Do this separately to satisfy type checker
         objects: list[SecurityContentObject] = []
-        objects += self.playbooks 
-        objects += self.baselines
         objects += self.macros 
         objects += self.lookups     
         return objects
     
-    def getSource(self)->str:
-        return self.file_path.parts[-2]
     
     @field_validator("deployment", mode="before")
     def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:

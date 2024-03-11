@@ -277,14 +277,29 @@ class ContainerSettings(BaseModel):
                                         "recommended to run more than 4 containers unless you have a very "
                                         "well-resourced environment.")
 
+class All(BaseModel):
+    #Doesn't need any extra logic
+    pass
+
+class Changes(BaseModel):
+    target_branch:str = Field(...,description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
+
+    def getContentToTest(self):
+        pass
+
+
+class Selected(BaseModel):
+    files:List[FilePath] = Field(...,description="List of detection files to test, separated by spaces.")
+
 class test(build):
     test_instance:Container = Container()
     container_settings:ContainerSettings = ContainerSettings()
+    mode:Union[All, Changes, Selected]
 
     def getAppDir(self)->pathlib.Path:
         return self.path / "apps"
 
 class test_servers(build):
     servers:List[Infrastructure] = Field([Infrastructure(instance_address="splunkServerAddress.com")],description="Test against one or more preconfigured servers.")
-
+    mode:Union[All, Changes, Selected] = Field(...,description="Test All content in the app, Selected files, or Automatically determine the changes between two branches (includes uncommitted changes in your working directory).")
 

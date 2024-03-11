@@ -397,8 +397,8 @@ def test_func(config:test):
     director_output_dto = build_func(config)
     #from contentctl.actions.test import Test, TestInputDto
     from contentctl.actions.detection_testing.GitService import simpleGit,Mode
-    gitServer = simpleGit(director_output_dto,config)
-    gitServer.getContent(Mode.changes)
+    gitServer = simpleGit(director=director_output_dto,config=config)
+    content = gitServer.getContent()
     #test_input_dto = TestInputDto(director_output_dto, gitService, config)
     
     #t = Test()
@@ -409,6 +409,7 @@ def test_servers_func(config:test_servers):
     raise Exception("Not yet done")
 
 def main():
+    
     config = cli(Union[init, validate, build, new, test, test_servers, deploy_acs, deploy_rest])
     
     if type(config) == init:
@@ -425,6 +426,8 @@ def main():
         deploy_rest_func(config)
     elif type(config) == test:
         test_func(config)
+    elif type(config) == test_servers:
+        test_servers_func(config)
     
 
 # def legacy_main():

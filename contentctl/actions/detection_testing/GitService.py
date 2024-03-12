@@ -1,7 +1,6 @@
 import logging
 import os
 import pathlib
-from enum import StrEnum, auto
 import pygit2
 from pygit2.enums import DeltaStatus
 from typing import List
@@ -22,16 +21,12 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)
 
 
-SSA_PREFIX = "ssa___"
+
 from contentctl.input.director import DirectorOutputDto
 
 
-class Mode(StrEnum):
-    all = auto()
-    changes = auto()
-    selected = auto()
 
-class simpleGit(BaseModel):
+class GitService(BaseModel):
     director: DirectorOutputDto
     config: test
     

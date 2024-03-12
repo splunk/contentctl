@@ -4,19 +4,18 @@ import os
 import pathlib
 
 from pydantic import RootModel 
-from contentctl.objects.config import init, test
+from contentctl.objects.config import init, test, test
 from contentctl.output.yml_writer import YmlWriter
 
 
 class Initialize:
 
     def execute(self, input_dto: init) -> None:
-        #construct a test object from the init object        
+        # construct a test object from the init object
+        # This way we can easily populate a yml with ALL the important
+        # fields for validating, building, and testing your app. 
         full_test_object:test = test.model_validate(input_dto.model_dump())
-         
-        YmlWriter.writeYmlFile(os.path.join(input_dto.path, 'contentctl.yml'), RootModel[init](test).model_dump())
-
-        
+        YmlWriter.writeYmlFile(str(input_dto.path/'contentctl.yml'), full_test_object.model_dump()) 
 
         #Create the following empty directories:
         for emptyDir in ['lookups', 'baselines', 'docs', 'reporting', 'investigations']:

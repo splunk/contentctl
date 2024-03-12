@@ -52,6 +52,7 @@ from abc import ABC, abstractmethod
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/download"
 
 class App_Base(BaseModel,ABC):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     uid: int = Field(ge=2, lt=100000, default_factory=lambda:random.randint(20000,100000))
     title: str = Field(default="Content Pack",description="Human-readable name used by the app. This can have special characters.")
     appid: Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]= Field(default="ContentPack",description="Internal name used by your app. "
@@ -68,8 +69,8 @@ class App_Base(BaseModel,ABC):
         ...
 
 class TestApp(App_Base):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
-
     def getApp(self, target_directory:pathlib.Path, config:test)->str:
         if config.splunk_api_password is not None and config.splunk_api_username is not None:
             destination = self.getSplunkbasePath()
@@ -92,6 +93,7 @@ class TestApp(App_Base):
 
 
 class CustomApp(App_Base):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
     prefix: str = Field(default="ContentPack",description="A short prefix to easily identify all your content.")
@@ -142,7 +144,8 @@ class CustomApp(App_Base):
 
 
 class Config_Base(BaseModel):
-    model_config = ConfigDict(use_enum_values=True,validate_default=False, arbitrary_types_allowed=True)
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+
     path: DirectoryPath = Field(default=DirectoryPath("."), description="The root of your app.")
     app:CustomApp = Field(default_factory=CustomApp)
     
@@ -155,6 +158,7 @@ class init(Config_Base):
 
 
 class validate(Config_Base):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     enrichments: bool = Field(default=False, description="Enable MITRE, APP, and CVE Enrichments.  "\
                                                          "This is useful when outputting a release build "\
                                                          "and validating these values, but should otherwise "\
@@ -165,19 +169,25 @@ class validate(Config_Base):
 
 
 class build(validate):
-    build_path: DirectoryPath = Field(default=pathlib.Path("dist"), title="Target path for all build outputs")
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    build_path: DirectoryPath = Field(default=DirectoryPath("dist/"), title="Target path for all build outputs")
     splunk_api_username: Optional[str] = Field(default=None,description="Splunk API username used for running appinspect.")
     splunk_api_password: Optional[str] = Field(default=None, exclude=True, description="Splunk API password used for running appinspect.")
 
-    
+    @field_serializer('build_path',when_used='always')
+    def serialize_build_path(path: DirectoryPath)->str:
+        return str(path)
+
     @field_validator('build_path',mode='before')
     @classmethod
-    def ensure_build_path(cls, v:DirectoryPath):
+    def ensure_build_path(cls, v:Union[str,DirectoryPath]):
         '''
         If the build path does not exist, then create it.
         If the build path is actually a file, then raise a descriptive
         exception.
         '''
+        if isinstance(v,str):
+            v = pathlib.Path(v)
         if v.is_dir():
             return v
         elif v.is_file():
@@ -209,8 +219,6 @@ class build(validate):
         return self.path/"app_template"
 
 
-#class Config_Test(BaseModel):
-#    pass
 
 class NewContentType(StrEnum):
     detection = auto()
@@ -220,7 +228,7 @@ class NewContentType(StrEnum):
 
 
 class new(Config_Base):
-    type: NewContentType
+    type: NewContentType = Field(default=NewContentType.detection, description="Specify the type of content you would like to create.")
 
   
 class StackType(StrEnum):
@@ -228,7 +236,20 @@ class StackType(StrEnum):
     victoria = auto()
 
 
-class deploy_acs(build):
+class deploy_acs_wrapper(build):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    #ignore linter error
+    splunk_cloud_jwt_token: Optional[str] = Field(default=None, exclude=True, description="Splunk JWT used for performing ACS operations on a Splunk Cloud Instance")
+    splunk_cloud_stack: Optional[str] = Field(default=None, description="The name of your Splunk Cloud Stack")
+    stack_type: Optional[StackType] = Field(default=None,description="The type of your Splunk Cloud Stack")
+
+    # Note that while these are a redefinition of fields with the same name in Config_Build object,
+    # they are now REQUIRED instead of optional
+    splunk_api_username: Optional[str] = Field(default=None,description="Splunk API username used for running appinspect.")
+    splunk_api_password: Optional[str] = Field(default=None,exclude=True, description="Splunk API password used for running appinspect.")
+
+class deploy_acs(deploy_acs_wrapper):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     #ignore linter error
     splunk_cloud_jwt_token: str = Field(exclude=True, description="Splunk JWT used for performing ACS operations on a Splunk Cloud Instance")
     splunk_cloud_stack: str = Field(description="The name of your Splunk Cloud Stack")
@@ -241,35 +262,33 @@ class deploy_acs(build):
 
 
     
-
-
-class deploy_rest(build):
-    #ignore linter error
-    password: str = Field(description="Password for your Splunk Environment")
-
-    api_port: int = Field(default=8089, description="API Port for your Splunk Environment")
-    username: str = Field(default="admin", description="Username for your splunk environment")
-    
-
-    #This will overwrite existing content without promprting for confirmation
-    overwrite_existing_content:bool = Field(default=True, description="Overwrite existing macros and savedsearches in your enviornment")
-
-
-
 class Infrastructure(BaseModel):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     splunk_app_username:str = Field(default="admin", description="Username for logging in to your Splunk Server")
-    splunk_app_password:str = Field(default="password", description="Password for logging in to your Splunk Server.")
+    splunk_app_password:str = Field(exclude=True, default="password", description="Password for logging in to your Splunk Server.")
     instance_address:str = Field(..., description="Address of your splunk server.")
     hec_port: int = Field(default=8088, gt=1, lt=65536, title="HTTP Event Collector Port")
     web_ui_port: int = Field(default=8000, gt=1, lt=65536, title="Web UI Port")
     api_port: int = Field(default=8089, gt=1, lt=65536, title="REST API Port")
+
+
+class deploy_rest(build):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    
+    target:Infrastructure = Infrastructure(instance_address="localhost")
+    #This will overwrite existing content without promprting for confirmation
+    overwrite_existing_content:bool = Field(default=True, description="Overwrite existing macros and savedsearches in your enviornment")
+
+
     
 class Container(Infrastructure):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     instance_address:str = Field(default="localhost", description="Address of your splunk server.")
     full_image_path:str = Field(default="https://registry.hub.docker.com/splunk/splunk:latest",
                                 title="Full path to the container image to be used")
 
 class ContainerSettings(BaseModel):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     leave_running: bool = Field(default=True, description="Leave container running after it is first "
                                 "set up to speed up subsequent test runs.")
     num_containers: PositiveInt = Field(default=1, description="Number of containers to start in parallel. "
@@ -282,24 +301,28 @@ class All(BaseModel):
     pass
 
 class Changes(BaseModel):
-    target_branch:str = Field(...,description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    target_branch:str = Field(default="main",description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
 
     def getContentToTest(self):
         pass
 
 
 class Selected(BaseModel):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     files:List[FilePath] = Field(...,description="List of detection files to test, separated by spaces.")
 
 class test(build):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     test_instance:Container = Container()
     container_settings:ContainerSettings = ContainerSettings()
-    mode:Union[All, Changes, Selected]
+    mode:Union[All, Changes, Selected] = Changes()
 
     def getAppDir(self)->pathlib.Path:
         return self.path / "apps"
 
 class test_servers(build):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     servers:List[Infrastructure] = Field([Infrastructure(instance_address="splunkServerAddress.com")],description="Test against one or more preconfigured servers.")
     mode:Union[All, Changes, Selected] = Field(...,description="Test All content in the app, Selected files, or Automatically determine the changes between two branches (includes uncommitted changes in your working directory).")
 

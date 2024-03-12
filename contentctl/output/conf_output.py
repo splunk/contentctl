@@ -190,7 +190,6 @@ class ConfOutput:
         
     def inspectAppAPI(self)->None:
         if self.config.splunk_api_username is None or self.config.splunk_api_password is None:
-            print("splunk_api_username and splunk_api_password not passed on command line")
             return None
         session = Session()
         session.auth = HTTPBasicAuth(self.config.splunk_api_username, self.config.splunk_api_password)

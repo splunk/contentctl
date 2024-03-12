@@ -67,9 +67,11 @@ def new_func(config:new):
     NewContent().execute(config)
 
 def deploy_acs_func(config:deploy_acs_wrapper):
-    import pprint
-    pprint.pprint(config.model_dump())
-    deploy_acs.model_validate(**config.model_dump())
+    # Due to the way that the default values are parsed, we need
+    # to reparse the deploy_acs values here
+    # We use __dict__ rather than model_dump because sensitive values,
+    # like password, are set to exclude=True and not serialzied on model_dump
+    config_deploy_acs:deploy_acs = deploy_acs.model_validate(config.__dict__)
     raise Exception("deploy acs not yet implemented")
 
 def deploy_rest_func(config:deploy_rest):

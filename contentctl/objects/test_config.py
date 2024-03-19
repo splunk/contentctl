@@ -163,6 +163,9 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
         default=DetectionTestingTargetInfrastructure.container,
         title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}",
     )
+
+    persist_and_reuse_container:bool = True
+
     full_image_path: str = Field(
         default="registry.hub.docker.com/splunk/splunk:latest",
         title="Full path to the container image to be used",
@@ -289,7 +292,7 @@ class InfrastructureConfig(BaseModel, extra=Extra.forbid, validate_assignment=Tr
             v = [Infrastructure()]
 
         if len(v) < 1:
-            print("Fix number of infrastructure validation later")
+            #print("Fix number of infrastructure validation later")
             return v
             raise (
                 ValueError(

@@ -99,7 +99,7 @@ action.sendtophantom.param.severity = {{ detection.deployment.phantom.severity |
 {% endif %}
 {% endif %}
 alert.digest_mode = 1
-{% if detection.disabled is defined %}
+{% if detection.enabled_by_default %}
 disabled = false
 {% else %}
 disabled = true

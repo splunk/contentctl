@@ -17,9 +17,11 @@ from typing import Union
 @dataclass(frozen=True)
 class GenerateInputDto:
     director_input_dto: DirectorInputDto
-    appinspect_api_username: Union[str,None] = None
-    appinspect_api_password: Union[str,None] = None
-
+    splunk_api_username: Union[str,None] = None
+    splunk_api_password: Union[str,None] = None
+    #For most cloud stacks, the stack_type argument has been deprecated for appinspect.
+    #Still, we will pass it in case there are users of very old stacks.
+    stack_type: str = "victoria"
 
 class Generate:
 
@@ -29,13 +31,15 @@ class Generate:
         director.execute(input_dto.director_input_dto)
 
         if input_dto.director_input_dto.product == SecurityContentProduct.SPLUNK_APP:
-            if input_dto.appinspect_api_username and input_dto.appinspect_api_password:
-                pass
-            elif input_dto.appinspect_api_username or input_dto.appinspect_api_password:
-                if input_dto.appinspect_api_password:
-                    raise Exception("appinspect_api_password was provided, but appinspect_api_username was not. Please provide both or neither")
+            if (input_dto.splunk_api_username is None) ^ (input_dto.splunk_api_password is None):
+                # Exclusive OR above finds when ONE of these is defined but the other is not
+                if input_dto.splunk_api_password:
+                    raise Exception("splunk_api_password was provided, but splunk_api_username was not. Please provide both or neither")
                 else:
-                    raise Exception("appinspect_api_username was provided, but appinspect_api_password was not. Please provide both or neither")            
+                    raise Exception("splunk_api_username was provided, but splunk_api_password was not. Please provide both or neither")                
+
+
+            
             
             conf_output = ConfOutput(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config)
             conf_output.writeHeaders()
@@ -48,10 +52,10 @@ class Generate:
             conf_output.writeAppConf()
             conf_output.packageApp()
 
-            conf_output.inspectAppCLI()
-            if input_dto.appinspect_api_username and input_dto.appinspect_api_password:
-                conf_output.inspectAppAPI(input_dto.appinspect_api_username, input_dto.appinspect_api_password)
-            
+            #conf_output.inspectAppCLI()
+            if input_dto.splunk_api_username and input_dto.splunk_api_password:
+                _ = conf_output.inspectAppAPI(input_dto.splunk_api_username, input_dto.splunk_api_password, input_dto.stack_type)
+                
             print(f'Generate of security content successful to {conf_output.output_path}')
             return director_output_dto
 
@@ -76,7 +80,7 @@ class Generate:
             api_json_output.writeObjects(director_output_dto.lookups, output_path, SecurityContentType.lookups)
             api_json_output.writeObjects(director_output_dto.macros, output_path, SecurityContentType.macros)
             api_json_output.writeObjects(director_output_dto.deployments, output_path, SecurityContentType.deployments)
-            
+ 
             #create version file for sse api
             version_file = pathlib.Path(output_path)/"version.json"
             utc_time = datetime.datetime.utcnow().replace(microsecond=0).isoformat()

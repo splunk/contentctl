@@ -4,10 +4,15 @@ import sys
 import pathlib
 
 from contentctl.input.yml_reader import YmlReader
-from contentctl.objects.config import Config, TestConfig
+from contentctl.objects.config import Config, TestConfig, ConfigEnrichments
+from contentctl.objects.test_config import InfrastructureConfig, Infrastructure
 from contentctl.objects.enums import DetectionTestingMode
 from typing import Union
 import argparse
+
+from contentctl.objects.enums import (
+    DetectionTestingTargetInfrastructure,
+)
 
 class ConfigHandler:
 
@@ -23,6 +28,11 @@ class ConfigHandler:
 
         try: 
             config = Config.parse_obj(yml_dict)
+            if args.enable_enrichment:
+                config.enrichments.attack_enrichment = True
+            else:
+                # Use whatever setting is in contentctl.yml
+                pass
         except Exception as e:
             raise Exception(f"Error reading config file: {str(e)}")
             
@@ -39,6 +49,11 @@ class ConfigHandler:
             sys.exit(1)
 
         try: 
+            if args.dry_run:
+                yml_dict['apps'] = []
+                yml_dict['infrastructure_config'] = InfrastructureConfig(infrastructure_type=DetectionTestingTargetInfrastructure.server, ).__dict__
+                if args.server_info is None:
+                    yml_dict['infrastructure_config']['infrastructures'] = [Infrastructure().__dict__]
             if args.mode != DetectionTestingMode.changes:
                 yml_dict['version_control_config'] = None
             if yml_dict.get("version_control_config", None) is not None:

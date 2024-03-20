@@ -208,8 +208,6 @@ class ConfOutput:
         return datetime.timedelta(seconds=round(timeit.default_timer() - startTime))
     
     def deploy_via_acs(self, splunk_cloud_jwt_token:str, splunk_cloud_stack:str, appinspect_token:str, stack_type:str):
-        #production endpoint
-        #https://admin.splunk.com/{stack}/adminconfig/v2/apps/victoria
         if stack_type not in ['victoria', 'classic']:
             raise Exception(f"stack_type MUST be either 'classic' or 'victoria', NOT '{stack_type}'")
         
@@ -225,7 +223,7 @@ class ConfOutput:
                 if stack_type == 'classic':
                     # Classic instead uses a form to store token and package
                     # https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps#Manage_private_apps_using_the_ACS_API_on_Classic_Experience
-                    address = f"https://staging.admin.splunk.com/{splunk_cloud_stack}/adminconfig/v2/apps"
+                    address = f"https://admin.splunk.com/{splunk_cloud_stack}/adminconfig/v2/apps"
                     
                     form_data = {
                         'token': (None, appinspect_token),
@@ -238,7 +236,7 @@ class ConfOutput:
                     # It also uses --data-binary for the app content
                     # https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps#Manage_private_apps_using_the_ACS_API_on_Victoria_Experience
                     headers.update({'X-Splunk-Authorization':  appinspect_token})
-                    address = f"https://staging.admin.splunk.com/{splunk_cloud_stack}/adminconfig/v2/apps/victoria"
+                    address = f"https://admin.splunk.com/{splunk_cloud_stack}/adminconfig/v2/apps/victoria"
                     print(f"curl -X POST '{address}' --header 'X-Splunk-Authorization: {appinspect_token}' --header 'Authorization: Bearer {splunk_cloud_jwt_token}' --header 'ACS-Legal-Ack: Y' --data-binary '@{self.getPackagePath(include_version=False)}'")
                     res = post(address, headers=headers, data=app_data.read())
         except Exception as e:

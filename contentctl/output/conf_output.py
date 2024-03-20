@@ -300,6 +300,10 @@ class ConfOutput:
             "Authorization": f"bearer {authorization_bearer}"
         }
         startTime = timeit.default_timer()
+        # the first time, wait for 40 seconds. subsequent times, wait for less.
+        # this is because appinspect takes some time to return, so there is no sense
+        # checking many times when we know it will take at least 40 seconds to run.
+        iteration_wait_time = 40
         while True:
             
             res = get(APPINSPECT_API_VALIDATION_STATUS, headers=headers)
@@ -307,7 +311,8 @@ class ConfOutput:
             status = res.json().get("status",None)
             if status in ["PROCESSING", "PREPARING"]:
                 print(f"[{self.getElapsedTime(startTime)}] Appinspect API is {status}...")
-                time.sleep(15)
+                time.sleep(iteration_wait_time)
+                iteration_wait_time = 1
                 continue
             elif status == "SUCCESS":
                 print(f"[{self.getElapsedTime(startTime)}] Appinspect API has finished!")

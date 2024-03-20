@@ -17,7 +17,7 @@ from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.config import Config
 from requests import Session, post, get
 from requests.auth import HTTPBasicAuth
-
+import pprint
 class ConfOutput:
 
     input_path: str
@@ -206,23 +206,89 @@ class ConfOutput:
         
     def getElapsedTime(self, startTime:float)->datetime.timedelta:
         return datetime.timedelta(seconds=round(timeit.default_timer() - startTime))
+    
+    def deploy_via_acs(self, splunk_cloud_jwt_token:str, splunk_cloud_stack:str, appinspect_token:str, stack_type:str):
+        #production endpoint
+        #https://admin.splunk.com/{stack}/adminconfig/v2/apps/victoria
+        if stack_type not in ['victoria', 'classic']:
+            raise Exception(f"stack_type MUST be either 'classic' or 'victoria', NOT '{stack_type}'")
         
-    def inspectAppAPI(self, username:str, password:str)->None:
+        
+        #The following common headers are used by both Clasic and Victoria
+        headers = {
+            'Authorization': f'Bearer {splunk_cloud_jwt_token}',
+            'ACS-Legal-Ack': 'Y'
+        }
+        try:
+            with open(self.getPackagePath(include_version=False),'rb') as app_data:
+                #request_data = app_data.read()
+                if stack_type == 'classic':
+                    # Classic instead uses a form to store token and package
+                    # https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps#Manage_private_apps_using_the_ACS_API_on_Classic_Experience
+                    address = f"https://staging.admin.splunk.com/{splunk_cloud_stack}/adminconfig/v2/apps"
+                    
+                    form_data = {
+                        'token': (None, appinspect_token),
+                        'package': app_data
+                    }
+                    print(f"curl -X POST '{address}' --header 'Authorization: Bearer {splunk_cloud_jwt_token}' --header 'ACS-Legal-Ack: Y' --form 'token={appinspect_token}'  --form 'package=@{self.getPackagePath(include_version=False)}'")
+                    res = post(address, headers=headers, files = form_data)
+                else:
+                    # Victoria uses the X-Splunk-Authorization Header
+                    # It also uses --data-binary for the app content
+                    # https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps#Manage_private_apps_using_the_ACS_API_on_Victoria_Experience
+                    headers.update({'X-Splunk-Authorization':  appinspect_token})
+                    address = f"https://staging.admin.splunk.com/{splunk_cloud_stack}/adminconfig/v2/apps/victoria"
+                    print(f"curl -X POST '{address}' --header 'X-Splunk-Authorization: {appinspect_token}' --header 'Authorization: Bearer {splunk_cloud_jwt_token}' --header 'ACS-Legal-Ack: Y' --data-binary '@{self.getPackagePath(include_version=False)}'")
+                    res = post(address, headers=headers, data=app_data.read())
+        except Exception as e:
+            raise Exception(f"Error installing to stack '{splunk_cloud_stack}' (stack_type='{stack_type}') via ACS:\n{str(e)}")
+        
+        try:
+            # Request went through and completed, but may have returned a non-successful error code.
+            # This likely includes a more verbose response describing the error
+            res.raise_for_status()
+        except Exception as e:
+            try:
+                error_text = res.json()
+            except Exception as e:
+                error_text = "No error text - request failed"
+            formatted_error_text = pprint.pformat(error_text)
+            raise Exception(f"Error installing to stack '{splunk_cloud_stack}' (stack_type='{stack_type}') via ACS:\n{formatted_error_text}")
+        
+        print(f"'{self.getPackagePath(include_version=False)}' successfully installed to stack '{splunk_cloud_stack}' (stack_type='{stack_type}') via ACS!")
+
+        return
+
+    def inspectAppAPI(self, username:str, password:str, stack_type:str)->str:
         session = Session()
         session.auth = HTTPBasicAuth(username, password)
+        if stack_type not in ['victoria', 'classic']:
+            raise Exception(f"stack_type MUST be either 'classic' or 'victoria', NOT '{stack_type}'")
+        
         APPINSPECT_API_LOGIN = "https://api.splunk.com/2.0/rest/login/splunk"
+        
+            
+        
         res = session.get(APPINSPECT_API_LOGIN)
         #If login failed or other failure, raise an exception
         res.raise_for_status()
         
-        appinspect_token = res.json().get("data",{}).get("token",None)
+        authorization_bearer = res.json().get("data",{}).get("token",None)
         APPINSPECT_API_VALIDATION_REQUEST = "https://appinspect.splunk.com/v1/app/validate"
         headers = {
-            "Authorization": f"bearer {appinspect_token}",
+            "Authorization": f"bearer {authorization_bearer}",
             "Cache-Control": "no-cache"
         }
+
+        package_path = self.getPackagePath(include_version=False)
+        if not package_path.is_file():
+            raise Exception(f"Cannot run Appinspect API on App '{self.config.build.title}' - "
+                            f"no package exists as expected path '{package_path}'.\nAre you "
+                            "trying to 'contentctl acs_deploy' the package BEFORE running 'contentctl build'?")
+        
         files = {
-            "app_package": open(self.getPackagePath(include_version=False),"rb"),
+            "app_package": open(package_path,"rb"),
             "included_tags":(None,"cloud")
         } 
         
@@ -231,9 +297,9 @@ class ConfOutput:
         res.raise_for_status()
 
         request_id = res.json().get("request_id",None)
-        APPINSPECT_API_VALIDATION_STATUS = f"https://appinspect.splunk.com/v1/app/validate/status/{request_id}"
+        APPINSPECT_API_VALIDATION_STATUS = f"https://appinspect.splunk.com/v1/app/validate/status/{request_id}?included_tags=private_{stack_type}"
         headers = headers = {
-            "Authorization": f"bearer {appinspect_token}"
+            "Authorization": f"bearer {authorization_bearer}"
         }
         startTime = timeit.default_timer()
         while True:
@@ -254,10 +320,10 @@ class ConfOutput:
         
 
         #We have finished running appinspect, so get the report
-        APPINSPECT_API_REPORT = f"https://appinspect.splunk.com/v1/app/report/{request_id}"
+        APPINSPECT_API_REPORT = f"https://appinspect.splunk.com/v1/app/report/{request_id}?included_tags=private_{stack_type}"
         #Get human-readable HTML report
         headers = headers = {
-            "Authorization": f"bearer {appinspect_token}",
+            "Authorization": f"bearer {authorization_bearer}",
             "Content-Type": "text/html"
         }
         res = get(APPINSPECT_API_REPORT, headers=headers)
@@ -266,7 +332,7 @@ class ConfOutput:
         
         #Get JSON report for processing
         headers = headers = {
-            "Authorization": f"bearer {appinspect_token}",
+            "Authorization": f"bearer {authorization_bearer}",
             "Content-Type": "application/json"
         }
         res = get(APPINSPECT_API_REPORT, headers=headers)
@@ -274,15 +340,15 @@ class ConfOutput:
         report_json = res.json()
         
         
-        with open(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.html", "wb") as report:
+        with open(self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_api_results.html", "wb") as report:
             report.write(report_html)
-        with open(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.json", "w") as report:
+        with open(self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_api_results.json", "w") as report:
             json.dump(report_json, report)
         
         
-        self.parseAppinspectJsonLogFile(self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_api_results.json")
+        self.parseAppinspectJsonLogFile(self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_api_results.json")
       
-        return None
+        return authorization_bearer
     
     def parseAppinspectJsonLogFile(self, logfile_path:pathlib.Path, 
                                    status_types:list[str] = ["error", "failure", "manual_check", "warning"], 
@@ -365,8 +431,8 @@ class ConfOutput:
         included_tags = []
         excluded_tags = []
 
-        appinspect_output = self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_cli_results.json"
-        appinspect_logging = self.dist/f"{self.config.build.title}-{self.config.build.version}.appinspect_cli_logging.log"
+        appinspect_output = self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_cli_results.json"
+        appinspect_logging = self.dist/f"{self.config.build.name}-{self.config.build.version}.appinspect_cli_logging.log"
         try:
             arguments_list = [(APP_PACKAGE_ARGUMENT, str(self.getPackagePath(include_version=False)))]
             options_list = []

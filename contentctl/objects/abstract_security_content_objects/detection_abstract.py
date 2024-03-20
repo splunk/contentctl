@@ -55,6 +55,7 @@ class Detection_Abstract(SecurityContentObject):
     nes_fields: str = None
     providing_technologies: list = None
     runtime: str = None
+    enabled_by_default: bool = False
 
     class Config:
         use_enum_values = True
@@ -97,6 +98,32 @@ class Detection_Abstract(SecurityContentObject):
                 )
 
         return SecurityContentObject.free_text_field_valid(cls, v, values, field)
+
+    @validator('enabled_by_default')
+    def only_enabled_if_production_status(cls,v,values):
+        '''
+        A detection can ONLY be enabled by default if it is a PRODUCTION detection.
+        If not (for example, it is EXPERIMENTAL or DEPRECATED) then we will throw an exception.
+        Similarly, a detection MUST be schedulable, meaning that it must be Anomaly, Correleation, or TTP.
+        We will not allow Hunting searches to be enabled by default.
+        '''
+        if v == False:
+            return v
+
+        status = DetectionStatus(values.get("status"))
+        searchType = AnalyticsType(values.get("type"))
+        errors = []
+        if status != DetectionStatus.production:
+            errors.append(f"status is '{status.name}'. Detections that are enabled by default MUST be '{DetectionStatus.production.value}'")
+            
+        if searchType not in [AnalyticsType.Anomaly, AnalyticsType.Correlation, AnalyticsType.TTP]:            
+            errors.append(f"type is '{searchType.value}'. Detections that are enabled by default MUST be one of the following types: {[AnalyticsType.Anomaly.value, AnalyticsType.Correlation.value, AnalyticsType.TTP.value]}")
+        if len(errors) > 0:
+            error_message = "\n  - ".join(errors)
+            raise ValueError(f"Detection is 'enabled_by_default: true' however \n  - {error_message}")
+        
+        return v
+        
 
     @validator("status")
     def validation_for_ba_only(cls, v, values):

@@ -19,7 +19,7 @@ from contentctl.objects.baseline import Baseline
 from contentctl.objects.playbook import Playbook
 from contentctl.helper.link_validator import LinkValidator
 from contentctl.objects.enums import SecurityContentType
-
+from contentctl.objects.test_group import TestGroup
 
 class Detection_Abstract(SecurityContentObject):
     # contentType: SecurityContentType = SecurityContentType.detections
@@ -59,6 +59,34 @@ class Detection_Abstract(SecurityContentObject):
 
     class Config:
         use_enum_values = True
+
+
+    # A list of groups of tests, relying on the same data
+    test_groups: Union[list[TestGroup], None] = None
+
+    @validator("test_groups", always=True)
+    def validate_test_groups(cls, value, values) -> Union[list[TestGroup], None]:
+        """
+        Validates the `test_groups` field and constructs the model from the list of unit tests
+        if no explicit construct was provided
+        :param value: the value of the field `test_groups`
+        :param values: a dict of the other fields in the Detection model
+        """
+        # if the value was not the None default, do nothing
+        if value is not None:
+            return value
+
+        # iterate over the unit tests and create a TestGroup (and as a result, an IntegrationTest) for each
+        test_groups: list[TestGroup] = []
+        for unit_test in values["tests"]:
+            test_group = TestGroup.derive_from_unit_test(unit_test, values["name"])
+            test_groups.append(test_group)
+
+        # now add each integration test to the list of tests
+        for test_group in test_groups:
+            values["tests"].append(test_group.integration_test)
+        return test_groups
+
 
     def get_content_dependencies(self) -> list[SecurityContentObject]:
         return self.playbooks + self.baselines + self.macros + self.lookups
@@ -206,20 +234,27 @@ class Detection_Abstract(SecurityContentObject):
         if values.get("status","") != DetectionStatus.production.value:
             return v
         
-        #Only certain types of analytics must have tests
-        if values.get("type","") not in set([AnalyticsType.Anomaly.value, AnalyticsType.Hunting.value, AnalyticsType.TTP.value]):
+        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
+        # Accordingly, we do not need to do additional checks if the type is Correlation
+        if values.get("type","") in set([AnalyticsType.Correlation.value]):
             return v
         
-        #check and see if the manual_test flag is present
-        tags_obj = values.get("tags")
-        if tags_obj and tags_obj.manual_test:
-            #If any tests are present while manual_test is set, replace them with the manual_test placeholder
-            return [UnitTest(name="MANUAL_TEST_ONLY",attack_data=[])]
+            
+        # Ensure that there is at least 1 test        
+        if len(v) == 0:
+            if values.get("tags",None) and values.get("tags").manual_test is not None:
+                # Detections that are manual_test MAY have detections, but it is not required.  If they
+                # do not have one, then create one which will be a placeholder.
+                # Note that this fake UnitTest (and by extension, Integration Test) will NOT be generated
+                # if there ARE test(s) defined for a Detection.
+                placeholder_test = UnitTest(name="PLACEHOLDER FOR DETECTION TAGGED MANUAL_TEST WITH NO TESTS SPECIFIED IN YML FILE", attack_data=[])
+                return [placeholder_test]
+            
+            else:
+                raise ValueError("At least one test is REQUIRED for production detection: " + values.get("name", "NO NAME FOUND"))
 
-        if len(v) < 1:
-            raise ValueError("At least one test is REQUIRED for production detection: " + values.get("name", "NO NAME FOUND"))
-        
-        #No issues - at least one test provided            
+
+        #No issues - at least one test provided for production type requiring testing
         return v
 
     @validator("datamodel")

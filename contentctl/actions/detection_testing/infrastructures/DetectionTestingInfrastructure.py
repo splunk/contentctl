@@ -414,33 +414,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         data)
         :param detection: the Detection to test
         """
-        if detection.tags.manual_test:
-            # Detections with the manual_test flag MAY have real test cases associated with them.
-            # When parsing these YMLs into Objects, the presence of the manual_test flag will remove
-            # any custom tests and SHOULD replace that test with a NEW test with the name 
-            # MANUAL_TEST_ONLY, which we check below.  We ensure that the length of tests here is
-            # EXACTLY one so that we can make sure we replaced all other tests and created the manual test.
-            if len(detection.tests) != 1:
-                raise Exception(f"Detection {detection.name} configured for manual_test, but no "
-                                "manual_test was found in tests section. It should have been "
-                                f"added automatically: {detection.tests}")
-            elif detection.tests[0].name != "MANUAL_TEST_ONLY":
-                raise Exception(f"Detection {detection.name} configured for manual_test, but a test "
-                                f"{detection.tests[0]}was found INSTEAD of the automatically added "
-                                "MANUAL_TEST_ONLY")
-            else:
-                detection.tests[0].result = UnitTestResult()
-                detection.tests[0].result.set_manual_test(detection.tags.manual_test)
-                return
-        elif detection.tests is None or len(detection.tests) == 0:
-            raise Exception(f"Detection {detection.name} did not have any tests configured for it and is "
-                            "not configured for manual_test.  This should not have progressed past "
-                            "the 'contentctl valdiate' stage.")
-
 
         # iterate TestGroups
         for test_group in detection.test_groups:
-            # If all tests in the group have been skipped, report and continue
+            # If all tests in the group have been skipped, report and continue.
+            # Note that the logic for skipping tests for detections tagged manual_test exists in
+            # the detection builder.
             if test_group.all_tests_skipped():
                 self.pbar.write(
                     self.format_pbar_string(

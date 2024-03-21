@@ -7,6 +7,8 @@ from splunklib.data import Record
 from contentctl.helper.utils import Utils
 
 
+# TODO: add status "UNSET" so that we can make sure the result is always of this enum type; remove
+#   mypy ignores associated w/ these typing issues once we do
 class TestResultStatus(str, Enum):
     """Enum for test status (e.g. pass/fail)"""
     # Test failed (detection did NOT fire appropriately)

@@ -37,8 +37,6 @@ class Build:
             conf_output.writeAppConf()
             conf_output.packageApp()
 
-            conf_output.inspectAppCLI()
-            conf_output.inspectAppAPI()
             
             print(f'Build of security content successful to {conf_output.config.getPackageFilePath()}')
             return input_dto.director_output_dto

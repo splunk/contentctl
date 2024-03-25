@@ -171,8 +171,6 @@ class validate(Config_Base):
 class build(validate):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     build_path: DirectoryPath = Field(default=DirectoryPath("dist/"), title="Target path for all build outputs")
-    splunk_api_username: Optional[str] = Field(default=None,description="Splunk API username used for running appinspect.")
-    splunk_api_password: Optional[str] = Field(default=None, exclude=True, description="Splunk API password used for running appinspect.")
 
     @field_serializer('build_path',when_used='always')
     def serialize_build_path(path: DirectoryPath)->str:
@@ -219,6 +217,14 @@ class build(validate):
         return self.path/"app_template"
 
 
+class StackType(StrEnum):
+    classic = auto()
+    victoria = auto()
+
+class inspect(build):
+    splunk_api_username: str = Field(description="Splunk API username used for running appinspect.")
+    splunk_api_password: str = Field(exclude=True, description="Splunk API password used for running appinspect.")
+    stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
 
 class NewContentType(StrEnum):
     detection = auto()
@@ -230,30 +236,15 @@ class NewContentType(StrEnum):
 class new(Config_Base):
     type: NewContentType = Field(default=NewContentType.detection, description="Specify the type of content you would like to create.")
 
-  
-class StackType(StrEnum):
-    classic = auto()
-    victoria = auto()
 
 
-class deploy_acs_wrapper(build):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    #ignore linter error
-    splunk_cloud_jwt_token: Optional[str] = Field(default=None, exclude=True, description="Splunk JWT used for performing ACS operations on a Splunk Cloud Instance")
-    splunk_cloud_stack: Optional[str] = Field(default=None, description="The name of your Splunk Cloud Stack")
-    stack_type: Optional[StackType] = Field(default=None,description="The type of your Splunk Cloud Stack")
 
-    # Note that while these are a redefinition of fields with the same name in Config_Build object,
-    # they are now REQUIRED instead of optional
-    splunk_api_username: Optional[str] = Field(default=None,description="Splunk API username used for running appinspect.")
-    splunk_api_password: Optional[str] = Field(default=None,exclude=True, description="Splunk API password used for running appinspect.")
 
-class deploy_acs(deploy_acs_wrapper):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+class deploy_acs(inspect):
+    model_config = ConfigDict(use_enum_values=True,validate_default=False, arbitrary_types_allowed=True)
     #ignore linter error
     splunk_cloud_jwt_token: str = Field(exclude=True, description="Splunk JWT used for performing ACS operations on a Splunk Cloud Instance")
     splunk_cloud_stack: str = Field(description="The name of your Splunk Cloud Stack")
-    stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
 
     # Note that while these are a redefinition of fields with the same name in Config_Build object,
     # they are now REQUIRED instead of optional
@@ -304,13 +295,12 @@ class Changes(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     target_branch:str = Field(default="main",description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
 
-    def getContentToTest(self):
-        pass
-
 
 class Selected(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     files:List[FilePath] = Field(...,description="List of detection files to test, separated by spaces.")
+
+
 
 class test(build):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)

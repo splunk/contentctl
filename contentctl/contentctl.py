@@ -1,6 +1,6 @@
 from contentctl.actions.initialize import Initialize
-from tyro import cli
-from contentctl.objects.config import Config_Base, CustomApp, init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers,deploy_acs_wrapper
+import tyro
+from contentctl.objects.config import Config_Base, CustomApp, init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect
 from typing import Union
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
@@ -10,7 +10,9 @@ from contentctl.actions.build import (
      DirectorOutputDto,
      Build,
 )
+from contentctl.actions.inspect import Inspect
 import sys
+import warnings
 import pathlib
 from contentctl.input.yml_reader import YmlReader
 
@@ -47,7 +49,7 @@ from contentctl.input.yml_reader import YmlReader
 
 
 
-def init_func(config:init):    
+def init_func(config:test):    
     Initialize().execute(config)
 
 
@@ -63,15 +65,19 @@ def build_func(config:build)->DirectorOutputDto:
     builder = Build()
     return builder.execute(BuildInputDto(director_output_dto, config))
 
+def inspect_func(config:inspect)->str:
+    builder = build_func(config)
+    inspect_token = Inspect().execute(config)
+    return inspect_token
+    
+
 def new_func(config:new):
     NewContent().execute(config)
 
-def deploy_acs_func(config:deploy_acs_wrapper):
-    # Due to the way that the default values are parsed, we need
-    # to reparse the deploy_acs values here
-    # We use __dict__ rather than model_dump because sensitive values,
-    # like password, are set to exclude=True and not serialzied on model_dump
-    config_deploy_acs:deploy_acs = deploy_acs.model_validate(config.__dict__)
+
+
+def deploy_acs_func(config:deploy_acs):
+    #This is a bit challenging to get to work with the default values.
     raise Exception("deploy acs not yet implemented")
 
 def deploy_rest_func(config:deploy_rest):
@@ -93,35 +99,31 @@ def test_func(config:test):
 def test_servers_func(config:test_servers):
     raise Exception("Not yet done")
 
+    
+
 def main():
     
     
-    #try:
-    if 1:
+    try:
         configFile = pathlib.Path("contentctl.yml")
         if not configFile.is_file():
-            raise Exception(f"Config File {configFile} does not exist. Please create it with 'contentctl init'")        
-        config_obj = YmlReader().load_file(configFile)
-        t = test.model_validate(config_obj)
-        b = build.model_validate(config_obj)
-    #except Exception as e:
-    #    print(e)
-    #    sys.exit(1)    
-    import tyro
+            t = test()
+            config_obj = t.model_dump()
+            #raise Exception(f"Config File {configFile} does not exist. Please create it with 'contentctl init'")        
+        else:
+            config_obj = YmlReader().load_file(configFile)
+            t = test.model_validate(config_obj)
+    except Exception as e:
+        print(f"Error validating 'contentctl.yml':\n{str(e)}")
+        sys.exit(1)
+        
     
-    '''
-    #y = deploy_rest.model_construct(config_obj)
-    from typing import Union, Annotated
-    config=cli( Union[
-        Annotated[init,tyro.conf.subcommand("init", default=t)],
-        Annotated[validate,tyro.conf.subcommand("validate", default=t)],
-        Annotated[build,tyro.conf.subcommand("build", default=t)],
-        #Annotated[new,tyro.conf.subcommand("new",default=new.model_construct(**t.model_dump()))],
-        Annotated[test,tyro.conf.subcommand("test", default=t,)],
-        Annotated[test_servers,tyro.conf.subcommand("test_servers")],
-        Annotated[deploy_acs,tyro.conf.subcommand("deploy_acs")]
-        ])
-    '''
+    # For ease of generating the constructor, we want to allow construction
+    # of an object from default values WITHOUT requiring all fields to be declared
+    # with defaults OR in the config file. As such, we construct the model rather
+    # than model_validating it so that validation does not run on missing required fields.
+    # Note that we HAVE model_validated the test object fields already above
+    import pprint
 
 
     models = tyro.extras.subcommand_type_from_defaults(
@@ -129,39 +131,45 @@ def main():
             "init":init.model_validate(config_obj),
             "validate": validate.model_validate(config_obj),
             "build":build.model_validate(config_obj),
+            "inspect": inspect.model_construct(**t.__dict__),
             "new":new.model_validate(config_obj),
             "test":test.model_validate(config_obj),
             "test_servers":test_servers.model_validate(config_obj),
-            "deploy_acs": deploy_acs_wrapper.model_validate(config_obj),
+            "deploy_acs": deploy_acs.model_construct(**t.__dict__),
             #"deploy_rest":deploy_rest()
         }
     )
-        
-    #cli(Union[init, validate, build, new, test, test_servers],default=t)
-    config = cli(models)
-   
     
 
-    
-    
+    # Since some model(s) were constructed and not model_validated, we have to catch
+    # warnings again when creating the cli
+    with warnings.catch_warnings(action="ignore"):
+        config = tyro.cli(models)
+   
 
     #config = cli(Union[init, validate, build, new, test, test_servers, deploy_acs, deploy_rest])    
     
     
-    if type(config) == init:    
-        init_func(config)
-    if type(config) == validate:
+    if type(config) == init:
+        t.__dict__.update(config.__dict__)
+        init_func(t)
+    elif type(config) == validate:
         validate_func(config)
     elif type(config) == build:
         build_func(config)
     elif type(config) == new:
         new_func(config)
-    elif type(config) == deploy_acs_wrapper:
-        deploy_acs_func(config)
+    elif type(config) == inspect:
+        inspect_func(config)
+    elif type(config) == deploy_acs:
+        updated_config = deploy_acs.model_validate(config)
+        deploy_acs_func(updated_config)
     elif type(config) == deploy_rest:
         deploy_rest_func(config)
     elif type(config) == test:
         test_func(config)
     elif type(config) == test_servers:
         test_servers_func(config)
+    else:
+        raise Exception(f"Unknown command line type '{type(config).__name__}'")
     

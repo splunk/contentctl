@@ -221,6 +221,13 @@ class Director():
         # TODO: is there a better way to handle this? The `test` portion of the config is not defined for validate
         if (self.input_dto.config.test is not None) and (not self.input_dto.config.test.enable_integration_testing):
             builder.skipIntegrationTests()
+        
+        if builder.security_content_obj is not None and \
+           builder.security_content_obj.tags is not None and \
+           isinstance(builder.security_content_obj.tags.manual_test,str):
+            # Set all tests, both Unit AND Integration, to manual_test.  Note that integration test messages
+            # will intentionally overwrite the justification in the skipIntegrationTests call above. 
+            builder.skipAllTests(builder.security_content_obj.tags.manual_test)
 
 
     def constructSSADetection(self, builder: DetectionBuilder, file_path: str) -> None:

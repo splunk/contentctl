@@ -344,6 +344,23 @@ class DetectionBuilder():
                 "security_content_obj must be an instance of Detection to skip integration tests, "
                 f"not {type(self.security_content_obj)}"
                 )
+    
+    def skipAllTests(self, manual_test_explanation:str) -> None:
+        """
+        Skip all unit and integration tests if the manual_test flag is defined in the yml
+        """
+        # Sanity check for typing and in setObject wasn't called yet 
+        if self.security_content_obj is not None and isinstance(self.security_content_obj, Detection):
+            for test in self.security_content_obj.tests:
+                #This should skip both unit and integration tests as appropriate
+                test.skip(f"TEST SKIPPED: Detection marked as 'manual_test' with explanation: {manual_test_explanation}")
+                
+        else:
+            raise ValueError(
+                "security_content_obj must be an instance of Detection to skip unit and integration tests due "
+                f"to the presence of the manual_test field, not {type(self.security_content_obj)}"
+                )
+
 
     def reset(self) -> None:
         self.security_content_obj = None

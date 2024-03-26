@@ -54,6 +54,20 @@ class DetectionBuilder():
 
     def addRBA(self) -> None:
         if self.security_content_obj:
+            has_victim = False
+            failed_detection = []
+
+            if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
+                for entity in self.security_content_obj.tags.observable:
+                    # Check if the detection type is TTP and the entity role is Victim
+                    if "deprecated" not in self.security_content_obj.file_path and self.security_content_obj.status != "experimental" and (self.security_content_obj.type == "Anomaly" or self.security_content_obj.type == "TTP") and 'Victim' in entity.role:
+                        has_victim = True  # Set the flag to True if a Victim is found
+
+
+            # After processing all entities, check if a Victim was found for TTP detections
+            if "deprecated" not in self.security_content_obj.file_path and self.security_content_obj.status != "experimental" and (self.security_content_obj.type == "Anomaly" or self.security_content_obj.type == "TTP") and not has_victim:
+                       
+                     raise ValueError(f"The TTP detection '{self.security_content_obj.name}' does not have any entity with the role of 'Victim'.")
 
             risk_objects = []
             risk_object_user_types = {'user', 'username', 'email address'}

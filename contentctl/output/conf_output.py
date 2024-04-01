@@ -229,7 +229,6 @@ class ConfOutput:
                         'token': (None, appinspect_token),
                         'package': app_data
                     }
-                    print(f"curl -X POST '{address}' --header 'Authorization: Bearer {splunk_cloud_jwt_token}' --header 'ACS-Legal-Ack: Y' --form 'token={appinspect_token}'  --form 'package=@{self.getPackagePath(include_version=False)}'")
                     res = post(address, headers=headers, files = form_data)
                 else:
                     # Victoria uses the X-Splunk-Authorization Header
@@ -237,7 +236,6 @@ class ConfOutput:
                     # https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps#Manage_private_apps_using_the_ACS_API_on_Victoria_Experience
                     headers.update({'X-Splunk-Authorization':  appinspect_token})
                     address = f"https://admin.splunk.com/{splunk_cloud_stack}/adminconfig/v2/apps/victoria"
-                    print(f"curl -X POST '{address}' --header 'X-Splunk-Authorization: {appinspect_token}' --header 'Authorization: Bearer {splunk_cloud_jwt_token}' --header 'ACS-Legal-Ack: Y' --data-binary '@{self.getPackagePath(include_version=False)}'")
                     res = post(address, headers=headers, data=app_data.read())
         except Exception as e:
             raise Exception(f"Error installing to stack '{splunk_cloud_stack}' (stack_type='{stack_type}') via ACS:\n{str(e)}")

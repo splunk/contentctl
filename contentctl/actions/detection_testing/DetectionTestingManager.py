@@ -1,4 +1,5 @@
-from contentctl.objects.test_config import TestConfig
+from typing import List
+from contentctl.objects.config import test
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
 )
@@ -9,12 +10,11 @@ from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfras
     DetectionTestingInfrastructureServer,
 )
 
-from contentctl.objects.app import App
-import pathlib
-import os
-from contentctl.helper.utils import Utils
+
+
+
 from urllib.parse import urlparse
-import time
+
 from copy import deepcopy
 from contentctl.objects.enums import DetectionTestingTargetInfrastructure
 import signal
@@ -37,7 +37,6 @@ from contentctl.actions.detection_testing.views.DetectionTestingView import (
 from contentctl.objects.enums import PostTestBehavior
 
 from pydantic import BaseModel, Field
-from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.detection import Detection
 
 
@@ -48,8 +47,8 @@ import tqdm
 
 @dataclass(frozen=False)
 class DetectionTestingManagerInputDto:
-    config: TestConfig
-    testContent: DirectorOutputDto
+    config: test
+    detections: List[Detection]
     views: list[DetectionTestingView]
 
 
@@ -65,7 +64,7 @@ class DetectionTestingManager(BaseModel):
 
         # for content in self.input_dto.testContent.detections:
         #    self.pending_queue.put(content)
-        self.output_dto.inputQueue = self.input_dto.testContent.detections
+        self.output_dto.inputQueue = self.input_dto.detections
         self.create_DetectionTestingInfrastructureObjects()
 
     def execute(self) -> DetectionTestingManagerOutputDto:

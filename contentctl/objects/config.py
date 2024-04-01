@@ -5,7 +5,7 @@ from pydantic import (
     PositiveInt, FilePath, HttpUrl, computed_field
 )
 
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional,Any,Dict,Annotated,List,Union
 import semantic_version
 import random
@@ -14,6 +14,7 @@ import pathlib
 from contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
+from contentctl.objects.enums import PostTestBehavior
 #from contentctl.objects.test_config import TestConfig
 
 
@@ -53,12 +54,12 @@ SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/down
 
 class App_Base(BaseModel,ABC):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    uid: int = Field(ge=2, lt=100000, default_factory=lambda:random.randint(20000,100000))
-    title: str = Field(default="Content Pack",description="Human-readable name used by the app. This can have special characters.")
-    appid: Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]= Field(default="ContentPack",description="Internal name used by your app. "
+    uid: Optional[int] = Field(default=None)
+    title: str = Field(description="Human-readable name used by the app. This can have special characters.")
+    appid: Optional[Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]]= Field(default=None,description="Internal name used by your app. "
                                                                     "It may ONLY have characters, numbers, and underscores. No other characters are allowed.")
-    version: str = Field(default="0.0.1",description="The version of your Content Pack.  This must follow semantic versioning guidelines.")
-    
+    version: str = Field(description="The version of your Content Pack.  This must follow semantic versioning guidelines.")
+    description: Optional[str] = Field(default="description of app",description="Free text description of the Content Pack.")
     
    
     def getSplunkbasePath(self)->HttpUrl:
@@ -70,10 +71,15 @@ class App_Base(BaseModel,ABC):
 
 class TestApp(App_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
-    def getApp(self, target_directory:pathlib.Path, config:test)->str:
+    hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(default=None, description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
+    
+    def getApp(self, config:test)->str:
         if config.splunk_api_password is not None and config.splunk_api_username is not None:
-            destination = self.getSplunkbasePath()
+            if self.version is not None and self.uid is not None:
+               return str(self.getSplunkbasePath())
+            if self.version is None or self.uid is None:
+                print(f"Not downloading {self.title} from Splunkbase since uid[{self.uid}] AND version[{self.version}] MUST be defined") 
+            
         
         elif isinstance(self.hardcoded_path, FilePath):
             destination = config.getAppDir() / self.hardcoded_path.name
@@ -92,12 +98,22 @@ class TestApp(App_Base):
         return str(destination)
 
 
+class allapps(BaseModel):
+    model_config = ConfigDict(validate_default=True, extra="forbid")
+    a:List[TestApp]
+
 class CustomApp(App_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
+    uid: int = Field(ge=2, lt=100000, default_factory=lambda:random.randint(20000,100000))
+    title: str = Field(default="Content Pack",description="Human-readable name used by the app. This can have special characters.")
+    appid: Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]= Field(default="ContentPack",description="Internal name used by your app. "
+                                                                    "It may ONLY have characters, numbers, and underscores. No other characters are allowed.")
+    version: str = Field(default="0.0.1",description="The version of your Content Pack.  This must follow semantic versioning guidelines.")
+
     prefix: str = Field(default="ContentPack",description="A short prefix to easily identify all your content.")
-    build: int = Field(exclude=True, default=int(datetime.utcnow().strftime("%Y%m%d%H%M%S")),
+    build: int = Field(exclude=True, default=int(datetime.now(UTC).strftime("%Y%m%d%H%M%S")),
                        description="Build number for your app.  This will always be a number that corresponds to the time of the build in the format YYYYMMDDHHMMSS")
     # id has many restrictions:
     # * Omit this setting for apps that are for internal use only and not intended
@@ -246,12 +262,6 @@ class deploy_acs(inspect):
     splunk_cloud_jwt_token: str = Field(exclude=True, description="Splunk JWT used for performing ACS operations on a Splunk Cloud Instance")
     splunk_cloud_stack: str = Field(description="The name of your Splunk Cloud Stack")
 
-    # Note that while these are a redefinition of fields with the same name in Config_Build object,
-    # they are now REQUIRED instead of optional
-    splunk_api_username: str = Field(description="Splunk API username used for running appinspect.")
-    splunk_api_password: str = Field(exclude=True, description="Splunk API password used for running appinspect.")
-
-
     
 class Infrastructure(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
@@ -307,7 +317,10 @@ class test(build):
     test_instance:Container = Container()
     container_settings:ContainerSettings = ContainerSettings()
     mode:Union[All, Changes, Selected] = Changes()
-
+    splunk_api_username: Optional[str] = Field(default=None, description="Splunk API username used for running appinspect or installating apps from Splunkbase")
+    splunk_api_password: Optional[str] = Field(default=None, exclude=True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
+    apps: List[TestApp] = Field(default=[], exclude=True, description="List of apps to install in test environment")
+    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
     def getAppDir(self)->pathlib.Path:
         return self.path / "apps"
 

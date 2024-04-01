@@ -28,8 +28,8 @@ class Story(SecurityContentObject):
     author_company: str = "no"
     
 
-    #These enrichments will occur at the very end
-    print("enable enrichments for story")
+    # These are updated when detection and investigation objects are created.
+    # Specifically in the model_post_init functions
     detections:List[Detection] = []
     investigations: List[Investigation] = []
     
@@ -39,11 +39,6 @@ class Story(SecurityContentObject):
     def encode_error(cls, v:str, info:ValidationInfo)->str:
         return super().free_text_field_valid(v,info)
 
-    # def getDetections(self, detections:List[Detection])->list[Detection]:
-    #     return [detection for detection in detections if self in detection.tags.analytic_story]
-
-    # def getDetectionNames(self, detections:List[Detection])->List[str]:
-    #     return [detection.name for detection in self.getDetections(detections)]
     def getDetectionNames(self)->List[str]:
         return [detection.name for detection in self.detections]
     
@@ -51,8 +46,5 @@ class Story(SecurityContentObject):
         return [investigation.name for investigation in self.investigations]
 
     
-    # def getInvestigationNames(self)->List[str]:
-    #     if self.investigations:
-    #         return [investigation.name for investigation in self.investigations]
-    #     return []
+    
  

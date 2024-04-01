@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 import abc
 from typing import Callable
-from contentctl.objects.test_config import TestConfig
+from contentctl.objects.config import test
 import datetime
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
@@ -11,7 +11,7 @@ from contentctl.objects.enums import DetectionStatus
 
 
 class DetectionTestingView(BaseModel, abc.ABC):
-    config: TestConfig
+    config: test
     sync_obj: DetectionTestingManagerOutputDto
 
     interval: float = 10

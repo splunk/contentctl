@@ -308,6 +308,7 @@ class AssetType(str, enum.Enum):
     SPLUNK_SERVER = "Splunk Server"
     VPN_Appliance = "VPN Appliance"
     WEB_SERVER = "Web Server"
+    WEB_PROXY = "Web Proxy"
     WEB_APPLICATION = "Web Application"
     WINDOWS = "Windows"
 

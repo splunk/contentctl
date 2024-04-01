@@ -1,6 +1,6 @@
 from contentctl.actions.initialize import Initialize
 import tyro
-from contentctl.objects.config import Config_Base, CustomApp, init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect
+from contentctl.objects.config import Config_Base, CustomApp, init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, allapps
 from typing import Union
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
@@ -10,6 +10,9 @@ from contentctl.actions.build import (
      DirectorOutputDto,
      Build,
 )
+
+from contentctl.actions.test import TestInputDto
+
 from contentctl.actions.inspect import Inspect
 import sys
 import warnings
@@ -53,7 +56,7 @@ def init_func(config:test):
     Initialize().execute(config)
 
 
-def validate_func(config:validate):
+def validate_func(config:validate)->DirectorOutputDto:
     validate = Validate()
     return validate.execute(config)
 
@@ -84,15 +87,19 @@ def deploy_rest_func(config:deploy_rest):
     raise Exception("deploy rest not yet implemented")
     
 
-def test_func(config:test):
+def test_func(config:test, apps:allapps):
     director_output_dto = build_func(config)
     
     
     gitServer = GitService(director=director_output_dto,config=config)
-    content = gitServer.getContent()
-    #test_input_dto = TestInputDto(director_output_dto, gitService, config)
     
-    #t = Test()
+    detections_to_test = gitServer.getContent()
+
+    
+
+    test_input_dto = TestInputDto(detections_to_test, config)
+    
+    t = Test()
 
     #t.execute(test_input_dto)
 
@@ -116,6 +123,20 @@ def main():
     except Exception as e:
         print(f"Error validating 'contentctl.yml':\n{str(e)}")
         sys.exit(1)
+    
+    try:
+        appsFile = pathlib.Path("apps.yml")
+        if not appsFile.is_file():
+            print("make new file")
+            apps = allapps(a=[])
+            #raise Exception(f"Config File {configFile} does not exist. Please create it with 'contentctl init'")        
+        else:
+            apps_obj = YmlReader().load_file(appsFile,add_fields=False)
+            apps = allapps.model_validate(apps_obj)
+
+    except Exception as e:
+        print(f"Error validating 'contentctl.yml':\n{str(e)}")
+        sys.exit(1)
         
     
     # For ease of generating the constructor, we want to allow construction
@@ -123,8 +144,6 @@ def main():
     # with defaults OR in the config file. As such, we construct the model rather
     # than model_validating it so that validation does not run on missing required fields.
     # Note that we HAVE model_validated the test object fields already above
-    import pprint
-
 
     models = tyro.extras.subcommand_type_from_defaults(
         {
@@ -146,8 +165,6 @@ def main():
     with warnings.catch_warnings(action="ignore"):
         config = tyro.cli(models)
    
-
-    #config = cli(Union[init, validate, build, new, test, test_servers, deploy_acs, deploy_rest])    
     
     
     if type(config) == init:
@@ -167,7 +184,7 @@ def main():
     elif type(config) == deploy_rest:
         deploy_rest_func(config)
     elif type(config) == test:
-        test_func(config)
+        test_func(config, apps)
     elif type(config) == test_servers:
         test_servers_func(config)
     else:

@@ -4,71 +4,30 @@ import pathlib
 
 from contentctl.output.json_writer import JsonWriter
 from contentctl.objects.enums import SecurityContentType
+from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import SecurityContentObject_Abstract
 
 
 class ApiJsonOutput():
 
- def writeObjects(self, objects: list, output_path: pathlib.Path, type: SecurityContentType = None) -> None:
-        if type == SecurityContentType.detections:
-            obj_array = []
-            for detection in objects:
-                detection.id = str(detection.id)
-                obj_array.append(detection.dict(exclude_none=True, 
-                    exclude =
-                    {
-                        "deprecated": True,
-                        "experimental": True,
-                        "annotations": True,
-                        "risk": True,
-                        "playbooks": True,
-                        "baselines": True,
-                        "mappings": True,
-                        "test": True,
-                        "deployment": True,
-                        "type": True,
-                        "status": True,
-                        "data_source": True,
-                        "tests": True,
-                        "cve_enrichment": True,
-                        "tags": 
-                            {
-                                "file_path": True,
-                                "required_fields": True,
-                                "confidence": True,
-                                "impact": True,
-                                "product": True,
-                                "cve": True
-                            }
-                    }
-                ))
+ def writeObjects(self, objects: list[SecurityContentObject_Abstract], output_path: pathlib.Path, contentType: SecurityContentType = None) -> None:
+        #Serialize all objects
+        serialized_objects = []
+        try:
+            for obj in objects:
+                serialized_objects.append(obj.model_dump())
+        except Exception as e:
+            raise Exception(f"Error serializing object with name '{obj.name}' and type '{type(obj).__name__}': '{str(e)}'")
             
-            JsonWriter.writeJsonObject(os.path.join(output_path, 'detections.json'), {'detections': obj_array })
 
-            ### Code to be added to contentctl to ship filter macros to macros.json
-
-            obj_array = []    
-            for detection in objects:
-                detection_dict = detection.dict()
-                if "macros" in detection_dict:
-                    for macro in detection_dict["macros"]:
-                        obj_array.append(macro)
-
-            uniques:set[str] = set()
-            for obj in obj_array:
-                if obj.get("arguments",None) != None:
-                    uniques.add(json.dumps(obj,sort_keys=True))
-                else:
-                    obj.pop("arguments")
-                    uniques.add(json.dumps(obj, sort_keys=True))
-
-            obj_array = []
-            for item in uniques:
-                obj_array.append(json.loads(item))
-
-            JsonWriter.writeJsonObject(os.path.join(output_path, 'macros.json'), {'macros': obj_array})
+        if contentType == SecurityContentType.detections:  
+            JsonWriter.writeJsonObject(os.path.join(output_path, 'detections.json'), {'detections': serialized_objects })
 
         
-        elif type == SecurityContentType.stories:
+
+        elif contentType == SecurityContentType.macros:
+            JsonWriter.writeJsonObject(os.path.join(output_path, 'macros.json'), {'macros': serialized_objects })
+        
+        elif contentType == SecurityContentType.stories:
             obj_array = []
             for story in objects:
                 story.id = str(story.id)
@@ -79,9 +38,9 @@ class ApiJsonOutput():
                     }
                 ))
 
-            JsonWriter.writeJsonObject(os.path.join(output_path, 'stories.json'), {'stories': obj_array })
+            JsonWriter.writeJsonObject(os.path.join(output_path, 'stories.json'), {'stories': serialized_objects })
 
-        elif type == SecurityContentType.baselines:
+        elif contentType == SecurityContentType.baselines:
             obj_array = []
             for baseline in objects:
                 baseline.id = str(baseline.id)
@@ -94,27 +53,27 @@ class ApiJsonOutput():
                     }
                 ))
 
-            JsonWriter.writeJsonObject(os.path.join(output_path, 'baselines.json'), {'baselines': obj_array })
+            JsonWriter.writeJsonObject(os.path.join(output_path, 'baselines.json'), {'baselines': serialized_objects })
 
-        elif type == SecurityContentType.investigations:
+        elif contentType == SecurityContentType.investigations:
             obj_array = []
             for investigation in objects:
                 investigation.id = str(investigation.id)
                 obj_array.append(investigation.dict(exclude_none=True))
 
-            JsonWriter.writeJsonObject(os.path.join(output_path, 'response_tasks.json'), {'response_tasks': obj_array })
+            JsonWriter.writeJsonObject(os.path.join(output_path, 'response_tasks.json'), {'response_tasks': serialized_objects })
         
-        elif type == SecurityContentType.lookups:
+        elif contentType == SecurityContentType.lookups:
             obj_array = []
             for lookup in objects:
 
                 obj_array.append(lookup.dict(exclude_none=True))
 
 
-            JsonWriter.writeJsonObject(os.path.join(output_path, 'lookups.json'), {'lookups': obj_array })
+            JsonWriter.writeJsonObject(os.path.join(output_path, 'lookups.json'), {'lookups': serialized_objects })
 
 
-        elif type == SecurityContentType.deployments:
+        elif contentType == SecurityContentType.deployments:
             obj_array = []
             for deployment in objects:
                 deployment.id = str(deployment.id)

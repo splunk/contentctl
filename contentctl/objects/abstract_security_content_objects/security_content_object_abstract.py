@@ -12,7 +12,7 @@ import re
 import abc
 import uuid
 import datetime
-from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict, model_validator
+from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict, model_validator, model_serializer
 from typing import Tuple, Optional, List, Union
 import pathlib
        
@@ -43,6 +43,18 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     file_path: Optional[FilePath] = None
     references: Optional[List[HttpUrl]] = None
 
+
+    @model_serializer
+    def serialize_model(self):
+        return {
+            "name": self.name,
+            "author": self.author,
+            "date": str(self.date),
+            "version": self.version,
+            "id": str(self.id),
+            "description": self.description,
+            "references": [str(url) for url in self.references or []]
+        }
 
     @staticmethod
     def objectListToNameList(objects:list[SecurityContentObject], config:Optional[Config]=None)->list[str]:

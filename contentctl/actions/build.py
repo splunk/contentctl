@@ -25,7 +25,8 @@ class BuildInputDto:
 class Build:
 
     def execute(self, input_dto: BuildInputDto) -> DirectorOutputDto:
-        if input_dto.config.build_app or input_dto.config.build_api:    
+        print("BUILD")
+        if input_dto.config.build_app:    
             conf_output = ConfOutput(input_dto.config)
             conf_output.writeHeaders()
             conf_output.writeObjects(input_dto.director_output_dto.detections, SecurityContentType.detections)
@@ -39,9 +40,9 @@ class Build:
 
             
             print(f'Build of security content successful to {conf_output.config.getPackageFilePath()}')
-            return input_dto.director_output_dto
+        
 
-        elif input_dto.config.build_api:    
+        if input_dto.config.build_api:    
             shutil.rmtree(input_dto.config.getAPIPath(), ignore_errors=True)
             input_dto.config.getAPIPath().mkdir(parents=True)
             api_json_output = ApiJsonOutput()
@@ -62,7 +63,7 @@ class Build:
             with open(version_file,"w") as version_f:
                 json.dump(version_dict,version_f)
 
-        elif input_dto.config.build_ssa:
+        if input_dto.config.build_ssa:
             
             srs_path = input_dto.config.getSSAPath() / 'srs'
             complex_path = input_dto.config.getSSAPath() / 'complex'

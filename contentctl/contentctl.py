@@ -59,6 +59,7 @@ def init_func(config:test):
 def validate_func(config:validate)->DirectorOutputDto:
     validate = Validate()
     return validate.execute(config)
+    
 
 
 def build_func(config:build)->DirectorOutputDto:

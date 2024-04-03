@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 from typing import List,Set,Optional, Annotated
 
 from enum import Enum
@@ -30,5 +30,19 @@ class StoryTags(BaseModel):
       if len(self.category) > 1:
          print("Story with more than 1 category.  We can only have 1 category, fix it!")
       return self.category.pop()
+   
+   @model_serializer
+   def serialize_model(self):
+      #no super to call
+      return {
+         "category": list(self.category),
+         "product": list(self.product),
+         "usecase": self.usecase,
+         "mitre_attack_enrichments": self.mitre_attack_enrichments,
+         "mitre_attack_tactics": list(self.mitre_attack_tactics) if self.mitre_attack_tactics is not None else None,
+         "datamodels": list(self.datamodels) if self.datamodels is not None else None,
+         "kill_chain_phases": list(self.kill_chain_phases) if self.kill_chain_phases is not None else None  
+      }
+
         
     

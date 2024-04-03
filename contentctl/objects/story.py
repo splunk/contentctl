@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING,List
 from contentctl.objects.story_tags import StoryTags
-from pydantic import field_validator, Field, ValidationInfo
+from pydantic import field_validator, Field, ValidationInfo, model_serializer
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
@@ -32,6 +32,29 @@ class Story(SecurityContentObject):
     # Specifically in the model_post_init functions
     detections:List[Detection] = []
     investigations: List[Investigation] = []
+    
+
+    @model_serializer
+    def serialize_model(self):
+        #Call serializer for parent
+        super_fields = super().serialize_model()
+        
+        #All fields custom to this model
+        model= {
+            "narrative": self.narrative,
+            "tags": self.tags.model_dump(),
+            "detection_names": self.getDetectionNames(),
+            "investigation_names": self.getInvestigationNames(),
+            "detections": []
+        }
+        
+        #Combine fields from this model with fields from parent
+        model.update(super_fields)
+        
+        #return the model
+        return model
+
+
     
     
     @field_validator('narrative')

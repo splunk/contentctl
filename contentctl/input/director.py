@@ -116,7 +116,7 @@ class Director():
         # Fetch and load all the atomic tests
         self.getAtomicTests()
 
-        if self.input_dto.build_app or self.input_dto.build_app:
+        if self.input_dto.build_app or self.input_dto.build_api:
             self.createSecurityContent(SecurityContentType.deployments)
             self.createSecurityContent(SecurityContentType.lookups)
             self.createSecurityContent(SecurityContentType.macros)
@@ -125,6 +125,7 @@ class Director():
             self.createSecurityContent(SecurityContentType.investigations)
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
+        
         elif self.input_dto.build_ssa == SecurityContentProduct.SSA:
             self.createSecurityContent(SecurityContentType.ssa_detections)
         
@@ -140,12 +141,14 @@ class Director():
         already_ran = False
         progress_percent = 0
 
-        if self.input_dto.build_app or self.input_dto.build_app:
+        if self.input_dto.build_app or self.input_dto.build_api:
             security_content_files = [f for f in files if not f.name.startswith('ssa___')]
         elif self.input_dto.build_ssa:
             security_content_files = [f for f in files if f.name.startswith('ssa___')]
         else:
-            raise(Exception(f"Cannot createSecurityContent for unknown product."))
+            import code
+            code.interact(local=locals())
+            raise(Exception(f"Cannot createSecurityContent for unknown product.  We must have at least one of 'build_app: True', 'build:api: True', and/or 'build_ssa: True' "))
 
         
         for index,file in enumerate(security_content_files):

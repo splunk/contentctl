@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING,Union, Optional, List, Any
+import os.path
 import re
 import pathlib
-from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field, computed_field
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field, computed_field, model_serializer
 
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
@@ -48,6 +49,13 @@ class Detection_Abstract(SecurityContentObject):
         else:
             return []
     
+    @computed_field
+    @property
+    def source(self)->str:
+        if self.file_path is not None:
+            return self.file_path.absolute().parent.name
+        else:
+            raise ValueError(f"Cannot get 'source' for detection {self.name} - 'file_path' was None.")
 
     deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
     annotations: dict[str,Union[List[Any],int]] = {}
@@ -65,6 +73,31 @@ class Detection_Abstract(SecurityContentObject):
     
     class Config:
         use_enum_values = True
+
+
+    @model_serializer
+    def serialize_model(self):
+        #Call serializer for parent
+        super_fields = super().serialize_model()
+        
+        #All fields custom to this model
+        model= {
+            "tags": self.tags.model_dump(),
+            "search": self.search,
+            "how_to_implement":self.how_to_implement,
+            "known_false_positives":self.known_false_positives,
+            "datamodel": self.datamodel,
+            "macros": self.macros,
+            "lookups": self.lookups,
+            "source": self.source,
+            "nes_fields": self.nes_fields,
+        }
+        
+        #Combine fields from this model with fields from parent
+        model.update(super_fields)
+        
+        #return the model
+        return model
 
 
     def model_post_init(self, ctx:dict[str,Any]):

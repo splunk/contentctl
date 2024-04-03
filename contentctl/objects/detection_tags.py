@@ -1,7 +1,7 @@
 from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, List, Optional, Annotated, Union
-from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo
+from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo, model_serializer
 from contentctl.objects.story import Story
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
@@ -111,6 +111,25 @@ class DetectionTags(BaseModel):
     #     return v
 
     
+    @model_serializer
+    def serialize_model(self):
+        #Since this field has no parent, there is no need to call super() serialization function
+        return {
+            "analytic_story": [story.name for story in self.analytic_story],
+            "asset_type": self.asset_type,
+            "cis20": self.cis20,
+            "kill_chain_phases": self.kill_chain_phases,
+            "nist": self.nist,
+            "observable": self.observable,
+            "message": self.message,
+            "risk_score": self.risk_score,
+            "security_domain": self.security_domain,
+            "risk_severity": self.risk_severity,
+            "mitre_attack_enrichments": self.mitre_attack_enrichments
+        }
+    
+        
+
     @field_validator('analytic_story',mode="before")
     @classmethod
     def mapStoryNamesToStoryObjects(cls, v:list[str], info:ValidationInfo)->list[Story]:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List
 import re
-from pydantic import Field
+from pydantic import Field, model_serializer
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -24,6 +24,23 @@ class Macro(SecurityContentObject):
     
     
 
+
+    @model_serializer
+    def serialize_model(self):
+        #Call serializer for parent
+        super_fields = super().serialize_model()
+        
+        #All fields custom to this model
+        model= {
+            "definition": self.definition,
+            "arguments": self.arguments
+        }
+        
+        #Combine fields from this model with fields from parent
+        model.update(super_fields)
+        
+        #return the model
+        return model
     @staticmethod
     def get_macros(text_field:str, director:DirectorOutputDto , ignore_macros:set[str]=MACROS_TO_IGNORE)->list[Macro]:
                 

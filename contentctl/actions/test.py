@@ -1,13 +1,11 @@
 from dataclasses import dataclass
+from typing import List
 
 from contentctl.objects.config import test
 from contentctl.objects.enums import DetectionTestingMode
+from contentctl.objects.detection import Detection
 
 from contentctl.input.director import DirectorOutputDto
-
-from contentctl.actions.detection_testing.GitService import (
-    GitService,
-)
 
 from contentctl.actions.detection_testing.DetectionTestingManager import (
     DetectionTestingManager,
@@ -40,8 +38,7 @@ MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
 @dataclass(frozen=True)
 class TestInputDto:
-    test_director_output_dto: DirectorOutputDto
-    gitService: GitService
+    detections: List[Detection]
     config: test
     
 
@@ -62,7 +59,7 @@ class Test:
 
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,
-            testContent=input_dto.test_director_output_dto,
+            detections=input_dto.test_director_output_dto,
             views=[web, cli, file],
         )
         manager = DetectionTestingManager(

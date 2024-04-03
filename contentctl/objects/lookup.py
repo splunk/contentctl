@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import field_validator, ValidationInfo, model_validator, FilePath
+from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer
 from typing import Optional, Any, Union
 import re
 
@@ -27,6 +27,28 @@ class Lookup(SecurityContentObject):
     min_matches: Optional[int] = None
     case_sensitive_match: Optional[bool] = None
     
+
+    @model_serializer
+    def serialize_model(self):
+        #Call serializer for parent
+        super_fields = super().serialize_model()
+        
+        #All fields custom to this model
+        model= {
+            "collection": self.collection,
+            "field_list": self.fields_list,
+            "filename": self.filename.name if self.filename is not None else None,
+            "default_match": self.default_match,
+            "match_type": self.match_type,
+            "min_matches": self.min_matches,
+            "case_sensitive_match": self.case_sensitive_match
+        }
+        
+        #Combine fields from this model with fields from parent
+        model.update(super_fields)
+        
+        #return the model
+        return model
 
     @model_validator(mode="before")
     def fix_lookup_path(cls, data:Any)->Any:

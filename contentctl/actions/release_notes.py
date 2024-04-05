@@ -44,7 +44,7 @@ class ReleaseNotes:
                                 if 'name' in data and'lookups/' in file_path:
                                     print("- " + f"{data['name']}")
 
-                                # if 'name' in data and 'id' in data and re.match('.*/ssa_detections/.*', file_path):
+                               # Create only SSA link when its production
                                 if 'name' in data and 'id' in data and 'ssa_detections/' in file_path:
                                     if data['status'] == "production":
                                         temp_link = "https://research.splunk.com" + file_path.replace(repo_path,"")

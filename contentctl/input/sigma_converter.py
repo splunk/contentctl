@@ -16,6 +16,7 @@ from sigma.processing.pipeline import ProcessingItem, ProcessingPipeline
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 from contentctl.objects.data_source import DataSource
+from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.enums import *
 from contentctl.helper.utils import Utils
 from contentctl.input.backend_splunk_ba import SplunkBABackend
@@ -225,6 +226,12 @@ class SigmaConverter():
         name = yml_dict.get("name","")
         yml_dict["name"] = name[:67]
         detection = Detection.parse_obj(yml_dict)
+        # Remove any Integration Tests.  IntegrationTests are only relevant
+        # for ESCU Content and NOT for BA Content. Instead of filtering OUT
+        # IntegrationTest, we will ONLY include UnitTest. This supports the introduction
+        # of additional ESCU Test Types in the future.
+        detection.tests = list(filter(lambda t: isinstance(t, UnitTest), detection.tests))
+
         detection.name = name
 
         detection.source = os.path.split(os.path.dirname(detection_path))[-1]  

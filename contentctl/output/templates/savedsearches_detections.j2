@@ -6,7 +6,9 @@
 action.escu = 0
 action.escu.enabled = 1
 {% if detection.status == "deprecated" %}
-description = WARNING, this detection has been marked deprecated by the Splunk Threat Research team, this means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
+description = **WARNING**, this detection has been marked **DEPRECATED** by the Splunk Threat Research Team. This means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }}
+{% elif detection.status == "experimental" %}
+description = **WARNING**, this detection is marked **EXPERIMENTAL** by the Splunk Threat Research Team. This means that the detection has been manually tested but we do not have the associated attack data to perform automated testing or cannot share this attack dataset due to its sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
 {% else %}
 description = {{ detection.description }}
 {% endif %}
@@ -54,6 +56,8 @@ dispatch.latest_time = {{ detection.deployment.scheduling.latest_time }}
 action.correlationsearch.enabled = 1
 {% if detection.status == "deprecated" %}
 action.correlationsearch.label = {{APP_NAME}} - Deprecated - {{ detection.name }} - Rule
+{% elif detection.status == "experimental" %}
+action.correlationsearch.label = {{APP_NAME}} - Experimental - {{ detection.name }} - Rule
 {% elif detection.type | lower == "correlation" %}
 action.correlationsearch.label = {{APP_NAME}} - RIR - {{ detection.name }} - Rule
 {% else %}
@@ -95,7 +99,7 @@ action.sendtophantom.param.severity = {{ detection.deployment.phantom.severity |
 {% endif %}
 {% endif %}
 alert.digest_mode = 1
-{% if detection.disabled is defined %}
+{% if detection.enabled_by_default %}
 disabled = false
 {% else %}
 disabled = true

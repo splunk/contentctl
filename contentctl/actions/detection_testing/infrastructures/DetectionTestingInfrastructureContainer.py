@@ -15,6 +15,16 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
     container: docker.models.resource.Model = None
 
     def start(self):
+        if self.global_config.infrastructure_config.persist_and_reuse_container:
+            # If we are configured to use the persistent container, then check and see if it's already
+            # running. If so, just use it without additional configuration.
+            try:
+                self.container = self.get_docker_client().containers.get(self.get_name())
+                return
+            except Exception:
+                #We did not find the container running, we will set it up
+                pass
+
         self.container = self.make_container()
         self.container.start()
 
@@ -107,7 +117,12 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             # Container does not exist, no need to try and remove it
             return
         try:
-
+            # If the user wants to persist the container (or use a previously configured container), then DO NOT remove it.
+            # Emit the following message, which they will see on initial setup and teardown at the end of the test. 
+            if self.global_config.infrastructure_config.persist_and_reuse_container:
+                print(f"\nContainer [{self.get_name()}] has NOT been terminated because 'contentctl_test.yml ---> infrastructure_config ---> persist_and_reuse_container = True'")
+                print(f"To remove it, please manually run the following at the command line: `docker container rm -fv {self.get_name()}`\n")
+                return
             # container was found, so now we try to remove it
             # v also removes volumes linked to the container
             container.remove(v=removeVolumes, force=forceRemove)

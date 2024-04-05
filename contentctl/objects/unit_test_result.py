@@ -46,7 +46,7 @@ class UnitTestResult(BaseTestResult):
             elif self.status == TestResultStatus.FAIL:
                 self.message = "TEST FAILED"
             elif self.status == TestResultStatus.ERROR:
-                self.message = "TEST FAILED (ERROR)"
+                self.message = "TEST ERROR"
             elif self.status == TestResultStatus.SKIP:
                 #A test that was SKIPPED should not have job content since it should not have been run.
                 self.message = "TEST SKIPPED"

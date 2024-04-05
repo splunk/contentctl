@@ -30,17 +30,9 @@ class ReleaseNotes:
                                 if 'name' in data and 'stories/' in file_path:
                                     story_link = "https://research.splunk.com/stories/" + data['name']
                                     story_link=story_link.replace(" ","_")
-                                    story_link=story_link.replace("- ","_")
                                     story_link = story_link.lower()
                                     print("- "+"["+f"{data['name']}"+"]"+"("+story_link+")")
-                                # Check and create detection link
-                                if 'name' in data and 'id' in data and 'detections/' in file_path:
-                                    temp_link = "https://research.splunk.com" + file_path.replace(repo_path,"")
-                                    pattern = r'(?<=/)[^/]*$'
-                                    detection_link = re.sub(pattern, data['id'], temp_link)
-                                    detection_link = detection_link.replace("detections","" )
-                                    detection_link = detection_link.replace(".com//",".com/" )
-                                    print("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")")    
+              
                                 if 'name' in data and'playbooks/' in file_path:
                                     playbook_link = "https://research.splunk.com" + file_path.replace(repo_path,"")
                                     playbook_link=playbook_link.replace(".yml","/").lower()
@@ -52,6 +44,28 @@ class ReleaseNotes:
                                 if 'name' in data and'lookups/' in file_path:
                                     print("- " + f"{data['name']}")
 
+                               # Create only SSA link when its production
+                                if 'name' in data and 'id' in data and 'ssa_detections/' in file_path:
+                                    if data['status'] == "production":
+                                        temp_link = "https://research.splunk.com" + file_path.replace(repo_path,"")
+                                        pattern = r'(?<=/)[^/]*$'
+                                        detection_link = re.sub(pattern, data['id'], temp_link)
+                                        detection_link = detection_link.replace("detections","" )
+                                        detection_link = detection_link.replace("ssa_/","" )
+                                        print("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")")   
+
+                                    if data['status'] == "validation":
+                                        print("- "+f"{data['name']}"+" (Validation Mode)")   
+
+                                # Check and create detection link
+                                if 'name' in data and 'id' in data and 'detections/' in file_path and not 'ssa_detections/' in file_path:
+                                    temp_link = "https://research.splunk.com" + file_path.replace(repo_path,"")
+                                    pattern = r'(?<=/)[^/]*$'
+                                    detection_link = re.sub(pattern, data['id'], temp_link)
+                                    detection_link = detection_link.replace("detections","" )
+                                    detection_link = detection_link.replace(".com//",".com/" )
+                                    print("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")") 
+
                             except yaml.YAMLError as exc:
                                 print(f"Error parsing YAML file {file_path}: {exc}")
                 else:
@@ -60,7 +74,7 @@ class ReleaseNotes:
     def release_notes(self, input_dto: DirectorInputDto, old_tag:Union[str,None], new_tag:str, latest_branch:str) -> None:
 
         ### Remove hard coded path
-        directories = ['detections/','stories/','macros/','lookups/','playbooks']
+        directories = ['detections/','stories/','macros/','lookups/','playbooks/','ssa_detections/']
         repo_path = os.path.abspath(input_dto.director_input_dto.input_path)
         repo = Repo(repo_path)
         # Ensure the new tag is in the tags if tags are supplied
@@ -104,17 +118,20 @@ class ReleaseNotes:
                 # Check if a file is Modified
                 if diff.change_type == 'M':
                     modified_files.append(file_path)
+
+
                 # Check if a file is Added
                 elif diff.change_type == 'A':
                     added_files.append(file_path)
                     # print(added_files)
-
         detections_added = []
+        ba_detections_added = []
         stories_added = []
         macros_added = []
         lookups_added = []
         playbooks_added = []      
         detections_modified = []
+        ba_detections_modified = []
         stories_modified = []
         macros_modified = []
         lookups_modified = []
@@ -122,7 +139,7 @@ class ReleaseNotes:
 
         for file in modified_files:
             file=repo_path +"/"+file
-            if 'detections/' in file:
+            if 'detections/' in file and 'ssa_detections/' not in file:
                 detections_modified.append(file)
             if 'stories/' in file:
                 stories_modified.append(file)
@@ -132,10 +149,12 @@ class ReleaseNotes:
                 lookups_modified.append(file)
             if 'playbooks/' in file:
                 playbooks_modified.append(file)
+            if 'ssa_detections/' in file:
+                ba_detections_modified.append(file)
 
         for file in added_files:
             file=repo_path +"/"+file
-            if 'detections/' in file:
+            if 'detections/' in file and 'ssa_detections/' not in file:
                 detections_added.append(file)
             if 'stories/' in file:
                 stories_added.append(file)
@@ -145,6 +164,9 @@ class ReleaseNotes:
                 lookups_added.append(file)
             if 'playbooks/' in file:
                 playbooks_added.append(file)
+            if 'ssa_detections/' in file:
+                ba_detections_added.append(file)
+
         if new_tag:
 
             print(f"Generating release notes       - \033[92m{latest_tag}\033[0m")
@@ -177,6 +199,16 @@ class ReleaseNotes:
         print("\n### Playbooks Updated")    
         self.create_notes(repo_path,playbooks_modified)
 
-        print("\n### Other Updates\n-\n") 
+        print("\n### Other Updates\n-\n")
+
+        print("\n## BA Release Notes")
+
+        print("\n### New BA Analytics")
+        self.create_notes(repo_path,ba_detections_added)
+
+        print("\n### Updated BA Analytics")    
+        self.create_notes(repo_path,ba_detections_modified) 
+
+
         
         print(f"Release notes completed succesfully")

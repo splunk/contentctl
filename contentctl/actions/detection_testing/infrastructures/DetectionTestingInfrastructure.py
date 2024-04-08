@@ -898,7 +898,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except Exception as e:
             # Catch and report and unhandled exceptions in integration testing
             test.result = IntegrationTestResult(
-                message="TEST FAILED: unhandled exception in CorrelationSearch",
+                message="TEST ERROR: unhandled exception in CorrelationSearch",
                 exception=e,
                 status=TestResultStatus.ERROR
             )

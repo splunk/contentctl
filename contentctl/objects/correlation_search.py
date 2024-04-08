@@ -1,5 +1,6 @@
 import logging
 import time
+import json
 from typing import Union, Optional, Any
 from enum import Enum
 
@@ -18,12 +19,22 @@ from contentctl.actions.detection_testing.progress_bar import (
     TestReportingType,
     TestingStates
 )
+from contentctl.objects.errors import (
+    IntegrationTestingError,
+    ServerError,
+    ClientError,
+    ValidationFailed
+)
 from contentctl.objects.detection import Detection
 from contentctl.objects.risk_event import RiskEvent
+from contentctl.objects.notable_event import NotableEvent
+from contentctl.objects.observable import Observable
+
+# TODO: test my new contentctl logic against an old ESCU build; my logic should detect the faulty attacker events
 
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
@@ -64,21 +75,6 @@ def get_logger() -> logging.Logger:
         logger.addHandler(handler)
 
     return logger
-
-
-class IntegrationTestingError(Exception):
-    """Base exception class for integration testing"""
-    pass
-
-
-class ServerError(IntegrationTestingError):
-    """An error encounterd during integration testing, as provided by the server (Splunk instance)"""
-    pass
-
-
-class ClientError(IntegrationTestingError):
-    """An error encounterd during integration testing, on the client's side (locally)"""
-    pass
 
 
 class SavedSearchKeys(str, Enum):
@@ -156,7 +152,7 @@ class ResultIterator:
                 level: int = logging.getLevelName(level_name)
 
                 # log message at appropriate level and raise if needed
-                message = f"{result.type}: {result.message}"
+                message = f"SPLUNK: {result.message}"
                 self.logger.log(level, message)
                 if level == logging.ERROR:
                     raise ServerError(message)
@@ -244,6 +240,9 @@ class CorrelationSearch(BaseModel):
 
     # The list of risk events found
     _risk_events: Optional[list[RiskEvent]] = PrivateAttr(default=None)
+
+    # The list of notable events found
+    _notable_events: Optional[list[NotableEvent]] = PrivateAttr(default=None)
 
     class Config:
         # needed to allow fields w/ types like SavedSearch
@@ -417,6 +416,14 @@ class CorrelationSearch(BaseModel):
             return NotableAction.parse_from_dict(content)
         return None
 
+    @staticmethod
+    def _get_relevant_observables(observables: list[Observable]) -> list[Observable]:
+        relevant = []
+        for observable in observables:
+            if not RiskEvent.ignore_observable(observable):
+                relevant.append(observable)
+        return relevant
+
     # TODO (cmcginley): ideally, we could handle this and the following init w/ a call to
     #   model_post_init, so that all the logic is encapsulated w/in _parse_risk_and_notable_actions
     #   but that is a pydantic v2 feature (see the init validators for risk/notable actions):
@@ -547,22 +554,24 @@ class CorrelationSearch(BaseModel):
         """Get risk events from the Splunk instance
 
         Queries the `risk` index and returns any matching risk events
-        :param force_update: whether the cached _risk_objects should be forcibly updated if already
+        :param force_update: whether the cached _risk_events should be forcibly updated if already
             set
         :return: a list of risk events
         """
         # Reset the list of risk events if we're forcing an update
         if force_update:
+            self.logger.debug("Resetting risk event cache.")
             self._risk_events = None
 
         # Use the cached risk_events unless we're forcing an update
         if self._risk_events is not None:
+            self.logger.debug(f"Using cached risk events ({len(self._risk_events)} total).")
             return self._risk_events
 
         # Search for all risk events from a single scheduled search (indicated by orig_sid)
         query = (
             f'search index=risk search_name="{self.name}" [search index=risk search '
-            f'search_name="{self.name}" | head 1 | fields orig_sid]'
+            f'search_name="{self.name}" | head 1 | fields orig_sid] | tojson'
         )
         result_iterator = self._search(query)
 
@@ -573,50 +582,94 @@ class CorrelationSearch(BaseModel):
                 # sanity check that this result from the iterator is a risk event and not some
                 # other metadata
                 if result["index"] == Indexes.RISK_INDEX.value:
-                    event = RiskEvent.parse_obj(result)
+                    try:
+                        parsed_raw = json.loads(result["_raw"])
+                        event = RiskEvent.parse_obj(parsed_raw)
+                    except Exception:
+                        self.logger.error(f"Failed to parse RiskEvent from search result: {result}")
+                        raise
                     events.append(event)
-                    self.logger.debug(
-                        f"Found risk event for '{self.name}': {event}")
+                    self.logger.debug(f"Found risk event for '{self.name}': {event}")
         except ServerError as e:
             self.logger.error(f"Error returned from Splunk instance: {e}")
             raise e
 
         # Log if no events were found
         if len(events) < 1:
-            self.logger.debug(f"No risk event found for '{self.name}'")
+            self.logger.debug(f"No risk events found for '{self.name}'")
+        else:
+            # Set the cache if we found events
+            self._risk_events = events
+            self.logger.debug(f"Caching {len(self._risk_events)} risk events.")
 
-        # Set the cache, and return
-        self._risk_events = events
         return events
 
     def notable_event_exists(self) -> bool:
         """Whether a notable event exists
 
-        Queries the `notable` index and returns True if a risk event exists
-        :return: a bool indicating whether a risk event exists in the risk index
+        Queries the `notable` index and returns True if a notble event exists
+        :return: a bool indicating whether a notable event exists in the notable index
         """
-        # construct our query and issue our search job on the risk index
-        query = "search index=notable | head 1"
+        # construct our query and issue our search job on the notsble index
+        # We always force an update on the cache when checking if events exist
+        events = self.get_notable_events(force_update=True)
+        return len(events) > 0
+
+    def get_notable_events(self, force_update: bool = False) -> list[NotableEvent]:
+        """Get notable events from the Splunk instance
+
+        Queries the `notable` index and returns any matching notable events
+        :param force_update: whether the cached _notable_events should be forcibly updated if
+            already set
+        :return: a list of notable events
+        """
+        # Reset the list of notable events if we're forcing an update
+        if force_update:
+            self.logger.debug("Resetting notable event cache.")
+            self._notable_events = None
+
+        # Use the cached notable_events unless we're forcing an update
+        if self._notable_events is not None:
+            self.logger.debug(f"Using cached notable events ({len(self._notable_events)} total).")
+            return self._notable_events
+
+        # Search for all notable events from a single scheduled search (indicated by orig_sid)
+        query = (
+            f'search index=notable search_name="{self.name}" [search index=notable search '
+            f'search_name="{self.name}" | head 1 | fields orig_sid] | tojson'
+        )
         result_iterator = self._search(query)
+
+        # Iterate over the events, storing them in a list and checking for any errors
+        events: list[NotableEvent] = []
         try:
             for result in result_iterator:
-                # we return True if we find at least one notable object
+                # sanity check that this result from the iterator is a notable event and not some
+                # other metadata
                 if result["index"] == Indexes.NOTABLE_INDEX.value:
-                    self.logger.debug(
-                        f"Found notable event for '{self.name}': {result}")
-                    return True
+                    try:
+                        parsed_raw = json.loads(result["_raw"])
+                        event = NotableEvent.parse_obj(parsed_raw)
+                    except Exception:
+                        self.logger.error(f"Failed to parse NotableEvent from search result: {result}")
+                        raise
+                    events.append(event)
+                    self.logger.debug(f"Found notable event for '{self.name}': {event}")
         except ServerError as e:
             self.logger.error(f"Error returned from Splunk instance: {e}")
             raise e
-        self.logger.debug(f"No notable event found for '{self.name}'")
-        return False
 
-    def risk_message_is_valid(self, risk_event: RiskEvent) -> tuple[bool, str]:
-        """Validates the observed risk message against the expected risk message"""
-        # TODO
-        raise NotImplementedError
+        # Log if no events were found
+        if len(events) < 1:
+            self.logger.debug(f"No notable events found for '{self.name}'")
+        else:
+            # Set the cache if we found events
+            self._notable_events = events
+            self.logger.debug(f"Caching {len(self._notable_events)} notable events.")
 
-    def validate_risk_events(self, elapsed_sleep_time: int) -> Optional[IntegrationTestResult]:
+        return events
+
+    def validate_risk_events(self) -> None:
         """Validates the existence of any expected risk events
 
         First ensure the risk event exists, and if it does validate its risk message and make sure
@@ -626,28 +679,78 @@ class CorrelationSearch(BaseModel):
             check the risks/notables
         :returns: an IntegrationTestResult on failure; None on success
         """
-        result: Optional[IntegrationTestResult] = None
+        # TODO: Re-enable this check once we have refined the logic and reduced the false positive
+        #   rate in risk/obseravble matching
+        # Create a mapping of the relevant observables to counters
+        # observables = CorrelationSearch._get_relevant_observables(self.detection.tags.observable)
+        # observable_counts: dict[str, int] = {str(x): 0 for x in observables}
+        # if len(observables) != len(observable_counts):
+        #     raise ClientError(
+        #         f"At least two observables in '{self.detection.name}' have the same name."
+        #     )
 
-        # Validate each risk event; note that we use the cached risk events, expecting they were
+        # Get the risk events; note that we use the cached risk events, expecting they were
         # saved by a prior call to risk_event_exists
         events = self.get_risk_events()
+
+        # Validate each risk event individually and record some aggregate counts
+        c = 0
         for event in events:
-            result = self.validate_risk_event(self, event)
+            c += 1
+            self.logger.debug(
+                f"Validating risk event ({event.risk_object}, {event.risk_object_type}): "
+                f"{c}/{len(events)}"
+            )
+            event.validate_against_detection(self.detection)
 
-        # Return the result if we have one, else proceed w/ validation
-        if result is not None:
-            return result
+            # TODO: Re-enable this check once we have refined the logic and reduced the false
+            #   positive rate in risk/obseravble matching
+            # Update observable count based on match
+            # matched_observable = event.get_matched_observable(self.detection.tags.observable)
+            # self.logger.debug(
+            #     f"Matched risk event ({event.risk_object}, {event.risk_object_type}) to observable "
+            #     f"({matched_observable.name}, {matched_observable.type}, {matched_observable.role})"
+            # )
+            # observable_counts[str(matched_observable)] += 1
 
-        # Validate risk events in aggregate
-        # TODO
+        # TODO: Re-enable this check once we have refined the logic and reduced the false positive
+        #   rate in risk/obseravble matching
+        # TODO: I foresee issues here if for example a parent and child process share a name
+        #   (matched observable could be either) -> these issues are confirmed to exist, e.g.
+        #   `Windows Steal Authentication Certificates Export Certificate`
+        # Validate risk events in aggregate; we should have an equal amount of risk events for each
+        # relevant observable, and the total count should match the total number of events
+        # individual_count: Optional[int] = None
+        # total_count = 0
+        # for observable_str in observable_counts:
+        #     self.logger.debug(
+        #         f"Observable <{observable_str}> match count: {observable_counts[observable_str]}"
+        #     )
 
-        return result
+        #     # Grab the first value encountered if not set yet
+        #     if individual_count is None:
+        #         individual_count = observable_counts[observable_str]
+        #     else:
+        #         # Confirm that the count for the current observable matches the count of the others
+        #         if observable_counts[observable_str] != individual_count:
+        #             raise ValidationFailed(
+        #                 f"Count of risk events matching observable <\"{observable_str}\"> "
+        #                 f"({observable_counts[observable_str]}) does not match the count of those "
+        #                 f"matching other observables ({individual_count})."
+        #             )
 
-    # TODO: Maybe this should be an instance method of the RiskEvent class?
-    def validate_risk_event(self):
-        raise NotImplementedError()
+        #     # Aggregate total count of events matched to observables
+        #     total_count += observable_counts[observable_str]
 
-    def validate_notable_events(self, elapsed_sleep_time: int) -> Optional[IntegrationTestResult]:
+        # # Raise if the the number of events doesn't match the number of those matched to observables
+        # if len(events) != total_count:
+        #     raise ValidationFailed(
+        #         f"The total number of risk events {len(events)} does not match the number of "
+        #         f"risk events we were able to match against observables ({total_count})."
+        #     )
+
+    # TODO: implement deeper notable validation
+    def validate_notable_events(self) -> None:
         """Validates the existence of any expected notables
 
         Ensures the notable exists. Also adds the notable index to the purge list if notables
@@ -656,18 +759,6 @@ class CorrelationSearch(BaseModel):
             check the risks/notables
         :returns: an IntegrationTestResult on failure; None on success
         """
-        if not self.notable_event_exists():
-            result = IntegrationTestResult(
-                status=TestResultStatus.FAIL,
-                message=f"No matching notable event created for '{self.name}'",
-                wait_duration=elapsed_sleep_time,
-            )
-        else:
-            self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
-
-        return result
-
-    def validate_notable_event(self):
         raise NotImplementedError()
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
@@ -710,12 +801,12 @@ class CorrelationSearch(BaseModel):
             self.update_pbar(TestingStates.PRE_CLEANUP)
             if self.risk_event_exists():
                 self.logger.warn(
-                    f"Risk events matching '{self.name}' already exist; marking for deletion")
-                self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
+                    f"Risk events matching '{self.name}' already exist; marking for deletion"
+                )
             if self.notable_event_exists():
                 self.logger.warn(
-                    f"Notable events matching '{self.name}' already exist; marking for deletion")
-                self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
+                    f"Notable events matching '{self.name}' already exist; marking for deletion"
+                )
             self.cleanup()
 
             # skip test if no risk or notable action defined
@@ -734,7 +825,6 @@ class CorrelationSearch(BaseModel):
                 self.logger.info(f"Forcing a run on {self.name}")
                 self.update_pbar(TestingStates.FORCE_RUN)
                 self.force_run()
-                time.sleep(TimeoutConfig.BASE_SLEEP.value)
 
                 # loop so long as the elapsed time is less than max_sleep
                 while elapsed_sleep_time < max_sleep:
@@ -752,36 +842,49 @@ class CorrelationSearch(BaseModel):
                     # reset the result to None on each loop iteration
                     result = None
 
-                    self.logger.debug("Checking for matching risk events")
-                    if self.has_risk_analysis_action:
-                        if self.risk_event_exists():
-                            # TODO: should this be part of the retry loop? or outside it?
-                            result = self.validate_risk_events(elapsed_sleep_time)
-                            if result is None:
-                                self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
-                        else:
-                            result = IntegrationTestResult(
-                                status=TestResultStatus.FAIL,
-                                message=f"TEST FAILED: No matching risk event created for: {self.name}",
-                                wait_duration=elapsed_sleep_time,
-                            )
+                    try:
+                        # Validate risk events
+                        self.logger.debug("Checking for matching risk events")
+                        if self.has_risk_analysis_action:
+                            if self.risk_event_exists():
+                                # TODO: should this be part of the retry loop? or outside it?
+                                #   -> I've observed there being a missing risk event (15/16) on
+                                #   the first few tries, so this does help us check for true
+                                #   positives; BUT, if we have lots of failing detections, this
+                                #   will definitely add to the total wait time
+                                #   -> certain types of failures (e.g. risk message, or any value
+                                #       checking) should fail testing automatically
+                                #   -> other types, like those based on counts of risk events,
+                                #       should happen should fail more slowly as more events may be
+                                #       produced
+                                self.validate_risk_events()
+                            else:
+                                raise ValidationFailed(
+                                    f"TEST FAILED: No matching risk event created for: {self.name}"
+                                )
 
-                    # check for notable events
-                    self.logger.debug("Checking for matching notable events")
-                    if self.has_notable_action:
-                        # NOTE: because we check this last, if both fail, the error message about notables will
-                        # always be the last to be added and thus the one surfaced to the user
-                        if self.notable_event_exists():
-                            # TODO: should this be part of the retry loop? or outside it?
-                            result = self.validate_notable_events(elapsed_sleep_time)
-                            if result is None:
-                                self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
-                        else:
-                            result = IntegrationTestResult(
-                                status=TestResultStatus.FAIL,
-                                message=f"TEST FAILED: No matching notable event created for: {self.name}",
-                                wait_duration=elapsed_sleep_time,
-                            )
+                        # Validate notable events
+                        self.logger.debug("Checking for matching notable events")
+                        if self.has_notable_action:
+                            # NOTE: because we check this last, if both fail, the error message about notables will
+                            # always be the last to be added and thus the one surfaced to the user
+                            if self.notable_event_exists():
+                                # TODO: should this be part of the retry loop? or outside it?
+                                # TODO: implement deeper notable validation (the method commented
+                                #   out below is unimplemented)
+                                # self.validate_notable_events(elapsed_sleep_time)
+                                pass
+                            else:
+                                raise ValidationFailed(
+                                    f"TEST FAILED: No matching notable event created for: {self.name}"
+                                )
+                    except ValidationFailed as e:
+                        self.logger.error(f"Risk/notable validation failed: {e}")
+                        result = IntegrationTestResult(
+                            status=TestResultStatus.FAIL,
+                            message=f"TEST FAILED: {e}",
+                            wait_duration=elapsed_sleep_time,
+                        )
 
                     # if result is still None, then all checks passed and we can break the loop
                     if result is None:
@@ -802,6 +905,7 @@ class CorrelationSearch(BaseModel):
                     if (elapsed_sleep_time + time_to_sleep) > max_sleep:
                         time_to_sleep = max_sleep - elapsed_sleep_time
 
+            # TODO: should cleanup be in a finally block so it runs even on exception?
             # cleanup the created events, disable the detection and return the result
             self.logger.debug("Cleaning up any created risk/notable events...")
             self.update_pbar(TestingStates.POST_CLEANUP)
@@ -814,9 +918,13 @@ class CorrelationSearch(BaseModel):
                     wait_duration=elapsed_sleep_time,
                     exception=e,
                 )
-                self.logger.exception(f"{result.status.name}: {result.message}")                    # type: ignore
+                self.logger.exception(result.message)                    # type: ignore
             else:
                 raise e
+        except Exception as e:
+            # Log any exceptions locally and raise to the caller
+            self.logger.exception(f"Unhandled exception during testing: {e}")
+            raise e
 
         # log based on result status
         if result is not None:
@@ -864,8 +972,8 @@ class CorrelationSearch(BaseModel):
         :param index: index to delete all events from (e.g. 'risk')
         """
         # construct our query and issue our delete job on the index
-        self.logger.debug(f"Deleting index '{index}")
-        query = f"search index={index} | delete"
+        self.logger.debug(f"Deleting index '{index}'")
+        query = f'search index={index} search_name="{self.name}" | delete'
         result_iterator = self._search(query)
 
         # we should get two results, one for "__ALL__" and one for the index; iterate until we find the one for the
@@ -904,12 +1012,22 @@ class CorrelationSearch(BaseModel):
         # disable the detection
         self.disable()
 
-        # delete the indexes
+        # Add indexes to purge
         if delete_test_index:
             self.indexes_to_purge.add(self.test_index)                                              # type: ignore
+        if self._risk_events is not None:
+            self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
+        if self._notable_events is not None:
+            self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
+
+        # delete the indexes
         for index in self.indexes_to_purge:
             self._delete_index(index)
         self.indexes_to_purge.clear()
+
+        # reset caches
+        self._risk_events = None
+        self._notable_events = None
 
     def update_pbar(self, state: str) -> str:
         """

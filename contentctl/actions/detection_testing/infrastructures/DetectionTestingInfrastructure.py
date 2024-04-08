@@ -410,15 +410,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         data)
         :param detection: the Detection to test
         """
-        # TODO: do we want to return a failure here if no test exists for a production detection?
-        # Log and return if no tests exist
-        if detection.tests is None or detection.test_groups is None:
-            self.pbar.write(f"No test(s) found for {detection.name}")
-            return
 
         # iterate TestGroups
         for test_group in detection.test_groups:
-            # If all tests in the group have been skipped, report and continue
+            # If all tests in the group have been skipped, report and continue.
+            # Note that the logic for skipping tests for detections tagged manual_test exists in
+            # the detection builder.
             if test_group.all_tests_skipped():
                 self.pbar.write(
                     self.format_pbar_string(

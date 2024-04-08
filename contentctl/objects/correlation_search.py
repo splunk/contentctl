@@ -30,8 +30,6 @@ from contentctl.objects.risk_event import RiskEvent
 from contentctl.objects.notable_event import NotableEvent
 from contentctl.objects.observable import Observable
 
-# TODO: test my new contentctl logic against an old ESCU build; my logic should detect the faulty attacker events
-
 
 # Suppress logging by default; enable for local testing
 ENABLE_LOGGING = True
@@ -418,6 +416,11 @@ class CorrelationSearch(BaseModel):
 
     @staticmethod
     def _get_relevant_observables(observables: list[Observable]) -> list[Observable]:
+        """
+        Given a list of observables, identify the subset of those relevant for risk matching
+        :param observables: the Observable objects to filter
+        :returns: the filtered list of relevant observables
+        """
         relevant = []
         for observable in observables:
             if not RiskEvent.ignore_observable(observable):
@@ -679,8 +682,8 @@ class CorrelationSearch(BaseModel):
             check the risks/notables
         :returns: an IntegrationTestResult on failure; None on success
         """
-        # TODO: Re-enable this check once we have refined the logic and reduced the false positive
-        #   rate in risk/obseravble matching
+        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
+        #   positive rate in risk/obseravble matching
         # Create a mapping of the relevant observables to counters
         # observables = CorrelationSearch._get_relevant_observables(self.detection.tags.observable)
         # observable_counts: dict[str, int] = {str(x): 0 for x in observables}
@@ -703,8 +706,8 @@ class CorrelationSearch(BaseModel):
             )
             event.validate_against_detection(self.detection)
 
-            # TODO: Re-enable this check once we have refined the logic and reduced the false
-            #   positive rate in risk/obseravble matching
+            # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the
+            #   false positive rate in risk/obseravble matching
             # Update observable count based on match
             # matched_observable = event.get_matched_observable(self.detection.tags.observable)
             # self.logger.debug(
@@ -713,10 +716,14 @@ class CorrelationSearch(BaseModel):
             # )
             # observable_counts[str(matched_observable)] += 1
 
-        # TODO: Re-enable this check once we have refined the logic and reduced the false positive
+        # TODO (PEX-433): test my new contentctl logic against an old ESCU build; my logic should
+        #   detect the faulty attacker events -> this was the issue from the 4.28/4.27 release;
+        #   recreate by testing against one of those old builds w/ the bad config
+        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
+        #   positive
         #   rate in risk/obseravble matching
-        # TODO: I foresee issues here if for example a parent and child process share a name
-        #   (matched observable could be either) -> these issues are confirmed to exist, e.g.
+        # TODO (PEX-433): I foresee issues here if for example a parent and child process share a
+        #   name (matched observable could be either) -> these issues are confirmed to exist, e.g.
         #   `Windows Steal Authentication Certificates Export Certificate`
         # Validate risk events in aggregate; we should have an equal amount of risk events for each
         # relevant observable, and the total count should match the total number of events
@@ -749,7 +756,7 @@ class CorrelationSearch(BaseModel):
         #         f"risk events we were able to match against observables ({total_count})."
         #     )
 
-    # TODO: implement deeper notable validation
+    # TODO (PEX-434): implement deeper notable validation
     def validate_notable_events(self) -> None:
         """Validates the existence of any expected notables
 
@@ -847,7 +854,7 @@ class CorrelationSearch(BaseModel):
                         self.logger.debug("Checking for matching risk events")
                         if self.has_risk_analysis_action:
                             if self.risk_event_exists():
-                                # TODO: should this be part of the retry loop? or outside it?
+                                # TODO (PEX-435): should this in the retry loop? or outside it?
                                 #   -> I've observed there being a missing risk event (15/16) on
                                 #   the first few tries, so this does help us check for true
                                 #   positives; BUT, if we have lots of failing detections, this
@@ -869,9 +876,9 @@ class CorrelationSearch(BaseModel):
                             # NOTE: because we check this last, if both fail, the error message about notables will
                             # always be the last to be added and thus the one surfaced to the user
                             if self.notable_event_exists():
-                                # TODO: should this be part of the retry loop? or outside it?
-                                # TODO: implement deeper notable validation (the method commented
-                                #   out below is unimplemented)
+                                # TODO (PEX-435): should this in the retry loop? or outside it?
+                                # TODO (PEX-434): implement deeper notable validation (the method
+                                #   commented out below is unimplemented)
                                 # self.validate_notable_events(elapsed_sleep_time)
                                 pass
                             else:
@@ -905,7 +912,7 @@ class CorrelationSearch(BaseModel):
                     if (elapsed_sleep_time + time_to_sleep) > max_sleep:
                         time_to_sleep = max_sleep - elapsed_sleep_time
 
-            # TODO: should cleanup be in a finally block so it runs even on exception?
+            # TODO (PEX-436): should cleanup be in a finally block so it runs even on exception?
             # cleanup the created events, disable the detection and return the result
             self.logger.debug("Cleaning up any created risk/notable events...")
             self.update_pbar(TestingStates.POST_CLEANUP)

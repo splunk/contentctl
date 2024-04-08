@@ -7,22 +7,24 @@ from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
 from contentctl.objects.observable import Observable
 
-# TODO: use SES_OBSERVABLE_TYPE_MAPPING
+# TODO (PEX-433): use SES_OBSERVABLE_TYPE_MAPPING
 TYPE_MAP: dict[str, list[str]] = {
     "user": ["User"],
     "system": ["Hostname", "IP Address", "Endpoint"],
     "other": ["Process", "URL String", "Unknown", "Process Name"],
 }
-# TODO: 'Email Address', 'File Name', 'File Hash', 'Other', 'User Name', 'File', 'Process Name'
+# TODO (PEX-433): 'Email Address', 'File Name', 'File Hash', 'Other', 'User Name', 'File',
+#   'Process Name'
 
-# TODO: use SES_OBSERVABLE_ROLE_MAPPING
+# TODO (PEX-433): use SES_OBSERVABLE_ROLE_MAPPING
 IGNORE_ROLES: list[str] = ["Attacker"]
 # Known valid roles: Victim, Parent Process, Child Process
-# TODO: 'Other', 'Target', 'Unknown'
-# TODO: is Other a valid role
+# TODO (PEX-433): 'Other', 'Target', 'Unknown'
+# TODO (PEX-433): is Other a valid role
 
-# TODO: do we need User Name in conjunction w/ User? User Name doesn't get mapped to "user" in risk events
-# TODO: similarly, do we need Process and Process Name?
+# TODO (PEX-433): do we need User Name in conjunction w/ User? User Name doesn't get mapped to
+#   "user" in risk events
+# TODO (PEX-433): similarly, do we need Process and Process Name?
 
 RESERVED_FIELDS = ["host"]
 
@@ -108,14 +110,16 @@ class RiskEvent(BaseModel):
         # Check risk_message
         self.validate_risk_message(detection)
 
-        # TODO: Re-enable this check once we have refined the logic and reduced the false positive
-        #   rate in risk/obseravble matching
+        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
+        #   positive rate in risk/obseravble matching
         # Check several conditions against the observables
         # self.validate_risk_against_observables(detection.tags.observable)
 
     def validate_mitre_ids(self, detection: Detection) -> None:
         """
         Given the associated detection, validate the risk event's MITRE attack IDs
+        :param detection: the detection associated w/ this risk event
+        :raises: ValidationFailed
         """
         # Convert to lists if needed so we can use the equality below
         risk_mitre = self.annotations_mitre_attack
@@ -135,6 +139,8 @@ class RiskEvent(BaseModel):
     def validate_analyticstories(self, detection: Detection) -> None:
         """
         Given the associated detection, validate the risk event's MITRE analytic stories
+        :param detection: the detection associated w/ this risk event
+        :raises: ValidationFailed
         """
         # Convert to lists if needed so we can use the equality below
         risk_analytic = self.analyticstories
@@ -152,6 +158,11 @@ class RiskEvent(BaseModel):
             )
 
     def validate_risk_message(self, detection: Detection) -> None:
+        """
+        Given the associated detection, validate the risk event's message
+        :param detection: the detection associated w/ this risk event
+        :raises: ValidationFailed
+        """
         # Check for string literals of the form "$...$" in the observed risk message
         field_replacement_pattern = re.compile(r"\$\S+\$")
         if field_replacement_pattern.search(self.risk_message) is not None:
@@ -171,7 +182,7 @@ class RiskEvent(BaseModel):
         )
         placeholder_replacement_pattern = re.compile(tmp_placeholder)
         final_risk_message_pattern = re.compile(
-            placeholder_replacement_pattern.sub(".+", escaped_source_message_with_placeholder)
+            placeholder_replacement_pattern.sub(r"[\\s\\S]+", escaped_source_message_with_placeholder)
         )
 
         # Check created regex pattern againt the observed risk message
@@ -183,6 +194,12 @@ class RiskEvent(BaseModel):
             )
 
     def validate_risk_against_observables(self, observables: list[Observable]) -> None:
+        """
+        Given the observables from the associated detection, validate the risk event against those
+        observables
+        :param observables: the Observable objects from the detection
+        :raises: ValidationFailed
+        """
         # Get the matched observable; will raise validation errors if no match can be made or if
         # risk is missing values associated w/ observables
         matched_observable = self.get_matched_observable(observables)
@@ -196,7 +213,15 @@ class RiskEvent(BaseModel):
             )
 
     @staticmethod
-    def observable_type_to_risk_type(observable_type: str):
+    def observable_type_to_risk_type(observable_type: str) -> str:
+        """
+        Given a string representing the observable type, use our mapping to convert it to the
+        expected type in the risk event
+        :param observable_type: the type of the observable
+        :returns: a string (the risk object type)
+        :raises ValueError: if the observable type has not yet been mapped to a risk object type
+        """
+        # Iterate over the map and search the lists for a match
         for risk_type in TYPE_MAP:
             if observable_type in TYPE_MAP[risk_type]:
                 return risk_type
@@ -205,10 +230,18 @@ class RiskEvent(BaseModel):
             f"Observable type {observable_type} does not have a mapping to a risk type in TYPE_MAP"
         )
 
-    # TODO: should this be an observable instance method? It feels less relevant to observables
-    #   themselves, as it's really only relevant to the handling of risk events
+    # TODO (PEX-433): should this be an observable instance method? It feels less relevant to
+    #   observables themselves, as it's really only relevant to the handling of risk events
     @staticmethod
     def ignore_observable(observable: Observable) -> bool:
+        """
+        Given an observable, determine based on its roles if it should be ignored in risk/observable
+        matching (e.g. Attacker role observables should not generate risk events)
+        :param observable: the Observable object we are checking the roles of
+        :returns: a bool indicating whether this observable should be ignored or not
+        """
+        # TODO (PEX-433): could there be a case where an observable has both an Attacker and Victim
+        #   (or equivalent) role? If so, how should we handle ignoring it?
         ignore = False
         for role in observable.role:
             if role in IGNORE_ROLES:
@@ -216,10 +249,15 @@ class RiskEvent(BaseModel):
                 break
         return ignore
 
-    # TODO: two possibilities: alway check for the field itself and the field prefixed w/ "orig_"
-    #   OR more explicitly maintain a list of known "reserved fields", like "host". I think I like
-    #   option 2 better as it can have fewer unknown side effects
+    # TODO (PEX-433): two possibilities: alway check for the field itself and the field prefixed
+    #   w/ "orig_" OR more explicitly maintain a list of known "reserved fields", like "host". I
+    #   think I like option 2 better as it can have fewer unknown side effects
     def matches_observable(self, observable: Observable) -> bool:
+        """
+        Given an observable, check if the risk event matches is
+        :param observable: the Observable object we are comparing the risk event against
+        :returns: bool indicating a match or not
+        """
         # When field names collide w/ reserved fields in Splunk events (e.g. sourcetype or host)
         # they get prefixed w/ "orig_"
         attribute_name = observable.name
@@ -235,14 +273,24 @@ class RiskEvent(BaseModel):
         return self.risk_object in value
 
     def get_matched_observable(self, observables: list[Observable]) -> Observable:
+        """
+        Given a list of observables, return the one this risk event matches
+        :param observables: the list of Observable objects we are checking against
+        :returns: the matched Observable object
+        :raises ValidationFailed: if a match could not be made or if an expected field (based on
+            one of the observables) could not be found in the risk event
+        """
+        # Return the cached match if already found
         if self._matched_observable is not None:
             return self._matched_observable
 
         matched_observable: Optional[Observable] = None
 
+        # Iterate over the obervables and check for a match
         for observable in observables:
             # Each the field name used in each observable shoud be present in the risk event
-            # TODO: this check is redundant I think; earlier in the unit test, observable field
+            # TODO (PEX-433): this check is redundant I think; earlier in the unit test, observable
+            #   field
             #   names are compared against the search result set, ensuring all are present; if all
             #   are present in the result set, all are present in the risk event
             if not hasattr(self, observable.name):
@@ -254,7 +302,9 @@ class RiskEvent(BaseModel):
             # a valid role (some, like Attacker, don't get converted to risk events)
             if not RiskEvent.ignore_observable(observable):
                 if self.matches_observable(observable):
-                    # TODO: Sanity check since we don't know yet if this is True
+                    # TODO (PEX-433): This check fails as there are some instances where this is
+                    #   true (e.g. we have an observable for process and parent_process and both
+                    #   have the same name like "cmd.exe")
                     if matched_observable is not None:
                         raise ValueError(
                             "Unexpected conditon: we don't expect the value corresponding to an "

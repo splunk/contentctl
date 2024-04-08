@@ -29,7 +29,7 @@ class AttackEnrichment():
             print(f"\r{'Client'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
             
             print(f"\r{'Enterprise'.rjust(23)}: [{0.0:3.0f}%]...", end="", flush=True)
-            all_enterprise = lift.get_enterprise(stix_format=False)
+            all_enterprise = lift.get_enterprise_techniques(stix_format=False)
             print(f"\r{'Enterprise'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
             
             print(f"\r{'Relationships'.rjust(23)}: [{0.0:3.0f}%]...", end="", flush=True)
@@ -40,8 +40,8 @@ class AttackEnrichment():
             enterprise_groups = lift.get_enterprise_groups()
             print(f"\r{'Groups'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
             
-            for index, technique in enumerate(all_enterprise['techniques']):
-                progress_percent = ((index+1)/len(all_enterprise['techniques'])) * 100
+            for index, technique in enumerate(all_enterprise_techniques):
+                progress_percent = ((index+1)/len(all_enterprise_techniques)) * 100
                 if (sys.stdout.isatty() and sys.stdin.isatty() and sys.stderr.isatty()):
                     print(f"\r\t{'MITRE Technique Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
                 apt_groups = []

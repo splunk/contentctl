@@ -14,7 +14,7 @@ default_match = {{ lookup.default_match }}
 case_sensitive_match = {{ lookup.case_sensitive_match }}
 {% endif %}
 {% if lookup.description is defined and lookup.description != None %}
-# description = {{ lookup.description }}
+# description = {{ lookup.description | escapeNewlines() }}
 {% endif %}
 {% if lookup.match_type is defined and lookup.match_type != None %}
 match_type = {{ lookup.match_type }}

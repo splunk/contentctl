@@ -59,8 +59,6 @@ def init_func(config:test):
 def validate_func(config:validate)->DirectorOutputDto:
     validate = Validate()
     return validate.execute(config)
-    
-
 
 def build_func(config:build)->DirectorOutputDto:
     # First, perform validation. Remember that the validate
@@ -110,8 +108,6 @@ def test_servers_func(config:test_servers):
     
 
 def main():
-    
-    
     try:
         configFile = pathlib.Path("contentctl.yml")
         if not configFile.is_file():

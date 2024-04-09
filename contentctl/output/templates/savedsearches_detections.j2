@@ -6,20 +6,20 @@
 action.escu = 0
 action.escu.enabled = 1
 {% if detection.status == "deprecated" %}
-description = WARNING, this detection has been marked deprecated by the Splunk Threat Research team, this means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
+description = WARNING, this detection has been marked deprecated by the Splunk Threat Research team, this means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description | escapeNewlines() }} 
 {% else %}
-description = {{ detection.description }}
+description = {{ detection.description | escapeNewlines() }}
 {% endif %}
 action.escu.mappings = {{ detection.mappings | tojson }}
 action.escu.data_models = {{ detection.datamodel | tojson }}
-action.escu.eli5 = {{ detection.description }}
+action.escu.eli5 = {{ detection.description | escapeNewlines() }}
 {% if detection.how_to_implement is defined %}
-action.escu.how_to_implement = {{ detection.how_to_implement }}
+action.escu.how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}
 action.escu.how_to_implement = none
 {% endif %}
 {% if detection.known_false_positives is defined %}
-action.escu.known_false_positives = {{ detection.known_false_positives }}
+action.escu.known_false_positives = {{ detection.known_false_positives | escapeNewlines() }}
 {% else %}
 action.escu.known_false_positives = None
 {% endif %}
@@ -44,7 +44,7 @@ action.escu.providing_technologies = []
 action.escu.analytic_story = {{ objectListToNameList(detection.tags.analytic_story) | tojson }}
 {% if detection.deployment.rba.enabled is defined %}
 action.risk = 1
-action.risk.param._risk_message = {{ detection.tags.message }}
+action.risk.param._risk_message = {{ detection.tags.message | escapeNewlines() }}
 action.risk.param._risk = {{ detection.risk | tojson }}
 action.risk.param._risk_score = 0
 action.risk.param.verbose = 0
@@ -73,21 +73,21 @@ action.notable = 1
 {% if detection.nes_fields is defined %}
 action.notable.param.nes_fields = {{ detection.nes_fields }}
 {% endif %}
-action.notable.param.rule_description = {{ detection.deployment.notable.rule_description | custom_jinja2_enrichment_filter(detection) }}
+action.notable.param.rule_description = {{ detection.deployment.notable.rule_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines()}}
 action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
 action.notable.param.security_domain = {{ detection.tags.security_domain }}
 action.notable.param.severity = high
 {% endif %}
 {% if detection.deployment.email.to is defined %}
-action.email.subject.alert = {{ detection.deployment.email.subject | custom_jinja2_enrichment_filter(detection) }}
+action.email.subject.alert = {{ detection.deployment.email.subject | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.email.to = {{ detection.deployment.email.to }}
-action.email.message.alert = {{ detection.deployment.email.message | custom_jinja2_enrichment_filter(detection) }}
+action.email.message.alert = {{ detection.deployment.email.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.email.useNSSubject = 1
 {% endif %}
 {% if detection.deployment.slack.channel is defined %}
 action.slack = 1
-action.slack.param.channel = {{ detection.deployment.slack.channel | custom_jinja2_enrichment_filter(detection) }}
-action.slack.param.message = {{ detection.deployment.slack.message | custom_jinja2_enrichment_filter(detection) }}
+action.slack.param.channel = {{ detection.deployment.slack.channel | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.slack.param.message = {{ detection.deployment.slack.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 {% endif %}
 {% if detection.deployment.phantom.phantom_server is defined %}
 action.sendtophantom = 1
@@ -111,7 +111,7 @@ relation = greater than
 quantity = 0
 realtime_schedule = 0
 is_visible = false
-search = {{ detection.search }}
+search = {{ detection.search | escapeNewlines() }}
 
 {% endif %}
 {% endfor %}

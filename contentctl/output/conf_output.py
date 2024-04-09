@@ -56,12 +56,16 @@ class ConfOutput:
 
     def writeAppConf(self):
         for output_app_path, template_name in [ ("default/app.conf", "app.conf.j2"),
-                                                ("default/content-version.conf", "content-version.j2"),
-                                                ("app.manifest", "app.manifest.j2")]:
+                                                ("default/content-version.conf", "content-version.j2")]:
             ConfWriter.writeConfFile(pathlib.Path(output_app_path),
                                     template_name,
                                     self.config,
                                     [self.config.app])
+        
+        ConfWriter.writeManifestFile(pathlib.Path("app.manifest"),
+                                              "app.manifest.j2",
+                                              self.config,
+                                              [self.config.app])
 
         
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
@@ -101,10 +105,10 @@ class ConfOutput:
                     investigation.search = investigation.search.replace("<","&lt;")
                     
                     
-                    ConfWriter.writeConfFileHeaderEmpty(pathlib.Path(f'default/data/ui/panels/workbench_panel_{response_file_name_xml}'), 
+                    ConfWriter.writeXmlFileHeader(pathlib.Path(f'default/data/ui/panels/workbench_panel_{response_file_name_xml}'), 
                                                         self.config)
                     
-                    ConfWriter.writeConfFile(   pathlib.Path(f'default/data/ui/panels/workbench_panel_{response_file_name_xml}'),
+                    ConfWriter.writeXmlFile(    pathlib.Path(f'default/data/ui/panels/workbench_panel_{response_file_name_xml}'),
                                                 'panel.j2',
                                                 self.config,[investigation.search])
 

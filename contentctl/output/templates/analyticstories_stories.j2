@@ -11,9 +11,9 @@ references = {{ story.getReferencesListForJson() | tojson }}
 maintainers = [{"company": "{{ story.author_company }}", "email": "-", "name": "{{ story.author }}"}]
 spec_version = 3
 searches = {{ (story.getDetectionNames() + story.getInvestigationNames()) | tojson }}
-description = {{ story.description }}
+description = {{ story.description | escapeNewlines() }}
 {% if story.narrative is defined %}
-narrative = {{ story.narrative }}
+narrative = {{ story.narrative | escapeNewlines() }}
 {% endif %}
 
 {% endfor %}

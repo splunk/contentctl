@@ -120,8 +120,8 @@ class Detection_Abstract(SecurityContentObject):
         director:DirectorOutputDto = info.context.get("output_dto",None)
         
         search:Union[str,dict] = info.data.get("search",None)
-        if isinstance(search,dict):
-            #The search was sigma formatted, so we will not validate macros in it
+        if not isinstance(search,str):
+            #The search was sigma formatted (or failed other validation and was None), so we will not validate macros in it
             return []
         
         search_name:Union[str,Any] = info.data.get("name",None)
@@ -203,7 +203,7 @@ class Detection_Abstract(SecurityContentObject):
     #     return v
 
 
-    @field_validator('how_to_implement', 'known_false_positives')
+    @field_validator('how_to_implement', 'known_false_positives', 'search')
     @classmethod
     def encode_error(cls, v: str, info: ValidationInfo):
         return SecurityContentObject.free_text_field_valid(v,info)

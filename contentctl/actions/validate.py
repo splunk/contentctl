@@ -23,20 +23,6 @@ class Validate:
         director = Director(director_output_dto)
         director.execute(input_dto)
 
-        # uuid validation all objects
-        try:
-            security_content_objects:list[SecurityContentObject_Abstract] = (
-                director_output_dto.detections
-                + director_output_dto.stories
-                + director_output_dto.baselines
-                + director_output_dto.investigations
-                + director_output_dto.playbooks
-            )
-            self.validate_duplicate_uuids(security_content_objects)
-
-        except ValueError as e:
-            print(e)
-            sys.exit(1)
         return director_output_dto
 
     def validate_duplicate_uuids(self, security_content_objects:list[SecurityContentObject_Abstract]):

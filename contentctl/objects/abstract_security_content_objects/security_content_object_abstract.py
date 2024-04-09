@@ -112,6 +112,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         
         
         if bool(re.search(r"[^\\]\n", v)):
+                return v
                 raise ValueError(f"Unexpected newline(s) in {info.field_name}:'{v}'.  Newline characters MUST be prefixed with \\")
         return v
     

@@ -6,10 +6,10 @@ args = {% for arg in macro.arguments %}{{ arg }}{{ ", " if not loop.last }}
 {% endfor %}
 {% endif %}
 {% if macro.definition is not none %}
-definition = {{ macro.definition }}
+definition = {{ macro.definition | escapeNewlines() }}
 {% else %}
 definition =
 {% endif %}
-description = {{ macro.description }}
+description = {{ macro.description | escapeNewlines() }}
 
 {% endfor %}

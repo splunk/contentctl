@@ -144,6 +144,7 @@ class DetectionTags(BaseModel):
     @field_validator('atomic_guid',mode="before")
     @classmethod
     def mapAtomicGuidsToAtomicTests(cls, v:Union[list[UUID4],None], info:ValidationInfo)->Union[None,list[AtomicTest]]:
+        
         if v is None or len(v) == 0:
             return None
         
@@ -159,7 +160,6 @@ class DetectionTags(BaseModel):
         missing_tests:List[UUID4] = []
         for atomic_guid in v:
             try:
-                
                 matched_tests.append(AtomicTest.getAtomicByAtomicGuid(uuid.UUID(atomic_guid),all_tests))
             except Exception as _:
                 missing_tests.append(atomic_guid)

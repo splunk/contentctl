@@ -25,7 +25,6 @@ class BuildInputDto:
 class Build:
 
     def execute(self, input_dto: BuildInputDto) -> DirectorOutputDto:
-        print("BUILD")
         if input_dto.config.build_app:    
             conf_output = ConfOutput(input_dto.config)
             conf_output.writeHeaders()

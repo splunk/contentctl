@@ -7,14 +7,14 @@
 type = detection
 asset_type = {{ detection.tags.asset_type }}
 confidence = medium
-explanation = {{ detection.description }}
+explanation = {{ detection.description | escapeNewlines() }}
 {% if detection.how_to_implement is defined %}
-how_to_implement = {{ detection.how_to_implement }}
+how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}
 how_to_implement = none
 {% endif %}
 annotations = {{ detection.mappings | tojson }}
-known_false_positives = {{ detection.known_false_positives }}
+known_false_positives = {{ detection.known_false_positives | escapeNewlines() }}
 providing_technologies = {{ detection.providing_technologies | tojson }}
 
 {% endif %}

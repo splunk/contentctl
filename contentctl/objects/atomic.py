@@ -101,12 +101,13 @@ class AtomicTest(BaseModel):
     @classmethod
     def parseArtRepo(cls, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->List[AtomicFile]:
         if not repo_path.is_dir():
-            raise ValueError(f"Atomic Red Team repo does NOT exist at {repo_path.absolute()}. You can check it out with:\n * git clone --single-branch https://github.com/redcanaryco/atomic-red-team")
+            print(f"WARNING: Atomic Red Team repo does NOT exist at {repo_path.absolute()}. You can check it out with:\n * git clone --single-branch https://github.com/redcanaryco/atomic-red-team. This will ONLY throw a validation error if you reference atomid_guids in your detection(s).")
+            return []
         atomics_path = repo_path/"atomics"
         if not atomics_path.is_dir():
-            raise ValueError(f"Atomic Red Team repo exists at {repo_path.absolute}, but atomics directory does NOT exist at {atomics_path.absolute()}. Was it deleted or renamed?")
+            print(f"WARNING: Atomic Red Team repo exists at {repo_path.absolute}, but atomics directory does NOT exist at {atomics_path.absolute()}. Was it deleted or renamed? This will ONLY throw a validation error if you reference atomid_guids in your detection(s).")
+            return []
         
-        print("Found the Atomic Red Team Repo! We will validate the presence of any atomic_guid fields referenced in your detections.")
 
         atomic_files:List[AtomicFile] = []
         error_messages:List[str] = []
@@ -129,7 +130,11 @@ class AtomicTest(BaseModel):
     
     @classmethod
     def getAtomicTestsFromArtRepo(cls, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->List[AtomicTest]:
+        # Get all the atomic files.  Note that if the ART repo is not found, we will not throw an error,
+        # but will not have any atomics. This means that if atomic_guids are referenced during validation,
+        # validation for those detections will fail
         atomic_files = cls.getAtomicFilesFromArtRepo(repo_path)
+            
         atomic_tests:List[AtomicTest] = []
         for atomic_file in atomic_files:
             atomic_tests.extend(atomic_file.atomic_tests)

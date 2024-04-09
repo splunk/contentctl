@@ -21,7 +21,7 @@ reload.es_investigations = simple
 [launcher]
 author = {{ objects[0].author_company }}
 version = {{ objects[0].version }} 
-description = {{ objects[0].description }}
+description = {{ objects[0].description | escapeNewlines() }}
 
 [ui]
 is_visible = true

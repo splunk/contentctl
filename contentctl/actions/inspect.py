@@ -21,7 +21,7 @@ class InspectInputDto:
 class Inspect:
 
     def execute(self, config: inspect) -> str:
-        if config.build_app:    
+        if config.build_app or config.build_api:    
          
             self.inspectAppCLI(config)
             appinspect_token = self.inspectAppAPI(config)

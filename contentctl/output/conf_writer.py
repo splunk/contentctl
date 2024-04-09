@@ -100,7 +100,7 @@ class ConfWriter():
     @staticmethod
     def writeXmlFileHeader(app_output_path:pathlib.Path, config: build) -> None:
         output = ConfWriter.writeFileHeader(app_output_path, config)    
-        output_with_xml_comment = f"<!--\n{output}\n-->"
+        output_with_xml_comment = f"<!--\n{output}-->\n"
 
         output_path = config.getPackageDirectoryPath()/app_output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)

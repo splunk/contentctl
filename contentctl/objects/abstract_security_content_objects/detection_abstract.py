@@ -57,6 +57,7 @@ class Detection_Abstract(SecurityContentObject):
     runtime: str = None
     enabled_by_default: bool = False
 
+
     class Config:
         use_enum_values = True
 
@@ -346,3 +347,10 @@ class Detection_Abstract(SecurityContentObject):
 
         # Return the summary
         return summary_dict
+
+
+    def getMetadata(self)->dict[str,str]:
+        return {'detection_id':str(self.id),
+                'deprecated':'1' if self.status==DetectionStatus.deprecated.value else '0',
+                'detection_version':str(self.version)}
+

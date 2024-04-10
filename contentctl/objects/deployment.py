@@ -1,15 +1,13 @@
 from __future__ import annotations
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, model_validator
 from typing import Optional
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.deployment_scheduling import DeploymentScheduling
-from contentctl.objects.deployment_email import DeploymentEmail
-from contentctl.objects.deployment_notable import DeploymentNotable
-from contentctl.objects.deployment_rba import DeploymentRBA
-from contentctl.objects.deployment_slack import DeploymentSlack
-from contentctl.objects.deployment_phantom import DeploymentPhantom
+from contentctl.objects.alert_action import AlertAction
+
 from contentctl.objects.enums import DeploymentType
+
 
 class Deployment(SecurityContentObject):
     #id: str = None
@@ -18,11 +16,7 @@ class Deployment(SecurityContentObject):
     #description: str = None
     #contentType: SecurityContentType = SecurityContentType.deployments
     scheduling: DeploymentScheduling = Field(...)
-    email: Optional[DeploymentEmail] = None
-    notable: Optional[DeploymentNotable] = None
-    rba: Optional[DeploymentRBA] = None
-    slack: Optional[DeploymentSlack] = None
-    phantom: Optional[DeploymentPhantom] = None
+    alert_action: AlertAction = AlertAction()
     type: DeploymentType = Field(...)
 
     #Type was the only tag exposed and should likely be removed/refactored.

@@ -61,13 +61,35 @@ class Detection_Abstract(SecurityContentObject):
     annotations: dict[str,Union[List[Any],int]] = {}
     #playbooks: list[Playbook] = []
     #baselines: list[Baseline] = []
-    mappings: Optional[dict] = None
+    
+    @computed_field
+    @property
+    def mappings(self)->dict[str, List[str]]:
+        mappings = {}
+        if self.tags.mitre_attack_id is not None and len(self.tags.mitre_attack_id) > 0:
+            mappings['mitre_attack'] = self.tags.mitre_attack_id
+        if len(self.tags.kill_chain_phases) > 0:
+            mappings['kill_chain_phases'] = self.tags.kill_chain_phases
+        if self.tags.nist is not None and len(self.tags.nist) > 0:
+             mappings['nist'] = self.tags.nist
+        if len(self.tags.cis20) > 0:
+            mappings["cis20"] = self.tags.cis20
+        return mappings
+
     macros: list[Macro] = Field([],validate_default=True)
     lookups: list[Lookup] = []
     cve_enrichment: Optional[List[dict]] = None
     splunk_app_enrichment: Optional[List[dict]] = None
     
-    nes_fields: Optional[str] = None
+    @computed_field
+    @property
+    def nes_fields(self)->Optional[str]:
+        if self.deployment.alert_action.notable is not None:
+            print(','.join(self.deployment.alert_action.notable.nes_fields)  )
+            return ','.join(self.deployment.alert_action.notable.nes_fields)
+        else:
+            return None
+    
     providing_technologies: Optional[List[ProvidingTechnology]] = None
     risk: Optional[list[dict]] = None
     

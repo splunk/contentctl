@@ -13,7 +13,7 @@ from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
 from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
 from contentctl.objects.atomic import AtomicTest
-
+from contentctl.helper.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
 
 
 class DetectionTags(BaseModel):
@@ -58,8 +58,10 @@ class DetectionTags(BaseModel):
     @computed_field
     @property
     def kill_chain_phases(self)->list[KillChainPhase]:
-        from contentctl.helper.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
-        phases:set[str] = set()
+        if self.mitre_attack_enrichments is None:
+            return []
+        
+        phases:set[KillChainPhase] = set()
         for enrichment in self.mitre_attack_enrichments:
             for tactic in enrichment.mitre_attack_tactics:
                 phase = KillChainPhase(ATTACK_TACTICS_KILLCHAIN_MAPPING[tactic])

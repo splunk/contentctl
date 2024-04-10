@@ -4,7 +4,7 @@ import pathlib
 from dataclasses import dataclass, field
 from pydantic import ValidationError
 from uuid import UUID
-
+from contentctl.input.yml_reader import YmlReader
     
     
     
@@ -105,13 +105,13 @@ class Director():
         if self.input_dto.enrichments:
             self.attack_enrichment = AttackEnrichment.get_attack_lookup(str(self.input_dto.path))
         
-        self.basic_builder = BasicBuilder()
-        self.playbook_builder = PlaybookBuilder(self.input_dto.path)
-        self.baseline_builder = BaselineBuilder()
-        self.investigation_builder = InvestigationBuilder()
-        self.story_builder = StoryBuilder()
-        self.detection_builder = DetectionBuilder()
-        self.ssa_detection_builder = SSADetectionBuilder()
+        #self.basic_builder = BasicBuilder()
+        #self.playbook_builder = PlaybookBuilder(self.input_dto.path)
+        #self.baseline_builder = BaselineBuilder()
+        #self.investigation_builder = InvestigationBuilder()
+        #self.story_builder = StoryBuilder()
+        #self.detection_builder = DetectionBuilder()
+        #self.ssa_detection_builder = SSADetectionBuilder()
 
         # Fetch and load all the atomic tests
         self.getAtomicTests()
@@ -155,51 +155,45 @@ class Director():
             progress_percent = ((index+1)/len(security_content_files)) * 100
             try:
                 type_string = type.name.upper()
+                modelDict = YmlReader.load_file(file)
+
                 if type == SecurityContentType.lookups:
-                        self.constructLookup(self.basic_builder, file)
-                        lookup = self.basic_builder.getObject()
+                        lookup = Lookup.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.lookups.append(lookup)
                         self.addContentToDictMappings(lookup)
                 
                 elif type == SecurityContentType.macros:
-                        self.constructMacro(self.basic_builder, file)
-                        macro = self.basic_builder.getObject()
+                        macro = Macro.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.macros.append(macro)
                         self.addContentToDictMappings(macro)
                 
                 elif type == SecurityContentType.deployments:
-                        self.constructDeployment(self.basic_builder, file)
-                        deployment = self.basic_builder.getObject()
+                        deployment = Deployment.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.deployments.append(deployment)
                         self.addContentToDictMappings(deployment)
                 
                 elif type == SecurityContentType.playbooks:
-                        self.constructPlaybook(self.playbook_builder, file)
-                        playbook = self.playbook_builder.getObject()
+                        playbook = Playbook.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.playbooks.append(playbook)  
                         self.addContentToDictMappings(playbook)                  
                 
                 elif type == SecurityContentType.baselines:
-                        self.constructBaseline(self.baseline_builder, file)
-                        baseline = self.baseline_builder.getObject()
+                        baseline = Baseline.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.baselines.append(baseline)
                         self.addContentToDictMappings(baseline)
                 
                 elif type == SecurityContentType.investigations:
-                        self.constructInvestigation(self.investigation_builder, file)
-                        investigation = self.investigation_builder.getObject()
+                        investigation = Investigation.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.investigations.append(investigation)
                         self.addContentToDictMappings(investigation)
 
                 elif type == SecurityContentType.stories:
-                        self.constructStory(self.story_builder, file)
-                        story = self.story_builder.getObject()
+                        story = Story.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.stories.append(story)
                         self.addContentToDictMappings(story)
             
                 elif type == SecurityContentType.detections:
-                        self.constructDetection(self.detection_builder, file)
-                        detection = self.detection_builder.getObject()
+                        detection = Detection.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.detections.append(detection)
                         self.addContentToDictMappings(detection)
 

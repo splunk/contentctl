@@ -24,6 +24,7 @@ class StoryBuilder():
         return self.story
 
     def addDetections(self, detections: list, config: build) -> None:
+        raise Exception("dead code")
         matched_detection_names = []
         matched_detections = []
         mitre_attack_enrichments = []

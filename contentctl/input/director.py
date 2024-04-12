@@ -146,8 +146,6 @@ class Director():
         elif self.input_dto.build_ssa:
             security_content_files = [f for f in files if f.name.startswith('ssa___')]
         else:
-            import code
-            code.interact(local=locals())
             raise(Exception(f"Cannot createSecurityContent for unknown product.  We must have at least one of 'build_app: True', 'build:api: True', and/or 'build_ssa: True' "))
 
         

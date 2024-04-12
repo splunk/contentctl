@@ -13,12 +13,12 @@ description = {{ detection.description | escapeNewlines() }}
 action.escu.mappings = {{ detection.mappings | tojson }}
 action.escu.data_models = {{ detection.datamodel | tojson }}
 action.escu.eli5 = {{ detection.description | escapeNewlines() }}
-{% if detection.how_to_implement is defined %}
+{% if detection.how_to_implement %}
 action.escu.how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}
 action.escu.how_to_implement = none
 {% endif %}
-{% if detection.known_false_positives is defined %}
+{% if detection.known_false_positives %}
 action.escu.known_false_positives = {{ detection.known_false_positives | escapeNewlines() }}
 {% else %}
 action.escu.known_false_positives = None
@@ -31,16 +31,15 @@ action.escu.search_type = detection
 {% if detection.tags.product is defined %}
 action.escu.product = {{ detection.tags.product | tojson }}
 {% endif %}
-{#{% if detection.tags.getAtomicGuidStringArray) | length > 0 %}#}
 {% if detection.tags.atomic_guid %}
 action.escu.atomic_red_team_guids = {{ detection.tags.getAtomicGuidStringArray() | tojson }}
 {% endif %}
-{% if detection.providing_technologies is defined %}
+{% if detection.providing_technologies %}
 action.escu.providing_technologies = {{ detection.providing_technologies | tojson }}
 {% else %}
 action.escu.providing_technologies = []
 {% endif %}
-{% if detection.tags.analytic_story is defined %}
+{% if detection.tags.analytic_story %}
 action.escu.analytic_story = {{ objectListToNameList(detection.tags.analytic_story) | tojson }}
 {% if detection.deployment.alert_action.rba%}
 action.risk = 1
@@ -68,28 +67,28 @@ action.correlationsearch.annotations = {{ detection.getAnnotationsDictForJson() 
 schedule_window = {{ detection.deployment.scheduling.schedule_window }}
 {% endif %}
 {% if detection.deployment is defined %}
-{% if detection.deployment.alert_action.notable is defined %}
+{% if detection.deployment.alert_action.notable %}
 action.notable = 1
-{% if detection.nes_fields is defined %}
+{% if detection.nes_fields %}
 action.notable.param.nes_fields = {{ detection.nes_fields }}
 {% endif %}
 action.notable.param.rule_description = {{ detection.deployment.alert_action.notable.rule_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines()}}
-action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.alert_ction.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
+action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
 action.notable.param.security_domain = {{ detection.tags.security_domain }}
 action.notable.param.severity = high
 {% endif %}
-{% if detection.deployment.alert_action.email is defined %}
+{% if detection.deployment.alert_action.email %}
 action.email.subject.alert = {{ detection.deployment.alert_action.email.subject | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.email.to = {{ detection.deployment.alert_action.email.to }}
 action.email.message.alert = {{ detection.deployment.alert_action.email.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.email.useNSSubject = 1
 {% endif %}
-{% if detection.deployment.alert_action.slack is defined %}
+{% if detection.deployment.alert_action.slack %}
 action.slack = 1
 action.slack.param.channel = {{ detection.deployment.alert_action.slack.channel | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.slack.param.message = {{ detection.deployment.alert_action.slack.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 {% endif %}
-{% if detection.deployment.alert_action.phantom is defined %}
+{% if detection.deployment.alert_action.phantom%}
 action.sendtophantom = 1
 action.sendtophantom.param._cam_workers = {{ detection.deployment.alert_action.phantom.cam_workers | custom_jinja2_enrichment_filter(detection) }}
 action.sendtophantom.param.label = {{ detection.deployment.alert_action.phantom.label | custom_jinja2_enrichment_filter(detection) }}

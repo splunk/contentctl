@@ -50,12 +50,32 @@ class DetectionBuilder():
                     self.security_content_obj.deployment = None
                 else:
                     self.security_content_obj.deployment = matched_deployments[-1]
+                    ""
+    def addBasicDrilldown(self) -> None:
+        if self.security_content_obj:
+            risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
+            self.security_content_obj.drilldown_objects = []
+            
+            if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'): 
+                if self.security_content_obj.type == "TTP":
+                    for entity in self.security_content_obj.tags.observable:
+                        basic_drilldown_object = dict()
+                        if 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:                           
+                            drilldown_search = self.security_content_obj.search + "| search " + entity.name + " = $" + entity.name + "$"
+                            basic_drilldown_object['name'] = "View the event for $" + entity.name + "$"
+                            basic_drilldown_object['search'] = drilldown_search
+                            basic_drilldown_object['earliest_offset'] = "$info_min_time$"
+                            basic_drilldown_object['latest_offset'] = "$info_min_time$"
+                            
+                    self.security_content_obj.drilldown_objects.append(basic_drilldown_object)
+                            # print(self.security_content_obj.drilldown_objects)
 
-
+                            ### action.notable.param.drilldown_searches = [{"name":"Find process details","search":"|  datamodel","earliest_offset":"$info_min_time$","latest_offset":"$info_max_time$"},{"name":"FInd notable history","search":"| notable","earliest_offset":86400,"latest_offset":"$info_max_time$"}]
     def addRBA(self) -> None:
         if self.security_content_obj:
 
             risk_objects = []
+            # self.security_content_obj.drilldown_objects = []
             risk_object_user_types = {'user', 'username', 'email address'}
             risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
             process_threat_object_types = {'process name','process'}
@@ -63,6 +83,8 @@ class DetectionBuilder():
             url_threat_object_types = {'url string','url'}
             ip_threat_object_types = {'ip address'}
 
+            ### Create that drill down search
+            
             if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
                 for entity in self.security_content_obj.tags.observable:
 
@@ -344,6 +366,23 @@ class DetectionBuilder():
                 "security_content_obj must be an instance of Detection to skip integration tests, "
                 f"not {type(self.security_content_obj)}"
                 )
+    
+    def skipAllTests(self, manual_test_explanation:str) -> None:
+        """
+        Skip all unit and integration tests if the manual_test flag is defined in the yml
+        """
+        # Sanity check for typing and in setObject wasn't called yet 
+        if self.security_content_obj is not None and isinstance(self.security_content_obj, Detection):
+            for test in self.security_content_obj.tests:
+                #This should skip both unit and integration tests as appropriate
+                test.skip(f"TEST SKIPPED: Detection marked as 'manual_test' with explanation: {manual_test_explanation}")
+                
+        else:
+            raise ValueError(
+                "security_content_obj must be an instance of Detection to skip unit and integration tests due "
+                f"to the presence of the manual_test field, not {type(self.security_content_obj)}"
+                )
+
 
     def reset(self) -> None:
         self.security_content_obj = None

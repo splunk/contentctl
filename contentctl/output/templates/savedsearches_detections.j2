@@ -69,7 +69,10 @@ schedule_window = {{ detection.deployment.scheduling.schedule_window }}
 {% endif %}
 {% if detection.deployment is defined %}
 {% if detection.deployment.notable.rule_title is defined %}
-action.notable = 1
+action.notable = 1 
+{% if detection.drilldown_objects is defined  and detection.drilldown_objects != [{}] %}
+action.notable.param.drilldown_searches = {{ detection.drilldown_objects | tojson }}
+{% endif %}
 {% if detection.nes_fields is defined %}
 action.notable.param.nes_fields = {{ detection.nes_fields }}
 {% endif %}
@@ -99,7 +102,7 @@ action.sendtophantom.param.severity = {{ detection.deployment.phantom.severity |
 {% endif %}
 {% endif %}
 alert.digest_mode = 1
-{% if detection.enabled_by_default %}
+{% if detection.disabled is defined %}
 disabled = false
 {% else %}
 disabled = true

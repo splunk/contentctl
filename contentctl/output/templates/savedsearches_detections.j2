@@ -70,7 +70,7 @@ schedule_window = {{ detection.deployment.scheduling.schedule_window }}
 {% if detection.deployment is defined %}
 {% if detection.deployment.notable.rule_title is defined %}
 action.notable = 1 
-{% if detection.drilldown_objects is defined  and detection.drilldown_objects != [{}] %}
+{% if detection.drilldown_objects is defined  and detection.drilldown_objects != [{}] and detection.type | lower == "ttp" %}
 action.notable.param.drilldown_searches = {{ detection.drilldown_objects | tojson }}
 {% endif %}
 {% if detection.nes_fields is defined %}

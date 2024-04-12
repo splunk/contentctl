@@ -85,7 +85,6 @@ class Detection_Abstract(SecurityContentObject):
     @property
     def nes_fields(self)->Optional[str]:
         if self.deployment.alert_action.notable is not None:
-            print(','.join(self.deployment.alert_action.notable.nes_fields)  )
             return ','.join(self.deployment.alert_action.notable.nes_fields)
         else:
             return None

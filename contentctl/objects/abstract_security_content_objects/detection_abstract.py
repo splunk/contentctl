@@ -58,7 +58,26 @@ class Detection_Abstract(SecurityContentObject):
             raise ValueError(f"Cannot get 'source' for detection {self.name} - 'file_path' was None.")
 
     deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
-    annotations: dict[str,Union[List[Any],int]] = {}
+    
+    @computed_field
+    @property
+    def annotations(self)->dict[str,Union[List[Any],int]]:
+        annotations_dict = {}
+        annotations_dict["analytic_story"]=[story.name for story in self.tags.analytic_story]
+        annotations_dict["cis20"] = self.tags.cis20
+        annotations_dict["confidence"] = self.tags.confidence
+        if len(self.tags.cve or []) > 0:
+            annotations_dict["cve"] = self.tags.cve
+        #kill chain phases
+        if len(self.tags.kill_chain_phases) > 0:
+            annotations_dict["kill_chain_phases"] = [phase.value for phase in self.tags.kill_chain_phases]
+        #mitre attack
+        if len(self.tags.mitre_attack_id or []) >0:
+            annotations_dict["mitre_attack"] = self.tags.mitre_attack_id
+        annotations_dict["impact"] = self.tags.impact
+        annotations_dict["nist"] = self.tags.nist or []
+        
+        return annotations_dict
     #playbooks: list[Playbook] = []
     #baselines: list[Baseline] = []
     
@@ -232,7 +251,7 @@ class Detection_Abstract(SecurityContentObject):
     
     @model_validator(mode="after")
     def addTags_nist(self):
-        if self.type == AnalyticsType.TTP:
+        if self.type == AnalyticsType.TTP.value:
             self.tags.nist = [NistCategory.DE_CM]
         else:
             self.tags.nist = [NistCategory.DE_AE]

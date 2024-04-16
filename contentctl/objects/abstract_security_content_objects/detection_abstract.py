@@ -63,14 +63,14 @@ class Detection_Abstract(SecurityContentObject):
     @property
     def annotations(self)->dict[str,Union[List[Any],int]]:
         annotations_dict = {}
-        annotations_dict["analytic_story"]=[story.name for story in self.tags.analytic_story]
+        annotations_dict["analytic_story"]=[sorted(story.name for story in self.tags.analytic_story)]
         annotations_dict["cis20"] = self.tags.cis20
         annotations_dict["confidence"] = self.tags.confidence
         if len(self.tags.cve or []) > 0:
             annotations_dict["cve"] = self.tags.cve
         #kill chain phases
         if len(self.tags.kill_chain_phases) > 0:
-            annotations_dict["kill_chain_phases"] = [phase.value for phase in self.tags.kill_chain_phases]
+            annotations_dict["kill_chain_phases"] = [sorted(phase.value for phase in self.tags.kill_chain_phases)]
         #mitre attack
         if len(self.tags.mitre_attack_id or []) >0:
             annotations_dict["mitre_attack"] = self.tags.mitre_attack_id
@@ -119,9 +119,128 @@ class Detection_Abstract(SecurityContentObject):
     
     @computed_field
     @property
-    def risk(self)->list[dict]:
-        return [{}]
+    def risk(self)->list[dict[str,Any]]:
+        risk_objects = []
+        risk_object_user_types = {'user', 'username', 'email address'}
+        risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
+        process_threat_object_types = {'process name','process'}
+        file_threat_object_types = {'file name','file', 'file hash'}
+        url_threat_object_types = {'url string','url'}
+        ip_threat_object_types = {'ip address'}
+
+        
+        for entity in self.tags.observable:
+
+            risk_object = dict()
+            if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
+                risk_object['risk_object_type'] = 'user'
+                risk_object['risk_object_field'] = entity.name
+                risk_object['risk_score'] = self.tags.risk_score
+                risk_objects.append(risk_object)
+
+            elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
+                risk_object['risk_object_type'] = 'system'
+                risk_object['risk_object_field'] = entity.name
+                risk_object['risk_score'] = self.tags.risk_score
+                risk_objects.append(risk_object)
+
+            elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
+                risk_object['threat_object_field'] = entity.name
+                risk_object['threat_object_type'] = "process"
+                risk_objects.append(risk_object) 
+
+            elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
+                risk_object['threat_object_field'] = entity.name
+                risk_object['threat_object_type'] = "file_name"
+                risk_objects.append(risk_object) 
+
+            elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
+                risk_object['threat_object_field'] = entity.name
+                risk_object['threat_object_type'] = "ip_address"
+                risk_objects.append(risk_object) 
+
+            elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
+                risk_object['threat_object_field'] = entity.name
+                risk_object['threat_object_type'] = "url"
+                risk_objects.append(risk_object) 
+
+            else:
+                risk_object['risk_object_type'] = 'other'
+                risk_object['risk_object_field'] = entity.name
+                risk_object['risk_score'] = self.tags.risk_score
+                risk_objects.append(risk_object)
+                continue
+
+
+        return risk_objects
+
+    '''
+    @computed_field
+    @property
+    def risk(self)->list[dict[str,Any]]:
     
+
+        risk_objects = []
+        risk_object_user_types = {'user', 'username', 'email address'}
+        risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
+        process_threat_object_types = {'process name','process'}
+        file_threat_object_types = {'file name','file', 'file hash'}
+        url_threat_object_types = {'url string','url'}
+        ip_threat_object_types = {'ip address'}
+
+        if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
+            for entity in self.security_content_obj.tags.observable:
+
+                risk_object = dict()
+                if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
+                    risk_object['risk_object_type'] = 'user'
+                    risk_object['risk_object_field'] = entity.name
+                    risk_object['risk_score'] = self.security_content_obj.tags.risk_score
+                    risk_objects.append(risk_object)
+
+                elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
+                    risk_object['risk_object_type'] = 'system'
+                    risk_object['risk_object_field'] = entity.name
+                    risk_object['risk_score'] = self.security_content_obj.tags.risk_score
+                    risk_objects.append(risk_object)
+
+                elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
+                    risk_object['threat_object_field'] = entity.name
+                    risk_object['threat_object_type'] = "process"
+                    risk_objects.append(risk_object) 
+
+                elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
+                    risk_object['threat_object_field'] = entity.name
+                    risk_object['threat_object_type'] = "file_name"
+                    risk_objects.append(risk_object) 
+
+                elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
+                    risk_object['threat_object_field'] = entity.name
+                    risk_object['threat_object_type'] = "ip_address"
+                    risk_objects.append(risk_object) 
+
+                elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
+                    risk_object['threat_object_field'] = entity.name
+                    risk_object['threat_object_type'] = "url"
+                    risk_objects.append(risk_object) 
+
+                else:
+                    risk_object['risk_object_type'] = 'other'
+                    risk_object['risk_object_field'] = entity.name
+                    risk_object['risk_score'] = self.security_content_obj.tags.risk_score
+                    risk_objects.append(risk_object)
+                    continue
+
+        if self.security_content_obj.tags.risk_score >= 80:
+            self.security_content_obj.tags.risk_severity = 'high'
+        elif (self.security_content_obj.tags.risk_score >= 50 and self.security_content_obj.tags.risk_score <= 79):
+            self.security_content_obj.tags.risk_severity = 'medium'
+        else:
+            self.security_content_obj.tags.risk_severity = 'low'
+
+        self.security_content_obj.risk = risk_objects
+        
+    '''
     
     class Config:
         use_enum_values = True

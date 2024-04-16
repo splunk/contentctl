@@ -33,13 +33,25 @@ class DetectionTags(BaseModel):
     
     mitre_attack_id: List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]] = []
     nist: Optional[list[NistCategory]] = None
-    observable: Optional[list[Observable]] = []
+    observable: List[Observable] = []
     message: Optional[str] = Field(...)
     product: list[SecurityContentProductName] = Field(...,min_length=1)
     required_fields: list[str] = Field(min_length=1)
     
     security_domain: SecurityDomain = Field(...)
-    risk_severity: Optional[RiskSeverity] = None
+
+    @computed_field
+    @property
+    def risk_severity(self)->RiskSeverity:
+        if self.risk_score >= 80:
+            return RiskSeverity('high')
+        elif (self.risk_score >= 50 and self.risk_score <= 79):
+            return RiskSeverity('medium')
+        else:
+            return RiskSeverity('low')
+
+
+    
     cve: Optional[List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]]] = None
     atomic_guid: Optional[list[AtomicTest]] = None
     drilldown_search: Optional[str] = None

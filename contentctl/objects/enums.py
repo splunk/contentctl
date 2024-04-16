@@ -229,12 +229,24 @@ class DataSource(str,enum.Enum):
     WINDOWS_SYSTEM_7045 = "Windows System 7045"
 
 class ProvidingTechnology(str, enum.Enum):
+    AMAZON_SECURITY_LAKE = "Amazon Security Lake"
     AMAZON_WEB_SERVICES_CLOUDTRAIL = "Amazon Web Services - Cloudtrail"
+    AZURE_AD = "Azure AD"
     CARBON_BLACK_RESPONSE = "Carbon Black Response"
     CROWDSTRIKE_FALCON = "CrowdStrike Falcon"
+    ENTRA_ID = "Entra ID"
+    GOOGLE_CLOUD_PLATFORM = "Google Cloud Platform"
+    GOOGLE_WORKSPACE = "Google Workspace"
+    KUBERNETES = "Kubernetes"
+    MICROSOFT_DEFENDER = "Microsoft Defender"
+    MICROSOFT_OFFICE_365 = "Microsoft Office 365"
+    MICROSOFT_SYSMON = "Microsoft Sysmon"
     MICROSOFT_WINDOWS = "Microsoft Windows"
+    OKTA = "Okta"
+    PING_ID = "Ping ID"
+    SPLUNK_INTERNAL_LOGS = "Splunk Internal Logs"
     SYMANTEC_ENDPOINT_PROTECTION = "Symantec Endpoint Protection"
-    SYSMON = "Sysmon"
+    ZEEK = "Zeek"
     
     @staticmethod
     def getProvidingTechFromSearch(search_string:str)->List[ProvidingTechnology]:
@@ -251,15 +263,31 @@ class ProvidingTechnology(str, enum.Enum):
             it is derived from a set) calculated from the search string.
         """        
         matched_technologies:set[ProvidingTechnology] = set()
+        #As there are many different sources that use google logs, we define the set once
+        google_logs = set([ProvidingTechnology.GOOGLE_WORKSPACE, ProvidingTechnology.GOOGLE_CLOUD_PLATFORM])
         providing_technologies_mapping = {
-            'Endpoint': set([ProvidingTechnology.SYSMON, 
+            '`amazon_security_lake`': set([ProvidingTechnology.AMAZON_SECURITY_LAKE]),
+            '`audit_searches`': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
+            '`azure_monitor_aad`': set([ProvidingTechnology.AZURE_AD, ProvidingTechnology.ENTRA_ID]),
+            '`cloudtrail`': set([ProvidingTechnology.AMAZON_WEB_SERVICES_CLOUDTRAIL]),
+            #Endpoint is NOT a Macro (and this is intentional since it is to capture Endpoint Datamodel usage)
+            'Endpoint': set([ProvidingTechnology.MICROSOFT_SYSMON, 
                              ProvidingTechnology.MICROSOFT_WINDOWS,
                              ProvidingTechnology.CARBON_BLACK_RESPONSE,
                              ProvidingTechnology.CROWDSTRIKE_FALCON, 
                              ProvidingTechnology.SYMANTEC_ENDPOINT_PROTECTION]),
-            '`cloudtrail`': set([ProvidingTechnology.AMAZON_WEB_SERVICES_CLOUDTRAIL]),
+            '`google_`': google_logs,
+            '`gsuite`': google_logs,
+            '`gws_`': google_logs,
+            '`kube`': set([ProvidingTechnology.KUBERNETES]),
+            '`o365_`': set([ProvidingTechnology.MICROSOFT_OFFICE_365]),
+            '`okta`': set([ProvidingTechnology.OKTA]),
+            '`pingid`': set([ProvidingTechnology.PING_ID]),
+            '`powershell`': set(set([ProvidingTechnology.MICROSOFT_WINDOWS])),
+            '`splunkd_`': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
+            '`sysmon`': set([ProvidingTechnology.MICROSOFT_SYSMON]),
             '`wineventlog_security`': set([ProvidingTechnology.MICROSOFT_WINDOWS]),
-            '`powershell`': set(set([ProvidingTechnology.MICROSOFT_WINDOWS]))
+            '`zeek_`': set([ProvidingTechnology.ZEEK]),
         }
         for key in providing_technologies_mapping:
             if key in search_string:

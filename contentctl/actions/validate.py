@@ -13,13 +13,13 @@ from contentctl.input.director import (
 )
 
 from contentctl.objects.config import validate
-
+from contentctl.enrichments.attack_enrichment import AttackEnrichment
 
 
 
 class Validate:
     def execute(self, input_dto: validate) -> DirectorOutputDto:
-        director_output_dto = DirectorOutputDto([], [], [], [], [], [], [], [], [],[])
+        director_output_dto = DirectorOutputDto([], [], [], [], [], [], [], [], [],[], AttackEnrichment.getAttackEnrichment(input_dto))
         director = Director(director_output_dto)
         director.execute(input_dto)
 

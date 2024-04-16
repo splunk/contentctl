@@ -1,7 +1,7 @@
 from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, List, Optional, Annotated, Union
-from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo, model_serializer
+from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo, model_serializer, model_validator
 from contentctl.objects.story import Story
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
@@ -31,7 +31,7 @@ class DetectionTags(BaseModel):
         return round((self.confidence * self.impact)/100)
     
     
-    mitre_attack_id: Optional[List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]]] = None
+    mitre_attack_id: List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]] = []
     nist: Optional[list[NistCategory]] = None
     observable: Optional[list[Observable]] = []
     message: Optional[str] = Field(...)
@@ -46,7 +46,7 @@ class DetectionTags(BaseModel):
 
 
     # enrichment
-    mitre_attack_enrichments: Optional[List[MitreAttackEnrichment]] = []
+    mitre_attack_enrichments: List[MitreAttackEnrichment] = Field([],validate_default=True)
     confidence_id: Optional[PositiveInt] = Field(None,ge=1,le=3)
     impact_id: Optional[PositiveInt] = Field(None,ge=1,le=5)
     # context_ids: list = None
@@ -60,13 +60,12 @@ class DetectionTags(BaseModel):
     def kill_chain_phases(self)->list[KillChainPhase]:
         if self.mitre_attack_enrichments is None:
             return []
-        
         phases:set[KillChainPhase] = set()
         for enrichment in self.mitre_attack_enrichments:
             for tactic in enrichment.mitre_attack_tactics:
                 phase = KillChainPhase(ATTACK_TACTICS_KILLCHAIN_MAPPING[tactic])
                 phases.add(phase)
-        return list(phases)
+        return sorted(list(phases))
     
     #enum is intentionally Cis18 even though field is named cis20 for legacy reasons
     @computed_field
@@ -131,6 +130,53 @@ class DetectionTags(BaseModel):
         }
     
         
+    @model_validator(mode="after")
+    def addAttackEnrichment(self, info:ValidationInfo):
+        if len(self.mitre_attack_enrichments) > 0:
+            raise ValueError(f"Error, field 'mitre_attack_enrichment' should be empty and dynamically populated at runtime. Instead, this field contained: {str(v)}")
+        
+        output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
+        if output_dto is None:
+            raise ValueError("Context not provided to detection.detection_tags model post validator")
+        
+        if output_dto.attack_enrichment.use_enrichment is False:
+            return self
+        
+
+        mitre_enrichments = []
+        missing_tactics = []
+        for mitre_attack_id in self.mitre_attack_id:
+            try:
+                mitre_enrichments.append(output_dto.attack_enrichment.getEnrichmentByMitreID(mitre_attack_id))
+            except Exception as e:
+                missing_tactics.append(mitre_attack_id)            
+        
+        if len(missing_tactics) > 0:
+            raise ValueError(f"Missing Mitre Attack IDs. {missing_tactics} not found.")
+        else:
+            self.mitre_attack_enrichments = mitre_enrichments
+        
+        return self
+
+    '''
+    @field_validator('mitre_attack_enrichments', mode="before")
+    @classmethod
+    def addAttackEnrichments(cls, v:list[MitreAttackEnrichment], info:ValidationInfo)->list[MitreAttackEnrichment]:
+        if len(v) > 0:
+            raise ValueError(f"Error, field 'mitre_attack_enrichment' should be empty and dynamically populated at runtime. Instead, this field contained: {str(v)}")
+        
+        
+        output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
+        if output_dto is None:
+            raise ValueError("Context not provided to detection.detection_tags.mitre_attack_enrichments")
+        
+        enrichments = []
+
+
+
+        
+        return enrichments
+    '''
 
     @field_validator('analytic_story',mode="before")
     @classmethod
@@ -153,7 +199,7 @@ class DetectionTags(BaseModel):
 
         output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
         if output_dto is None:
-            raise ValueError("Atomic Red Team Tests not provided to detection.detection_tags.atomic_guid validator")
+            raise ValueError("Context not provided to detection.detection_tags.atomic_guid validator")
 
         
         all_tests:List[AtomicTest]= output_dto.atomic_tests

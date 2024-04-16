@@ -21,6 +21,7 @@ from contentctl.objects.lookup import Lookup
 from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.atomic import AtomicTest
 from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.enrichments.attack_enrichment import AttackEnrichment
 
 from contentctl.objects.config import validate
 
@@ -38,9 +39,10 @@ class DirectorOutputDto:
      deployments: list[Deployment]
      ssa_detections: list[SSADetection]
      atomic_tests: list[AtomicTest]
+     attack_enrichment: AttackEnrichment
      name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
      uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
-
+     
 
 
 
@@ -55,7 +57,7 @@ from contentctl.objects.enums import SecurityContentType
 
 from contentctl.objects.enums import DetectionStatus 
 from contentctl.helper.utils import Utils
-from contentctl.enrichments.attack_enrichment import AttackEnrichment
+
 
 
 
@@ -74,13 +76,12 @@ class Director():
     story_builder: StoryBuilder
     detection_builder: DetectionBuilder
     ssa_detection_builder: SSADetectionBuilder
-    attack_enrichment: dict
     
 
 
     def __init__(self, output_dto: DirectorOutputDto) -> None:
         self.output_dto = output_dto
-        self.attack_enrichment = dict()
+        
     
     def addContentToDictMappings(self, content:SecurityContentObject):
          if content.name in self.output_dto.name_to_content_map:
@@ -97,13 +98,11 @@ class Director():
     
     def getAtomicTests(self)->None:
          self.output_dto.atomic_tests = AtomicTest.getAtomicTestsFromArtRepo()
-         
+        
     
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
         
-        if self.input_dto.enrichments:
-            self.attack_enrichment = AttackEnrichment.get_attack_lookup(str(self.input_dto.path))
         
         #self.basic_builder = BasicBuilder()
         #self.playbook_builder = PlaybookBuilder(self.input_dto.path)

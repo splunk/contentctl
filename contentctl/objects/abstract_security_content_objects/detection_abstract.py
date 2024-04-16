@@ -108,8 +108,20 @@ class Detection_Abstract(SecurityContentObject):
         else:
             return None
     
-    providing_technologies: Optional[List[ProvidingTechnology]] = None
-    risk: Optional[list[dict]] = None
+    @computed_field
+    @property
+    def providing_technologies(self)->List[ProvidingTechnology]:
+        if isinstance(self.search, str):
+            return ProvidingTechnology.getProvidingTechFromSearch(self.search)
+        else:
+            #Dict-formatted searches (sigma) will not have providing technologies
+            return []
+    
+    @computed_field
+    @property
+    def risk(self)->list[dict]:
+        return [{}]
+    
     
     class Config:
         use_enum_values = True

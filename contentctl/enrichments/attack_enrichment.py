@@ -29,7 +29,7 @@ class AttackEnrichment():
             print(f"\r{'Client'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
             
             print(f"\r{'Enterprise'.rjust(23)}: [{0.0:3.0f}%]...", end="", flush=True)
-            all_enterprise = lift.get_enterprise_techniques(stix_format=False)
+            all_enterprise_techniques = lift.get_enterprise_techniques(stix_format=False)
             print(f"\r{'Enterprise'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
             
             print(f"\r{'Relationships'.rjust(23)}: [{0.0:3.0f}%]...", end="", flush=True)

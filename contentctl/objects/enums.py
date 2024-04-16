@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import List
 import enum
 
 
@@ -233,6 +235,37 @@ class ProvidingTechnology(str, enum.Enum):
     MICROSOFT_WINDOWS = "Microsoft Windows"
     SYMANTEC_ENDPOINT_PROTECTION = "Symantec Endpoint Protection"
     SYSMON = "Sysmon"
+    
+    @staticmethod
+    def getProvidingTechFromSearch(search_string:str)->List[ProvidingTechnology]:
+        """_summary_
+
+        Args:
+            search_string (str): The search string to extract the providing technologies from.
+            The providing_technologies_mapping provides keywords, macros, etc that can be updated
+            with new mappings.  If that substring appears in the search, then its list of providing
+            technologies is added.
+
+        Returns:
+            List[ProvidingTechnology]: List of providing technologies (with no duplicates because
+            it is derived from a set) calculated from the search string.
+        """        
+        matched_technologies:set[ProvidingTechnology] = set()
+        providing_technologies_mapping = {
+            'Endpoint': set([ProvidingTechnology.SYSMON, 
+                             ProvidingTechnology.MICROSOFT_WINDOWS,
+                             ProvidingTechnology.CARBON_BLACK_RESPONSE,
+                             ProvidingTechnology.CROWDSTRIKE_FALCON, 
+                             ProvidingTechnology.SYMANTEC_ENDPOINT_PROTECTION]),
+            '`cloudtrail`': set([ProvidingTechnology.AMAZON_WEB_SERVICES_CLOUDTRAIL]),
+            '`wineventlog_security`': set([ProvidingTechnology.MICROSOFT_WINDOWS]),
+            '`powershell`': set(set([ProvidingTechnology.MICROSOFT_WINDOWS]))
+        }
+        for key in providing_technologies_mapping:
+            if key in search_string:
+                matched_technologies.update(providing_technologies_mapping[key])
+        return sorted(list(matched_technologies))
+
 
 class Cis18Value(str,enum.Enum):
     CIS_0 = "CIS 0"

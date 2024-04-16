@@ -36,14 +36,14 @@ action.escu.product = {{ detection.tags.product | tojson }}
 {% if detection.tags.atomic_guid %}
 action.escu.atomic_red_team_guids = {{ detection.tags.getAtomicGuidStringArray() | tojson }}
 {% endif %}
-{% if detection.providing_technologies  %}
+{% if detection.providing_technologies | length > 0  %}
 action.escu.providing_technologies = {{ detection.providing_technologies | tojson }}
 {% else %}
-action.escu.providing_technologies = []
+action.escu.providing_technologies = null
 {% endif %}
 {% if detection.tags.analytic_story %}
 action.escu.analytic_story = {{ objectListToNameList(detection.tags.analytic_story) | tojson }}
-{% if detection.deployment.alert_action.rba%}
+{% if detection.deployment.alert_action.rba.enabled%}
 action.risk = 1
 action.risk.param._risk_message = {{ detection.tags.message | escapeNewlines() }}
 action.risk.param._risk = {{ detection.risk | tojson }}

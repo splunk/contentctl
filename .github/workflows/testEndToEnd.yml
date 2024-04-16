@@ -72,7 +72,7 @@ jobs:
       - name: Run contentctl test
         run: |
           cd my_splunk_content_pack
-          poetry run contentctl test --unattended
+          poetry run contentctl test
       
       - uses: actions/upload-artifact@v3
         with:

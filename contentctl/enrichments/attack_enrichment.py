@@ -83,7 +83,7 @@ class AttackEnrichment(BaseModel):
             print(f"\r{'Groups'.rjust(23)}: [{0:3.0f}%]...", end="", flush=True)
             enterprise_groups = lift.get_enterprise_groups(stix_format=False)
             print(f"\r{'Groups'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
-            lift.get_enterprise_relationships()
+            
             
             for index, technique in enumerate(all_enterprise_techniques):
                 progress_percent = ((index+1)/len(all_enterprise_techniques)) * 100

@@ -63,8 +63,9 @@ class ConfWriter():
 
     @staticmethod
     def writeFileHeader(app_output_path:pathlib.Path, config: build) -> str:
-        
-        utc_time = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
+        #Do not output microseconds or +00:000 at the end of the datetime string
+        utc_time = datetime.datetime.now(datetime.UTC).replace(microsecond=0,tzinfo=None).isoformat()
+    
         j2_env = Environment(
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')), 
             trim_blocks=True)

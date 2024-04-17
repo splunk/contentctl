@@ -267,7 +267,7 @@ class ProvidingTechnology(str, enum.Enum):
         google_logs = set([ProvidingTechnology.GOOGLE_WORKSPACE, ProvidingTechnology.GOOGLE_CLOUD_PLATFORM])
         providing_technologies_mapping = {
             '`amazon_security_lake`': set([ProvidingTechnology.AMAZON_SECURITY_LAKE]),
-            '`audit_searches`': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
+            'audit_searches': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
             '`azure_monitor_aad`': set([ProvidingTechnology.AZURE_AD, ProvidingTechnology.ENTRA_ID]),
             '`cloudtrail`': set([ProvidingTechnology.AMAZON_WEB_SERVICES_CLOUDTRAIL]),
             #Endpoint is NOT a Macro (and this is intentional since it is to capture Endpoint Datamodel usage)
@@ -276,18 +276,19 @@ class ProvidingTechnology(str, enum.Enum):
                              ProvidingTechnology.CARBON_BLACK_RESPONSE,
                              ProvidingTechnology.CROWDSTRIKE_FALCON, 
                              ProvidingTechnology.SYMANTEC_ENDPOINT_PROTECTION]),
-            '`google_`': google_logs,
-            '`gsuite`': google_logs,
-            '`gws_`': google_logs,
-            '`kube`': set([ProvidingTechnology.KUBERNETES]),
-            '`o365_`': set([ProvidingTechnology.MICROSOFT_OFFICE_365]),
+            '`google_': google_logs,
+            '`gsuite': google_logs,
+            '`gws_': google_logs,
+            '`kube': set([ProvidingTechnology.KUBERNETES]),
+            '`ms_defender`': set([ProvidingTechnology.MICROSOFT_DEFENDER]),
+            '`o365_': set([ProvidingTechnology.MICROSOFT_OFFICE_365]),
             '`okta`': set([ProvidingTechnology.OKTA]),
             '`pingid`': set([ProvidingTechnology.PING_ID]),
             '`powershell`': set(set([ProvidingTechnology.MICROSOFT_WINDOWS])),
-            '`splunkd_`': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
+            '`splunkd_': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
             '`sysmon`': set([ProvidingTechnology.MICROSOFT_SYSMON]),
             '`wineventlog_security`': set([ProvidingTechnology.MICROSOFT_WINDOWS]),
-            '`zeek_`': set([ProvidingTechnology.ZEEK]),
+            '`zeek_': set([ProvidingTechnology.ZEEK]),
         }
         for key in providing_technologies_mapping:
             if key in search_string:
@@ -365,7 +366,8 @@ class AssetType(str, enum.Enum):
     NETWORK = "Network"
     #OFFICE_365 = "Office 365"
     #OFFICE_365_Tenant = "Office 365 Tenant"
-    O365_Tenant = "O365 Tenant"
+    O365_TENANT = "O365 Tenant"
+    OKTA_TENANT = "Okta Tenant"
     PROXY = "Proxy"
     S3_BUCKET = "S3 Bucket"
     SPLUNK_SERVER = "Splunk Server"

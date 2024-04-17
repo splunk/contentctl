@@ -32,7 +32,7 @@ class DetectionTags(BaseModel):
     
     
     mitre_attack_id: List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]] = []
-    nist: Optional[list[NistCategory]] = None
+    nist: list[NistCategory] = []
     observable: List[Observable] = []
     message: Optional[str] = Field(...)
     product: list[SecurityContentProductName] = Field(...,min_length=1)
@@ -52,8 +52,8 @@ class DetectionTags(BaseModel):
 
 
     
-    cve: Optional[List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]]] = None
-    atomic_guid: Optional[list[AtomicTest]] = None
+    cve: List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]] = []
+    atomic_guid: List[AtomicTest] = []
     drilldown_search: Optional[str] = None
 
 
@@ -196,19 +196,15 @@ class DetectionTags(BaseModel):
         return Story.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None))
     
     def getAtomicGuidStringArray(self)->List[str]:
-        if self.atomic_guid:
-            return [str(atomic_guid.auto_generated_guid) for atomic_guid in self.atomic_guid]
-        else:
-            return []
+        return [str(atomic_guid.auto_generated_guid) for atomic_guid in self.atomic_guid]
+            
 
     @field_validator('atomic_guid',mode="before")
     @classmethod
-    def mapAtomicGuidsToAtomicTests(cls, v:Union[list[UUID4],None], info:ValidationInfo)->Union[None,list[AtomicTest]]:
+    def mapAtomicGuidsToAtomicTests(cls, v:List[UUID4], info:ValidationInfo)->List[AtomicTest]:
+        if len(v) == 0:
+            return []
         
-        if v is None or len(v) == 0:
-            return None
-        
-
         output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
         if output_dto is None:
             raise ValueError("Context not provided to detection.detection_tags.atomic_guid validator")

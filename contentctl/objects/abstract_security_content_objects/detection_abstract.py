@@ -61,38 +61,43 @@ class Detection_Abstract(SecurityContentObject):
     
     @computed_field
     @property
-    def annotations(self)->dict[str,Union[List[Any],int]]:
-        annotations_dict = {}
-        annotations_dict["analytic_story"]=[sorted(story.name for story in self.tags.analytic_story)]
-        annotations_dict["cis20"] = self.tags.cis20
+    def annotations(self)->dict[str,Union[List[str],int]]:
+
+        annotations_dict:dict[str, Union[List[str], int]] = {} 
+        annotations_dict["analytic_story"]=[story.name for story in self.tags.analytic_story]
         annotations_dict["confidence"] = self.tags.confidence
         if len(self.tags.cve or []) > 0:
-            annotations_dict["cve"] = self.tags.cve
-        #kill chain phases
-        if len(self.tags.kill_chain_phases) > 0:
-            annotations_dict["kill_chain_phases"] = [sorted(phase.value for phase in self.tags.kill_chain_phases)]
-        #mitre attack
-        if len(self.tags.mitre_attack_id or []) >0:
-            annotations_dict["mitre_attack"] = self.tags.mitre_attack_id
+            annotations_dict["cve"] = self.tags.cve        
         annotations_dict["impact"] = self.tags.impact
-        annotations_dict["nist"] = self.tags.nist or []
         
-        return annotations_dict
+        #The annotations object is a superset of the mappings object.
+        # So start with the mapping object.
+        annotations_dict.update(self.mappings)
+
+        #Make sure that the results are sorted for readability/easier diffs
+        return dict(sorted(annotations_dict.items(), key=lambda item: item[0]))
+        
     #playbooks: list[Playbook] = []
     #baselines: list[Baseline] = []
     
     @computed_field
     @property
     def mappings(self)->dict[str, List[str]]:
-        mappings = {}
-        if self.tags.mitre_attack_id is not None and len(self.tags.mitre_attack_id) > 0:
-            mappings['mitre_attack'] = self.tags.mitre_attack_id
-        if len(self.tags.kill_chain_phases) > 0:
-            mappings['kill_chain_phases'] = self.tags.kill_chain_phases
-        if self.tags.nist is not None and len(self.tags.nist) > 0:
-             mappings['nist'] = self.tags.nist
+        mappings:dict[str,Any] = {}
         if len(self.tags.cis20) > 0:
-            mappings["cis20"] = self.tags.cis20
+            mappings["cis20"] = [tag.value for tag in self.tags.cis20]
+        if len(self.tags.kill_chain_phases) > 0:
+            mappings['kill_chain_phases'] = [phase.value for phase in self.tags.kill_chain_phases]
+        if len(self.tags.mitre_attack_id) > 0:
+            mappings['mitre_attack'] = self.tags.mitre_attack_id
+        if len(self.tags.nist) > 0:
+             mappings['nist'] = [category.value for category in self.tags.nist]
+        
+        
+        # No need to sort the dict! It has been constructed in-order.
+        # However, if this logic is changed, then consider reordering or
+        # adding the sort back!
+        #return dict(sorted(mappings.items(), key=lambda item: item[0]))
         return mappings
 
     macros: list[Macro] = Field([],validate_default=True)
@@ -313,19 +318,6 @@ class Detection_Abstract(SecurityContentObject):
         macros_from_search = Macro.get_macros(search, director)
         
         return  macros_from_search + [filter_macro]
-        
-
-        
-        
-    def getAnnotationsDictForJson(self)->dict[str,Union[List[Any],int]]:
-        result_dict:dict[str,Union[List[Any],int]] = {}
-        for k in self.annotations:
-            ls = self.annotations.get(k,[])
-            if isinstance(ls, List) and True in [True for obj in ls if isinstance(obj, SecurityContentObject)]:
-                result_dict[k] = [obj.name for obj in ls]
-            else:
-                result_dict[k] = ls
-        return result_dict
 
     def get_content_dependencies(self)->list[SecurityContentObject]:
         #Do this separately to satisfy type checker
@@ -387,6 +379,34 @@ class Detection_Abstract(SecurityContentObject):
         else:
             self.tags.nist = [NistCategory.DE_AE]
         return self
+    
+    @model_validator(mode="after")
+    def ensureProperObservablesExist(self):
+        """
+        If a detections is PRODUCTION and either TTP or ANOMALY, then it MUST have an Observable with the VICTIM role.
+
+        Returns:
+            self: Returns itself if the valdiation passes 
+        """
+        if self.status not in [DetectionStatus.production.value]:
+            # Only perform this validation on production detections
+            return self
+
+        if self.type not in [AnalyticsType.TTP.value or AnalyticsType.Anomaly.value]:
+            # Only perform this validation on TTP and Anomaly detections
+            return self 
+    
+        #Detection is required to have a victim
+        roles = []
+        for observable in self.tags.observable:
+            roles.extend(observable.role)
+        number_of_victims = roles.count("Victim")
+        if number_of_victims == 0:
+            raise ValueError(f"Error, there must be AT LEAST 1 Observable with the role 'Victim' declared in Detection.tags.observables. However, none were found.")
+        
+        # Exactly one victim was found
+        return self
+        
 
     @model_validator(mode="after")
     def search_observables_exist_validate(self):

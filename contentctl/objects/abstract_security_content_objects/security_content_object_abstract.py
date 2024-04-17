@@ -148,7 +148,8 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             error_string = "\n  - ".join(errors)
             raise ValueError(f"Found {len(errors)} issues when resolving references Security Content Object names:\n  - {error_string}")
         
-        return mappedObjects
+        #Sort all objects sorted by name
+        return sorted(mappedObjects, key=lambda o: o.name)
 
     @staticmethod
     def getDeploymentFromType(typeField:Union[str,None], info:ValidationInfo)->Deployment:

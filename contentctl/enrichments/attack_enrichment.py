@@ -98,13 +98,9 @@ class AttackEnrichment(BaseModel):
                     for tactic in technique['tactic']:
                         tactics.append(tactic.replace('-',' ').title())
 
-                #sort tactics and groups
-                tactics.sort()
-                apt_groups.sort()
-
-                if not ('revoked' in technique):
-                    self.addMitreID(technique, tactics, apt_groups)
-                    attack_lookup[technique['technique_id']] = {'technique': technique['technique'], 'tactics': tactics, 'groups': apt_groups}
+                
+                self.addMitreID(technique, tactics, apt_groups)
+                attack_lookup[technique['technique_id']] = {'technique': technique['technique'], 'tactics': tactics, 'groups': apt_groups}
 
             if store_csv:
                 f = open(file_path, 'w')

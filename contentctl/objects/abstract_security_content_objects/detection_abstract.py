@@ -392,7 +392,7 @@ class Detection_Abstract(SecurityContentObject):
             # Only perform this validation on production detections
             return self
 
-        if self.type not in [AnalyticsType.TTP.value or AnalyticsType.Anomaly.value]:
+        if self.type not in [AnalyticsType.TTP.value, AnalyticsType.Anomaly.value]:
             # Only perform this validation on TTP and Anomaly detections
             return self 
     
@@ -400,8 +400,8 @@ class Detection_Abstract(SecurityContentObject):
         roles = []
         for observable in self.tags.observable:
             roles.extend(observable.role)
-        number_of_victims = roles.count("Victim")
-        if number_of_victims == 0:
+        
+        if roles.count("Victim") == 0:
             raise ValueError(f"Error, there must be AT LEAST 1 Observable with the role 'Victim' declared in Detection.tags.observables. However, none were found.")
         
         # Exactly one victim was found

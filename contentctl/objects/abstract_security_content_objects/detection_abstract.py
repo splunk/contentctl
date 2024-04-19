@@ -23,7 +23,7 @@ from contentctl.objects.unit_test import UnitTest
 #from contentctl.objects.baseline import Baseline
 #from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import DataSource,ProvidingTechnology
-
+from contentctl.enrichments.cve_enrichment import CveEnrichment, CveEnrichmentObj
 
 
 class Detection_Abstract(SecurityContentObject):
@@ -102,7 +102,18 @@ class Detection_Abstract(SecurityContentObject):
 
     macros: list[Macro] = Field([],validate_default=True)
     lookups: list[Lookup] = []
-    cve_enrichment: Optional[List[dict]] = None
+
+    @computed_field
+    @property
+    def cve_enrichment(self)->List[CveEnrichmentObj]:
+        raise Exception("CVE Enrichment Functionality not currently supported.  It will be re-added at a later time.")
+        enriched_cves = []
+        for cve_id in self.tags.cve:
+            print(f"\nEnriching {cve_id}\n")
+            enriched_cves.append(CveEnrichment.enrich_cve(cve_id))
+
+        return enriched_cves
+    
     splunk_app_enrichment: Optional[List[dict]] = None
     
     @computed_field
@@ -364,12 +375,6 @@ class Detection_Abstract(SecurityContentObject):
     #     if v.lower() not in [el.name.lower() for el in AnalyticsType]:
     #         raise ValueError("not valid analytics type: " + values["name"])
     #     return v
-
-
-    @field_validator('how_to_implement', 'known_false_positives', 'search')
-    @classmethod
-    def encode_error(cls, v: str, info: ValidationInfo):
-        return SecurityContentObject.free_text_field_valid(v,info)
 
     
     @model_validator(mode="after")

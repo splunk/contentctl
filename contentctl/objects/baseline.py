@@ -36,13 +36,6 @@ class Baseline(SecurityContentObject):
     # enrichment
     deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
 
-
-    @field_validator('search', 'how_to_implement', 'known_false_positives')
-    @classmethod
-    def encode_error(cls, v: str, info: ValidationInfo):
-        return SecurityContentObject.free_text_field_valid(v,info)
-
-
     @field_validator("deployment", mode="before")
     def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
         return SecurityContentObject.getDeploymentFromType(info.data.get("type",None), info)

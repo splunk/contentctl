@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
-from pydantic import field_validator, model_validator, ValidationInfo, Field, FilePath
+from typing import TYPE_CHECKING,Self
+from pydantic import model_validator, Field, FilePath
 
 
 from contentctl.objects.playbook_tags import PlaybookTag
@@ -10,19 +10,20 @@ from contentctl.objects.enums import PlaybookType
 
 class Playbook(SecurityContentObject):
     type: PlaybookType = Field(...)
+    
+    # Override the type definition for filePath.
+    # This MUST be backed by a file and cannot be None
+    file_path: FilePath
+    
     how_to_implement: str = Field(min_length=4)
     playbook: str = Field(min_length=4)
     app_list: list[str] = Field(...,min_length=0) 
     tags: PlaybookTag = Field(...)
+    
 
-
-    @field_validator('how_to_implement')
-    @classmethod
-    def encode_error(cls, v:str, info:ValidationInfo):
-        return super().free_text_field_valid(v,info)
     
     @model_validator(mode="after")
-    def ensureJsonAndPyFilesExist(self)->Playbook:
+    def ensureJsonAndPyFilesExist(self)->Self:
         json_file_path = self.file_path.with_suffix(".json")
         python_file_path = self.file_path.with_suffix(".py")
         missing:list[str] = []
@@ -46,7 +47,7 @@ class Playbook(SecurityContentObject):
 
     #Override playbook file name checking FOR NOW
     @model_validator(mode="after")
-    def ensureFileNameMatchesSearchName(self):
+    def ensureFileNameMatchesSearchName(self)->Self:
         file_name = self.name \
             .replace(' ', '_') \
             .replace('-','_') \

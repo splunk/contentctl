@@ -37,10 +37,4 @@ class Investigation(SecurityContentObject):
             story.investigations.append(self)
     
 
-
-    @field_validator('how_to_implement', 'known_false_positives')
-    @classmethod
-    def encode_error(cls, v: str, info: ValidationInfo):
-        return SecurityContentObject.free_text_field_valid(v,info)
-
     

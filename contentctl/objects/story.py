@@ -55,13 +55,6 @@ class Story(SecurityContentObject):
         return model
 
 
-    
-    
-    @field_validator('narrative')
-    @classmethod
-    def encode_error(cls, v:str, info:ValidationInfo)->str:
-        return super().free_text_field_valid(v,info)
-
     def getDetectionNames(self)->List[str]:
         return [detection.name for detection in self.detections]
     

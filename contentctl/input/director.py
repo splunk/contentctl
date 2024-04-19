@@ -21,7 +21,9 @@ from contentctl.objects.lookup import Lookup
 from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.atomic import AtomicTest
 from contentctl.objects.security_content_object import SecurityContentObject
+
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
+from contentctl.enrichments.cve_enrichment import CveEnrichment
 
 from contentctl.objects.config import validate
 
@@ -40,19 +42,16 @@ class DirectorOutputDto:
      ssa_detections: list[SSADetection]
      atomic_tests: list[AtomicTest]
      attack_enrichment: AttackEnrichment
+     #cve_enrichment: CveEnrichment
+
      name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
      uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
      
 
 
 
-from contentctl.input.basic_builder import BasicBuilder
-from contentctl.input.detection_builder import DetectionBuilder
+
 from contentctl.input.ssa_detection_builder import SSADetectionBuilder
-from contentctl.input.playbook_builder import PlaybookBuilder
-from contentctl.input.baseline_builder import BaselineBuilder
-from contentctl.input.investigation_builder import InvestigationBuilder
-from contentctl.input.story_builder import StoryBuilder
 from contentctl.objects.enums import SecurityContentType
 
 from contentctl.objects.enums import DetectionStatus 
@@ -69,12 +68,6 @@ from contentctl.helper.utils import Utils
 class Director():
     input_dto: validate
     output_dto: DirectorOutputDto
-    basic_builder: BasicBuilder
-    playbook_builder: PlaybookBuilder
-    baseline_builder: BaselineBuilder
-    investigation_builder: InvestigationBuilder
-    story_builder: StoryBuilder
-    detection_builder: DetectionBuilder
     ssa_detection_builder: SSADetectionBuilder
     
 
@@ -102,15 +95,6 @@ class Director():
     
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
-        
-        
-        #self.basic_builder = BasicBuilder()
-        #self.playbook_builder = PlaybookBuilder(self.input_dto.path)
-        #self.baseline_builder = BaselineBuilder()
-        #self.investigation_builder = InvestigationBuilder()
-        #self.story_builder = StoryBuilder()
-        #self.detection_builder = DetectionBuilder()
-        #self.ssa_detection_builder = SSADetectionBuilder()
 
         # Fetch and load all the atomic tests
         self.getAtomicTests()
@@ -195,7 +179,7 @@ class Director():
                         self.addContentToDictMappings(detection)
 
                 elif type == SecurityContentType.ssa_detections:
-                        self.constructSSADetection(self.ssa_detection_builder, file)
+                        self.constructSSADetection(self.ssa_detection_builder, str(file))
                         ssa_detection = self.ssa_detection_builder.getObject()
                         if ssa_detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
                             self.output_dto.ssa_detections.append(ssa_detection)
@@ -224,33 +208,10 @@ class Director():
             raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
 
 
-    def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, self.output_dto)
-        #builder.addDeployment(self.output_dto.deployments)
-        builder.addMitreAttackEnrichment(self.attack_enrichment)
-        #builder.addKillChainPhase()
-        #builder.addCIS()
-        #builder.addNist()
-        #builder.addDatamodel()
-        builder.addRBA()
-        builder.addProvidingTechnologies()
-        builder.addNesFields()
-        builder.addAnnotations()
-        builder.addMappings()
-        #builder.addBaseline(self.output_dto.baselines)
-        #builder.addPlaybook(self.output_dto.playbooks)
-        #builder.addMacros(self.output_dto.macros)
-        #builder.addLookups(self.output_dto.lookups)
-        
-        if self.input_dto.enrichments:
-            builder.addMitreAttackEnrichment(self.attack_enrichment)
-            builder.addCve()
     
-        
+    
 
-
-    def constructSSADetection(self, builder: DetectionBuilder, file_path: str) -> None:
+    def constructSSADetection(self, builder: SSADetectionBuilder, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path,self.output_dto)
         builder.addMitreAttackEnrichment(self.attack_enrichment)
@@ -263,53 +224,4 @@ class Director():
         builder.addRBA()
 
 
-    def constructStory(self, builder: StoryBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path,self.output_dto)
-        #builder.addDetections(self.output_dto.detections, self.input_dto.config)
-        
-        #builder.addInvestigations(self.output_dto.investigations)
-        #builder.addBaselines(self.output_dto.baselines)
-        builder.addAuthorCompanyName()
-
-
-    def constructBaseline(self, builder: BaselineBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path,self.output_dto)
-        #builder.addDeployment(self.output_dto.deployments)
-
-
-    def constructDeployment(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, SecurityContentType.deployments,self.output_dto)
-
-
-    def constructLookup(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, SecurityContentType.lookups,self.output_dto)
-
-
-    def constructMacro(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, SecurityContentType.macros,self.output_dto)
-
-
-    def constructPlaybook(self, builder: PlaybookBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, self.output_dto)
-        builder.addDetections()
-
-
-    def constructTest(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, SecurityContentType.unit_tests, self.output_dto)
-
-
-    def constructInvestigation(self, builder: InvestigationBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path,self.output_dto)
-        builder.addInputs()
-
-    def constructObjects(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, self.output_dto)
+    

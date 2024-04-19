@@ -14,7 +14,7 @@ from contentctl.input.director import (
 
 from contentctl.objects.config import validate
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
-
+from contentctl.enrichments.cve_enrichment import CveEnrichment
 
 
 class Validate:

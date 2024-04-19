@@ -100,22 +100,6 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     def getReferencesListForJson(self)->List[str]:
         return [str(url) for url in self.references or []]
         
-    @field_validator('name','author','description')
-    @classmethod
-    def free_text_field_valid(cls, v: str, info:ValidationInfo)->str:
-        try:
-            v.encode('ascii')
-        except UnicodeEncodeError as e:
-            print(f"Potential Ascii encoding error in {info.field_name}:'{v}' - {str(e)}")
-        except Exception as e:
-            print(f"Unknown encoding error in {info.field_name}:'{v}' - {str(e)}")
-        
-        
-        if bool(re.search(r"[^\\]\n", v)):
-                return v
-                raise ValueError(f"Unexpected newline(s) in {info.field_name}:'{v}'.  Newline characters MUST be prefixed with \\")
-        return v
-    
     @classmethod
     def mapNamesToSecurityContentObjects(cls, v: list[str], director:Union[DirectorOutputDto,None])->list[Self]:
         if director is not None:

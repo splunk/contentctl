@@ -31,6 +31,10 @@ from contentctl.objects.config import validate
 
 @dataclass()
 class DirectorOutputDto:
+     # Atomic Tests are first because parsing them 
+     # is far quicker than attack_enrichment
+     atomic_tests: list[AtomicTest] 
+     attack_enrichment: AttackEnrichment
      detections: list[Detection]
      stories: list[Story]
      baselines: list[Baseline]
@@ -40,8 +44,6 @@ class DirectorOutputDto:
      lookups: list[Lookup]
      deployments: list[Deployment]
      ssa_detections: list[SSADetection]
-     atomic_tests: list[AtomicTest]
-     attack_enrichment: AttackEnrichment
      #cve_enrichment: CveEnrichment
 
      name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
@@ -89,15 +91,11 @@ class Director():
          self.output_dto.name_to_content_map[content.name] = content 
          self.output_dto.uuid_to_content_map[content.id] = content 
     
-    def getAtomicTests(self)->None:
-         self.output_dto.atomic_tests = AtomicTest.getAtomicTestsFromArtRepo()
         
     
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
 
-        # Fetch and load all the atomic tests
-        self.getAtomicTests()
 
         if self.input_dto.build_app or self.input_dto.build_api:
             self.createSecurityContent(SecurityContentType.deployments)

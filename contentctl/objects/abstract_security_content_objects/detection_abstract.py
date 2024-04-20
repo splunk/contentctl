@@ -101,7 +101,7 @@ class Detection_Abstract(SecurityContentObject):
         return mappings
 
     macros: list[Macro] = Field([],validate_default=True)
-    lookups: list[Lookup] = []
+    lookups: list[Lookup] = Field([],validate_default=True)
 
     @computed_field
     @property
@@ -281,10 +281,10 @@ class Detection_Abstract(SecurityContentObject):
         }
         
         #Combine fields from this model with fields from parent
-        model.update(super_fields)
+        super_fields.update(model)
         
         #return the model
-        return model
+        return super_fields
 
 
     def model_post_init(self, ctx:dict[str,Any]):
@@ -299,7 +299,17 @@ class Detection_Abstract(SecurityContentObject):
     @field_validator('lookups',mode="before")
     @classmethod
     def getDetectionLookups(cls, v:list[str], info:ValidationInfo)->list[Lookup]:
-        return Lookup.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None))
+        director:DirectorOutputDto = info.context.get("output_dto",None)
+        
+        search:Union[str,dict] = info.data.get("search",None)
+        if not isinstance(search,str):
+            #The search was sigma formatted (or failed other validation and was None), so we will not validate macros in it
+            return []
+        
+        lookups= Lookup.get_lookups(search, director)
+        if len(lookups) > 0:
+            print(f"\nFound {len(lookups)} lookups!")
+        return lookups
 
     @field_validator('macros',mode="before")
     @classmethod

@@ -1,8 +1,9 @@
 from __future__ import annotations
 from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer
-from typing import Optional, Any, Union
+from typing import TYPE_CHECKING, Optional, Any, Union
 import re
-
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.security_content_object import SecurityContentObject
 
 LOOKUPS_TO_IGNORE = set(["outputlookup"])
@@ -30,22 +31,21 @@ class Lookup(SecurityContentObject):
 
     @model_serializer
     def serialize_model(self):
-        #Call serializer for parent
-        super_fields = super().serialize_model()
-        
+        #DO NOT call parent serializer, we only want to include a subset of fields
+        #super_fields = super().serialize_model()
+
         #All fields custom to this model
         model= {
-            "collection": self.collection,
-            "field_list": self.fields_list,
+            "name": self.name,
+            "description": self.description,
             "filename": self.filename.name if self.filename is not None else None,
-            "default_match": self.default_match,
+            "default_match": "true" if self.default_match is True else "false",
             "match_type": self.match_type,
             "min_matches": self.min_matches,
-            "case_sensitive_match": self.case_sensitive_match
+            "case_sensitive_match": "true" if self.case_sensitive_match is True else "false",
+            "collection": self.collection,
+            "fields_list": self.fields_list
         }
-        
-        #Combine fields from this model with fields from parent
-        model.update(super_fields)
         
         #return the model
         return model
@@ -92,9 +92,9 @@ class Lookup(SecurityContentObject):
     
     
     @staticmethod
-    def get_lookups(text_field: str, all_lookups: list[Lookup], ignore_lookups:set[str]=LOOKUPS_TO_IGNORE)->list[Lookup]:
+    def get_lookups(text_field: str, director:DirectorOutputDto, ignore_lookups:set[str]=LOOKUPS_TO_IGNORE)->list[Lookup]:
         lookups_to_get = set(re.findall(r'[^output]lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', text_field))
         lookups_to_ignore = set([lookup for lookup in lookups_to_get if any(to_ignore in lookups_to_get for to_ignore in ignore_lookups)])
         lookups_to_get -= lookups_to_ignore
-        return Lookup.mapNamesToSecurityContentObjects(list(lookups_to_get), info.context.get("output_dto",None))
+        return Lookup.mapNamesToSecurityContentObjects(list(lookups_to_get), director)
     

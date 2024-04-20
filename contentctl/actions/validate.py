@@ -15,11 +15,15 @@ from contentctl.input.director import (
 from contentctl.objects.config import validate
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
-
+from contentctl.objects.atomic import AtomicTest
 
 class Validate:
     def execute(self, input_dto: validate) -> DirectorOutputDto:
-        director_output_dto = DirectorOutputDto([], [], [], [], [], [], [], [], [],[], AttackEnrichment.getAttackEnrichment(input_dto))
+        
+        director_output_dto = DirectorOutputDto(AtomicTest.getAtomicTestsFromArtRepo(),
+                                                AttackEnrichment.getAttackEnrichment(input_dto),
+                                                [],[],[],[],[],[],[],[],[])
+
         director = Director(director_output_dto)
         director.execute(input_dto)
 

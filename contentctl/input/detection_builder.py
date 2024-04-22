@@ -61,12 +61,12 @@ class DetectionBuilder():
             process_threat_object_types = {'process name','process'}
             file_threat_object_types = {'file name','file', 'file hash'}
             url_threat_object_types = {'url string','url'}
+            ip_threat_object_types = {'ip address'}
 
             if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
                 for entity in self.security_content_obj.tags.observable:
 
                     risk_object = dict()
-                    # If Victim is defined as observable, only then create its risk_object 
                     if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
                         risk_object['risk_object_type'] = 'user'
                         risk_object['risk_object_field'] = entity.name
@@ -79,8 +79,6 @@ class DetectionBuilder():
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
                         risk_objects.append(risk_object)
 
-                    # If 'Attacker' is defined as observable, only then create its threat object of different types
-
                     elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
                         risk_object['threat_object_field'] = entity.name
                         risk_object['threat_object_type'] = "process"
@@ -91,16 +89,17 @@ class DetectionBuilder():
                         risk_object['threat_object_type'] = "file_name"
                         risk_objects.append(risk_object) 
 
+                    elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
+                        risk_object['threat_object_field'] = entity.name
+                        risk_object['threat_object_type'] = "ip_address"
+                        risk_objects.append(risk_object) 
+
                     elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
                         risk_object['threat_object_field'] = entity.name
                         risk_object['threat_object_type'] = "url"
                         risk_objects.append(risk_object) 
 
                     else:
-                    # When nothing match the above conditions add there is an observable in the yaml, create a risk object of type other.
-
-                    # Having no risk configs causes ES to fail silently and we need to supply atleast one risk object
-                    
                         risk_object['risk_object_type'] = 'other'
                         risk_object['risk_object_field'] = entity.name
                         risk_object['risk_score'] = self.security_content_obj.tags.risk_score
@@ -121,11 +120,41 @@ class DetectionBuilder():
         if self.security_content_obj:
             if 'Endpoint' in str(self.security_content_obj.search):
                 self.security_content_obj.providing_technologies = ["Sysmon", "Microsoft Windows","Carbon Black Response","CrowdStrike Falcon", "Symantec Endpoint Protection"]
+
+            if "`sysmon`" in str(self.security_content_obj.search):
+                self.security_content_obj.providing_technologies = ["Microsoft Sysmon"]
+
             if "`cloudtrail`" in str(self.security_content_obj.search):
                 self.security_content_obj.providing_technologies = ["Amazon Web Services - Cloudtrail"]
+
             if '`wineventlog_security`' in self.security_content_obj.search or '`powershell`' in self.security_content_obj.search:
                 self.security_content_obj.providing_technologies = ["Microsoft Windows"]
 
+            if '`ms_defender`' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Microsoft Defender"]
+            if '`pingid`' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Ping ID"]
+            if '`okta' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Okta"]
+            if '`zeek_' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Zeek"]
+            if '`amazon_security_lake`' in self.security_content_obj.search: 
+                self.security_content_obj.providing_technologies = ["Amazon Security Lake"]
+
+            if '`azure_monitor_aad`' in self.security_content_obj.search :
+                self.security_content_obj.providing_technologies = ["Azure AD", "Entra ID"]
+
+            if '`o365_' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Microsoft Office 365"]
+
+            if '`gsuite' in self.security_content_obj.search or '`google_' in self.security_content_obj.search or '`gws_' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Google Workspace","Google Cloud Platform"]
+
+            if '`splunkd_' in self.security_content_obj.search or 'audit_searches' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Splunk Internal Logs"]
+
+            if '`kube' in self.security_content_obj.search:
+                self.security_content_obj.providing_technologies = ["Kubernetes"]
     
     def addNesFields(self) -> None:
         if self.security_content_obj:
@@ -319,6 +348,23 @@ class DetectionBuilder():
                 "security_content_obj must be an instance of Detection to skip integration tests, "
                 f"not {type(self.security_content_obj)}"
                 )
+    
+    def skipAllTests(self, manual_test_explanation:str) -> None:
+        """
+        Skip all unit and integration tests if the manual_test flag is defined in the yml
+        """
+        # Sanity check for typing and in setObject wasn't called yet 
+        if self.security_content_obj is not None and isinstance(self.security_content_obj, Detection):
+            for test in self.security_content_obj.tests:
+                #This should skip both unit and integration tests as appropriate
+                test.skip(f"TEST SKIPPED: Detection marked as 'manual_test' with explanation: {manual_test_explanation}")
+                
+        else:
+            raise ValueError(
+                "security_content_obj must be an instance of Detection to skip unit and integration tests due "
+                f"to the presence of the manual_test field, not {type(self.security_content_obj)}"
+                )
+
 
     def reset(self) -> None:
         self.security_content_obj = None

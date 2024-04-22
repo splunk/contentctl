@@ -84,6 +84,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
         tested_detections = []
         total_pass = 0
         total_fail = 0
+        total_skipped = 0
 
         # Iterate the detections tested (anything in the output queue was tested)
         for detection in self.sync_obj.outputQueue:
@@ -93,16 +94,27 @@ class DetectionTestingView(BaseModel, abc.ABC):
             )
 
             # Aggregate detection pass/fail metrics
-            if summary["success"] is True:
-                total_pass += 1
-            else:
+            if summary["success"] is False:
                 total_fail += 1
+            else:
+                #Test is marked as a success, but we need to determine if there were skipped unit tests
+                #SKIPPED tests still show a success in this field, but we want to count them differently
+                pass_increment = 1
+                for test in summary.get("tests"):
+                    if test.get("test_type") == "unit" and test.get("status") == "skip":
+                        total_skipped += 1
+                        #Test should not count as a pass, so do not increment the count
+                        pass_increment = 0
+                        break
+                total_pass += pass_increment
+                
 
             # Append to our list
             tested_detections.append(summary)
 
         # Sort s.t. all failures appear first (then by name)
-        tested_detections.sort(key=lambda x: (x["success"], x["name"]))
+        #Second short condition is a hack to get detections with unit skipped tests to appear above pass tests
+        tested_detections.sort(key=lambda x: (x["success"], 0 if x.get("tests",[{}])[0].get("status","status_missing")=="skip" else 1, x["name"]))
 
         # Aggregate summaries for the untested detections (anything still in the input queue was untested)
         total_untested = len(self.sync_obj.inputQueue)
@@ -128,14 +140,15 @@ class DetectionTestingView(BaseModel, abc.ABC):
             overall_success = False
 
         # Compute total detections
-        total_detections = total_fail + total_pass + total_untested
+        total_detections = total_fail + total_pass + total_untested + total_skipped
+
 
         # Compute the percentage of completion for testing, as well as the success rate
         percent_complete = Utils.getPercent(
             len(tested_detections), len(untested_detections), 1
         )
         success_rate = Utils.getPercent(
-            total_pass, total_detections, 1
+            total_pass, total_detections-total_skipped, 1
         )
 
         # TODO (cmcginley): add stats around total test cases and unit/integration test
@@ -149,6 +162,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 "total_detections": total_detections,
                 "total_pass": total_pass,
                 "total_fail": total_fail,
+                "total_skipped": total_skipped,
                 "total_untested": total_untested,
                 "total_experimental_or_deprecated": len(deprecated_detections+experimental_detections),
                 "success_rate": success_rate,

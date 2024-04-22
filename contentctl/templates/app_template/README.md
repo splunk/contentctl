@@ -1,7 +1,7 @@
-# Splunk ES Content Update
+# Content Pack built with contentctl
 
-This subscription service delivers pre-packaged Security Content for use with Splunk Enterprise Security. Subscribers get regular updates to help security practitioners more quickly address ongoing and time-sensitive customer problems and threats.
+This application was built using the open source [contentctl](https://github.com/splunk/contentctl) tool published by the Splunk Threat Research Team (STRT).
 
-Requires Splunk Enterprise Security version 4.5 or greater.
+For questions about the tool, please see the repo or contact STRT at research@splunk.com
 
-For more information please visit the [Splunk ES Content Update user documentation](https://docs.splunk.com/Documentation/ESSOC).
+Feel free to update this file to include your own valuable README information.

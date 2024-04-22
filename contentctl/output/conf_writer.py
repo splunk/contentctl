@@ -57,7 +57,13 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         template = j2_env.get_template(template_name)
         
-        output = template.render(objects=objects, APP_NAME=config.app.label)
+        output = template.render(objects=objects, APP_NAME=config.app.label, currentDate=datetime.datetime.now(datetime.UTC).date().isoformat())
+        
+        output_path = config.getPackageDirectoryPath()/app_output_path
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, 'w') as f:
+            output = output.encode('utf-8', 'ignore').decode('utf-8')
+            f.write(output)
 
 
 

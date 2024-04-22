@@ -16,7 +16,7 @@ class StoryUseCase(str,Enum):
    ADVANCED_THREAD_DETECTION = "Advanced Threat Detection"
 
 class StoryTags(BaseModel):
-   model_config = ConfigDict(extra='forbid')
+   model_config = ConfigDict(extra='forbid', use_enum_values=True)
    category: Set[StoryCategory] = Field(...,min_length=1)
    product: Set[SecurityContentProductName] = Field(...,min_length=1)
    usecase: StoryUseCase = Field(...)

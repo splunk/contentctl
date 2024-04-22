@@ -152,13 +152,15 @@ class DetectionBuilder():
         if self.security_content_obj:
             annotations = {}
             annotation_keys = ['mitre_attack', 'kill_chain_phases', 'cis20', 'nist', 
-                'analytic_story', 'context', 'impact', 'confidence', 'cve','version']
+                'analytic_story', 'context', 'impact', 'confidence', 'cve','version','type']
             for key in annotation_keys:
                 if key == 'mitre_attack':
                     if getattr(self.security_content_obj.tags, 'mitre_attack_id'):
                         annotations[key] = getattr(self.security_content_obj.tags, 'mitre_attack_id')
                 if key == 'version':
                         annotations[key] = self.security_content_obj.version
+                if key == 'type':
+                        annotations[key] = self.security_content_obj.type
                 try:
                     if getattr(self.security_content_obj.tags, key):
                         annotations[key] = getattr(self.security_content_obj.tags, key)

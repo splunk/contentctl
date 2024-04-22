@@ -43,6 +43,7 @@ class Detection_Abstract(SecurityContentObject):
     check_references: bool = False  
     #data_source: Optional[List[DataSource]] = None
 
+    enabled_by_default: bool = False
     
     tests: list[Union[UnitTest, IntegrationTest]] = []
 

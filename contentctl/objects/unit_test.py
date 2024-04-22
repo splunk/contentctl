@@ -27,7 +27,7 @@ class UnitTest(BaseTest):
     # contentType: SecurityContentType = SecurityContentType.unit_tests
 
     # The test type (unit)
-    test_type: TestType = Field(TestType.UNIT, const=True)
+    test_type: TestType = Field(TestType.UNIT)
 
     # The condition to check if the search was successful
     pass_condition: Union[str, None] = None

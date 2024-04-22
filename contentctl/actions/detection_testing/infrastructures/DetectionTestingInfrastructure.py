@@ -36,9 +36,6 @@ from contentctl.objects.test_group import TestGroup
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.correlation_search import CorrelationSearch, PbarData
 from contentctl.helper.utils import Utils
-from contentctl.actions.detection_testing.DataManipulation import (
-    DataManipulation,
-)
 from contentctl.actions.detection_testing.progress_bar import (
     format_pbar_string,
     TestReportingType,

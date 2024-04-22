@@ -13,7 +13,7 @@ from contentctl.objects.constants import *
 from contentctl.objects.observable import Observable
 from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, RiskLevel, SecurityContentProductName
 from contentctl.objects.atomic import AtomicTest
-from contentctl.helper.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
+
 
 
 class DetectionTags(BaseModel):

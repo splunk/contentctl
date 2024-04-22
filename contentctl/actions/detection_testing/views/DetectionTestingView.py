@@ -12,7 +12,7 @@ from contentctl.objects.enums import DetectionStatus
 
 
 class DetectionTestingView(BaseModel, abc.ABC):
-    config: test
+    config: TestConfig
     sync_obj: DetectionTestingManagerOutputDto
 
     interval: float = 10

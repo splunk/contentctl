@@ -30,8 +30,8 @@ class StoryTags(BaseModel):
    group: List[str] = Field([], description="A list of groups who leverage the techniques list in this Analytic Story.")
 
    def getCategory_conf(self) -> str:
-      if len(self.category) > 1:
-         print("Story with more than 1 category.  We can only have 1 category, fix it!")
+      #if len(self.category) > 1:
+      #   print("Story with more than 1 category.  We can only have 1 category, fix it!")
       return self.category.pop()
    
    @model_serializer

@@ -5,7 +5,7 @@
 {% if (detection.type == 'TTP' or detection.type == 'Anomaly' or detection.type == 'Hunting' or detection.type == 'Correlation') %}
 [savedsearch://{{APP_NAME}} - {{ detection.name }} - Rule]
 type = detection
-asset_type = {{ detection.tags.asset_type }}
+asset_type = {{ detection.tags.asset_type.value }}
 confidence = medium
 explanation = {{ detection.description | escapeNewlines() }}
 {% if detection.how_to_implement is defined %}

@@ -1,7 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING,List
 from contentctl.objects.story_tags import StoryTags
-from pydantic import field_validator, Field, ValidationInfo, model_serializer,computed_field
+from pydantic import field_validator, Field, ValidationInfo, model_serializer,computed_field, model_validator
+import re
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
@@ -26,8 +27,6 @@ class Story(SecurityContentObject):
     #detection_names: List[str] = []
     #investigation_names: List[str] = []
     #baseline_names: List[str] = []
-    author_company: str = "no"
-    
 
     # These are updated when detection and investigation objects are created.
     # Specifically in the model_post_init functions
@@ -55,6 +54,33 @@ class Story(SecurityContentObject):
         
         #return the model
         return model
+
+    
+
+    @computed_field
+    @property
+    def author_name(self)->str:
+        match_author = re.search(r'^([^,]+)', self.author)
+        if match_author is None:
+            return 'no'
+        else:
+            return match_author.group(1)
+
+    @computed_field
+    @property
+    def author_company(self)->str:
+        match_company = re.search(r',\s?(.*)$', self.author)
+        if match_company is None:
+            return 'no'
+        else:
+            return match_company.group(1)
+
+
+    
+    @computed_field
+    @property
+    def author_email(self)->str:
+        return "-"
 
     @computed_field
     @property

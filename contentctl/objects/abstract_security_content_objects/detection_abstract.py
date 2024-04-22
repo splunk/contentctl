@@ -9,6 +9,7 @@ from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
+    from contentctl.objects.baseline import Baseline
     
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
@@ -20,7 +21,7 @@ from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
 
-#from contentctl.objects.baseline import Baseline
+
 #from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import DataSource,ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichment, CveEnrichmentObj
@@ -78,7 +79,8 @@ class Detection_Abstract(SecurityContentObject):
         return dict(sorted(annotations_dict.items(), key=lambda item: item[0]))
         
     #playbooks: list[Playbook] = []
-    #baselines: list[Baseline] = []
+    
+    baselines: list[Baseline] = Field([],validate_default=True)
     
     @computed_field
     @property
@@ -190,73 +192,6 @@ class Detection_Abstract(SecurityContentObject):
 
         return risk_objects
 
-    '''
-    @computed_field
-    @property
-    def risk(self)->list[dict[str,Any]]:
-    
-
-        risk_objects = []
-        risk_object_user_types = {'user', 'username', 'email address'}
-        risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
-        process_threat_object_types = {'process name','process'}
-        file_threat_object_types = {'file name','file', 'file hash'}
-        url_threat_object_types = {'url string','url'}
-        ip_threat_object_types = {'ip address'}
-
-        if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
-            for entity in self.security_content_obj.tags.observable:
-
-                risk_object = dict()
-                if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
-                    risk_object['risk_object_type'] = 'user'
-                    risk_object['risk_object_field'] = entity.name
-                    risk_object['risk_score'] = self.security_content_obj.tags.risk_score
-                    risk_objects.append(risk_object)
-
-                elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
-                    risk_object['risk_object_type'] = 'system'
-                    risk_object['risk_object_field'] = entity.name
-                    risk_object['risk_score'] = self.security_content_obj.tags.risk_score
-                    risk_objects.append(risk_object)
-
-                elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
-                    risk_object['threat_object_field'] = entity.name
-                    risk_object['threat_object_type'] = "process"
-                    risk_objects.append(risk_object) 
-
-                elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
-                    risk_object['threat_object_field'] = entity.name
-                    risk_object['threat_object_type'] = "file_name"
-                    risk_objects.append(risk_object) 
-
-                elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
-                    risk_object['threat_object_field'] = entity.name
-                    risk_object['threat_object_type'] = "ip_address"
-                    risk_objects.append(risk_object) 
-
-                elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
-                    risk_object['threat_object_field'] = entity.name
-                    risk_object['threat_object_type'] = "url"
-                    risk_objects.append(risk_object) 
-
-                else:
-                    risk_object['risk_object_type'] = 'other'
-                    risk_object['risk_object_field'] = entity.name
-                    risk_object['risk_score'] = self.security_content_obj.tags.risk_score
-                    risk_objects.append(risk_object)
-                    continue
-
-        if self.security_content_obj.tags.risk_score >= 80:
-            self.security_content_obj.tags.risk_severity = 'high'
-        elif (self.security_content_obj.tags.risk_score >= 50 and self.security_content_obj.tags.risk_score <= 79):
-            self.security_content_obj.tags.risk_severity = 'medium'
-        else:
-            self.security_content_obj.tags.risk_severity = 'low'
-
-        self.security_content_obj.risk = risk_objects
-        
-    '''
     
     class Config:
         use_enum_values = True
@@ -270,6 +205,7 @@ class Detection_Abstract(SecurityContentObject):
         #All fields custom to this model
         model= {
             "tags": self.tags.model_dump(),
+            "type": self.type,
             "search": self.search,
             "how_to_implement":self.how_to_implement,
             "known_false_positives":self.known_false_positives,
@@ -294,6 +230,24 @@ class Detection_Abstract(SecurityContentObject):
         director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
         for story in self.tags.analytic_story:
             story.detections.append(self)
+        
+        #Ensure that all baselines link to this detection
+        for baseline in self.baselines:
+            new_detections = []
+            replaced = False
+            for d in baseline.tags.detections:
+                    if isinstance(d,str) and self.name==d:
+                        new_detections.append(self)
+                        replaced = True
+                    else:
+                        new_detections.append(d)
+            if replaced is False:
+                raise ValueError(f"Error, failed to replace detection reference in Baseline '{baseline.name}' to detection '{self.name}'")             
+            baseline.tags.detections = new_detections
+        
+        return self
+
+
 
     
     @field_validator('lookups',mode="before")
@@ -307,9 +261,26 @@ class Detection_Abstract(SecurityContentObject):
             return []
         
         lookups= Lookup.get_lookups(search, director)
-        if len(lookups) > 0:
-            print(f"\nFound {len(lookups)} lookups!")
         return lookups
+
+    @field_validator('baselines',mode="before")
+    @classmethod
+    def mapDetectionNamesToBaselineObjects(cls, v:list[str], info:ValidationInfo)->List[Baseline]:
+        if len(v) > 0:
+            raise ValueError("Error, baselines are constructed automatically at runtime.  Please do not include this field.")
+
+        
+        name:Union[str,dict] = info.data.get("name",None)
+        if name is None:
+            raise ValueError("Error, cannot get Baselines because the Detection does not have a 'name' defined.")
+        
+        director:DirectorOutputDto = info.context.get("output_dto",None)
+        baselines:List[Baseline] = []
+        for baseline in director.baselines:
+            if name in baseline.tags.detections:
+                baselines.append(baseline)
+
+        return baselines
 
     @field_validator('macros',mode="before")
     @classmethod
@@ -457,6 +428,7 @@ class Detection_Abstract(SecurityContentObject):
         
         # Found everything
         return self
+        
 
     @model_validator(mode="after")
     def tests_validate(self):

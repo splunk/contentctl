@@ -24,6 +24,8 @@ class BuildInputDto:
 
 class Build:
 
+
+
     def execute(self, input_dto: BuildInputDto) -> DirectorOutputDto:
         if input_dto.config.build_app:    
             conf_output = ConfOutput(input_dto.config)

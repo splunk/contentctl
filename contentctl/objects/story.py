@@ -1,10 +1,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING,List
 from contentctl.objects.story_tags import StoryTags
-from pydantic import field_validator, Field, ValidationInfo, model_serializer
+from pydantic import field_validator, Field, ValidationInfo, model_serializer,computed_field
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
+    from contentctl.objects.baseline import Baseline
     
 
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -32,7 +33,7 @@ class Story(SecurityContentObject):
     # Specifically in the model_post_init functions
     detections:List[Detection] = []
     investigations: List[Investigation] = []
-    
+    baselines: List[Baseline] = []
 
     @model_serializer
     def serialize_model(self):
@@ -43,9 +44,10 @@ class Story(SecurityContentObject):
         model= {
             "narrative": self.narrative,
             "tags": self.tags.model_dump(),
-            "detection_names": self.getDetectionNames(),
-            "investigation_names": self.getInvestigationNames(),
-            "detections": []
+            "detection_names": self.detection_names,
+            "investigation_names": self.investigation_names,
+            "baseline_names": self.baseline_names,
+            "detections": self.detections
         }
         
         #Combine fields from this model with fields from parent
@@ -54,13 +56,20 @@ class Story(SecurityContentObject):
         #return the model
         return model
 
-
-    def getDetectionNames(self)->List[str]:
+    @computed_field
+    @property
+    def detection_names(self)->List[str]:
         return [detection.name for detection in self.detections]
     
-    def getInvestigationNames(self)->List[str]:
+    @computed_field
+    @property
+    def investigation_names(self)->List[str]:
         return [investigation.name for investigation in self.investigations]
 
+    @computed_field
+    @property
+    def baseline_names(self)->List[str]:        
+        return [baseline.name for baseline in self.baselines]
     
     
  

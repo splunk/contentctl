@@ -27,18 +27,18 @@ class Macro(SecurityContentObject):
 
     @model_serializer
     def serialize_model(self):
-        #DO NOT Call serializer for parent - this will include extra fields we do not want
-        #super_fields = super().serialize_model()
+        #Call serializer for parent
+        super_fields = super().serialize_model()
 
         #All fields custom to this model
         model= {
-            "name": self.name,
             "definition": self.definition,
             "description": self.description,
-            "arguments": self.arguments
         }
         
         #return the model
+        model.update(super_fields)
+        
         return model
     
     @staticmethod

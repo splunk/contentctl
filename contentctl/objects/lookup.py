@@ -31,13 +31,11 @@ class Lookup(SecurityContentObject):
 
     @model_serializer
     def serialize_model(self):
-        #DO NOT call parent serializer, we only want to include a subset of fields
-        #super_fields = super().serialize_model()
+        #Call parent serializer
+        super_fields = super().serialize_model()
 
         #All fields custom to this model
         model= {
-            "name": self.name,
-            "description": self.description,
             "filename": self.filename.name if self.filename is not None else None,
             "default_match": "true" if self.default_match is True else "false",
             "match_type": self.match_type,
@@ -48,6 +46,7 @@ class Lookup(SecurityContentObject):
         }
         
         #return the model
+        model.update(super_fields)
         return model
 
     @model_validator(mode="before")

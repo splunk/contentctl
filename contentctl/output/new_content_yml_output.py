@@ -13,6 +13,7 @@ class NewContentYmlOutput():
     
     def writeObjectNewContent(self, object: dict, subdirectory_name: str, type: NewContentType) -> None:
         if type == NewContentType.detection:
+
             file_path = os.path.join(self.output_path, 'detections', subdirectory_name, self.convertNameToFileName(object['name'], object['tags']['product']))
             output_folder = pathlib.Path(self.output_path)/'detections'/subdirectory_name
             #make sure the output folder exists for this detection

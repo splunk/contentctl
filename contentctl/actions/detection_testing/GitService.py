@@ -162,4 +162,3 @@ class GitService(BaseModel):
             raise Exception(f"There following errors were encountered while getting selected detections to test:\n - {errorsString}")
         return detections
 
-

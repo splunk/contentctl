@@ -63,11 +63,14 @@ class SecurityContentType(enum.Enum):
 #     splunk_app = "splunk_app"
 #     ba_objects = "ba_objects"
 #     json_objects = "json_objects"
+
+
 class SecurityContentProduct(enum.Enum):
     SPLUNK_APP = 1
     SSA = 2
     API = 3
     CUSTOM = 4
+
 
 class SecurityContentProductName(str, enum.Enum):
     SPLUNK_ENTERPRISE = "Splunk Enterprise"
@@ -86,17 +89,28 @@ class SecurityContentInvestigationProductName(str, enum.Enum):
 
 
 
+
+class SigmaConverterTarget(enum.Enum):
+    CIM = 1
+    RAW = 2
+    OCSF = 3
+    ALL = 4
+
+
+
 class DetectionStatus(enum.Enum):
     production = "production"
     deprecated = "deprecated"
     experimental = "experimental"
     validation = "validation"
 
+
 class DetectionStatusSSA(enum.Enum):
     production = "production"
     deprecated = "deprecated"
     experimental = "experimental"
     validation = "validation"
+
 
 class LogLevel(enum.Enum):
     NONE = "NONE"
@@ -109,7 +123,8 @@ class AlertActions(enum.Enum):
     rba = "rba"
     email = "email"
 
-class StoryCategory(str,enum.Enum):
+
+class StoryCategory(str, enum.Enum):
     ABUSE = "Abuse"
     ADVERSARY_TACTICS = "Adversary Tactics"
     BEST_PRACTICES = "Best Practices"
@@ -118,7 +133,6 @@ class StoryCategory(str,enum.Enum):
     MALWARE = "Malware"
     UNCATEGORIZED = "Uncategorized"
     VULNERABILITY = "Vulnerability"
-    
 
     # The following categories are currently used in
     # security_content stories but do not appear
@@ -128,11 +142,10 @@ class StoryCategory(str,enum.Enum):
     ACCOUNT_COMPROMSE = "Account Compromise"
     DATA_DESTRUCTION = "Data Destruction"
     LATERAL_MOVEMENT = "Lateral Movement"
-    PRIVILEGE_ESCALATION  = "Privilege Escalation"
+    PRIVILEGE_ESCALATION = "Privilege Escalation"
     RANSOMWARE = "Ransomware"
     UNAUTHORIZED_SOFTWARE = "Unauthorized Software"
-  
-  
+
 
 class PostTestBehavior(str, enum.Enum):
     always_pause = "always_pause"
@@ -157,6 +170,7 @@ class InstanceState(str, enum.Enum):
     error = "error"
     stopping = "stopping"
     stopped = "stopped"
+
 
 class SigmaConverterTarget(enum.Enum):
     CIM = 1

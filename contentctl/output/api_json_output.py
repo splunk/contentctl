@@ -7,7 +7,7 @@ from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
     SecurityContentObject_Abstract,
 )
-from typing import List, Any
+
 
 
 class ApiJsonOutput:

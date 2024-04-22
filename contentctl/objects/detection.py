@@ -6,10 +6,10 @@ class Detection(Detection_Abstract):
     # You may add fields and/or validations
 
     # You may also experiment with removing fields
-    # and/or validations,  or chagning validation(s).  
-    # Please be aware that many defaults field(s) 
+    # and/or validations,  or chagning validation(s).
+    # Please be aware that many defaults field(s)
     # or validation(s) are required and removing or
     # them or modifying their behavior may cause
-    # undefined issues with the contentctl tooling 
-    # or output of the tooling. 
+    # undefined issues with the contentctl tooling
+    # or output of the tooling.
     pass

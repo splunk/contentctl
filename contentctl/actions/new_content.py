@@ -113,3 +113,4 @@ class NewContent:
         
         else:
             raise(Exception(f"Object Must be Story or Detection, but is not: {object}"))
+

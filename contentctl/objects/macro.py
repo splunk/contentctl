@@ -42,12 +42,16 @@ class Macro(SecurityContentObject):
         return model
     
     @staticmethod
+
     def get_macros(text_field:str, director:DirectorOutputDto , ignore_macros:set[str]=MACROS_TO_IGNORE)->list[Macro]:
-                
-        #Simple regex to remove comments which can cause issues with
-        #the macro pasing logic below
-        text_field = re.sub(r'```.*```', ' ', text_field)
-                
+        #Remove any comments, allowing there to be macros (which have a single backtick) inside those comments
+        #If a comment ENDS in a macro, for example ```this is a comment with a macro `macro_here````
+        #then there is a small edge case where the regex below does not work properly.  If that is 
+        #the case, we edit the search slightly to insert a space
+        text_field = re.sub(r"\`\`\`\`", r"` ```", text_field)
+        text_field = re.sub(r"\`\`\`.*?\`\`\`", " ", text_field)
+        
+
         macros_to_get = re.findall(r'`([^\s]+)`', text_field)
         #If macros take arguments, stop at the first argument.  We just want the name of the macro
         macros_to_get = set([macro[:macro.find('(')] if macro.find('(') != -1 else macro for macro in macros_to_get])

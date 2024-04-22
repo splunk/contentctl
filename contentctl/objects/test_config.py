@@ -4,9 +4,12 @@ from __future__ import annotations
 import git
 import pathlib
 import yaml
-from pydantic import BaseModel, field_validator, model_validator, Field, ValidationInfo, AnyHttpUrl, DirectoryPath, NonNegativeInt, FilePath, field_serializer
-from typing import Any, Optional
-
+import os
+from pydantic import BaseModel, Field, AnyHttpUrl, field_serializer, model_validator,ValidationInfo
+from typing import Union, Optional
+import re
+import docker
+import docker.errors
 
 
 from contentctl.objects.enums import (
@@ -35,11 +38,8 @@ def getTestConfigFromYMLFile(path: pathlib.Path):
         print(f"Error loading test configuration file '{path}': {str(e)}")
 
 
-def serialize_url(url:AnyHttpUrl)->str:
-    return str(url)
-
 class Infrastructure(BaseModel, extra="forbid", validate_assignment=True):
-    splunk_app_username: Optional[str] = Field(
+    splunk_app_username: Union[str, None] = Field(
         default="admin", title="The name of the user for testing"
     )
     splunk_app_password: Optional[str] = Field(
@@ -49,9 +49,10 @@ class Infrastructure(BaseModel, extra="forbid", validate_assignment=True):
         default="localhost",
         title="Domain name of IP address of Splunk server to be used for testing. Do NOT use a protocol, like http(s):// or 'localhost'",
     )
+
     @field_serializer('instance_address')
-    def serialize_address(self, repo_url: AnyHttpUrl, _info:ValidationInfo)->str:
-        return serialize_url(repo_url)    
+    def serialize_address(repo_url: AnyHttpUrl)->str:
+        return str(repo_url)    
     
     instance_name: str = Field(
         default="Splunk_Server_Name",
@@ -109,8 +110,11 @@ class InfrastructureConfig(BaseModel, extra="forbid", validate_assignment=True):
         default=DetectionTestingTargetInfrastructure.container,
         title=f"Control where testing should be launched.  Choose one of {DetectionTestingTargetInfrastructure._member_names_}",
     )
-    full_image_path: Optional[str] = Field(
-        default="https://registry.hub.docker.com/splunk/splunk:latest",
+
+    persist_and_reuse_container:bool = True
+
+    full_image_path: str = Field(
+        default="registry.hub.docker.com/splunk/splunk:latest",
         title="Full path to the container image to be used",
     )
     infrastructures: list[Infrastructure] = Field(default=[Infrastructure()],min_length=1)
@@ -229,8 +233,31 @@ class InfrastructureConfig(BaseModel, extra="forbid", validate_assignment=True):
 
     #     return v
 
-    @model_validator(mode="after")
-    def validate_ports_overlap(self)->InfrastructureConfig:
+    @validator("infrastructures", always=True)
+    def validate_infrastructures(cls, v, values):
+        MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING = 2
+        if values.get("infrastructure_type",None) == DetectionTestingTargetInfrastructure.container and len(v) == 0:
+            v = [Infrastructure()]
+
+        if len(v) < 1:
+            #print("Fix number of infrastructure validation later")
+            return v
+            raise (
+                ValueError(
+                    f"Error validating infrastructures.  Test must be run with AT LEAST 1 infrastructure, not {len(v)}"
+                )
+            )
+        if (values.get("infrastructure_type", None) == DetectionTestingTargetInfrastructure.container.value) and len(v) > MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING:
+            print(
+                f"You requested to run with [{v}] containers which may use a very large amount of resources "
+                "as they all run in parallel.  The maximum suggested number of parallel containers is "
+                f"[{MAX_RECOMMENDED_CONTAINERS_BEFORE_WARNING}].  We will do what you asked, but be warned!"
+            )
+        return v
+
+
+    @validator("infrastructures", each_item=False)
+    def validate_ports_overlap(cls, v, values):
         ports = set()
         if self.infrastructure_type == DetectionTestingTargetInfrastructure.server.value:
             #ports are allowed to overlap, they are on different servers
@@ -255,7 +282,7 @@ class VersionControlConfig(BaseModel, extra='forbid', validate_assignment=True):
 
     @field_serializer('repo_url')
     def serialize_address(self, repo_url: AnyHttpUrl, _info:ValidationInfo)->str:
-        return serialize_url(repo_url)    
+        return str(repo_url)    
     
     @field_validator('repo_path')
     @classmethod
@@ -391,7 +418,12 @@ class TestConfig(BaseModel, extra="forbid", validate_assignment=True):
         default=App.get_default_apps(),
         title="A list of all the apps to be installed on each container",
     )
-    
+    enable_integration_testing: bool = Field(
+        default=False,
+        title="Whether integration testing should be enabled, in addition to unit testing (requires a configured Splunk"
+        " instance with ES installed)"
+    )
+
 
     # # Ensure that at least 1 of test_branch, commit_hash, and/or pr_number were passed.
     # # Otherwise, what are we testing??

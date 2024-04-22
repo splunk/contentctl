@@ -10,11 +10,22 @@ class NewContentQuestions:
                 "default": "Powershell Encoded Command",
             },
             {
-                "type": "select",
-                "message": "what kind of detection is this",
-                "name": "detection_kind",
-                "choices": ["endpoint", "cloud", "application", "network", "web"],
-                "default": "endpoint",
+                'type': 'select',
+                'message': 'what kind of detection is this',
+                'name': 'detection_kind',
+                'choices': [
+                    'endpoint',
+                    'cloud',
+                    'application',
+                    'network',
+                    'web'
+                ],
+                'default': 'endpoint'
+            },
+            {
+                'type': 'text',
+                'message': 'enter author name',
+                'name': 'detection_author',
             },
             {
                 "type": "text",
@@ -36,10 +47,10 @@ class NewContentQuestions:
                 "default": "TTP",
             },
             {
-                "type": "checkbox",
-                "message": "Your data source",
-                "name": "data_source",
-                "choices": [
+                'type': 'checkbox',
+                'message': 'Your data source',
+                'name': 'data_source',
+                'choices': [
                     "OSQuery ES Process Events",
                     "Powershell 4104",
                     "Sysmon Event ID 1",
@@ -77,8 +88,8 @@ class NewContentQuestions:
                     "Windows Security 4798",
                     "Windows Security 5136",
                     "Windows Security 5145",
-                    "Windows System 7045",
-                ],
+                    "Windows System 7045"
+                ]
             },
             {
                 "type": "text",
@@ -93,18 +104,18 @@ class NewContentQuestions:
                 "default": "T1003.002",
             },
             {
-                "type": "select",
-                "message": "security_domain for detection",
-                "name": "security_domain",
-                "choices": [
-                    "access",
-                    "endpoint",
-                    "network",
-                    "threat",
-                    "identity",
-                    "audit",
+                'type': 'select',
+                'message': 'security_domain for detection',
+                'name': 'security_domain',
+                'choices': [
+                    'access',
+                    'endpoint',
+                    'network',
+                    'threat',
+                    'identity',
+                    'audit'
                 ],
-                "default": "endpoint",
+                'default': 'endpoint'
             },
         ]
         return questions

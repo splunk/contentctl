@@ -93,7 +93,10 @@ class Test:
                 f"\tPassed Detections            : {summary.get('total_pass','ERROR')}"
             )
             print(
-                f"\tFailed or Untested Detections: {summary.get('total_fail_or_untested','ERROR')}"
+                f"\tFailed Detections            : {summary.get('total_fail','ERROR')}"
+            )
+            print(
+                f"\tUntested Detections          : {summary.get('total_untested','ERROR')}"
             )
             print(f"\tTest Results File            : {file.getOutputFilePath()}")
             return summary_results.get("summary", {}).get("success", False)

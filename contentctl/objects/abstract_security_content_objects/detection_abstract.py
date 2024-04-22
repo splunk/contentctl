@@ -50,6 +50,7 @@ class Detection_Abstract(SecurityContentObject):
     lookups: list[Lookup] = []
     cve_enrichment: list = None
     splunk_app_enrichment: list = None
+    drilldown_objects: list = None
 
     source: str = None
     nes_fields: str = None

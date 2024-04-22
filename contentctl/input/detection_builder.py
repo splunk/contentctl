@@ -50,8 +50,25 @@ class DetectionBuilder():
                     self.security_content_obj.deployment = None
                 else:
                     self.security_content_obj.deployment = matched_deployments[-1]
-
-
+                    ""
+    def addBasicDrilldown(self) -> None:
+        if self.security_content_obj:
+            risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
+            self.security_content_obj.drilldown_objects = []
+            
+            if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'): 
+                if self.security_content_obj.type == "TTP":
+                    for entity in self.security_content_obj.tags.observable:
+                        basic_drilldown_object = dict()
+                        if 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:                           
+                            drilldown_search = self.security_content_obj.search + "| search " + entity.name + " = $" + entity.name + "$"
+                            basic_drilldown_object['name'] = "View the event for $" + entity.name + "$"
+                            basic_drilldown_object['search'] = drilldown_search
+                            basic_drilldown_object['earliest_offset'] = "$info_min_time$"
+                            basic_drilldown_object['latest_offset'] = "$info_min_time$"
+                            
+                    self.security_content_obj.drilldown_objects.append(basic_drilldown_object)
+                        
     def addRBA(self) -> None:
         if self.security_content_obj:
 
@@ -62,7 +79,7 @@ class DetectionBuilder():
             file_threat_object_types = {'file name','file', 'file hash'}
             url_threat_object_types = {'url string','url'}
             ip_threat_object_types = {'ip address'}
-
+            
             if hasattr(self.security_content_obj.tags, 'observable') and hasattr(self.security_content_obj.tags, 'risk_score'):
                 for entity in self.security_content_obj.tags.observable:
 

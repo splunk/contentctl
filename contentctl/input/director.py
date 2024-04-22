@@ -199,6 +199,7 @@ class Director():
         builder.addNist()
         builder.addDatamodel()
         builder.addRBA()
+        builder.addBasicDrilldown()
         builder.addProvidingTechnologies()
         builder.addNesFields()
         builder.addAnnotations()
@@ -228,7 +229,6 @@ class Director():
             # Set all tests, both Unit AND Integration, to manual_test.  Note that integration test messages
             # will intentionally overwrite the justification in the skipIntegrationTests call above. 
             builder.skipAllTests(builder.security_content_obj.tags.manual_test)
-
 
     def constructSSADetection(self, builder: DetectionBuilder, file_path: str) -> None:
         builder.reset()

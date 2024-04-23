@@ -53,6 +53,8 @@ class Story(SecurityContentObject):
             "detection_names": self.detection_names,
             "investigation_names": self.investigation_names,
             "baseline_names": self.baseline_names,
+            "author_company": self.author_company,
+            "author_name":self.author_name
         }
         detections = []
         for detection in self.detections:

@@ -54,7 +54,7 @@ class Build:
                                                 (input_dto.director_output_dto.lookups, SecurityContentType.lookups),
                                                 (input_dto.director_output_dto.macros, SecurityContentType.macros),
                                                 (input_dto.director_output_dto.deployments, SecurityContentType.deployments)]:
-                api_json_output.writeObjects(output_objects, input_dto.config.getAPIPath(), output_type, app_label=input_dto.config.app.label)
+                api_json_output.writeObjects(output_objects, input_dto.config.getAPIPath(), input_dto.config.app.label, output_type )
            
             
             #create version file for sse api

@@ -2,8 +2,8 @@
 {% for macro in objects %}
 [{{ macro.name }}{% if macro.arguments | length > 0 %}({{ macro.arguments|length }}){% endif %}]
 {% if macro.arguments | length > 0 %}
-args = {% for arg in macro.arguments %}{{ arg }}{{ ", " if not loop.last }}
-{% endfor %}
+args = {% for arg in macro.arguments %}{{ arg }}{{ ", " if not loop.last }}{% endfor %}
+
 {% endif %}
 definition = {{ macro.definition | escapeNewlines() }}
 description = {{ macro.description | escapeNewlines() }}

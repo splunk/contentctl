@@ -10,11 +10,11 @@ import pathlib
 from tempfile import TemporaryDirectory, mktemp
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
-from dataclasses import dataclass
+#from dataclasses import dataclass
 from shutil import copyfile
 from typing import Union, Optional
 
-from pydantic import BaseModel, PrivateAttr, Field
+from pydantic import BaseModel, PrivateAttr, Field, dataclasses
 import requests                                                                                     # type: ignore
 import splunklib.client as client                                                                   # type: ignore
 from splunklib.binding import HTTPError                                                             # type: ignore
@@ -64,7 +64,7 @@ class ContainerStoppedException(Exception):
     pass
 
 
-@dataclass(frozen=False)
+@dataclasses.dataclass(frozen=False)
 class DetectionTestingManagerOutputDto():
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)

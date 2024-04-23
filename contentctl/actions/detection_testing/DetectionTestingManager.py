@@ -1,14 +1,10 @@
 from typing import List,Union
 from contentctl.objects.config import test, test_servers, Container,Infrastructure
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
-    DetectionTestingInfrastructure,
-)
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import (
-    DetectionTestingInfrastructureContainer,
-)
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import (
-    DetectionTestingInfrastructureServer,
-)
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import DetectionTestingInfrastructure
+
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import DetectionTestingInfrastructureContainer
+
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import DetectionTestingInfrastructureServer
 
 
 
@@ -152,7 +148,7 @@ class DetectionTestingManager(BaseModel):
 
         for infrastructure in self.input_dto.config.test_instances:
 
-            if (isinstance(infrastructure, Container)):
+            if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
 
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureContainer(
@@ -171,6 +167,6 @@ class DetectionTestingManager(BaseModel):
             else:
 
                 print(
-                    f"Unsupported target infrastructure '{infrastructure}'"
+                    f"Unsupported target infrastructure '{infrastructure}' and config type {self.input_dto.config}"
                 )
                 sys.exit(1)

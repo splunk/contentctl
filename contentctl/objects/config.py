@@ -296,7 +296,7 @@ class ContainerSettings(BaseModel):
                                         "Please note that each container is quite expensive to run.  It is not "
                                         "recommended to run more than 4 containers unless you have a very "
                                         "well-resourced environment.")
-    full_image_path:str = Field(default="https://registry.hub.docker.com/splunk/splunk:latest",
+    full_image_path:str = Field(default="registry.hub.docker.com/splunk/splunk:latest",        
                                 title="Full path to the container image to be used")
     
     def getContainers(self)->List[Container]:

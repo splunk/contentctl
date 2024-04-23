@@ -53,6 +53,21 @@ class ApiJsonOutput:
                 )
                 for detection in objects
             ]
+            #Only a subset of macro fields are required:
+            # for detection in detections:
+            #     new_macros = []
+            #     for macro in detection.get("macros",[]):
+            #         new_macro_fields = {}
+            #         new_macro_fields["name"] = macro.get("name")
+            #         new_macro_fields["definition"] = macro.get("definition")
+            #         new_macro_fields["description"] = macro.get("description")
+            #         if len(macro.get("arguments", [])) > 0:
+            #             new_macro_fields["arguments"] = macro.get("arguments") 
+            #         new_macros.append(new_macro_fields)
+            #     detection["macros"] = new_macros
+            #     del()
+                    
+            
             JsonWriter.writeJsonObject(
                 os.path.join(output_path, "detections.json"), "detections", detections
             )

@@ -249,11 +249,45 @@ class Detection_Abstract(SecurityContentObject):
             "how_to_implement":self.how_to_implement,
             "known_false_positives":self.known_false_positives,
             "datamodel": self.datamodel,
-            "macros": self.macros,
-            "lookups": self.lookups,
             "source": self.source,
             "nes_fields": self.nes_fields,
         }
+        #Only a subset of macro fields are required:
+        all_macros = []
+        for macro in self.macros:
+            macro_dump:dict = {
+                "name": macro.name,
+                "definition": macro.definition,
+                "description": macro.description
+            }
+            if len(macro.arguments) > 0:
+                macro_dump['arguments'] = macro.arguments
+
+            all_macros.append(macro_dump)
+        model['macros'] = all_macros
+
+
+        all_lookups = []
+        for lookup in self.lookups:
+            if lookup.collection is not None:
+                all_lookups.append({
+                                    "name":lookup.name,
+                                    "description":lookup.description,
+                                    "collection":lookup.collection,
+                                    "case_sensitive_match": "true" if lookup.case_sensitive_match else "fasle",
+                                    "fields_list":lookup.fields_list})
+            elif lookup.filename is not None:
+                all_lookups.append({
+                                    "name":lookup.name,
+                                    "description":lookup.description,
+                                    "filename": lookup.filename.name,
+                                    "default_match":"true" if lookup.default_match else "false",
+                                    "case_sensitive_match": "true" if lookup.case_sensitive_match else "fasle",
+                                    "match_type":lookup.match_type,
+                                    "min_matches":lookup.min_matches,
+                                    "fields_list":lookup.fields_list})
+        model['lookups'] = all_lookups
+        
         
         #Combine fields from this model with fields from parent
         super_fields.update(model)

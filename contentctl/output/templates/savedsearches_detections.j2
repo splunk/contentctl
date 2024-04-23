@@ -67,6 +67,7 @@ action.correlationsearch.label = {{APP_NAME}} - RIR - {{ detection.name }} - Rul
 action.correlationsearch.label = {{APP_NAME}} - {{ detection.name }} - Rule
 {% endif %}
 action.correlationsearch.annotations = {{ detection.annotations | tojson }}
+action.correlationsearch.metadata = {{ detection.metadata | tojson }}
 {% if detection.deployment.scheduling.schedule_window is defined %}
 schedule_window = {{ detection.deployment.scheduling.schedule_window }}
 {% endif %}

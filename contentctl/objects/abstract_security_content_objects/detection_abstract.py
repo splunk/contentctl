@@ -234,7 +234,12 @@ class Detection_Abstract(SecurityContentObject):
 
     
     
-
+    @computed_field
+    @property
+    def metadata(self)->dict[str,str]:
+        return {'detection_id':str(self.id),
+                'deprecated':'1' if self.status==DetectionStatus.deprecated.value else '0',
+                'detection_version':str(self.version)}
 
     @model_serializer
     def serialize_model(self):

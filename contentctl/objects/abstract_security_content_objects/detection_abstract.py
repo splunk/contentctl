@@ -274,7 +274,7 @@ class Detection_Abstract(SecurityContentObject):
                                     "name":lookup.name,
                                     "description":lookup.description,
                                     "collection":lookup.collection,
-                                    "case_sensitive_match": "true" if lookup.case_sensitive_match else "fasle",
+                                    "case_sensitive_match": None,
                                     "fields_list":lookup.fields_list})
             elif lookup.filename is not None:
                 all_lookups.append({
@@ -282,7 +282,7 @@ class Detection_Abstract(SecurityContentObject):
                                     "description":lookup.description,
                                     "filename": lookup.filename.name,
                                     "default_match":"true" if lookup.default_match else "false",
-                                    "case_sensitive_match": "true" if lookup.case_sensitive_match else "fasle",
+                                    "case_sensitive_match": "true" if lookup.case_sensitive_match else "false",
                                     "match_type":lookup.match_type,
                                     "min_matches":lookup.min_matches,
                                     "fields_list":lookup.fields_list})

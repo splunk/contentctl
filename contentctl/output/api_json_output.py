@@ -204,6 +204,10 @@ class ApiJsonOutput:
                 )
                 for lookup in objects
             ]
+            for lookup in lookups:
+                for k in ["author","date","version","id","references"]:
+                    if k in lookup:
+                        del(lookup[k]) 
             JsonWriter.writeJsonObject(
                 os.path.join(output_path, "lookups.json"), "lookups", lookups
             )

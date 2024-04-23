@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, model_serializer
 from contentctl.objects.story import Story
 from contentctl.objects.enums import SecurityContentInvestigationProductName, SecurityDomain
 
@@ -14,4 +14,20 @@ class InvestigationTags(BaseModel):
     @classmethod
     def mapStoryNamesToStoryObjects(cls, v:list[str], info:ValidationInfo)->list[Story]:
         return Story.mapNamesToSecurityContentObjects(v, info.context.get("output_dto",None))
+    
+
+    @model_serializer
+    def serialize_model(self):
+        #All fields custom to this model
+        model= {
+            "analytic_story": [story.name for story in self.analytic_story],
+            "product": self.product,
+            "required_fields": self.required_fields,
+            "security_domain": self.security_domain,
+        }
         
+        #Combine fields from this model with fields from parent
+        
+        
+        #return the model
+        return model

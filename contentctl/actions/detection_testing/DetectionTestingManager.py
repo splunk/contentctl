@@ -1,5 +1,5 @@
-from typing import List
-from contentctl.objects.config import test
+from typing import List,Union
+from contentctl.objects.config import test, test_servers, Container,Infrastructure
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
 )
@@ -47,7 +47,7 @@ import tqdm
 
 @dataclass(frozen=False)
 class DetectionTestingManagerInputDto:
-    config: test
+    config: Union[test,test_servers]
     detections: List[Detection]
     views: list[DetectionTestingView]
 
@@ -84,13 +84,13 @@ class DetectionTestingManager(BaseModel):
                 print("*******************************")
 
         signal.signal(signal.SIGINT, sigint_handler)
-
+        
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self.input_dto.config.infrastructure_config.infrastructures),
+            max_workers=len(self.input_dto.config.test_instances),
         ) as instance_pool, concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self.input_dto.views)
         ) as view_runner, concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self.input_dto.config.infrastructure_config.infrastructures),
+            max_workers=len(self.input_dto.config.test_instances),
         ) as view_shutdowner:
 
             # Start all the views
@@ -150,12 +150,9 @@ class DetectionTestingManager(BaseModel):
     def create_DetectionTestingInfrastructureObjects(self):
         import sys
 
-        for infrastructure in self.input_dto.config.infrastructure_config.infrastructures:
+        for infrastructure in self.input_dto.config.test_instances:
 
-            if (
-                self.input_dto.config.infrastructure_config.infrastructure_type
-                == DetectionTestingTargetInfrastructure.container
-            ):
+            if (isinstance(infrastructure, Container)):
 
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureContainer(
@@ -163,10 +160,7 @@ class DetectionTestingManager(BaseModel):
                     )
                 )
 
-            elif (
-                self.input_dto.config.infrastructure_config.infrastructure_type
-                == DetectionTestingTargetInfrastructure.server
-            ):
+            elif isinstance(infrastructure, Infrastructure):
 
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureServer(
@@ -177,6 +171,6 @@ class DetectionTestingManager(BaseModel):
             else:
 
                 print(
-                    f"Unsupported target infrastructure '{self.input_dto.config.infrastructure_config.infrastructure_type}'"
+                    f"Unsupported target infrastructure '{infrastructure}'"
                 )
                 sys.exit(1)

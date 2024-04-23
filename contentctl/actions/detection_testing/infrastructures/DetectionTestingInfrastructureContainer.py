@@ -1,6 +1,7 @@
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
 )
+from contentctl.objects.config import test
 import docker.models.resource
 import docker.models.containers
 import docker
@@ -12,10 +13,11 @@ from contentctl.objects.test_config import (
 
 
 class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
+    global_config: test
     container: docker.models.resource.Model = None
 
     def start(self):
-        if self.global_config.infrastructure_config.persist_and_reuse_container:
+        if self.global_config.container_settings.leave_running:
             # If we are configured to use the persistent container, then check and see if it's already
             # running. If so, just use it without additional configuration.
             try:
@@ -90,11 +92,11 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             str(p.hardcoded_path) for p in self.global_config.apps 
         )
         if (
-            self.global_config.splunkbase_password is not None
-            and self.global_config.splunkbase_username is not None
+            self.global_config.splunk_api_username is not None
+            and self.global_config.splunk_api_password is not None
         ):
-            environment["SPLUNKBASE_USERNAME"] = self.global_config.splunkbase_username
-            environment["SPLUNKBASE_PASSWORD"] = self.global_config.splunkbase_password
+            environment["SPLUNKBASE_USERNAME"] = self.global_config.splunk_api_username
+            environment["SPLUNKBASE_PASSWORD"] = self.global_config.splunk_api_password
 
 
         def emit_docker_run_equivalent():
@@ -106,12 +108,11 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
                   f"{environment_string} "            
                   f" --name {self.get_name()} "
                   f"--platform linux/amd64"
-                  f"{self.global_config.infrastructure_config.full_image_path}")
+                  f"{self.global_config.container_settings.full_image_path}")
         emit_docker_run_equivalent()
-        import sys
-        sys.exit(1)
+        
         container = self.get_docker_client().containers.create(
-            self.global_config.infrastructure_config.full_image_path,
+            self.global_config.container_settings.full_image_path,
             ports=ports_dict,
             environment=environment,
             name=self.get_name(),
@@ -133,7 +134,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         try:
             # If the user wants to persist the container (or use a previously configured container), then DO NOT remove it.
             # Emit the following message, which they will see on initial setup and teardown at the end of the test. 
-            if self.global_config.infrastructure_config.persist_and_reuse_container:
+            if self.global_config.container_settings.leave_running:
                 print(f"\nContainer [{self.get_name()}] has NOT been terminated because 'contentctl_test.yml ---> infrastructure_config ---> persist_and_reuse_container = True'")
                 print(f"To remove it, please manually run the following at the command line: `docker container rm -fv {self.get_name()}`\n")
                 return

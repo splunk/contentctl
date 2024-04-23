@@ -271,12 +271,13 @@ class Infrastructure(BaseModel):
     hec_port: int = Field(default=8088, gt=1, lt=65536, title="HTTP Event Collector Port")
     web_ui_port: int = Field(default=8000, gt=1, lt=65536, title="Web UI Port")
     api_port: int = Field(default=8089, gt=1, lt=65536, title="REST API Port")
+    instance_name: str = Field(...)
 
 
 class deploy_rest(build):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     
-    target:Infrastructure = Infrastructure(instance_address="localhost")
+    target:Infrastructure = Infrastructure(instance_name="splunk_target_host", instance_address="localhost")
     #This will overwrite existing content without promprting for confirmation
     overwrite_existing_content:bool = Field(default=True, description="Overwrite existing macros and savedsearches in your enviornment")
 
@@ -285,8 +286,7 @@ class deploy_rest(build):
 class Container(Infrastructure):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     instance_address:str = Field(default="localhost", description="Address of your splunk server.")
-    full_image_path:str = Field(default="https://registry.hub.docker.com/splunk/splunk:latest",
-                                title="Full path to the container image to be used")
+    
 
 class ContainerSettings(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
@@ -296,6 +296,17 @@ class ContainerSettings(BaseModel):
                                         "Please note that each container is quite expensive to run.  It is not "
                                         "recommended to run more than 4 containers unless you have a very "
                                         "well-resourced environment.")
+    full_image_path:str = Field(default="https://registry.hub.docker.com/splunk/splunk:latest",
+                                title="Full path to the container image to be used")
+    
+    def getContainers(self)->List[Container]:
+        containers = []
+        for i in range(self.num_containers):
+            containers.append(Container(instance_name="contentctl_{}".format(i),
+                                        web_ui_port=8000+i, hec_port=8088+(i*2), api_port=8089+(i*2)))
+
+        return containers
+
 
 class All(BaseModel):
     #Doesn't need any extra logic
@@ -312,20 +323,26 @@ class Selected(BaseModel):
 
 
 
-class test(build):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    test_instance:Container = Container()
-    container_settings:ContainerSettings = ContainerSettings()
+class test_common(build):
     mode:Union[All, Changes, Selected] = Changes()
+    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
+    test_instances:List[Infrastructure] = Field(...)
+
+class test(test_common):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    container_settings:ContainerSettings = ContainerSettings()
+    test_instances:List[Container] = Field(container_settings.getContainers(),validate_default=True)
+    
     splunk_api_username: Optional[str] = Field(default=None, description="Splunk API username used for running appinspect or installating apps from Splunkbase")
     splunk_api_password: Optional[str] = Field(default=None, exclude=True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
     apps: List[TestApp] = Field(default=[], exclude=True, description="List of apps to install in test environment")
-    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
+    
+    
     def getAppDir(self)->pathlib.Path:
         return self.path / "apps"
 
-class test_servers(build):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    servers:List[Infrastructure] = Field([Infrastructure(instance_address="splunkServerAddress.com")],description="Test against one or more preconfigured servers.")
-    mode:Union[All, Changes, Selected] = Field(...,description="Test All content in the app, Selected files, or Automatically determine the changes between two branches (includes uncommitted changes in your working directory).")
 
+
+class test_servers(test_common):
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    test_instances:List[Infrastructure] = Field([Infrastructure(instance_name="splunk_target", instance_address="splunkServerAddress.com")],description="Test against one or more preconfigured servers.")

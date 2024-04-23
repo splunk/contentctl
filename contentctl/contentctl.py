@@ -11,6 +11,7 @@ from contentctl.actions.build import (
      Build,
 )
 
+from contentctl.actions.test import Test
 from contentctl.actions.test import TestInputDto
 
 from contentctl.actions.inspect import Inspect
@@ -100,7 +101,7 @@ def test_func(config:test, apps:allapps):
     
     t = Test()
 
-    #t.execute(test_input_dto)
+    t.execute(test_input_dto)
 
 def test_servers_func(config:test_servers):
     raise Exception("Not yet done")
@@ -124,7 +125,6 @@ def main():
     try:
         appsFile = pathlib.Path("apps.yml")
         if not appsFile.is_file():
-            print("make new file")
             apps = allapps(a=[])
             #raise Exception(f"Config File {configFile} does not exist. Please create it with 'contentctl init'")        
         else:

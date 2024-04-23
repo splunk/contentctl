@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING,Union, Optional, List, Any, Annotated
 import os.path
 import re
 import pathlib
-from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field, computed_field, model_serializer,ConfigDict
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field, computed_field, model_serializer,ConfigDict, FilePath
 
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
@@ -44,7 +44,7 @@ class Detection_Abstract(SecurityContentObject):
     #data_source: Optional[List[DataSource]] = None
 
     enabled_by_default: bool = False
-    
+    file_path: FilePath = Field(...)
     # For model construction to first attempt construction of the leftmost object.
     # From a file, this should be UnitTest. Note this is different than the
     # default mode, 'smart'

@@ -30,8 +30,8 @@ from contentctl.actions.detection_testing.views.DetectionTestingViewFile import 
     DetectionTestingViewFile,
 )
 
-from argparse import Namespace
-from os.path import relpath
+
+import pathlib
 
 MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
@@ -59,19 +59,19 @@ class Test:
 
         manager_input_dto = DetectionTestingManagerInputDto(
             config=input_dto.config,
-            detections=input_dto.test_director_output_dto,
+            detections=input_dto.detections,
             views=[web, cli, file],
         )
         manager = DetectionTestingManager(
             input_dto=manager_input_dto, output_dto=output_dto
         )
         
-        if len(input_dto.test_director_output_dto.detections) == 0:
-            print(f"With Detection Testing Mode '{input_dto.config.mode.value}', there were detections [{len(input_dto.test_director_output_dto.detections)}] found to test.\nAs such, we will quit immediately.")
+        if len(input_dto.detections) == 0:
+            print(f"With Detection Testing Mode '{input_dto.config.mode}', there were [0] detections found to test.\nAs such, we will quit immediately.")
         else:
-            print(f"MODE: [{input_dto.config.mode.value}] - Test [{len(input_dto.test_director_output_dto.detections)}] detections")
+            print(f"MODE: [{input_dto.config.mode}] - Test [{len(input_dto.detections)}] detections")
             if input_dto.config.mode in [DetectionTestingMode.changes, DetectionTestingMode.selected]:
-                files_string = '\n- '.join([relpath(detection.file_path) for detection in input_dto.test_director_output_dto.detections])
+                files_string = '\n- '.join([str(pathlib.Path(detection.file_path).relative_to(input_dto.config.path)) for detection in input_dto.detections])
                 print(f"Detections:\n- {files_string}")
 
             manager.setup()

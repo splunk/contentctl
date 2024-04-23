@@ -71,8 +71,7 @@ class ConfOutput:
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
         if type == SecurityContentType.detections:
             for output_app_path, template_name in [ ('default/savedsearches.conf', 'savedsearches_detections.j2'),
-                                                    ('default/analyticstories.conf', 'analyticstories_detections.j2'),
-                                                    ('default/macros.conf', 'macros_detections.j2')]:
+                                                    ('default/analyticstories.conf', 'analyticstories_detections.j2')]:
                 ConfWriter.writeConfFile(pathlib.Path(output_app_path),
                                          template_name,
                                          self.config,
@@ -147,6 +146,7 @@ class ConfOutput:
             ConfWriter.writeConfFile(pathlib.Path('default/macros.conf'),
                                     'macros.j2',
                                     self.config, objects)
+            
 
 
 

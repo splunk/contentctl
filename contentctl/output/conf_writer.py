@@ -151,7 +151,7 @@ class ConfWriter():
     @staticmethod
     def validateConfFile(path:pathlib.Path):
         """Ensure that the conf file is valid.  We will do this by reading back
-        the conf using ConfigParser to ensure that it does not throw any parsing errors.
+        the conf using RawConfigParser to ensure that it does not throw any parsing errors.
         This is particularly relevant because newlines contained in string fields may
         break the formatting of the conf file if they have been incorrectly escaped with
         the 'ConfWriter.escapeNewlines()' function. 
@@ -164,7 +164,7 @@ class ConfWriter():
         
         
         try:
-            _ = configparser.ConfigParser().read(path)
+            _ = configparser.RawConfigParser().read(path)
         except Exception as e:
             raise Exception(f"Failed to validate .conf file {str(path)}: {str(e)}")
 

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import Field, computed_field, model_validator,ValidationInfo
+from pydantic import Field, computed_field, model_validator,ValidationInfo, model_serializer
 from typing import Optional,Any
 
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -45,3 +45,26 @@ class Deployment(SecurityContentObject):
                         
         else:
             return SecurityContentObject.getDeploymentFromType(info.data.get("type",None), info)
+    
+    @model_serializer
+    def serialize_model(self):
+        #Call serializer for parent
+        super_fields = super().serialize_model()
+        
+        #All fields custom to this model
+        model= {
+            "scheduling": self.scheduling.model_dump(),
+            "tags": self.tags
+        }
+
+        
+        #Combine fields from this model with fields from parent
+        model.update(super_fields)
+        
+        alert_action_fields = self.alert_action.model_dump()
+        model.update(alert_action_fields)
+
+        del(model['references'])
+        
+        #return the model
+        return model

@@ -206,12 +206,14 @@ class ApiJsonOutput:
                             "description",
                             "scheduling",
                             "rba",
-                            "tags",
-                        ]
+                            "tags"
+                        ] 
                     )
                 )
                 for deployment in objects
             ]
+            #references are not to be included, but have been deleted in the
+            #model_serialization logic
             JsonWriter.writeJsonObject(
                 os.path.join(output_path, "deployments.json"),
                 "deployments",

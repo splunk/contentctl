@@ -198,7 +198,7 @@ class KillChainPhase(str, enum.Enum):
     DELIVERY = "Delivery"
     EXPLOITAITON = "Exploitation"
     INSTALLATION = "Installation"
-    COMMAND_AND_CONTROL = "Command And Control"
+    COMMAND_AND_CONTROL = "Command and Control"
     ACTIONS_ON_OBJECTIVES = "Actions on Objectives"
 
 

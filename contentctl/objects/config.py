@@ -328,6 +328,16 @@ class test_common(build):
     post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
     test_instances:List[Infrastructure] = Field(...)
 
+    def getModeName(self)->str:
+        if isinstance(self.mode, All):
+            return "All"
+        elif isinstance(self.mode, Changes):
+            return "Changes"
+        else:
+            return "Selected"
+        
+
+
 class test(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     container_settings:ContainerSettings = ContainerSettings()

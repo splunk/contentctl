@@ -78,6 +78,10 @@ class ApiJsonOutput:
                 macro.model_dump(include=set(["definition", "description", "name"]))
                 for macro in objects
             ]
+            for macro in macros:
+                for k in ["author", "date","version","id","references"]:
+                    if k in macro:
+                        del(macro[k])
             JsonWriter.writeJsonObject(
                 os.path.join(output_path, "macros.json"), "macros", macros
             )

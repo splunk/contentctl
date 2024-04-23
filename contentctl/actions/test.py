@@ -69,7 +69,7 @@ class Test:
         if len(input_dto.detections) == 0:
             print(f"With Detection Testing Mode '{input_dto.config.mode}', there were [0] detections found to test.\nAs such, we will quit immediately.")
         else:
-            print(f"MODE: [{input_dto.config.mode}] - Test [{len(input_dto.detections)}] detections")
+            print(f"MODE: [{input_dto.config.getModeName()}] - Test [{len(input_dto.detections)}] detections")
             if input_dto.config.mode in [DetectionTestingMode.changes, DetectionTestingMode.selected]:
                 files_string = '\n- '.join([str(pathlib.Path(detection.file_path).relative_to(input_dto.config.path)) for detection in input_dto.detections])
                 print(f"Detections:\n- {files_string}")

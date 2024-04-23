@@ -131,6 +131,7 @@ class DetectionTestingViewWeb(DetectionTestingView):
         # print("finished calling web server shutdown")
 
     def showStatus(self, interval: int = 60):
+        return "wow"
         # Status updated on page load
         # get all the finished detections:
 

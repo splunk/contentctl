@@ -3,7 +3,7 @@ from typing import List
 import enum
 
 
-class AnalyticsType(enum.Enum):
+class AnalyticsType(str, enum.Enum):
     TTP = "TTP"
     Anomaly = "Anomaly"
     Hunting = "Hunting"
@@ -87,17 +87,7 @@ class SecurityContentInvestigationProductName(str, enum.Enum):
     SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
     SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
     SPLUNK_PHANTOM = "Splunk Phantom"
-
-
-
-
-class SigmaConverterTarget(enum.Enum):
-    CIM = 1
-    RAW = 2
-    OCSF = 3
-    ALL = 4
-
-
+    
 
 class DetectionStatus(enum.Enum):
     production = "production"

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 from typing import TYPE_CHECKING, Optional, List, Any
 from pydantic import field_validator, computed_field, Field, ValidationInfo, ConfigDict
 if TYPE_CHECKING:
@@ -10,18 +11,29 @@ from contentctl.objects.investigation_tags import InvestigationTags
 
 class Investigation(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True,validate_default=False)
-    name: str = Field(max_length=75)
     type: str = Field(...,pattern="^Investigation$")
     datamodel: list[DataModel] = Field(...)
     
     search: str = Field(...)
     how_to_implement: str = Field(...)
     known_false_positives: str = Field(...)
-    check_references: bool = False #Validation is done in order, this field must be defined first
-    inputs: Optional[List[str]] = None
+    
+    
     tags: InvestigationTags
 
     # enrichment
+    @computed_field
+    @property
+    def inputs(self)->List[str]:
+        #Parse out and return all inputs from the searchj
+        inputs = []
+        pattern = r"\$([^\s.]*)\$"
+
+        for input in re.findall(pattern, self.search):
+            inputs.append(input)
+
+        return inputs
+
     @computed_field
     @property
     def lowercase_name(self)->str:

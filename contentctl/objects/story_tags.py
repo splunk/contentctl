@@ -17,8 +17,8 @@ class StoryUseCase(str,Enum):
 
 class StoryTags(BaseModel):
    model_config = ConfigDict(extra='forbid', use_enum_values=True)
-   category: Set[StoryCategory] = Field(...,min_length=1)
-   product: Set[SecurityContentProductName] = Field(...,min_length=1)
+   category: List[StoryCategory] = Field(...,min_length=1)
+   product: List[SecurityContentProductName] = Field(...,min_length=1)
    usecase: StoryUseCase = Field(...)
 
    # enrichment
@@ -32,7 +32,7 @@ class StoryTags(BaseModel):
    def getCategory_conf(self) -> str:
       #if len(self.category) > 1:
       #   print("Story with more than 1 category.  We can only have 1 category, fix it!")
-      return self.category.pop()
+      return list(self.category)[0]
    
    @model_serializer
    def serialize_model(self):

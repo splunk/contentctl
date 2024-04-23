@@ -15,7 +15,11 @@ how_to_implement = none
 {% endif %}
 annotations = {{ detection.mappings | tojson }}
 known_false_positives = {{ detection.known_false_positives | escapeNewlines() }}
+{% if detection.providing_technologies | length > 0  %}
 providing_technologies = {{ detection.providing_technologies | tojson }}
+{% else %}
+providing_technologies = null
+{% endif %}
 
 {% endif %}
 {% endfor %}

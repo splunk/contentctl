@@ -34,6 +34,12 @@ class Story(SecurityContentObject):
     investigations: List[Investigation] = []
     baselines: List[Baseline] = []
 
+
+    def storyAndInvestigationNamesWithApp(self, app_name:str)->List[str]:
+        return [f"{app_name} - {name} - Rule" for name in self.detection_names] + \
+               [f"{app_name} - {name} - Response Task" for name in self.investigation_names]
+        
+
     @model_serializer
     def serialize_model(self):
         #Call serializer for parent
@@ -75,8 +81,6 @@ class Story(SecurityContentObject):
         else:
             return match_company.group(1)
 
-
-    
     @computed_field
     @property
     def author_email(self)->str:

@@ -8,9 +8,9 @@ category = {{ story.tags.getCategory_conf() }}
 last_updated = {{ story.date }}
 version = {{ story.version }}
 references = {{ story.getReferencesListForJson() | tojson }}
-maintainers = [{"company": "{{ story.author_company }}", "email": "-", "name": "{{ story.author }}"}]
+maintainers = [{"company": "{{ story.author_company }}", "email": "{{ story.author_email }}", "name": "{{ story.author_name }}"}]
 spec_version = 3
-searches = {{ (story.detection_names + story.investigation_names) | tojson }}
+searches = {{ story.storyAndInvestigationNamesWithApp(APP_NAME) | tojson }}
 description = {{ story.description | escapeNewlines() }}
 {% if story.narrative is defined %}
 narrative = {{ story.narrative | escapeNewlines() }}

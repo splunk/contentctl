@@ -15,6 +15,7 @@ class DeploymentType(str, enum.Enum):
     Hunting = "Hunting"
     Correlation = "Correlation"
     Baseline = "Baseline"
+    Embedded = "Embedded"
 
 
 class DataModel(str,enum.Enum):
@@ -296,7 +297,7 @@ class ProvidingTechnology(str, enum.Enum):
             '`kube': set([ProvidingTechnology.KUBERNETES]),
             '`ms_defender`': set([ProvidingTechnology.MICROSOFT_DEFENDER]),
             '`o365_': set([ProvidingTechnology.MICROSOFT_OFFICE_365]),
-            '`okta`': set([ProvidingTechnology.OKTA]),
+            '`okta': set([ProvidingTechnology.OKTA]),
             '`pingid`': set([ProvidingTechnology.PING_ID]),
             '`powershell`': set(set([ProvidingTechnology.MICROSOFT_WINDOWS])),
             '`splunkd_': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),

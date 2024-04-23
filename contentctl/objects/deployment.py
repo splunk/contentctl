@@ -1,6 +1,6 @@
 from __future__ import annotations
-from pydantic import Field, computed_field, model_validator
-from typing import Optional
+from pydantic import Field, computed_field, model_validator,ValidationInfo
+from typing import Optional,Any
 
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.deployment_scheduling import DeploymentScheduling
@@ -26,3 +26,22 @@ class Deployment(SecurityContentObject):
     def tags(self)->dict[str,DeploymentType]:
         return {"type": self.type}
     
+    @staticmethod
+    def getDeployment(v:dict[str,Any], info:ValidationInfo)->Deployment:
+        if v != {}:
+            # If the user has defined a deployment, then allow it to be validated
+            # and override the default deployment info defined in type:Baseline
+            v['type'] = DeploymentType.Embedded
+            
+            detection_name = info.data.get("name", None)
+            if detection_name is None:
+                raise ValueError("Could not create inline deployment - Baseline or Detection lacking 'name' field,")
+            
+            v['name'] = f"{detection_name} - Inline Deployment"
+            # This constructs a temporary in-memory deployment,
+            # allowing the deployment to be easily defined in the 
+            # detection on a per detection basis.
+            return Deployment.model_validate(v)
+                        
+        else:
+            return SecurityContentObject.getDeploymentFromType(info.data.get("type",None), info)

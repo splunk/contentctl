@@ -9,6 +9,7 @@ from contentctl.objects.deployment import Deployment
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel, AnalyticsType
 from contentctl.objects.baseline_tags import BaselineTags
+from contentctl.objects.enums import DeploymentType
 #from contentctl.objects.deployment import Deployment
 
 # from typing import TYPE_CHECKING
@@ -34,11 +35,11 @@ class Baseline(SecurityContentObject):
     tags: BaselineTags = Field(...)
 
     # enrichment
-    deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
+    deployment: Deployment = Field({})
 
     @field_validator("deployment", mode="before")
     def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
-        return SecurityContentObject.getDeploymentFromType(info.data.get("type",None), info)
+        return Deployment.getDeployment(v,info)
     
 
     @model_serializer

@@ -96,7 +96,7 @@ class Detection_Abstract(SecurityContentObject):
         else:
             raise ValueError(f"Cannot get 'source' for detection {self.name} - 'file_path' was None.")
 
-    deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
+    deployment: Deployment = Field({})
     
     @computed_field
     @property
@@ -358,6 +358,7 @@ class Detection_Abstract(SecurityContentObject):
     
     @field_validator("deployment", mode="before")
     def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
+        return Deployment.getDeployment(v,info)
         return SecurityContentObject.getDeploymentFromType(info.data.get("type",None), info)
         # director: Optional[DirectorOutputDto] = info.context.get("output_dto",None) 
         # if not director:

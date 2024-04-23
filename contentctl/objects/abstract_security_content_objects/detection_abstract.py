@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING,Union, Optional, List, Any
+from typing import TYPE_CHECKING,Union, Optional, List, Any, Annotated
 import os.path
 import re
 import pathlib
@@ -45,7 +45,12 @@ class Detection_Abstract(SecurityContentObject):
 
     enabled_by_default: bool = False
     
-    tests: list[Union[UnitTest, IntegrationTest]] = []
+    # For model construction to first attempt construction of the leftmost object.
+    # From a file, this should be UnitTest. Note this is different than the
+    # default mode, 'smart'
+    # https://docs.pydantic.dev/latest/concepts/unions/#left-to-right-mode
+    # https://github.com/pydantic/pydantic/issues/9101#issuecomment-2019032541
+    tests: List[Annotated[Union[UnitTest, IntegrationTest], Field(union_mode='left_to_right')]] = []
 
     # A list of groups of tests, relying on the same data
     test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)

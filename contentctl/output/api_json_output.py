@@ -16,7 +16,8 @@ class ApiJsonOutput:
         self,
         objects: list[SecurityContentObject_Abstract],
         output_path: pathlib.Path,
-        contentType: SecurityContentType = None,
+        app_label:str = "ESCU",
+        contentType: SecurityContentType = None
     ) -> None:
         """#Serialize all objects
         try:
@@ -116,6 +117,7 @@ class ApiJsonOutput:
                     }
                     for detection in story["detections"]
                 ]
+                story["detection_names"] = [f"{app_label} - {name} - Rule" for name in story["detection_names"]]
                 
 
             JsonWriter.writeJsonObject(

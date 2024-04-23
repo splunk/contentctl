@@ -27,3 +27,6 @@ class MitreAttackEnrichment(BaseModel):
     mitre_attack_technique: str = Field(...)
     mitre_attack_tactics: List[MitreTactics] = Field(...)
     mitre_attack_groups: List[str] = Field(...)
+
+    def __hash__(self) -> int:
+        return id(self)

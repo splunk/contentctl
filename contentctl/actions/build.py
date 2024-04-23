@@ -54,12 +54,12 @@ class Build:
                                                 (input_dto.director_output_dto.lookups, SecurityContentType.lookups),
                                                 (input_dto.director_output_dto.macros, SecurityContentType.macros),
                                                 (input_dto.director_output_dto.deployments, SecurityContentType.deployments)]:
-                api_json_output.writeObjects(output_objects, input_dto.config.getAPIPath(), output_type)
+                api_json_output.writeObjects(output_objects, input_dto.config.getAPIPath(), output_type, app_label=input_dto.config.app.label)
            
             
             #create version file for sse api
             version_file = input_dto.config.getAPIPath()/"version.json"
-            utc_time = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+            utc_time = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0,tzinfo=None).isoformat()
             version_dict = {"version":{"name":f"v{input_dto.config.app.version}","published_at": f"{utc_time}Z"  }}
             with open(version_file,"w") as version_f:
                 json.dump(version_dict,version_f)

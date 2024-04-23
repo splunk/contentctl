@@ -100,7 +100,7 @@ class Detection_Abstract(SecurityContentObject):
     
     @computed_field
     @property
-    def annotations(self)->dict[str,Union[List[str],int]]:
+    def annotations(self)->dict[str,Union[List[str],int,str]]:
 
         annotations_dict:dict[str, Union[List[str], int]] = {} 
         annotations_dict["analytic_story"]=[story.name for story in self.tags.analytic_story]
@@ -108,7 +108,9 @@ class Detection_Abstract(SecurityContentObject):
         if len(self.tags.cve or []) > 0:
             annotations_dict["cve"] = self.tags.cve        
         annotations_dict["impact"] = self.tags.impact
-        
+        annotations_dict["type"] = self.type
+        annotations_dict["version"] = self.version
+
         #The annotations object is a superset of the mappings object.
         # So start with the mapping object.
         annotations_dict.update(self.mappings)

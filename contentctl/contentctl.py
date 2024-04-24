@@ -125,7 +125,8 @@ def main():
     try:
         appsFile = pathlib.Path("apps.yml")
         if not appsFile.is_file():
-            apps = allapps(a=[])
+            apps = allapps()
+            print("got them")
             #raise Exception(f"Config File {configFile} does not exist. Please create it with 'contentctl init'")        
         else:
             apps_obj = YmlReader().load_file(appsFile,add_fields=False)

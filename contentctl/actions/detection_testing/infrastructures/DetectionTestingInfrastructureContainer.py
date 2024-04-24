@@ -97,7 +97,8 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         ):
             environment["SPLUNKBASE_USERNAME"] = self.global_config.splunk_api_username
             environment["SPLUNKBASE_PASSWORD"] = self.global_config.splunk_api_password
-
+        
+        
 
         def emit_docker_run_equivalent():
             environment_string = " ".join([f'-e "{k}={environment.get(k)}"' for k in environment.keys()])

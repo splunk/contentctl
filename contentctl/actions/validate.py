@@ -9,7 +9,7 @@ from contentctl.objects.enums import SecurityContentProduct
 from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import SecurityContentObject_Abstract
 from contentctl.input.director import (
     Director,
-    DirectorOutputDto,
+    DirectorOutputDto
 )
 
 from contentctl.objects.config import validate
@@ -24,6 +24,7 @@ class Validate:
                                                 AttackEnrichment.getAttackEnrichment(input_dto),
                                                 [],[],[],[],[],[],[],[],[])
 
+        
         director = Director(director_output_dto)
         director.execute(input_dto)
 

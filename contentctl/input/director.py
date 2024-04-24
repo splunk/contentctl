@@ -76,7 +76,7 @@ class Director():
 
     def __init__(self, output_dto: DirectorOutputDto) -> None:
         self.output_dto = output_dto
-        
+        self.ssa_detection_builder = SSADetectionBuilder()
     
     def addContentToDictMappings(self, content:SecurityContentObject):
          if content.name in self.output_dto.name_to_content_map:
@@ -96,7 +96,6 @@ class Director():
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
 
-
         if self.input_dto.build_app or self.input_dto.build_api:
             self.createSecurityContent(SecurityContentType.deployments)
             self.createSecurityContent(SecurityContentType.lookups)
@@ -107,15 +106,15 @@ class Director():
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
         
-        elif self.input_dto.build_ssa:
+        if self.input_dto.build_ssa:
             self.createSecurityContent(SecurityContentType.ssa_detections)
         
 
-    def createSecurityContent(self, type: SecurityContentType) -> None:
-        if type == SecurityContentType.ssa_detections:
+    def createSecurityContent(self, contentType: SecurityContentType) -> None:
+        if contentType == SecurityContentType.ssa_detections:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, 'ssa_detections'))
         else:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, str(type.name)))
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, str(contentType.name)))
 
         validation_errors = []
                 
@@ -133,50 +132,50 @@ class Director():
         for index,file in enumerate(security_content_files):
             progress_percent = ((index+1)/len(security_content_files)) * 100
             try:
-                type_string = type.name.upper()
+                type_string = contentType.name.upper()
                 modelDict = YmlReader.load_file(file)
 
-                if type == SecurityContentType.lookups:
+                if contentType == SecurityContentType.lookups:
                         lookup = Lookup.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.lookups.append(lookup)
                         self.addContentToDictMappings(lookup)
                 
-                elif type == SecurityContentType.macros:
+                elif contentType == SecurityContentType.macros:
                         macro = Macro.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.macros.append(macro)
                         self.addContentToDictMappings(macro)
                 
-                elif type == SecurityContentType.deployments:
+                elif contentType == SecurityContentType.deployments:
                         deployment = Deployment.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.deployments.append(deployment)
                         self.addContentToDictMappings(deployment)
                 
-                elif type == SecurityContentType.playbooks:
+                elif contentType == SecurityContentType.playbooks:
                         playbook = Playbook.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.playbooks.append(playbook)  
                         self.addContentToDictMappings(playbook)                  
                 
-                elif type == SecurityContentType.baselines:
+                elif contentType == SecurityContentType.baselines:
                         baseline = Baseline.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.baselines.append(baseline)
                         self.addContentToDictMappings(baseline)
                 
-                elif type == SecurityContentType.investigations:
+                elif contentType == SecurityContentType.investigations:
                         investigation = Investigation.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.investigations.append(investigation)
                         self.addContentToDictMappings(investigation)
 
-                elif type == SecurityContentType.stories:
+                elif contentType == SecurityContentType.stories:
                         story = Story.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.stories.append(story)
                         self.addContentToDictMappings(story)
             
-                elif type == SecurityContentType.detections:
+                elif contentType == SecurityContentType.detections:
                         detection = Detection.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.detections.append(detection)
                         self.addContentToDictMappings(detection)
 
-                elif type == SecurityContentType.ssa_detections:
+                elif contentType == SecurityContentType.ssa_detections:
                         self.constructSSADetection(self.ssa_detection_builder, str(file))
                         ssa_detection = self.ssa_detection_builder.getObject()
                         if ssa_detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
@@ -184,7 +183,7 @@ class Director():
                             self.addContentToDictMappings(ssa_detection)
 
                 else:
-                        raise Exception(f"Unsupported type: [{type}]")
+                        raise Exception(f"Unsupported type: [{contentType}]")
                 
                 if (sys.stdout.isatty() and sys.stdin.isatty() and sys.stderr.isatty()) or not already_ran:
                         already_ran = True
@@ -195,7 +194,7 @@ class Director():
                 validation_errors.append((relative_path,e))
                 
 
-        print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
+        print(f"\r{f'{contentType.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
         print("Done!")
 
         if len(validation_errors) > 0:

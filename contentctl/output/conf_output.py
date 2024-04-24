@@ -35,7 +35,8 @@ class ConfOutput:
         shutil.copytree(config.getAppTemplatePath(), config.getPackageDirectoryPath())
         
 
-    def writeHeaders(self) -> None:
+    def writeHeaders(self) -> set[pathlib.Path]:
+        written_files:set[pathlib.Path] = set()
         for output_app_path in ['default/analyticstories.conf', 
                                 'default/savedsearches.conf', 
                                 'default/collections.conf', 
@@ -45,7 +46,9 @@ class ConfOutput:
                                 'default/workflow_actions.conf', 
                                 'default/app.conf',
                                 'default/content-version.conf']:
-            ConfWriter.writeConfFileHeader(pathlib.Path(output_app_path),self.config)
+            written_files.add(ConfWriter.writeConfFileHeader(pathlib.Path(output_app_path),self.config))
+            
+        return written_files
 
         
         #The contents of app.manifest are not a conf file, but json.
@@ -54,38 +57,39 @@ class ConfOutput:
             pass
             
 
-    def writeAppConf(self):
+    def writeAppConf(self)->set[pathlib.Path]:
+        written_files:set[pathlib.Path] = set()
         for output_app_path, template_name in [ ("default/app.conf", "app.conf.j2"),
                                                 ("default/content-version.conf", "content-version.j2")]:
-            ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+            written_files.add(ConfWriter.writeConfFile(pathlib.Path(output_app_path),
                                     template_name,
                                     self.config,
-                                    [self.config.app])
+                                    [self.config.app]))
         
-        ConfWriter.writeManifestFile(pathlib.Path("app.manifest"),
+        written_files.add(ConfWriter.writeManifestFile(pathlib.Path("app.manifest"),
                                               "app.manifest.j2",
                                               self.config,
-                                              [self.config.app])
+                                              [self.config.app]))
+        return written_files
 
         
-    def writeObjects(self, objects: list, type: SecurityContentType = None) -> None:
+    def writeObjects(self, objects: list, type: SecurityContentType = None) -> set[pathlib.Path]:
+        written_files:set[pathlib.Path] = set()
         if type == SecurityContentType.detections:
             for output_app_path, template_name in [ ('default/savedsearches.conf', 'savedsearches_detections.j2'),
                                                     ('default/analyticstories.conf', 'analyticstories_detections.j2')]:
-                ConfWriter.writeConfFile(pathlib.Path(output_app_path),
-                                         template_name,
-                                         self.config,
-                                         objects)
+                written_files.add(ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                                                           template_name, self.config, objects))
         
         elif type == SecurityContentType.stories:
-            ConfWriter.writeConfFile(pathlib.Path('default/analyticstories.conf'), 
+            written_files.add(ConfWriter.writeConfFile(pathlib.Path('default/analyticstories.conf'), 
                                     'analyticstories_stories.j2',
-                                    self.config, objects)
+                                    self.config, objects))
 
         elif type == SecurityContentType.baselines:
-            ConfWriter.writeConfFile(pathlib.Path('default/savedsearches.conf'),
-                                    'savedsearches_baselines.j2', 
-                                    self.config, objects)
+            written_files.add(ConfWriter.writeConfFile(pathlib.Path('default/savedsearches.conf'),
+                                                      'savedsearches_baselines.j2', 
+                                                       self.config, objects))
 
         elif type == SecurityContentType.investigations:
             for output_app_path, template_name in [ ('default/savedsearches.conf', 'savedsearches_investigations.j2'),
@@ -113,18 +117,18 @@ class ConfOutput:
 
             for output_app_path, template_name in [ ('default/es_investigations.conf', 'es_investigations_investigations.j2'),
                                                     ('default/workflow_actions.conf', 'workflow_actions.j2')]:
-                ConfWriter.writeConfFile(pathlib.Path(output_app_path),
-                                            template_name,
-                                            self.config,
-                                            workbench_panels)
+                written_files.add( ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                                                         template_name,
+                                                        self.config,
+                                                        workbench_panels))
 
         elif type == SecurityContentType.lookups:
             for output_app_path, template_name in [ ('default/collections.conf', 'collections.j2'),
                                                     ('default/transforms.conf', 'transforms.j2')]:
-                ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                written_files.add(ConfWriter.writeConfFile(pathlib.Path(output_app_path),
                                             template_name,
                                             self.config,
-                                            objects)
+                                            objects))
             
         
             #we want to copy all *.mlmodel files as well, not just csvs
@@ -143,9 +147,11 @@ class ConfOutput:
                     raise(Exception(f"Error copying lookup/mlmodel file.  Path {lookup_path} does not exist or is not a file."))
 
         elif type == SecurityContentType.macros:
-            ConfWriter.writeConfFile(pathlib.Path('default/macros.conf'),
+            written_files.add(ConfWriter.writeConfFile(pathlib.Path('default/macros.conf'),
                                     'macros.j2',
-                                    self.config, objects)
+                                    self.config, objects))
+        
+        return written_files
             
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pydantic import (
-    BaseModel, validator, Field, field_validator, 
-    field_serializer, ConfigDict, SecretStr, DirectoryPath,
+    BaseModel, Field, field_validator, 
+    field_serializer, ConfigDict, DirectoryPath,
     PositiveInt, FilePath, HttpUrl, AnyUrl, computed_field, model_validator
 )
 
@@ -16,6 +16,7 @@ from contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 from contentctl.objects.enums import PostTestBehavior
+from contentctl.input.yml_reader import YmlReader
 
 
 
@@ -600,15 +601,10 @@ class test(test_common):
 
     @computed_field
     @property
-    def apps(self)->List[TestApp]:
-        from contentctl.input.yml_reader import YmlReader
-
-        
+    def apps(self)->List[TestApp]:        
         if not self.getAppFilePath().exists():
-            print("apps.yml does not exist. Using DEFAULT_APPS")
             return DEFAULT_APPS
         
-
         app_objects:List[App_Base] = []
         data:List[dict[str,Any]] = YmlReader.load_file(self.getAppFilePath())
         for app in data:

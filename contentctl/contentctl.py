@@ -1,7 +1,6 @@
 from contentctl.actions.initialize import Initialize
 import tyro
-from contentctl.objects.config import Config_Base, CustomApp, init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect
-from typing import Union
+from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
 from contentctl.actions.detection_testing.GitService import GitService
@@ -69,7 +68,8 @@ def build_func(config:build)->DirectorOutputDto:
     return builder.execute(BuildInputDto(director_output_dto, config))
 
 def inspect_func(config:inspect)->str:
-    builder = build_func(config)
+    #Make sure that we have built the most recent version of the app
+    _ = build_func(config)
     inspect_token = Inspect().execute(config)
     return inspect_token
     
@@ -89,13 +89,9 @@ def deploy_rest_func(config:deploy_rest):
 
 def test_func(config:test):
     director_output_dto = build_func(config)
-    
-    
     gitServer = GitService(director=director_output_dto,config=config)
-    
     detections_to_test = gitServer.getContent()
 
-    
 
     test_input_dto = TestInputDto(detections_to_test, config)
     
@@ -121,8 +117,6 @@ def main():
     except Exception as e:
         print(f"Error validating 'contentctl.yml':\n{str(e)}")
         sys.exit(1)
-    
-  
         
     
     # For ease of generating the constructor, we want to allow construction

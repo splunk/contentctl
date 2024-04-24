@@ -40,7 +40,7 @@ class ConfWriter():
 
 
     @staticmethod
-    def writeConfFileHeader(app_output_path:pathlib.Path, config: build) -> None:
+    def writeConfFileHeader(app_output_path:pathlib.Path, config: build) -> pathlib.Path:
         output = ConfWriter.writeFileHeader(app_output_path, config)    
         
         output_path = config.getPackageDirectoryPath()/app_output_path
@@ -51,9 +51,10 @@ class ConfWriter():
 
         #Ensure that the conf file we just generated/update is syntactically valid
         ConfWriter.validateConfFile(output_path)        
+        return output_path
 
     @staticmethod
-    def writeManifestFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list) -> None:
+    def writeManifestFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list) -> pathlib.Path:
         j2_env = ConfWriter.getJ2Environment()
         template = j2_env.get_template(template_name)
         
@@ -64,7 +65,7 @@ class ConfWriter():
         with open(output_path, 'w') as f:
             output = output.encode('utf-8', 'ignore').decode('utf-8')
             f.write(output)
-
+        return output_path
 
 
     @staticmethod
@@ -133,7 +134,7 @@ class ConfWriter():
         return j2_env
 
     @staticmethod
-    def writeConfFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list) -> None:
+    def writeConfFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list) -> pathlib.Path:
         output_path = config.getPackageDirectoryPath()/app_output_path
         j2_env = ConfWriter.getJ2Environment()
         
@@ -144,9 +145,8 @@ class ConfWriter():
         with open(output_path, 'a') as f:
             output = output.encode('utf-8', 'ignore').decode('utf-8')
             f.write(output)
+        return output_path
         
-        #Ensure that the conf file we just generated/update is syntactically valid
-        ConfWriter.validateConfFile(output_path) 
         
     @staticmethod
     def validateConfFile(path:pathlib.Path):
@@ -161,8 +161,9 @@ class ConfWriter():
         Args:
             path (pathlib.Path): path to the conf file to validate
         """
-        
-        
+        if path.suffix != ".conf":
+            #there may be some other files built, so just ignore them
+            return
         try:
             _ = configparser.RawConfigParser().read(path)
         except Exception as e:

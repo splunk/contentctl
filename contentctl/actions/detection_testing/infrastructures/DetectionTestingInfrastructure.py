@@ -1195,7 +1195,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     ):
         tempfile = mktemp(dir=tmp_dir)
 
-        if not str(attack_data_file.data).startswith("http://"):
+        if not (str(attack_data_file.data).startswith("http://") or 
+                str(attack_data_file.data).startswith("https://")) :
             if pathlib.Path(str(attack_data_file.data)).is_file():
                 self.format_pbar_string(TestReportingType.GROUP, test_group.name, "Copying Data", test_group_start_time)
                 try:

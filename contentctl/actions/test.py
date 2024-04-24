@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from contentctl.objects.config import test
-from contentctl.objects.enums import DetectionTestingMode
+from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
 from contentctl.objects.detection import Detection
 
 from contentctl.input.director import DirectorOutputDto
@@ -30,6 +30,7 @@ from contentctl.actions.detection_testing.views.DetectionTestingViewFile import 
     DetectionTestingViewFile,
 )
 
+from contentctl.objects.integration_test import IntegrationTest
 
 import pathlib
 
@@ -49,6 +50,21 @@ class TestOutputDto:
 class Test:
     def execute(self, input_dto: TestInputDto) -> bool:
 
+        if not input_dto.config.enable_integration_testing:
+            #Skip all integraiton tests if integration testing is not enabled:
+            for detection in input_dto.detections:
+                for test in detection.tests:
+                    if isinstance(test, IntegrationTest):
+                        test.skip("TEST SKIPPED: Skipping all integration tests")
+        
+        #extra filtering which may be removed/modified in the future
+        for detection in input_dto.detections:
+            if (detection.status != DetectionStatus.production.value):
+                print(f"{detection.name} - Not testing because [STATUS: {detection.status}]")
+                input_dto.detections.remove(detection)
+            elif detection.type == AnalyticsType.Correlation:
+                print(f"{detection.name} - Not testing because [  TYPE: {detection.type}]")
+                input_dto.detections.remove(detection)
         
 
         output_dto = DetectionTestingManagerOutputDto()
@@ -67,7 +83,7 @@ class Test:
         )
         
         if len(input_dto.detections) == 0:
-            print(f"With Detection Testing Mode '{input_dto.config.mode}', there were [0] detections found to test.\nAs such, we will quit immediately.")
+            print(f"With Detection Testing Mode '{input_dto.config.getModeName()}', there were [0] detections found to test.\nAs such, we will quit immediately.")
         else:
             print(f"MODE: [{input_dto.config.getModeName()}] - Test [{len(input_dto.detections)}] detections")
             if input_dto.config.mode in [DetectionTestingMode.changes, DetectionTestingMode.selected]:

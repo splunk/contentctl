@@ -535,6 +535,33 @@ class Detection_Abstract(SecurityContentObject):
         return self
         
 
+    @model_validator(mode='after')
+    def ensurePresenceOfRequiredTests(self):
+        # TODO (cmcginley): Fix detection_abstract.tests_validate so that it surfaces validation errors
+        #   (e.g. a lack of tests) to the final results, instead of just showing a failed detection w/
+        #   no tests (maybe have a message propagated at the detection level? do a separate coverage
+        #   check as part of validation?):
+    
+    
+        #Only production analytics require tests
+        if self.status != DetectionStatus.production.value:
+            return self
+        
+        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
+        # Accordingly, we do not need to do additional checks if the type is Correlation
+        if self.type in set([AnalyticsType.Correlation.value]):
+            return self
+        
+        if self.tags.manual_test is not None:
+            for test in self.tests:
+                test.skip(f"TEST SKIPPED: Detection marked as 'manual_test' with explanation: '{self.tags.manual_test}'")
+
+        if len(self.tests) == 0:
+            raise ValueError(f"At least one test is REQUIRED for production detection: {self.name}")
+            
+
+        return self
+
     @field_validator("tests")
     def tests_validate(cls, v, info:ValidationInfo):
         # TODO (cmcginley): Fix detection_abstract.tests_validate so that it surfaces validation errors

@@ -62,8 +62,13 @@ class App_Base(BaseModel,ABC):
         return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid, release=self.version))
 
     @abstractmethod
-    def getApp(self, config:test)->str:
+    def getApp(self, config:test, stage_file:bool=False)->str:
         ...
+
+    def ensureAppPathExists(self, config:test, stage_file:bool=False):
+        if stage_file:
+            if not config.getLocalAppDir().exists():
+                config.getLocalAppDir().mkdir(parents=True)
 
 class TestApp(App_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
@@ -71,9 +76,7 @@ class TestApp(App_Base):
     
     def getApp(self, config:test,stage_file:bool=False)->str:
         #If the apps directory does not exist, then create it
-        if stage_file:
-            if not config.getLocalAppDir().exists():
-                config.getLocalAppDir().mkdir(parents=True)
+        self.ensureAppPathExists(config,stage_file)
 
         if config.splunk_api_password is not None and config.splunk_api_username is not None:
             if self.version is not None and self.uid is not None:
@@ -149,11 +152,14 @@ class CustomApp(App_Base):
     def validate_build(cls, v, values):
         return int(datetime.utcnow().strftime("%Y%m%d%H%M%S"))
     
-    def getApp(self, config:test)->str:
+    def getApp(self, config:test, stage_file=True)->str:
+        self.ensureAppPathExists(config,stage_file)
+        
         destination = config.getLocalAppDir() / (config.getPackageFilePath(include_version=True).name)
-        Utils.copy_local_file(str(config.getPackageFilePath(include_version=True)), 
-                              str(destination), 
-                              verbose_print=True)
+        if stage_file:
+            Utils.copy_local_file(str(config.getPackageFilePath(include_version=True)), 
+                                str(destination), 
+                                verbose_print=True)
         return str(destination)
 
 
@@ -318,6 +324,10 @@ class test_common(build):
     mode:Union[All, Changes, Selected] = Changes()
     post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
     test_instances:List[Infrastructure] = Field(...)
+    enable_integration_testing: bool = Field(default=False, description="Enable integration testing, which REQUIRES Splunk Enterprise Security "
+                                             "to be installed on the server. This checks for a number of different things including generation "
+                                             "of appropriate notables and messages. Please note that this will increase testing time "
+                                             "considerably (by approximately 2-3 minutes per detection).")
 
     def getModeName(self)->str:
         if isinstance(self.mode, All):
@@ -339,213 +349,213 @@ DEFAULT_APPS:List[TestApp] = [
                 "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-common-information-model-cim_520.tgz"
             ),
          ),
-        # TestApp(
-        #     uid=6553,
-        #     appid="Splunk_TA_okta_identity_cloud",
-        #     title="Splunk Add-on for Okta Identity Cloud",
-        #     version="2.1.0",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-okta-identity-cloud_210.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=6176,
-        #     appid="Splunk_TA_linux_sysmon",
-        #     title="Add-on for Linux Sysmon",
-        #     version="1.0.4",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/add-on-for-linux-sysmon_104.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     appid="Splunk_FIX_XMLWINEVENTLOG_HEC_PARSING",
-        #     title="Splunk Fix XmlWinEventLog HEC Parsing",
-        #     version="0.1",
-        #     description="This TA is required for replaying Windows Data into the Test Environment. The Default TA does not include logic for properly splitting multiple log events in a single file.  In production environments, this logic is applied by the Universal Forwarder.",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/Splunk_TA_fix_windows.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=742,
-        #     appid="SPLUNK_ADD_ON_FOR_MICROSOFT_WINDOWS",
-        #     title="Splunk Add-on for Microsoft Windows",
-        #     version="8.8.0",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_880.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=5709,
-        #     appid="Splunk_TA_microsoft_sysmon",
-        #     title="Splunk Add-on for Sysmon",
-        #     version="4.0.0",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-sysmon_400.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=833,
-        #     appid="Splunk_TA_nix",
-        #     title="Splunk Add-on for Unix and Linux",
-        #     version="9.0.0",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-unix-and-linux_900.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=5579,
-        #     appid="Splunk_TA_CrowdStrike_FDR",
-        #     title="Splunk Add-on for CrowdStrike FDR",
-        #     version="1.5.0",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-crowdstrike-fdr_150.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=3185,
-        #     appid="SPLUNK_TA_FOR_IIS",
-        #     title="Splunk Add-on for Microsoft IIS",
-        #     version="1.3.0",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-iis_130.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=4242,
-        #     appid="SPLUNK_TA_FOR_SURICATA",
-        #     title="TA for Suricata",
-        #     version="2.3.4",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/ta-for-suricata_234.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=5466,
-        #     appid="SPLUNK_TA_FOR_ZEEK",
-        #     title="TA for Zeek",
-        #     version="1.0.6",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/ta-for-zeek_106.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=3258,
-        #     appid="SPLUNK_ADD_ON_FOR_NGINX",
-        #     title="Splunk Add-on for NGINX",
-        #     version="3.2.2",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-nginx_322.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=5238,
-        #     appid="SPLUNK_ADD_ON_FOR_STREAM_FORWARDERS",
-        #     title="Splunk Add-on for Stream Forwarders",
-        #     version="8.1.1",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-stream-forwarders_811.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=5234,
-        #     appid="SPLUNK_ADD_ON_FOR_STREAM_WIRE_DATA",
-        #     title="Splunk Add-on for Stream Wire Data",
-        #     version="8.1.1",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-stream-wire-data_811.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=2757,
-        #     appid="PALO_ALTO_NETWORKS_ADD_ON_FOR_SPLUNK",
-        #     title="Palo Alto Networks Add-on for Splunk",
-        #     version="8.1.1",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/palo-alto-networks-add-on-for-splunk_811.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=3865,
-        #     appid="Zscaler_CIM",
-        #     title="Zscaler Technical Add-On for Splunk",
-        #     version="4.0.3",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/zscaler-technical-add-on-for-splunk_403.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=3719,
-        #     appid="SPLUNK_ADD_ON_FOR_AMAZON_KINESIS_FIREHOSE",
-        #     title="Splunk Add-on for Amazon Kinesis Firehose",
-        #     version="1.3.2",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-amazon-kinesis-firehose_132.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=1876,
-        #     appid="Splunk_TA_aws",
-        #     title="Splunk Add-on for AWS",
-        #     version="7.5.0",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-amazon-web-services-aws_750.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=3088,
-        #     appid="SPLUNK_ADD_ON_FOR_GOOGLE_CLOUD_PLATFORM",
-        #     title="Splunk Add-on for Google Cloud Platform",
-        #     version="4.4.0",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-google-cloud-platform_440.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=5556,
-        #     appid="SPLUNK_ADD_ON_FOR_GOOGLE_WORKSPACE",
-        #     title="Splunk Add-on for Google Workspace",
-        #     version="2.6.3",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-google-workspace_263.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=3110,
-        #     appid="SPLUNK_TA_MICROSOFT_CLOUD_SERVICES",
-        #     title="Splunk Add-on for Microsoft Cloud Services",
-        #     version="5.2.2",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-cloud-services_522.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=4055,
-        #     appid="SPLUNK_ADD_ON_FOR_MICROSOFT_OFFICE_365",
-        #     title="Splunk Add-on for Microsoft Office 365",
-        #     version="4.5.1",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-office-365_451.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=2890,
-        #     appid="SPLUNK_MACHINE_LEARNING_TOOLKIT",
-        #     title="Splunk Machine Learning Toolkit",
-        #     version="5.4.1",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-machine-learning-toolkit_541.tgz"
-        #     ),
-        # ),
-        # TestApp(
-        #     uid=2734,
-        #     appid="URL_TOOLBOX",
-        #     title="URL Toolbox",
-        #     version="1.9.2",
-        #     hardcoded_path=HttpUrl(
-        #         "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/url-toolbox_192.tgz"
-        #     ),
-        # ),
+        TestApp(
+            uid=6553,
+            appid="Splunk_TA_okta_identity_cloud",
+            title="Splunk Add-on for Okta Identity Cloud",
+            version="2.1.0",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-okta-identity-cloud_210.tgz"
+            ),
+        ),
+        TestApp(
+            uid=6176,
+            appid="Splunk_TA_linux_sysmon",
+            title="Add-on for Linux Sysmon",
+            version="1.0.4",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/add-on-for-linux-sysmon_104.tgz"
+            ),
+        ),
+        TestApp(
+            appid="Splunk_FIX_XMLWINEVENTLOG_HEC_PARSING",
+            title="Splunk Fix XmlWinEventLog HEC Parsing",
+            version="0.1",
+            description="This TA is required for replaying Windows Data into the Test Environment. The Default TA does not include logic for properly splitting multiple log events in a single file.  In production environments, this logic is applied by the Universal Forwarder.",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/Splunk_TA_fix_windows.tgz"
+            ),
+        ),
+        TestApp(
+            uid=742,
+            appid="SPLUNK_ADD_ON_FOR_MICROSOFT_WINDOWS",
+            title="Splunk Add-on for Microsoft Windows",
+            version="8.8.0",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-windows_880.tgz"
+            ),
+        ),
+        TestApp(
+            uid=5709,
+            appid="Splunk_TA_microsoft_sysmon",
+            title="Splunk Add-on for Sysmon",
+            version="4.0.0",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-sysmon_400.tgz"
+            ),
+        ),
+        TestApp(
+            uid=833,
+            appid="Splunk_TA_nix",
+            title="Splunk Add-on for Unix and Linux",
+            version="9.0.0",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-unix-and-linux_900.tgz"
+            ),
+        ),
+        TestApp(
+            uid=5579,
+            appid="Splunk_TA_CrowdStrike_FDR",
+            title="Splunk Add-on for CrowdStrike FDR",
+            version="1.5.0",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-crowdstrike-fdr_150.tgz"
+            ),
+        ),
+        TestApp(
+            uid=3185,
+            appid="SPLUNK_TA_FOR_IIS",
+            title="Splunk Add-on for Microsoft IIS",
+            version="1.3.0",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-iis_130.tgz"
+            ),
+        ),
+        TestApp(
+            uid=4242,
+            appid="SPLUNK_TA_FOR_SURICATA",
+            title="TA for Suricata",
+            version="2.3.4",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/ta-for-suricata_234.tgz"
+            ),
+        ),
+        TestApp(
+            uid=5466,
+            appid="SPLUNK_TA_FOR_ZEEK",
+            title="TA for Zeek",
+            version="1.0.6",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/ta-for-zeek_106.tgz"
+            ),
+        ),
+        TestApp(
+            uid=3258,
+            appid="SPLUNK_ADD_ON_FOR_NGINX",
+            title="Splunk Add-on for NGINX",
+            version="3.2.2",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-nginx_322.tgz"
+            ),
+        ),
+        TestApp(
+            uid=5238,
+            appid="SPLUNK_ADD_ON_FOR_STREAM_FORWARDERS",
+            title="Splunk Add-on for Stream Forwarders",
+            version="8.1.1",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-stream-forwarders_811.tgz"
+            ),
+        ),
+        TestApp(
+            uid=5234,
+            appid="SPLUNK_ADD_ON_FOR_STREAM_WIRE_DATA",
+            title="Splunk Add-on for Stream Wire Data",
+            version="8.1.1",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-stream-wire-data_811.tgz"
+            ),
+        ),
+        TestApp(
+            uid=2757,
+            appid="PALO_ALTO_NETWORKS_ADD_ON_FOR_SPLUNK",
+            title="Palo Alto Networks Add-on for Splunk",
+            version="8.1.1",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/palo-alto-networks-add-on-for-splunk_811.tgz"
+            ),
+        ),
+        TestApp(
+            uid=3865,
+            appid="Zscaler_CIM",
+            title="Zscaler Technical Add-On for Splunk",
+            version="4.0.3",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/zscaler-technical-add-on-for-splunk_403.tgz"
+            ),
+        ),
+        TestApp(
+            uid=3719,
+            appid="SPLUNK_ADD_ON_FOR_AMAZON_KINESIS_FIREHOSE",
+            title="Splunk Add-on for Amazon Kinesis Firehose",
+            version="1.3.2",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-amazon-kinesis-firehose_132.tgz"
+            ),
+        ),
+        TestApp(
+            uid=1876,
+            appid="Splunk_TA_aws",
+            title="Splunk Add-on for AWS",
+            version="7.5.0",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-amazon-web-services-aws_750.tgz"
+            ),
+        ),
+        TestApp(
+            uid=3088,
+            appid="SPLUNK_ADD_ON_FOR_GOOGLE_CLOUD_PLATFORM",
+            title="Splunk Add-on for Google Cloud Platform",
+            version="4.4.0",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-google-cloud-platform_440.tgz"
+            ),
+        ),
+        TestApp(
+            uid=5556,
+            appid="SPLUNK_ADD_ON_FOR_GOOGLE_WORKSPACE",
+            title="Splunk Add-on for Google Workspace",
+            version="2.6.3",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-google-workspace_263.tgz"
+            ),
+        ),
+        TestApp(
+            uid=3110,
+            appid="SPLUNK_TA_MICROSOFT_CLOUD_SERVICES",
+            title="Splunk Add-on for Microsoft Cloud Services",
+            version="5.2.2",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-cloud-services_522.tgz"
+            ),
+        ),
+        TestApp(
+            uid=4055,
+            appid="SPLUNK_ADD_ON_FOR_MICROSOFT_OFFICE_365",
+            title="Splunk Add-on for Microsoft Office 365",
+            version="4.5.1",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-add-on-for-microsoft-office-365_451.tgz"
+            ),
+        ),
+        TestApp(
+            uid=2890,
+            appid="SPLUNK_MACHINE_LEARNING_TOOLKIT",
+            title="Splunk Machine Learning Toolkit",
+            version="5.4.1",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/splunk-machine-learning-toolkit_541.tgz"
+            ),
+        ),
+        TestApp(
+            uid=2734,
+            appid="URL_TOOLBOX",
+            title="URL Toolbox",
+            version="1.9.2",
+            hardcoded_path=HttpUrl(
+                "https://attack-range-appbinaries.s3.us-west-2.amazonaws.com/Latest/url-toolbox_192.tgz"
+            ),
+        ),
     ]
 
 class test(test_common):
@@ -583,7 +593,7 @@ class test(test_common):
             Self: The test object. No modifications are made during this call.
         """        
         try:
-            _ = self.getContainerEnvironmentString(stage_file=False)
+            _ = self.getContainerEnvironmentString(stage_file=False, include_custom_app=False)
         except Exception as e:
             raise Exception(f"Error validating test apps: {str(e)}")
         return self
@@ -610,8 +620,13 @@ class test(test_common):
 
         return app_objects
     
-    def getContainerEnvironmentString(self,stage_file=True)->str:
-        paths = [app.getApp(self,stage_file=stage_file) for app in self.apps]
+    def getContainerEnvironmentString(self,stage_file:bool=True, include_custom_app:bool=True)->str:
+        apps:List[App_Base] = self.apps
+        if include_custom_app:
+            apps.append(self.app)
+
+        paths = [app.getApp(self,stage_file=stage_file) for app in apps]
+
         container_paths = []
         for path in paths:
             if path.startswith(SPLUNKBASE_URL):

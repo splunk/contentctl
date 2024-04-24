@@ -88,9 +88,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         environment = {}
         environment["SPLUNK_START_ARGS"] = "--accept-license"
         environment["SPLUNK_PASSWORD"] = self.infrastructure.splunk_app_password
-        environment["SPLUNK_APPS_URL"] = ",".join(
-            str(p.hardcoded_path) for p in self.global_config.apps 
-        )
+        environment["SPLUNK_APPS_URL"] = self.global_config.getContainerEnvironmentString(stage_file=True)
         if (
             self.global_config.splunk_api_username is not None
             and self.global_config.splunk_api_password is not None
@@ -98,7 +96,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             environment["SPLUNKBASE_USERNAME"] = self.global_config.splunk_api_username
             environment["SPLUNKBASE_PASSWORD"] = self.global_config.splunk_api_password
         
-        
+
 
         def emit_docker_run_equivalent():
             environment_string = " ".join([f'-e "{k}={environment.get(k)}"' for k in environment.keys()])

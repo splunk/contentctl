@@ -1195,14 +1195,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     ):
         tempfile = mktemp(dir=tmp_dir)
 
-        if not (
-            attack_data_file.data.startswith("https://")
-            or attack_data_file.data.startswith("http://")
-        ):
-            if pathlib.Path(attack_data_file.data).is_file():
+        if not str(attack_data_file.data).startswith("http://"):
+            if pathlib.Path(str(attack_data_file.data)).is_file():
                 self.format_pbar_string(TestReportingType.GROUP, test_group.name, "Copying Data", test_group_start_time)
                 try:
-                    copyfile(attack_data_file.data, tempfile)
+                    copyfile(str(attack_data_file.data), tempfile)
                 except Exception as e:
                     raise Exception(
                         f"Error copying local Attack Data File for [{test_group.name}] - [{attack_data_file.data}]: "
@@ -1228,7 +1225,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 )
 
                 Utils.download_file_from_http(
-                    attack_data_file.data, tempfile, self.pbar, overwrite_file=True
+                    str(attack_data_file.data), tempfile, self.pbar, overwrite_file=True
                 )
             except Exception as e:
                 raise (

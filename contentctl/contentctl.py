@@ -1,6 +1,6 @@
 from contentctl.actions.initialize import Initialize
 import tyro
-from contentctl.objects.config import Config_Base, CustomApp, init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, allapps
+from contentctl.objects.config import Config_Base, CustomApp, init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect
 from typing import Union
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
@@ -87,7 +87,7 @@ def deploy_rest_func(config:deploy_rest):
     raise Exception("deploy rest not yet implemented")
     
 
-def test_func(config:test, apps:allapps):
+def test_func(config:test):
     director_output_dto = build_func(config)
     
     
@@ -122,19 +122,7 @@ def main():
         print(f"Error validating 'contentctl.yml':\n{str(e)}")
         sys.exit(1)
     
-    try:
-        appsFile = pathlib.Path("apps.yml")
-        if not appsFile.is_file():
-            apps = allapps()
-            print("got them")
-            #raise Exception(f"Config File {configFile} does not exist. Please create it with 'contentctl init'")        
-        else:
-            apps_obj = YmlReader().load_file(appsFile,add_fields=False)
-            apps = allapps.model_validate(apps_obj)
-
-    except Exception as e:
-        print(f"Error validating 'contentctl.yml':\n{str(e)}")
-        sys.exit(1)
+  
         
     
     # For ease of generating the constructor, we want to allow construction
@@ -182,7 +170,7 @@ def main():
     elif type(config) == deploy_rest:
         deploy_rest_func(config)
     elif type(config) == test:
-        test_func(config, apps)
+        test_func(config)
     elif type(config) == test_servers:
         test_servers_func(config)
     else:

@@ -178,7 +178,28 @@ contentctl test's default mode allows it to quickly test all content with requir
 6. **docs** - Create documentation as Markdown
 7. **reporting** - Create different reporting files such as a Mitre ATT&CK overlay
 
+# Shell tab-complete
 
+Leveraging the tab completion featureset of the CLI library we're using, you can generate tab completions for `contentctl` automatically, for zsh, bash, and tcsh. For additional details, you can view the docs for the library [here.](https://brentyi.github.io/tyro/tab_completion/) 
+
+### Zsh
+If you already have a location for your ZSH tab completions, you only need to run the generation line and can skip the folder creation, configuring the rest to fit with your shell config.
+
+```zsh
+mkdir -p ~/.zfunc
+contentctl --tyro-write-completion zsh ~/.zfunc/_contentctl
+echo "fpath+=~/.zfunc" >> ~/.zshrc
+echo "autoload -Uz compinit && compinit" >> ~/.zshrc
+source ~/.zshrc
+```
+
+### Bash
+
+```bash
+completion_dir=${BASH_COMPLETION_USER_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion}/completions/
+mkdir -p $completion_dir
+contentctl --tyro-write-completion bash ${completion_dir}/_contentctl
+```
 
 # Acronyms
 | Acronym | Meaning| Description | 

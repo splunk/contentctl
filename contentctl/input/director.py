@@ -107,7 +107,7 @@ class Director():
             self.createSecurityContent(SecurityContentType.playbooks)
             self.createSecurityContent(SecurityContentType.detections)
         
-        elif self.input_dto.build_ssa == SecurityContentProduct.SSA:
+        elif self.input_dto.build_ssa:
             self.createSecurityContent(SecurityContentType.ssa_detections)
         
 

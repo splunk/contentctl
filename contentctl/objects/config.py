@@ -75,6 +75,11 @@ class TestApp(App_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(default=None, description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
     
+
+    @field_serializer('hardcoded_path',when_used='always')
+    def serialize_path(path: Union[AnyUrl, pathlib.Path])->str:
+        return str(path)
+
     def getApp(self, config:test,stage_file:bool=False)->str:
         #If the apps directory does not exist, then create it
         self.ensureAppPathExists(config,stage_file)

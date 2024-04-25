@@ -9,7 +9,7 @@ from contentctl.objects.enums import SecurityContentProductName
 
 class SSADetectionTags(BaseModel):
     # detection spec
-    name: str
+    #name: str
     analytic_story: list
     asset_type: str
     automated_detection_testing: str = None
@@ -79,7 +79,7 @@ class SSADetectionTags(BaseModel):
     def tags_confidence(cls, v, values):
         v = int(v)
         if not (v > 0 and v <= 100):
-             raise ValueError('confidence score is out of range 1-100: ' + values["name"])
+             raise ValueError('confidence score is out of range 1-100.' )
         else:
             return v
 
@@ -87,7 +87,7 @@ class SSADetectionTags(BaseModel):
     @validator('impact')
     def tags_impact(cls, v, values):
         if not (v > 0 and v <= 100):
-             raise ValueError('impact score is out of range 1-100: ' + values["name"])
+             raise ValueError('impact score is out of range 1-100.')
         else:
             return v
 
@@ -96,7 +96,7 @@ class SSADetectionTags(BaseModel):
         valid_kill_chain_phases = SES_KILL_CHAIN_MAPPINGS.keys()
         for value in v:
             if value not in valid_kill_chain_phases:
-                raise ValueError('kill chain phase not valid for ' + values["name"] + '. valid options are ' + str(valid_kill_chain_phases))
+                raise ValueError('kill chain phase not valid. Valid options are ' + str(valid_kill_chain_phases))
         return v
 
     @validator('mitre_attack_id')
@@ -104,7 +104,7 @@ class SSADetectionTags(BaseModel):
         pattern = 'T[0-9]{4}'
         for value in v:
             if not re.match(pattern, value):
-                raise ValueError('Mitre Attack ID are not following the pattern Txxxx: ' + values["name"])
+                raise ValueError('Mitre Attack ID are not following the pattern Txxxx:' )
         return v
 
 
@@ -119,20 +119,20 @@ class SSADetectionTags(BaseModel):
 
 
     @model_validator(mode="after")
-    def tags_observable(cls, values):
+    def tags_observable(self):
         valid_roles = SES_OBSERVABLE_ROLE_MAPPING.keys()
         valid_types = SES_OBSERVABLE_TYPE_MAPPING.keys()
         
-        for value in values["observable"]:
+        for value in self.observable:
             if value['type'] in valid_types:
-                if 'Splunk Behavioral Analytics' in values["product"]:
+                if 'Splunk Behavioral Analytics' in self.product:
                     continue
 
                 if 'role' not in value:
-                    raise ValueError('Observable role is missing for ' + values["name"])
+                    raise ValueError('Observable role is missing')
                 for role in value['role']:
                     if role not in valid_roles:
-                        raise ValueError('Observable role ' + role + ' not valid for ' + values["name"] + '. valid options are ' + str(valid_roles))
+                        raise ValueError(f'Observable role ' + role + ' not valid. Valid options are {str(valid_roles)}')
             else:
-                raise ValueError('Observable type ' + value['type'] + ' not valid for ' + values["name"] + '. valid options are ' + str(valid_types))
-        return values
+                raise ValueError(f'Observable type ' + value['type'] + ' not valid. Valid options are {str(valid_types)}')
+        return self

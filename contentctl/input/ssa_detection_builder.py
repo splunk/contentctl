@@ -3,7 +3,7 @@ import re
 import os
 
 from pydantic import ValidationError
-
+from typing import List
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -14,7 +14,7 @@ from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.constants import *
 from contentctl.input.director import DirectorOutputDto
-
+from contentctl.enrichments.attack_enrichment import AttackEnrichment
 
 class SSADetectionBuilder():
     security_content_obj : SSADetection
@@ -90,6 +90,14 @@ class SSADetectionBuilder():
                         else:
                             #print("mitre_attack_id " + mitre_attack_id + " doesn't exist for detecction " + self.security_content_obj.name)
                             raise ValueError("mitre_attack_id " + mitre_attack_id + " doesn't exist for detection " + self.security_content_obj.name)
+    def addMitreAttackEnrichmentNew(self, attack_enrichment: AttackEnrichment) -> None:
+        if self.security_content_obj and self.security_content_obj.tags.mitre_attack_id:
+            self.security_content_obj.tags.mitre_attack_enrichments = []
+            for mitre_attack_id in self.security_content_obj.tags.mitre_attack_id:
+                enrichment_obj = attack_enrichment.getEnrichmentByMitreID(mitre_attack_id)
+                if enrichment_obj is not None:
+                    self.security_content_obj.tags.mitre_attack_enrichments.append(enrichment_obj)
+
 
 
     def addCIS(self) -> None:

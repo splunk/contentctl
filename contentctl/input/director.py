@@ -176,7 +176,7 @@ class Director():
                         self.addContentToDictMappings(detection)
 
                 elif contentType == SecurityContentType.ssa_detections:
-                        self.constructSSADetection(self.ssa_detection_builder, str(file))
+                        self.constructSSADetection(self.ssa_detection_builder, self.output_dto,str(file))
                         ssa_detection = self.ssa_detection_builder.getObject()
                         if ssa_detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
                             self.output_dto.ssa_detections.append(ssa_detection)
@@ -208,10 +208,10 @@ class Director():
     
     
 
-    def constructSSADetection(self, builder: SSADetectionBuilder, file_path: str) -> None:
+    def constructSSADetection(self, builder: SSADetectionBuilder, directorOutput:DirectorOutputDto, file_path: str) -> None:
         builder.reset()
         builder.setObject(file_path,self.output_dto)
-        builder.addMitreAttackEnrichment(self.attack_enrichment)
+        builder.addMitreAttackEnrichmentNew(directorOutput.attack_enrichment)
         builder.addKillChainPhase()
         builder.addCIS()
         builder.addNist()

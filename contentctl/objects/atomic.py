@@ -95,6 +95,15 @@ class AtomicTest(BaseModel):
                           supported_platforms=[],
                           executor=AtomicExecutor(name="Placeholder Executor (enrichment disabled)", 
                                                   command="Placeholder command (enrichment disabled)"))
+    
+    @staticmethod
+    def AtomicTestWhenTestIsMissing(auto_generated_guid: UUID4)->Self:
+        return AtomicTest(name="Missing Atomic",
+                          auto_generated_guid=auto_generated_guid,
+                          description="This is a placeholder AtomicTest. Either the auto_generated_guid is incorrect or it there was an exception while parsing its AtomicFile..",
+                          supported_platforms=[],
+                          executor=AtomicExecutor(name="Placeholder Executor (failed to find auto_generated_guid)", 
+                                                  command="Placeholder command (failed to find auto_generated_guid)"))
 
 
     @classmethod
@@ -129,7 +138,10 @@ class AtomicTest(BaseModel):
                 error_messages.append(f"File [{obj_path}]\n{str(e)}")
         if len(error_messages) > 0:
             exceptions_string = '\n\n'.join(error_messages)
-            raise ValueError(f"The following {len(error_messages)} were generated when parsing the Atomic Red Team Repo:\n\n{exceptions_string}")
+            print(f"WARNING: The following [{len(error_messages)}] ERRORS were generated when parsing the Atomic Red Team Repo.\n"
+                   "Please raise an issue so that they can be fixed at https://github.com/redcanaryco/atomic-red-team/issues.\n"
+                   "Note that this is only a warning and contentctl will ignore Atomics contained in these files.\n"
+                  f"However, if you have written a detection that references them, 'contentctl build --enrichments' will fail:\n\n{exceptions_string}")
         
         return atomic_files
     

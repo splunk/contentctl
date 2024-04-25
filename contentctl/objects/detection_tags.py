@@ -227,18 +227,25 @@ class DetectionTags(BaseModel):
                 matched_tests.append(AtomicTest.getAtomicByAtomicGuid(atomic_guid,all_tests))
             except Exception as _:
                 missing_tests.append(atomic_guid)
-        if len(missing_tests) > 0 or len(badly_formatted_guids) > 0:
+
+        
+        
+        
+        if len(missing_tests) > 0:
+            missing_tests_string = f"\n\tWARNING: Failed to find [{len(missing_tests)}] Atomic Test(s) with the following atomic_guids (called auto_generated_guid in the ART Repo)."\
+                                   f"\n\tPlease review the output above for potential exception(s) when parsing the Atomic Red Team Repo."\
+                                   f"\n\tVerify that these auto_generated_guid exist and try updating/pulling the repo again.: {[str(guid) for guid in missing_tests]}"
+        else:
+            missing_tests_string = ""
+            
+
+        if len(badly_formatted_guids) > 0:
             if len(badly_formatted_guids) > 0:
                 bad_guids_string = f"The following [{len(badly_formatted_guids)}] value(s) are not properly formatted UUIDs: {badly_formatted_guids}\n"
-            else:
-                bad_guids_string = ""
-            if len(missing_tests) > 0:
-                missing_tests_string = f"Failed to find [{len(missing_tests)}] Atomic Test(s) with the following atomic_guids "\
-                                       f"(called auto-generated_guid in the ART Repo). "\
-                                       f"Verify that they exist and try updating/pulling the repo again: {[str(guid) for guid in missing_tests]}"
-            else:
-                missing_tests_string = ""
-            raise ValueError(f"{bad_guids_string}{missing_tests_string}")
+                raise ValueError(f"{bad_guids_string}{missing_tests_string}")
+        
+        elif len(missing_tests) > 0:
+            print(missing_tests_string)
 
-        return matched_tests
+        return matched_tests + [AtomicTest.AtomicTestWhenTestIsMissing(test) for test in missing_tests]
     

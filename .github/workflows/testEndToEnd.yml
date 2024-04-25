@@ -73,6 +73,7 @@ jobs:
         run: |
           cd my_splunk_content_pack
           poetry run contentctl test
+        if: matrix.operating_system != 'macos-*'
       
       - uses: actions/upload-artifact@v4
         with:

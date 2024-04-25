@@ -76,7 +76,11 @@ class GitService(BaseModel):
                 if diff.delta.status in (DeltaStatus.ADDED, DeltaStatus.MODIFIED, DeltaStatus.RENAMED):
                     #print(f"{DeltaStatus(diff.delta.status).name:<8}:{diff.delta.new_file.raw_path}")
                     decoded_path = pathlib.Path(diff.delta.new_file.raw_path.decode('utf-8'))
-                    if 'detections/' in str(decoded_path) and decoded_path.suffix == ".yml":
+                    if 'app_template/' in str(decoded_path) or 'ssa_detections' in str(decoded_path) or str(self.config.getBuildDir()) in str(decoded_path):
+                        #Ignore anything that is embedded in the app template.
+                        #Also ignore ssa detections
+                        pass
+                    elif 'detections/' in str(decoded_path) and decoded_path.suffix == ".yml":
                         detectionObject = filepath_to_content_map.get(decoded_path, None)
                         if isinstance(detectionObject, Detection):
                             updated_detections.append(detectionObject)

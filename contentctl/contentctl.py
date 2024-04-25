@@ -102,7 +102,10 @@ def test_func(config:test):
     # not production, the correct type, or manual_test only
     t.filter_detections(test_input_dto)
     
-    config.dumpCICDPlanAndQuit(gitServer.getHash(),test_input_dto.detections)
+    if config.plan_only:
+        #Emit the test plan and quit. Do not actually run the test
+        config.dumpCICDPlanAndQuit(gitServer.getHash(),test_input_dto.detections)
+        return 
     
     success = t.execute(test_input_dto)
     

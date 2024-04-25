@@ -136,7 +136,8 @@ class ConfOutput:
             lookup_folder = self.config.getPackageDirectoryPath()/"lookups"
             
             # Make the new folder for the lookups 
-            lookup_folder.mkdir()
+            # This folder almost certainly already exists because mitre_enrichment.csv has been writtent here from the app template.
+            lookup_folder.mkdir(exist_ok=True)
 
             #Copy each lookup into the folder
             for lookup_name in files:

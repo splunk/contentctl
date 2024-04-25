@@ -4,7 +4,7 @@ from pydantic import (
     field_serializer, ConfigDict, DirectoryPath,
     PositiveInt, FilePath, HttpUrl, AnyUrl, computed_field, model_validator
 )
-
+from contentctl.output.yml_writer import YmlWriter
 
 from datetime import datetime, UTC
 from typing import Optional,Any,Dict,Annotated,List,Union, Self
@@ -337,6 +337,17 @@ class test_common(build):
                                              "to be installed on the server. This checks for a number of different things including generation "
                                              "of appropriate notables and messages. Please note that this will increase testing time "
                                              "considerably (by approximately 2-3 minutes per detection).")
+    plan_only:bool = Field(default=False, exclude=True, description="WARNING - This is an advanced feature and currently intended for widespread use. "
+                           "This flag is useful for building your app and generating a test plan to run on different infrastructure.  "
+                           "This flag does not actually perform the test. Instead, it builds validates all content and builds the app(s).  "
+                           "It MUST be used with mode.changes and must run in the context of a git repo.")
+
+    @model_validator(mode='after')
+    def checkPlanOnlyUse(self)->Self:
+        #Ensure that mode is CHANGES
+        if self.plan_only and not isinstance(self.mode, Changes):
+            raise ValueError("plan_only MUST be used with --mode:changes")        
+        return self
 
     @field_serializer('post_test_behavior', when_used='always')
     def serializePostTestBehavior(self,behavior:PostTestBehavior)->str:
@@ -582,7 +593,7 @@ class test(test_common):
     
     
     def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
-        output_file = self.path / "test_config.yml"
+        output_file = self.path / "test_plan.yml"
         self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
         self.post_test_behavior = PostTestBehavior.never_pause
         
@@ -596,21 +607,19 @@ class test(test_common):
 
         data = self.model_dump()
         #Add relevant fields
-        data['githash'] = githash
+        data['githash'] = str(githash)
 
         #Remove some fields that are not relevant
         del(data['test_instances'])
         del(data['container_settings'])
         del(data['apps'])
 
+        try:
+            YmlWriter.writeYmlFile(str(output_file), data)
+            print(f"Successfully wrote a test plan for [{len(self.mode.files)} detections] using [{len(self.apps)} apps] to [{output_file}]")
+        except Exception as e:
+            raise Exception(f"Error writing test plan file [{output_file}]: {str(e)}")
 
-        from contentctl.output.yml_writer import YmlWriter
-        import sys
-        YmlWriter.writeYmlFile(str(output_file), data)
-        sys.exit(0)
-        
-
-        
 
     def getLocalAppDir(self)->pathlib.Path:
         return self.path / "apps"

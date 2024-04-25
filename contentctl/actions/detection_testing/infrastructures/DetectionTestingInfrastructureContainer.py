@@ -108,7 +108,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
                   f" --name {self.get_name()} "
                   f"--platform linux/amd64 "
                   f"{self.global_config.container_settings.full_image_path}\n\n")
-        emit_docker_run_equivalent()
+        #emit_docker_run_equivalent()
         
         container = self.get_docker_client().containers.create(
             self.global_config.container_settings.full_image_path,

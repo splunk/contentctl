@@ -1,25 +1,15 @@
 from typing import List,Union
 from contentctl.objects.config import test, test_servers, Container,Infrastructure
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import DetectionTestingInfrastructure
-
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import DetectionTestingInfrastructureContainer
-
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import DetectionTestingInfrastructureServer
-
-
-
-
 from urllib.parse import urlparse
-
 from copy import deepcopy
 from contentctl.objects.enums import DetectionTestingTargetInfrastructure
 import signal
 import datetime
-
 # from queue import Queue
-
 from dataclasses import dataclass
-
 # import threading
 import ctypes
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
@@ -29,16 +19,11 @@ from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfras
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
-
 from contentctl.objects.enums import PostTestBehavior
-
 from pydantic import BaseModel, Field
 from contentctl.objects.detection import Detection
-
-
 import concurrent.futures
-
-import tqdm
+import docker
 
 
 @dataclass(frozen=False)
@@ -144,7 +129,30 @@ class DetectionTestingManager(BaseModel):
         return self.output_dto
 
     def create_DetectionTestingInfrastructureObjects(self):
-        import sys
+        #Make sure that, if we need to, we pull the appropriate container
+        for infrastructure in self.input_dto.config.test_instances:
+            if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
+                try:
+                    client = docker.from_env()
+                except Exception as e:
+                    raise Exception("Unable to connect to docker.  Are you sure that docker is running on this host?")
+                try:
+                    
+                    parts = self.input_dto.config.container_settings.full_image_path.split(':')
+                    if len(parts) != 2:
+                        raise Exception(f"Expected to find a name:tag in {self.input_dto.config.container_settings.full_image_path}, "
+                                        f"but instead found {parts}. Note that this path MUST include the tag, which is separated by ':'")
+                    
+                    print(
+                        f"Getting the latest version of the container image [{self.input_dto.config.container_settings.full_image_path}]...",
+                        end="",
+                        flush=True,
+                    )
+                    client.images.pull(parts[0], tag=parts[1], platform="linux/amd64")
+                    print("done!")
+                    break
+                except Exception as e:
+                    raise Exception(f"Failed to pull docker container image [{self.input_dto.config.container_settings.full_image_path}]: {str(e)}")
 
         for infrastructure in self.input_dto.config.test_instances:
 
@@ -166,7 +174,5 @@ class DetectionTestingManager(BaseModel):
 
             else:
 
-                print(
-                    f"Unsupported target infrastructure '{infrastructure}' and config type {self.input_dto.config}"
-                )
-                sys.exit(1)
+                raise Exception(f"Unsupported target infrastructure '{infrastructure}' and config type {self.input_dto.config}")
+                

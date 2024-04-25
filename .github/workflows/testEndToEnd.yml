@@ -18,15 +18,15 @@ jobs:
 
     runs-on: ${{ matrix.operating_system }}
     steps:
-      - name: Install Docker for macOS
-        run: |
-           brew install docker
-           # import magic fails on macos runner
-           brew install libmagic colima
-           colima start
-           # Mapping below is required to get the Python docker library working
-           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
-        if: matrix.operating_system == 'macos-latest'
+      #- name: Install Docker for macOS
+      #  run: |
+      #     brew install docker
+      #     # import magic fails on macos runner
+      #     brew install libmagic colima
+      #     colima start
+      #     # Mapping below is required to get the Python docker library working
+      #     sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
+      #  if: matrix.operating_system == 'macos-latest'
 
       #Checkout the current branch
       - name: Checkout repo

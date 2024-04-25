@@ -70,10 +70,10 @@ jobs:
 
       #Do not pause on a failed detection
       - name: Run contentctl test
+        if: ${{ matrix.operating_system }} == 'ubuntu-20.04' || ${{ matrix.operating_system }} == 'ubuntu-22.04'
         run: |
           cd my_splunk_content_pack
           poetry run contentctl test
-        if: ${{ matrix.operating_system }} != 'macos-*'
       
       - uses: actions/upload-artifact@v4
         with:

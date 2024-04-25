@@ -3,7 +3,7 @@ import os
 import pathlib
 import pygit2
 from pygit2.enums import DeltaStatus
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, FilePath
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -29,7 +29,14 @@ from contentctl.input.director import DirectorOutputDto
 class GitService(BaseModel):
     director: DirectorOutputDto
     config: test
+    gitHash: Optional[str] = None
     
+    def getHash(self)->str:
+        if self.gitHash is None:
+            raise Exception("Cannot get hash of repo, it was not set")
+        return self.gitHash
+
+
     def getContent(self)->List[Detection]:
         if isinstance(self.config.mode, Selected):
             return self.getSelected(self.config.mode.files)
@@ -47,6 +54,7 @@ class GitService(BaseModel):
 
         try:
             target_tree = repo.revparse_single(target_branch).tree
+            self.gitHash = target_tree.id
             diffs = repo.index.diff_to_tree(target_tree)
         except Exception as e:
             raise Exception(f"Error parsing diff target_branch '{target_branch}'. Are you certain that it exists?")

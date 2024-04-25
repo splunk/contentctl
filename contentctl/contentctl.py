@@ -92,11 +92,18 @@ def test_func(config:test):
     gitServer = GitService(director=director_output_dto,config=config)
     detections_to_test = gitServer.getContent()
 
+    
 
     test_input_dto = TestInputDto(detections_to_test, config)
     
     t = Test()
-
+    
+    # Remove detections that we do not want to test because they are
+    # not production, the correct type, or manual_test only
+    t.filter_detections(test_input_dto)
+    
+    config.dumpCICDPlanAndQuit(gitServer.getHash(),test_input_dto.detections)
+    
     success = t.execute(test_input_dto)
     
     if success:

@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 from contentctl.objects.enums import PostTestBehavior
 from contentctl.input.yml_reader import YmlReader
-
+from contentctl.objects.detection import Detection
 
 
 # from contentctl.objects.test_config import TestConfig
@@ -325,6 +325,9 @@ class Selected(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     files:List[FilePath] = Field(...,description="List of detection files to test, separated by spaces.")
 
+    @field_serializer('files',when_used='always')
+    def serialize_path(paths: List[FilePath])->List[str]:
+        return [str(path) for path in paths]
 
 class test_common(build):
     mode:Union[All, Changes, Selected] = Changes()
@@ -334,6 +337,10 @@ class test_common(build):
                                              "to be installed on the server. This checks for a number of different things including generation "
                                              "of appropriate notables and messages. Please note that this will increase testing time "
                                              "considerably (by approximately 2-3 minutes per detection).")
+
+    @field_serializer('post_test_behavior', when_used='always')
+    def serializePostTestBehavior(self,behavior:PostTestBehavior)->str:
+        return behavior.value
 
     def getModeName(self)->str:
         if isinstance(self.mode, All):
@@ -569,11 +576,42 @@ class test(test_common):
     container_settings:ContainerSettings = ContainerSettings()
     test_instances:List[Container] = Field(default=container_settings.getContainers(),validate_default=True)
     
-    splunk_api_username: Optional[str] = Field(default=None, description="Splunk API username used for running appinspect or installating apps from Splunkbase")
-    splunk_api_password: Optional[str] = Field(default=None, exclude=True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
+    splunk_api_username: Optional[str] = Field(default=None, exclude = True,description="Splunk API username used for running appinspect or installating apps from Splunkbase")
+    splunk_api_password: Optional[str] = Field(default=None, exclude = True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
     #apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=True, description="List of apps to install in test environment")
     
     
+    def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
+        output_file = self.path / "test_config.yml"
+        self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
+        self.post_test_behavior = PostTestBehavior.never_pause
+        
+        # We will still parse the app, but no need to do enrichments or 
+        # output to dist. We have already built it!
+        self.build_app = False
+        self.build_api = False
+        self.build_ssa = False
+        self.enrichments = False
+        self.enable_integration_testing = True
+
+        data = self.model_dump()
+        #Add relevant fields
+        data['githash'] = githash
+
+        #Remove some fields that are not relevant
+        del(data['test_instances'])
+        del(data['container_settings'])
+        del(data['apps'])
+
+
+        from contentctl.output.yml_writer import YmlWriter
+        import sys
+        YmlWriter.writeYmlFile(str(output_file), data)
+        sys.exit(0)
+        
+
+        
+
     def getLocalAppDir(self)->pathlib.Path:
         return self.path / "apps"
     

@@ -48,8 +48,8 @@ class TestOutputDto:
 
 
 class Test:
-    def execute(self, input_dto: TestInputDto) -> bool:
 
+    def filter_detections(self, input_dto: TestInputDto):
         if not input_dto.config.enable_integration_testing:
             #Skip all integraiton tests if integration testing is not enabled:
             for detection in input_dto.detections:
@@ -60,11 +60,14 @@ class Test:
         #extra filtering which may be removed/modified in the future
         for detection in input_dto.detections:
             if (detection.status != DetectionStatus.production.value):
-                print(f"{detection.name} - Not testing because [STATUS: {detection.status}]")
+                #print(f"{detection.name} - Not testing because [STATUS: {detection.status}]")
                 input_dto.detections.remove(detection)
             elif detection.type == AnalyticsType.Correlation:
-                print(f"{detection.name} - Not testing because [  TYPE: {detection.type}]")
+                #print(f"{detection.name} - Not testing because [  TYPE: {detection.type}]")
                 input_dto.detections.remove(detection)
+
+    def execute(self, input_dto: TestInputDto) -> bool:
+
         
 
         output_dto = DetectionTestingManagerOutputDto()

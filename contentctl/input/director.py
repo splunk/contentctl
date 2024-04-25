@@ -101,18 +101,18 @@ class Director():
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
 
-        if self.input_dto.build_app or self.input_dto.build_api:
-            self.createSecurityContent(SecurityContentType.deployments)
-            self.createSecurityContent(SecurityContentType.lookups)
-            self.createSecurityContent(SecurityContentType.macros)
-            self.createSecurityContent(SecurityContentType.stories)
-            self.createSecurityContent(SecurityContentType.baselines)
-            self.createSecurityContent(SecurityContentType.investigations)
-            self.createSecurityContent(SecurityContentType.playbooks)
-            self.createSecurityContent(SecurityContentType.detections)
         
-        if self.input_dto.build_ssa:
-            self.createSecurityContent(SecurityContentType.ssa_detections)
+        self.createSecurityContent(SecurityContentType.deployments)
+        self.createSecurityContent(SecurityContentType.lookups)
+        self.createSecurityContent(SecurityContentType.macros)
+        self.createSecurityContent(SecurityContentType.stories)
+        self.createSecurityContent(SecurityContentType.baselines)
+        self.createSecurityContent(SecurityContentType.investigations)
+        self.createSecurityContent(SecurityContentType.playbooks)
+        self.createSecurityContent(SecurityContentType.detections)
+
+
+        self.createSecurityContent(SecurityContentType.ssa_detections)
         
 
     def createSecurityContent(self, contentType: SecurityContentType) -> None:
@@ -131,7 +131,7 @@ class Director():
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, str(contentType.name)))
             security_content_files = [f for f in files if not f.name.startswith('ssa___')]
         else:
-             raise(Exception(f"Cannot createSecurityContent for unknown product.  We must have at least one of 'build_app: True', 'build:api: True', and/or 'build_ssa: True' "))
+             raise(Exception(f"Cannot createSecurityContent for unknown product."))
 
         validation_errors = []
                 

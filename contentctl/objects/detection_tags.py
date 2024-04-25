@@ -214,13 +214,31 @@ class DetectionTags(BaseModel):
         
         matched_tests:List[AtomicTest] = []
         missing_tests:List[UUID4] = []
-        for atomic_guid in v:
+        badly_formatted_guids:List[str] = []
+        for atomic_guid_str in v:
             try:
-                matched_tests.append(AtomicTest.getAtomicByAtomicGuid(uuid.UUID(atomic_guid),all_tests))
+                #Ensure that this is a valid UUID
+                atomic_guid = uuid.UUID(str(atomic_guid_str))
+            except Exception as e:
+                #We will not try to load a test for this since it was invalid
+                badly_formatted_guids.append(str(atomic_guid_str))
+                continue
+            try:
+                matched_tests.append(AtomicTest.getAtomicByAtomicGuid(atomic_guid,all_tests))
             except Exception as _:
                 missing_tests.append(atomic_guid)
-        if len(missing_tests) > 0:
-            raise ValueError(f"Failed to find {len(missing_tests)} Atomic Tests with the following atomic_guids (called auto-generated_guid in the ART Repo): {missing_tests}")
+        if len(missing_tests) > 0 or len(badly_formatted_guids) > 0:
+            if len(badly_formatted_guids) > 0:
+                bad_guids_string = f"The following [{len(badly_formatted_guids)}] value(s) are not properly formatted UUIDs: {badly_formatted_guids}\n"
+            else:
+                bad_guids_string = ""
+            if len(missing_tests) > 0:
+                missing_tests_string = f"Failed to find [{len(missing_tests)}] Atomic Test(s) with the following atomic_guids "\
+                                       f"(called auto-generated_guid in the ART Repo). "\
+                                       f"Verify that they exist and try updating/pulling the repo again: {[str(guid) for guid in missing_tests]}"
+            else:
+                missing_tests_string = ""
+            raise ValueError(f"{bad_guids_string}{missing_tests_string}")
 
         return matched_tests
     

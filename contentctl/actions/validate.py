@@ -20,7 +20,7 @@ from contentctl.objects.atomic import AtomicTest
 class Validate:
     def execute(self, input_dto: validate) -> DirectorOutputDto:
         
-        director_output_dto = DirectorOutputDto(AtomicTest.getAtomicTestsFromArtRepo(),
+        director_output_dto = DirectorOutputDto(AtomicTest.getAtomicTestsFromArtRepo(enabled=input_dto.enrichments),
                                                 AttackEnrichment.getAttackEnrichment(input_dto),
                                                 [],[],[],[],[],[],[],[],[])
 

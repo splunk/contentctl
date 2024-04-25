@@ -1,6 +1,6 @@
 import os
 import sys
-import pathlib
+from typing import Union
 from dataclasses import dataclass, field
 from pydantic import ValidationError
 from uuid import UUID
@@ -33,7 +33,7 @@ from contentctl.objects.config import validate
 class DirectorOutputDto:
      # Atomic Tests are first because parsing them 
      # is far quicker than attack_enrichment
-     atomic_tests: list[AtomicTest] 
+     atomic_tests: Union[list[AtomicTest],None]
      attack_enrichment: AttackEnrichment
      detections: list[Detection]
      stories: list[Story]

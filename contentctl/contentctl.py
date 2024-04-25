@@ -97,7 +97,13 @@ def test_func(config:test):
     
     t = Test()
 
-    t.execute(test_input_dto)
+    success = t.execute(test_input_dto)
+    
+    if success:
+        #Everything passed!
+        print("All tests have run successfully or been marked as 'skipped'")
+        return
+    raise Exception("There was at least one unsuccessful test")
 
 def test_servers_func(config:test_servers):
     raise Exception("Not yet done")
@@ -146,27 +152,30 @@ def main():
         config = tyro.cli(models)
    
     
-    
-    if type(config) == init:
-        t.__dict__.update(config.__dict__)
-        init_func(t)
-    elif type(config) == validate:
-        validate_func(config)
-    elif type(config) == build:
-        build_func(config)
-    elif type(config) == new:
-        new_func(config)
-    elif type(config) == inspect:
-        inspect_func(config)
-    elif type(config) == deploy_acs:
-        updated_config = deploy_acs.model_validate(config)
-        deploy_acs_func(updated_config)
-    elif type(config) == deploy_rest:
-        deploy_rest_func(config)
-    elif type(config) == test:
-        test_func(config)
-    elif type(config) == test_servers:
-        test_servers_func(config)
-    else:
-        raise Exception(f"Unknown command line type '{type(config).__name__}'")
+    try:
+        if type(config) == init:
+            t.__dict__.update(config.__dict__)
+            init_func(t)
+        elif type(config) == validate:
+            validate_func(config)
+        elif type(config) == build:
+            build_func(config)
+        elif type(config) == new:
+            new_func(config)
+        elif type(config) == inspect:
+            inspect_func(config)
+        elif type(config) == deploy_acs:
+            updated_config = deploy_acs.model_validate(config)
+            deploy_acs_func(updated_config)
+        elif type(config) == deploy_rest:
+            deploy_rest_func(config)
+        elif type(config) == test:
+            test_func(config)
+        elif type(config) == test_servers:
+            test_servers_func(config)
+        else:
+            raise Exception(f"Unknown command line type '{type(config).__name__}'")
+    except Exception as e:
+        print(e)
+        sys.exit(1)
     

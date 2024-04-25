@@ -1,7 +1,7 @@
 from __future__ import annotations
 from contentctl.input.yml_reader import YmlReader
 from pydantic import BaseModel, model_validator, ConfigDict, FilePath, UUID4
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Self
 import pathlib
 # We should determine if we want to use StrEnum, which is only present in Python3.11+
 # Alternatively, we can use
@@ -87,9 +87,20 @@ class AtomicTest(BaseModel):
     dependencies: Optional[List[AtomicDependency]] = None
     dependency_executor_name: Optional[DependencyExecutorType] = None
 
+    @staticmethod
+    def AtomicTestWhenEnrichmentIsDisabled(auto_generated_guid: UUID4)->Self:
+        return AtomicTest(name="Placeholder Atomic Test (enrichment disabled)",
+                          auto_generated_guid=auto_generated_guid,
+                          description="This is a placeholder AtomicTest. Because enrichments were not enabled, it has not been validated against the real Atomic Red Team Repo.",
+                          supported_platforms=[],
+                          executor=AtomicExecutor(name="Placeholder Executor (enrichment disabled)", 
+                                                  command="Placeholder command (enrichment disabled)"))
+
 
     @classmethod
-    def getAtomicByAtomicGuid(cls, guid: UUID4, all_atomics:List[AtomicTest])->AtomicTest:
+    def getAtomicByAtomicGuid(cls, guid: UUID4, all_atomics:Union[List[AtomicTest],None])->AtomicTest:
+        if all_atomics is None:
+            return AtomicTest.AtomicTestWhenEnrichmentIsDisabled(guid)
         matching_atomics = [atomic for atomic in all_atomics if atomic.auto_generated_guid == guid]
         if len(matching_atomics) == 0:
             raise ValueError(f"Unable to find atomic_guid {guid} in {len(all_atomics)} atomic_tests from ART Repo")
@@ -129,10 +140,13 @@ class AtomicTest(BaseModel):
         return atomic_file
     
     @classmethod
-    def getAtomicTestsFromArtRepo(cls, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->List[AtomicTest]:
+    def getAtomicTestsFromArtRepo(cls, enabled:bool=True, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->Union[List[AtomicTest],None]:
         # Get all the atomic files.  Note that if the ART repo is not found, we will not throw an error,
         # but will not have any atomics. This means that if atomic_guids are referenced during validation,
         # validation for those detections will fail
+        if not enabled:
+            return None
+        
         atomic_files = cls.getAtomicFilesFromArtRepo(repo_path)
             
         atomic_tests:List[AtomicTest] = []

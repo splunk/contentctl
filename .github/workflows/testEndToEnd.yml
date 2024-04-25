@@ -26,7 +26,7 @@ jobs:
            colima start
            # Mapping below is required to get the Python docker library working
            sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
-        if: matrix.operating_system == 'macos'
+        if: matrix.operating_system == 'macos-latest'
 
       #Checkout the current branch
       - name: Checkout repo

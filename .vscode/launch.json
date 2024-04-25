@@ -1,52 +1,68 @@
 {
-    "configurations": [
-        {
-            "name": "contentctl init",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "/Users/emcginnis/Library/Caches/pypoetry/virtualenvs/contentctl-9mb55Yie-py3.11/bin/contentctl",
-            "cwd": "/Users/emcginnis/vcs/gitlab/security_content/ddd",
-            "args": ["init"]
-        },
-        {
-            "name": "contentctl validate",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "/Users/emcginnis/Library/Caches/pypoetry/virtualenvs/contentctl-9mb55Yie-py3.11/bin/contentctl",
-            "cwd": "/Users/emcginnis/vcs/gitlab/security_content",
-            "args": ["validate"]
-        },
-        {
-            "name": "contentctl build",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "/Users/emcginnis/Library/Caches/pypoetry/virtualenvs/contentctl-9mb55Yie-py3.11/bin/contentctl",
-            "cwd": "/Users/emcginnis/vcs/gitlab/security_content",
-            "args": ["build"]
-        },
-        {
-            "name": "contentctl test",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "/Users/emcginnis/Library/Caches/pypoetry/virtualenvs/contentctl-9mb55Yie-py3.11/bin/contentctl",
-            "cwd": "/Users/emcginnis/vcs/gitlab/security_content",
-            "args": ["test"]
-        },
-        {
-            "name": "contentctl --help",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "/Users/emcginnis/Library/Caches/pypoetry/virtualenvs/contentctl-9mb55Yie-py3.11/bin/contentctl",
-            "cwd": "/Users/emcginnis/vcs/gitlab/security_content",
-            "args": ["--help"]
-        },
-        {
-            "name": "contentctl test",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "/Users/emcginnis/Library/Caches/pypoetry/virtualenvs/contentctl-9mb55Yie-py3.11/bin/contentctl",
-            "cwd": "/Users/emcginnis/vcs/gitlab/security_content",
-            "args": ["test", "mode:selected", "--mode.files", "detections/endpoint/3cx_supply_chain_attack_network_indicators.yml"]
-        }
-    ]
+"configurations": [
+    {
+        "name": "contentctl init",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../ddd/",
+        "args": ["init"]
+    },
+    {
+        "name": "contentctl validate",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["validate"]
+    },
+    {
+        "name": "contentctl validate enrich",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["validate", "--enrichments"]
+    },
+    {
+        "name": "contentctl build",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["build"]
+    },
+    {
+        "name": "contentctl build enrich",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["build", "--enrichments"]
+    },
+    {
+        "name": "contentctl test",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["test"]
+    },
+    {
+        "name": "contentctl --help",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["--help"]
+    },
+    {
+        "name": "contentctl test detection",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["test", "mode:selected", "--mode.files", "detections/endpoint/3cx_supply_chain_attack_network_indicators.yml"]
+    }
+]
 }

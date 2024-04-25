@@ -16,6 +16,7 @@ from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.ssa_detection_tags import SSADetectionTags
 from contentctl.objects.unit_test_ssa import UnitTestSSA
+from contentctl.objects.unit_test_old import UnitTestOld
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.baseline import Baseline
@@ -48,7 +49,7 @@ class SSADetection(BaseModel):
     mappings: dict = None
     file_path: str = None
     source: str = None
-    test: Union[UnitTestSSA, dict] = None
+    test: Union[UnitTestSSA, dict, UnitTestOld] = None
     runtime: str = None
     internalVersion: int = None
 

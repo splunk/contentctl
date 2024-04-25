@@ -2,7 +2,7 @@ import os
 import re
 
 from urllib.parse import urlparse
-import pathlib
+
 from contentctl.output.yml_writer import YmlWriter
 from contentctl.objects.enums import SecurityContentType
 from contentctl.output.finding_report_writer import FindingReportObject
@@ -21,7 +21,7 @@ class BAYmlOutput():
             YmlWriter.writeYmlFile(file_path, object)
 
 
-    def writeObjects(self, objects: list, output_path: pathlib.Path, type: SecurityContentType = None) -> None:
+    def writeObjects(self, objects: list, output_path: str, contentType: SecurityContentType = None) -> None:
         for obj in objects: 
             file_name = "ssa___" + self.convertNameToFileName(obj.name, obj.tags)
             if self.isComplexBARule(obj.search):
@@ -31,7 +31,7 @@ class BAYmlOutput():
 
             # add research object
             RESEARCH_SITE_BASE = 'https://research.splunk.com/'
-            research_site_url = RESEARCH_SITE_BASE + obj.getSource() + "/" + obj.id + "/"
+            research_site_url = RESEARCH_SITE_BASE + obj.source + "/" + obj.id + "/"
             obj.tags.research_site_url = research_site_url
 
             # add ocsf schema tag
@@ -46,12 +46,10 @@ class BAYmlOutput():
                 }
                 test_dict["tests"][0]["name"] = obj.name
                 for count in range(len(test_dict["tests"][0]["attack_data"])):
-                    a = urlparse(test_dict["tests"][0]["attack_data"][count]["data"])
+                    a = urlparse(str(test_dict["tests"][0]["attack_data"][count]["data"]))
                     test_dict["tests"][0]["attack_data"][count]["file_name"] = os.path.basename(a.path)
-                test = UnitTestOld.model_validate(test_dict)
-                print("UNIT_TEST_OLD_DEBUGGING_BREAKPOINT")
-                import code
-                code.interact(local=locals())
+
+                test = UnitTestOld.parse_obj(test_dict)
 
                 obj.test = test
 
@@ -152,5 +150,4 @@ class BAYmlOutput():
 
     def isComplexBARule(self, search):
         return re.findall("stats|first_time_event|adaptive_threshold", search)
-
 

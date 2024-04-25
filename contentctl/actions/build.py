@@ -82,7 +82,7 @@ class Build:
             srs_path.mkdir(parents=True)
             complex_path.mkdir(parents=True)
             ba_yml_output = BAYmlOutput()
-            ba_yml_output.writeObjects(input_dto.director_output_dto.ssa_detections, srs_path)
+            ba_yml_output.writeObjects(input_dto.director_output_dto.ssa_detections, str(input_dto.config.getSSAPath()))
 
         
                 

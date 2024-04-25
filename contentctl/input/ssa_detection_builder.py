@@ -23,8 +23,9 @@ class SSADetectionBuilder():
     def setObject(self, path: str,
                   output_dto:DirectorOutputDto ) -> None:
         yml_dict = YmlReader.load_file(path)
-        self.security_content_obj = SSADetection.model_validate(yml_dict, context={"output_dto":output_dto})      
-
+        #self.security_content_obj = SSADetection.model_validate(yml_dict, context={"output_dto":output_dto})     
+        self.security_content_obj = SSADetection.parse_obj(yml_dict)
+        self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]
 
     def addProvidingTechnologies(self) -> None:
         if self.security_content_obj:

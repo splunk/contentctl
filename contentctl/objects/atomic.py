@@ -128,7 +128,7 @@ class AtomicTest(BaseModel):
             except Exception as e:
                 error_messages.append(f"File [{obj_path}]\n{str(e)}")
         if len(error_messages) > 0:
-            exceptions_string = '\n - '.join(error_messages)
+            exceptions_string = '\n\n'.join(error_messages)
             raise ValueError(f"The following {len(error_messages)} were generated when parsing the Atomic Red Team Repo:\n\n{exceptions_string}")
         
         return atomic_files

@@ -79,16 +79,21 @@ class Director():
         self.ssa_detection_builder = SSADetectionBuilder()
     
     def addContentToDictMappings(self, content:SecurityContentObject):
-         if content.name in self.output_dto.name_to_content_map:
-            raise ValueError(f"Duplicate name '{content.name}' with paths:\n"
+         content_name = content.name
+         if isinstance(content,SSADetection):
+            # Since SSA detections may have the same name as ESCU detection,
+            # for this function we prepend 'SSA ' to the name.
+            content_name = f"SSA {content_name}"               
+         if content_name in self.output_dto.name_to_content_map:
+            raise ValueError(f"Duplicate name '{content_name}' with paths:\n"
                              f" - {content.file_path}\n"
-                             f" - {self.output_dto.name_to_content_map[content.name].file_path}")
+                             f" - {self.output_dto.name_to_content_map[content_name].file_path}")
          elif content.id in self.output_dto.uuid_to_content_map:
             raise ValueError(f"Duplicate id '{content.id}' with paths:\n"
                     f" - {content.file_path}\n"
-                    f" - {self.output_dto.name_to_content_map[content.name].file_path}")
+                    f" - {self.output_dto.name_to_content_map[content_name].file_path}")
          
-         self.output_dto.name_to_content_map[content.name] = content 
+         self.output_dto.name_to_content_map[content_name] = content 
          self.output_dto.uuid_to_content_map[content.id] = content 
     
         
@@ -113,21 +118,25 @@ class Director():
     def createSecurityContent(self, contentType: SecurityContentType) -> None:
         if contentType == SecurityContentType.ssa_detections:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, 'ssa_detections'))
-        else:
+            security_content_files = [f for f in files if f.name.startswith('ssa___')]
+            
+        elif contentType in [SecurityContentType.deployments, 
+                             SecurityContentType.lookups, 
+                             SecurityContentType.macros, 
+                             SecurityContentType.stories,
+                             SecurityContentType.baselines,
+                             SecurityContentType.investigations,
+                             SecurityContentType.playbooks,
+                             SecurityContentType.detections]:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, str(contentType.name)))
+            security_content_files = [f for f in files if not f.name.startswith('ssa___')]
+        else:
+             raise(Exception(f"Cannot createSecurityContent for unknown product.  We must have at least one of 'build_app: True', 'build:api: True', and/or 'build_ssa: True' "))
 
         validation_errors = []
                 
         already_ran = False
         progress_percent = 0
-
-        if self.input_dto.build_app or self.input_dto.build_api:
-            security_content_files = [f for f in files if not f.name.startswith('ssa___')]
-        elif self.input_dto.build_ssa:
-            security_content_files = [f for f in files if f.name.startswith('ssa___')]
-        else:
-            raise(Exception(f"Cannot createSecurityContent for unknown product.  We must have at least one of 'build_app: True', 'build:api: True', and/or 'build_ssa: True' "))
-
         
         for index,file in enumerate(security_content_files):
             progress_percent = ((index+1)/len(security_content_files)) * 100
@@ -178,7 +187,7 @@ class Director():
                 elif contentType == SecurityContentType.ssa_detections:
                         self.constructSSADetection(self.ssa_detection_builder, self.output_dto,str(file))
                         ssa_detection = self.ssa_detection_builder.getObject()
-                        if ssa_detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
+                        if ssa_detection.status in [DetectionStatus.production.value, DetectionStatus.validation.value]:
                             self.output_dto.ssa_detections.append(ssa_detection)
                             self.addContentToDictMappings(ssa_detection)
 

@@ -84,6 +84,6 @@ class Build:
             ba_yml_output = BAYmlOutput()
             ba_yml_output.writeObjects(input_dto.director_output_dto.ssa_detections, str(input_dto.config.getSSAPath()))
 
-        
+            print(f"Build of 'SSA' successful to {input_dto.config.getSSAPath()}")
                 
         return input_dto.director_output_dto

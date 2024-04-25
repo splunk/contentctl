@@ -23,6 +23,7 @@ from contentctl.objects.base_test_result import TestResultStatus
 
 
 class UnitTestAttackDataSSA(BaseModel):
+    file_name:Optional[str] = None
     data: str = Field(...)
     # TODO - should source and sourcetype should be mapped to a list
     # of supported source and sourcetypes in a given environment?

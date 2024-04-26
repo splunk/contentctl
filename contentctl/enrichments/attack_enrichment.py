@@ -53,7 +53,6 @@ class AttackEnrichment(BaseModel):
 
     
     def get_attack_lookup(self, input_path: str, store_csv = False, force_cached_or_offline: bool = False, skip_enrichment:bool = False) -> dict:
-        force_cached_or_offline = True
         if self.use_enrichment is False:
             return {}
         print("Getting MITRE Attack Enrichment Data. This may take some time...")

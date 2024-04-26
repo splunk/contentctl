@@ -53,6 +53,7 @@ class AttackEnrichment(BaseModel):
 
     
     def get_attack_lookup(self, input_path: str, store_csv = False, force_cached_or_offline: bool = False, skip_enrichment:bool = False) -> dict:
+        force_cached_or_offline = True
         if self.use_enrichment is False:
             return {}
         print("Getting MITRE Attack Enrichment Data. This may take some time...")
@@ -128,8 +129,16 @@ class AttackEnrichment(BaseModel):
             dict_from_csv = {}
             with open(file_path, mode='r') as inp:
                 reader = csv.reader(inp)
+                #self.addMitreID(technique=['technique_id': rows[0], 'technique': rows[1]], tactics=rows[2].split('|'), groups=rows[3].split('|')) for rows in reader
                 attack_lookup = {rows[0]:{'technique': rows[1], 'tactics': rows[2].split('|'), 'groups': rows[3].split('|')} for rows in reader}
             attack_lookup.pop('mitre_id')
+            for key in attack_lookup.keys():
+                technique_input = {'technique_id': key , 'technique': attack_lookup[key]['technique'] }
+                tactics_input = attack_lookup[key]['tactics']
+                groups_input = attack_lookup[key]['groups']
+                self.addMitreID(technique=technique_input, tactics=tactics_input, groups=groups_input)
+            
+                
 
         print("Done!")
         return attack_lookup

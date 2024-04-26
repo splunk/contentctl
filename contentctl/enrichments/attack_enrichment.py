@@ -52,12 +52,12 @@ class AttackEnrichment(BaseModel):
                                                         mitre_attack_groups=groups)
 
     
-    def get_attack_lookup(self, input_path: str, store_csv = False, force_cached_or_offline: bool = False, skip_enrichment:bool = False) -> dict:
+    def get_attack_lookup(self, input_path: str, store_csv: bool = False, force_cached_or_offline: bool = False, skip_enrichment:bool = False) -> dict:
         if self.use_enrichment is False:
             return {}
         print("Getting MITRE Attack Enrichment Data. This may take some time...")
         attack_lookup = dict()
-        file_path = os.path.join(input_path, "lookups", "mitre_enrichment.csv")
+        file_path = os.path.join(input_path, "app_template", "lookups", "mitre_enrichment.csv")
 
         if skip_enrichment is True:
             print("Skipping enrichment")
@@ -124,12 +124,18 @@ class AttackEnrichment(BaseModel):
 
         except Exception as err:
             print(f'\nError: {str(err)}')
-            print('Use local copy lookups/mitre_enrichment.csv')
-            dict_from_csv = {}
+            print('Use local copy app_template/lookups/mitre_enrichment.csv')
             with open(file_path, mode='r') as inp:
                 reader = csv.reader(inp)
                 attack_lookup = {rows[0]:{'technique': rows[1], 'tactics': rows[2].split('|'), 'groups': rows[3].split('|')} for rows in reader}
             attack_lookup.pop('mitre_id')
+            for key in attack_lookup.keys():
+                technique_input = {'technique_id': key , 'technique': attack_lookup[key]['technique'] }
+                tactics_input = attack_lookup[key]['tactics']
+                groups_input = attack_lookup[key]['groups']
+                self.addMitreID(technique=technique_input, tactics=tactics_input, groups=groups_input)
+            
+                
 
         print("Done!")
         return attack_lookup

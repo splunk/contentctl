@@ -608,11 +608,11 @@ class test(test_common):
         data = self.model_dump()
         #Add relevant fields
         data['githash'] = str(githash)
-
+        
         #Remove some fields that are not relevant
         del(data['test_instances'])
         del(data['container_settings'])
-        del(data['apps'])
+        #del(data['apps'])
 
         try:
             YmlWriter.writeYmlFile(str(output_file), data)

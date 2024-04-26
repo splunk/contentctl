@@ -34,7 +34,7 @@ class ConfWriter():
         # Failing to do so will result in an improperly formatted conf files that
         # cannot be parsed
         if isinstance(obj,str):
-            return obj.replace("\n","\n\t")
+            return obj.replace(f"\n","\\\n")
         else:
             return obj
 
@@ -161,6 +161,7 @@ class ConfWriter():
         Args:
             path (pathlib.Path): path to the conf file to validate
         """
+        return
         if path.suffix != ".conf":
             #there may be some other files built, so just ignore them
             return

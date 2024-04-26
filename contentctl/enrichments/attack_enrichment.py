@@ -57,7 +57,7 @@ class AttackEnrichment(BaseModel):
             return {}
         print("Getting MITRE Attack Enrichment Data. This may take some time...")
         attack_lookup = dict()
-        file_path = os.path.join(input_path, "lookups", "mitre_enrichment.csv")
+        file_path = os.path.join(input_path, "app_template", "lookups", "mitre_enrichment.csv")
 
         if skip_enrichment is True:
             print("Skipping enrichment")
@@ -124,7 +124,7 @@ class AttackEnrichment(BaseModel):
 
         except Exception as err:
             print(f'\nError: {str(err)}')
-            print('Use local copy lookups/mitre_enrichment.csv')
+            print('Use local copy app_template/lookups/mitre_enrichment.csv')
             dict_from_csv = {}
             with open(file_path, mode='r') as inp:
                 reader = csv.reader(inp)

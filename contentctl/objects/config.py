@@ -2,7 +2,8 @@ from __future__ import annotations
 from pydantic import (
     BaseModel, Field, field_validator, 
     field_serializer, ConfigDict, DirectoryPath,
-    PositiveInt, FilePath, HttpUrl, AnyUrl, computed_field, model_validator
+    PositiveInt, FilePath, HttpUrl, AnyUrl, computed_field, model_validator,
+    ValidationInfo
 )
 from contentctl.output.yml_writer import YmlWriter
 
@@ -20,32 +21,8 @@ from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 
 
-# from contentctl.objects.test_config import TestConfig
-
-
-# PASSWORD = ''.join([random.choice(string.ascii_letters + string.digits) for i in range(16)])
-
-# class ConfigGlobal(BaseModel):
-#     log_path: str
-#     log_level: str
-
-
-# class ConfigAlertAction(BaseModel):
-#     notable: ConfigNotable
-
-
-# class ConfigDeploy(BaseModel):
-#     description: str = "Description for this deployment target"
-#     server: str = "127.0.0.1"
-
-# CREDENTIAL_MISSING = "PROVIDE_CREDENTIALS_VIA_CMD_LINE_ARGUMENT"
-# class ConfigDeployACS(ConfigDeploy):
-#     token: str = CREDENTIAL_MISSING
-
-
-# class Deployments(BaseModel):
-#     acs_deployments: list[ConfigDeployACS] = []
-#     rest_api_deployments: list[ConfigDeployRestAPI] = [ConfigDeployRestAPI()]
+ENTERPRISE_SECURITY_UID = 263
+COMMON_INFORMATION_MODEL_UID = 1621
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/download"
 
@@ -329,40 +306,6 @@ class Selected(BaseModel):
     def serialize_path(paths: List[FilePath])->List[str]:
         return [str(path) for path in paths]
 
-class test_common(build):
-    mode:Union[All, Changes, Selected] = Changes()
-    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
-    test_instances:List[Infrastructure] = Field(...)
-    enable_integration_testing: bool = Field(default=False, description="Enable integration testing, which REQUIRES Splunk Enterprise Security "
-                                             "to be installed on the server. This checks for a number of different things including generation "
-                                             "of appropriate notables and messages. Please note that this will increase testing time "
-                                             "considerably (by approximately 2-3 minutes per detection).")
-    plan_only:bool = Field(default=False, exclude=True, description="WARNING - This is an advanced feature and currently intended for widespread use. "
-                           "This flag is useful for building your app and generating a test plan to run on different infrastructure.  "
-                           "This flag does not actually perform the test. Instead, it builds validates all content and builds the app(s).  "
-                           "It MUST be used with mode.changes and must run in the context of a git repo.")
-
-    @model_validator(mode='after')
-    def checkPlanOnlyUse(self)->Self:
-        #Ensure that mode is CHANGES
-        if self.plan_only and not isinstance(self.mode, Changes):
-            raise ValueError("plan_only MUST be used with --mode:changes")        
-        return self
-
-    @field_serializer('post_test_behavior', when_used='always')
-    def serializePostTestBehavior(self,behavior:PostTestBehavior)->str:
-        return behavior.value
-
-    def getModeName(self)->str:
-        if isinstance(self.mode, All):
-            return "All"
-        elif isinstance(self.mode, Changes):
-            return "Changes"
-        else:
-            return "Selected"
-
-
-
 DEFAULT_APPS:List[TestApp] = [
         TestApp(
             uid=1621,
@@ -582,15 +525,99 @@ DEFAULT_APPS:List[TestApp] = [
         ),
     ]
 
+class test_common(build):
+    mode:Union[All, Changes, Selected] = Changes()
+    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
+    test_instances:List[Infrastructure] = Field(...)
+    enable_integration_testing: bool = Field(default=False, description="Enable integration testing, which REQUIRES Splunk Enterprise Security "
+                                             "to be installed on the server. This checks for a number of different things including generation "
+                                             "of appropriate notables and messages. Please note that this will increase testing time "
+                                             "considerably (by approximately 2-3 minutes per detection).")
+    plan_only:bool = Field(default=False, exclude=True, description="WARNING - This is an advanced feature and currently intended for widespread use. "
+                           "This flag is useful for building your app and generating a test plan to run on different infrastructure.  "
+                           "This flag does not actually perform the test. Instead, it builds validates all content and builds the app(s).  "
+                           "It MUST be used with mode.changes and must run in the context of a git repo.")
+
+    apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=False, description="List of apps to install in test environment")
+    
+    
+    def enterpriseSecurityInApps(self)->bool:
+        
+        for app in self.apps:
+            if app.uid == ENTERPRISE_SECURITY_UID:
+                return True
+        return False
+    
+    def commonInformationModelInApps(self)->bool:
+        for app in self.apps:
+            if app.uid == COMMON_INFORMATION_MODEL_UID:
+                return True
+        return False    
+
+    @model_validator(mode='after')
+    def ensureCommonInformationModel(self)->Self:
+        if self.commonInformationModelInApps():
+            return self
+        raise ValueError(f"Common Information Model/CIM "
+                         f"(uid: [{COMMON_INFORMATION_MODEL_UID}]) is not listed in apps. "
+                         f"contentctl test MUST include Common Information Model")
+                         
+                         
+
+
+    @model_validator(mode='after')
+    def ensureEnterpriseSecurityForIntegrationTesting(self)->Self:
+        if not self.enable_integration_testing:
+            return self
+        if self.enterpriseSecurityInApps():
+            return self
+            
+        raise ValueError(f"enable_integration_testing is [{self.enable_integration_testing}], "
+                         f"but the Splunk Enterprise Security "
+                         f"App (uid: [{ENTERPRISE_SECURITY_UID}]) is not listed in apps. "
+                         f"Integration Testing MUST include Enterprise Security.")
+        
+
+
+    @model_validator(mode='after')
+    def checkPlanOnlyUse(self)->Self:
+        #Ensure that mode is CHANGES
+        if self.plan_only and not isinstance(self.mode, Changes):
+            raise ValueError("plan_only MUST be used with --mode:changes")        
+        return self
+
+
+    def getModeName(self)->str:
+        if isinstance(self.mode, All):
+            return "All"
+        elif isinstance(self.mode, Changes):
+            return "Changes"
+        else:
+            return "Selected"
+
+
+    
+
+
+
 class test(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     container_settings:ContainerSettings = ContainerSettings()
-    test_instances:List[Container] = Field(default=container_settings.getContainers(),validate_default=True)
-    
+    test_instances: List[Container] = Field([], exclude = True, validate_default=True)
     splunk_api_username: Optional[str] = Field(default=None, exclude = True,description="Splunk API username used for running appinspect or installating apps from Splunkbase")
     splunk_api_password: Optional[str] = Field(default=None, exclude = True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
-    #apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=True, description="List of apps to install in test environment")
     
+    
+    @model_validator(mode='after')
+    def get_test_instances(self)->Self:
+        if len(self.test_instances) > 0:
+            return self
+        try:
+            self.test_instances = self.container_settings.getContainers()
+            return self
+            
+        except Exception as e:
+            raise ValueError(f"Error constructing test_instances: {str(e)}")
     
     def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
         output_file = self.path / "test_plan.yml"
@@ -651,22 +678,6 @@ class test(test_common):
             raise Exception(f"Error validating test apps: {str(e)}")
         return self
 
-    @computed_field
-    @property
-    def apps(self)->List[TestApp]:        
-        if not self.getAppFilePath().exists():
-            return DEFAULT_APPS
-        
-        app_objects:List[App_Base] = []
-        data:List[dict[str,Any]] = YmlReader.load_file(self.getAppFilePath())
-        for app in data:
-            try:
-                t = TestApp.model_validate(app)
-                app_objects.append(t)
-            except Exception as e:
-                raise Exception(f"Failed parsing the following dictionary into a test app with error(s) :{str(e)}:\n\n{app}")
-
-        return app_objects
     
     def getContainerEnvironmentString(self,stage_file:bool=True, include_custom_app:bool=True)->str:
         apps:List[App_Base] = self.apps

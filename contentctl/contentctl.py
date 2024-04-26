@@ -156,13 +156,15 @@ def main():
     )
     
 
-    # Since some model(s) were constructed and not model_validated, we have to catch
-    # warnings again when creating the cli
-    with warnings.catch_warnings(action="ignore"):
-        config = tyro.cli(models)
+
    
     
     try:
+        # Since some model(s) were constructed and not model_validated, we have to catch
+        # warnings again when creating the cli
+        with warnings.catch_warnings(action="ignore"):
+            config = tyro.cli(models)
+
         if type(config) == init:
             t.__dict__.update(config.__dict__)
             init_func(t)

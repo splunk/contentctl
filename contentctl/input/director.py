@@ -145,7 +145,7 @@ class Director():
                 modelDict = YmlReader.load_file(file)
 
                 if contentType == SecurityContentType.lookups:
-                        lookup = Lookup.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        lookup = Lookup.model_validate(modelDict,context={"output_dto":self.output_dto, "config":self.input_dto})
                         self.output_dto.lookups.append(lookup)
                         self.addContentToDictMappings(lookup)
                 

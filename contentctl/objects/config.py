@@ -35,7 +35,9 @@ class App_Base(BaseModel,ABC):
     version: str = Field(description="The version of your Content Pack.  This must follow semantic versioning guidelines.")
     description: Optional[str] = Field(default="description of app",description="Free text description of the Content Pack.")
     
-   
+
+    
+
     def getSplunkbasePath(self)->HttpUrl:
         return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid, release=self.version))
 
@@ -540,7 +542,7 @@ class test_common(build):
 
     apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=False, description="List of apps to install in test environment")
     
-    
+
     def enterpriseSecurityInApps(self)->bool:
         
         for app in self.apps:
@@ -622,7 +624,7 @@ class test(test_common):
     def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
         output_file = self.path / "test_plan.yml"
         self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
-        self.post_test_behavior = PostTestBehavior.never_pause
+        self.post_test_behavior = PostTestBehavior.never_pause.value
         
         # We will still parse the app, but no need to do enrichments or 
         # output to dist. We have already built it!
@@ -637,7 +639,6 @@ class test(test_common):
         data['githash'] = str(githash)
         
         #Remove some fields that are not relevant
-        del(data['test_instances'])
         del(data['container_settings'])
         #del(data['apps'])
 
@@ -703,3 +704,5 @@ class test(test_common):
 class test_servers(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     test_instances:List[Infrastructure] = Field([Infrastructure(instance_name="splunk_target", instance_address="splunkServerAddress.com")],description="Test against one or more preconfigured servers.")
+
+

@@ -4,7 +4,9 @@ from typing import TYPE_CHECKING, Optional, Any, Union
 import re
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
+    from contentctl.objects.config import validate
 from contentctl.objects.security_content_object import SecurityContentObject
+
 
 LOOKUPS_TO_IGNORE = set(["outputlookup"])
 LOOKUPS_TO_IGNORE.add("ut_shannon_lookup") #In the URL toolbox app which is recommended for ESCU
@@ -50,9 +52,13 @@ class Lookup(SecurityContentObject):
         return model
 
     @model_validator(mode="before")
-    def fix_lookup_path(cls, data:Any)->Any:
+    def fix_lookup_path(cls, data:Any, info: ValidationInfo)->Any:
         if data.get("filename"):
-            data["filename"] = "lookups/" + data["filename"]
+            config:validate = info.context.get("config",None)
+            if config is not None:
+                data["filename"] = config.path / "lookups/" / data["filename"]
+            else:
+                raise ValueError("config required for constructing lookup filename, but it was not")
         return data
 
     @field_validator('filename')

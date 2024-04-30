@@ -51,7 +51,6 @@ class Detection_Abstract(SecurityContentObject):
     # https://docs.pydantic.dev/latest/concepts/unions/#left-to-right-mode
     # https://github.com/pydantic/pydantic/issues/9101#issuecomment-2019032541
     tests: List[Annotated[Union[UnitTest, IntegrationTest], Field(union_mode='left_to_right')]] = []
-
     # A list of groups of tests, relying on the same data
     test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)
 
@@ -678,4 +677,13 @@ class Detection_Abstract(SecurityContentObject):
             summary_dict["tests"].append(result)
 
         # Return the summary
+
         return summary_dict
+
+
+    def getMetadata(self)->dict[str,str]:
+        return {'detection_id':str(self.id),
+                'deprecated':'1' if self.status==DetectionStatus.deprecated.value else '0',
+                'detection_version':str(self.version)}
+
+

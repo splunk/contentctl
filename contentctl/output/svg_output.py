@@ -35,7 +35,7 @@ class SvgOutput():
         
 
         total_dict:dict[str,Any] = self.get_badge_dict("Detections", detections, detections)
-        production_dict:dict[str,Any] = self.get_badge_dict("% Production", detections, [detection for detection in detections if detection.status == DetectionStatus.production])
+        production_dict:dict[str,Any] = self.get_badge_dict("% Production", detections, [detection for detection in detections if detection.status == DetectionStatus.production.value])
         #deprecated_dict = self.get_badge_dict("Deprecated", detections, [detection for detection in detections if detection.status == DetectionStatus.deprecated])
         #experimental_dict = self.get_badge_dict("Experimental", detections, [detection for detection in detections if detection.status == DetectionStatus.experimental])
         

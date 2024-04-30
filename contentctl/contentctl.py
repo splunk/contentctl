@@ -123,11 +123,22 @@ def test_servers_func(config:test_servers):
 def main():
     try:
         configFile = pathlib.Path("contentctl.yml")
+        
+        # We MUST load a config (with testing info) object so that we can
+        # properly construct the command line, including 'contentctl test' parameters.
         if not configFile.is_file():
+            if "init" not in sys.argv:
+                raise Exception(f"'{configFile}' not found in the current directory.\n"
+                                "Please ensure you are in the correct directory or run 'contentctl init' to create a new content pack.")
+            
+            # Otherwise generate a stub config file.
+            # It will be used during init workflow
+
             t = test()
             config_obj = t.model_dump()
-            #raise Exception(f"Config File {configFile} does not exist. Please create it with 'contentctl init'")        
+            
         else:
+            #The file exists, so load it up!
             config_obj = YmlReader().load_file(configFile)
             t = test.model_validate(config_obj)
     except Exception as e:
@@ -165,6 +176,7 @@ def main():
         with warnings.catch_warnings(action="ignore"):
             config = tyro.cli(models)
 
+        
         if type(config) == init:
             t.__dict__.update(config.__dict__)
             init_func(t)

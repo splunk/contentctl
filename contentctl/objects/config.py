@@ -531,7 +531,7 @@ DEFAULT_APPS:List[TestApp] = [
     ]
 
 class test_common(build):
-    mode:Union[All, Changes, Selected] = Changes()
+    mode:Union[Changes, Selected, All] = Field(Changes(), union_mode='left_to_right')
     post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
     test_instances:List[Infrastructure] = Field(...)
     enable_integration_testing: bool = Field(default=False, description="Enable integration testing, which REQUIRES Splunk Enterprise Security "
@@ -615,6 +615,7 @@ class test(test_common):
     
     @model_validator(mode='after')
     def get_test_instances(self)->Self:
+        
         if len(self.test_instances) > 0:
             return self
         try:

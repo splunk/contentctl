@@ -300,7 +300,7 @@ class All(BaseModel):
 
 class Changes(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    target_branch:str = Field(default="main",description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
+    target_branch:str = Field(...,description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
 
 
 class Selected(BaseModel):

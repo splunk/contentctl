@@ -175,6 +175,12 @@ class validate(Config_Base):
     def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
         return self.path/atomic_red_team_repo_name
 
+class report(validate):
+    #reporting takes no extra args, but we define it here so that it can be a mode on the command line    
+    def getReportingPath(self)->pathlib.Path:
+        return self.path/"reporting/"
+
+
 
 class build(validate):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
@@ -223,6 +229,7 @@ class build(validate):
 
     def getAppTemplatePath(self)->pathlib.Path:
         return self.path/"app_template"
+    
 
 
 class StackType(StrEnum):

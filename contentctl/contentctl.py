@@ -1,6 +1,6 @@
 from contentctl.actions.initialize import Initialize
 import tyro
-from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect
+from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, report
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
 from contentctl.actions.detection_testing.GitService import GitService
@@ -12,7 +12,7 @@ from contentctl.actions.build import (
 
 from contentctl.actions.test import Test
 from contentctl.actions.test import TestInputDto
-
+from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.inspect import Inspect
 import sys
 import warnings
@@ -59,6 +59,19 @@ def init_func(config:test):
 def validate_func(config:validate)->DirectorOutputDto:
     validate = Validate()
     return validate.execute(config)
+
+def report_func(config:report)->None:
+    # First, perform validation. Remember that the validate
+    # configuration is actually a subset of the build configuration
+    if config.enrichments is not True:
+        raise Exception("Error, --enrichments MUST be explicitly enabled for reporting. "
+                        "Generation of coverage.json requires access to the Mitre API.")
+    director_output_dto = validate_func(config)
+    
+    r = Reporting() 
+    return r.execute(ReportingInputDto(director_output_dto=director_output_dto, 
+                                       config=config))
+    
 
 def build_func(config:build)->DirectorOutputDto:
     # First, perform validation. Remember that the validate
@@ -156,6 +169,7 @@ def main():
         {
             "init":init.model_validate(config_obj),
             "validate": validate.model_validate(config_obj),
+            "report": report.model_validate(config_obj),
             "build":build.model_validate(config_obj),
             "inspect": inspect.model_construct(**t.__dict__),
             "new":new.model_validate(config_obj),
@@ -182,6 +196,8 @@ def main():
             init_func(t)
         elif type(config) == validate:
             validate_func(config)
+        elif type(config) == report:
+            report_func(config)
         elif type(config) == build:
             build_func(config)
         elif type(config) == new:

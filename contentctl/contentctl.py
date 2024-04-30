@@ -63,9 +63,6 @@ def validate_func(config:validate)->DirectorOutputDto:
 def report_func(config:report)->None:
     # First, perform validation. Remember that the validate
     # configuration is actually a subset of the build configuration
-    if config.enrichments is not True:
-        raise Exception("Error, --enrichments MUST be explicitly enabled for reporting. "
-                        "Generation of coverage.json requires access to the Mitre API.")
     director_output_dto = validate_func(config)
     
     r = Reporting() 

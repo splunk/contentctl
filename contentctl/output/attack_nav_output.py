@@ -11,13 +11,13 @@ class AttackNavOutput():
     def writeObjects(self, detections: List[Detection], output_path: pathlib.Path) -> None:
         techniques:dict[str,dict[str,Union[List[str],int]]] = {}
         for detection in detections:
-            for tactic in detection.tags.mitre_attack_enrichments:
-                if tactic.mitre_attack_id not in techniques:
-                    techniques[tactic.mitre_attack_id] = {'score':0,'file_paths':[]}
+            for tactic in detection.tags.mitre_attack_id:
+                if tactic not in techniques:
+                    techniques[tactic] = {'score':0,'file_paths':[]}
                 
                 detection_url = f"https://github.com/splunk/security_content/blob/develop/detections/{detection.source}/{detection.file_path.name}"
-                techniques[tactic.mitre_attack_id]['score'] += 1
-                techniques[tactic.mitre_attack_id]['file_paths'].append(detection_url)
+                techniques[tactic]['score'] += 1
+                techniques[tactic]['file_paths'].append(detection_url)
                 
         '''
         for detection in objects:

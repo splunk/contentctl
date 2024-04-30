@@ -531,7 +531,7 @@ DEFAULT_APPS:List[TestApp] = [
     ]
 
 class test_common(build):
-    mode:Union[Changes, Selected, All] = Field(Changes(), union_mode='left_to_right')
+    mode:Union[Changes, Selected, All] = Field(All(), union_mode='left_to_right')
     post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
     test_instances:List[Infrastructure] = Field(...)
     enable_integration_testing: bool = Field(default=False, description="Enable integration testing, which REQUIRES Splunk Enterprise Security "

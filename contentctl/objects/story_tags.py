@@ -7,7 +7,7 @@ from contentctl.objects.enums import StoryCategory
 class StoryTags(BaseModel):
     # story spec
     name: str
-    analytic_story: str
+    analytic_story: str = None #set as none since this is set in the Story Constructor from the name field
     category: list[StoryCategory]
     product: list
     usecase: str

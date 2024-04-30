@@ -33,6 +33,16 @@ class Story(SecurityContentObject):
     investigations: list = None
     
 
+    #Temporarily add back the analytic story name as a tag.
+    #analytic_story name is no longer a memeber of tags since
+    #its value was identical to name
+    @validator('tags')
+    def type_valid(cls, v, values):
+        if v.analytic_story is None:
+            v.analytic_story = values['name']
+
+        return v
+
     # Allow long names for macros
     @validator('name',check_fields=False)
     def name_max_length(cls, v):

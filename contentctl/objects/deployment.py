@@ -2,7 +2,7 @@
 import uuid
 import string
 
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel, validator, ValidationError, root_validator
 from datetime import datetime
 
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -27,4 +27,19 @@ class Deployment(SecurityContentObject):
     slack: DeploymentSlack = None
     phantom: DeploymentPhantom = None
     tags: dict = None
+
+    # Tags was a dict that contained ONLY type: [TYPE].
+    # tags was removed and the type was moved into the core
+    # object itself
+    @root_validator(pre=True)
+    def constructTagsFromType(cls, values):
+        if values.get('tags', None) is not None:
+            return values
+        if values.get("type", None) is None:
+            values['tags'] = {}
+            return values
+        
+        values['tags'] = {"type": values.get("type")}
+        return values
+        
     

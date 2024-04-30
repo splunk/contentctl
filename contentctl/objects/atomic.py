@@ -119,7 +119,7 @@ class AtomicTest(BaseModel):
         return matching_atomics[0]
     
     @classmethod
-    def parseArtRepo(cls, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->List[AtomicFile]:
+    def parseArtRepo(cls, repo_path:pathlib.Path)->List[AtomicFile]:
         if not repo_path.is_dir():
             print(f"WARNING: Atomic Red Team repo does NOT exist at {repo_path.absolute()}. You can check it out with:\n * git clone --single-branch https://github.com/redcanaryco/atomic-red-team. This will ONLY throw a validation error if you reference atomid_guids in your detection(s).")
             return []
@@ -152,7 +152,7 @@ class AtomicTest(BaseModel):
         return atomic_file
     
     @classmethod
-    def getAtomicTestsFromArtRepo(cls, enabled:bool=True, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->Union[List[AtomicTest],None]:
+    def getAtomicTestsFromArtRepo(cls, repo_path:pathlib.Path, enabled:bool=True)->Union[List[AtomicTest],None]:
         # Get all the atomic files.  Note that if the ART repo is not found, we will not throw an error,
         # but will not have any atomics. This means that if atomic_guids are referenced during validation,
         # validation for those detections will fail
@@ -169,7 +169,7 @@ class AtomicTest(BaseModel):
 
     
     @classmethod
-    def getAtomicFilesFromArtRepo(cls, repo_path:pathlib.Path=pathlib.Path("atomic-red-team"))->List[AtomicFile]:
+    def getAtomicFilesFromArtRepo(cls, repo_path:pathlib.Path)->List[AtomicFile]:
         return cls.parseArtRepo(repo_path)
 
     

@@ -172,6 +172,9 @@ class validate(Config_Base):
     build_api: bool = Field(default=False, description="Should api objects be built and output in the {build_path}?")
     build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the {build_path}?")
 
+    def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
+        return self.path/atomic_red_team_repo_name
+
 
 class build(validate):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)

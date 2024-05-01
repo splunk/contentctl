@@ -715,14 +715,45 @@ class test(test_common):
 class test_servers(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     test_instances:List[Infrastructure] = Field([],description="Test against one or more preconfigured servers.", validate_default=True)
+    server_info:Optional[str] = Field(None, validate_default=True)
+
+
+    @model_validator(mode='before')
+    @classmethod
+    def parse_config(cls, data:Any, info: ValidationInfo)->Any:
+        #Ignore whatever is in the file or defaults, these must be supplied on command line
+        #if len(v) != 0:
+        #    return v
+        TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
+        
+        if isinstance(data.get("server_info"),str) :
+            server_info = data.get("server_info")
+        elif isinstance(environ.get(TEST_ARGS_ENV),str):
+            server_info = environ.get(TEST_ARGS_ENV)
+        else:
+            raise ValueError(f"server_info not passed on command line or in environment variable {TEST_ARGS_ENV}")
+
+        infrastructures:List[Infrastructure] = []
+        
+        
+        index = 0
+        for server in server_info.split(';'):
+                address, username, password, web_ui_port, hec_port, api_port = server.split(",")
+                infrastructures.append(Infrastructure(splunk_app_username = username, splunk_app_password=password, 
+                                   instance_address=address, hec_port = int(hec_port), 
+                                   web_ui_port= int(web_ui_port),api_port=int(api_port), instance_name=f"test_server_{index}")
+                )
+                index+=1
+        data['test_instances'] = infrastructures
+        return data
 
     @field_validator('test_instances',mode='before')
     @classmethod
     def check_environment_variable_for_config(cls, v:List[Infrastructure]):
-        import code
-        code.interact(local=locals())
-        if len(v) != 0:
-            return v
+        return v
+        #Ignore whatever is in the file or defaults, these must be supplied on command line
+        #if len(v) != 0:
+        #    return v
         TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
         
         

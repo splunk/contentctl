@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from contentctl.objects.config import test
+from contentctl.objects.config import test_common
 from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
 from contentctl.objects.detection import Detection
 
@@ -40,7 +40,7 @@ MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 @dataclass(frozen=True)
 class TestInputDto:
     detections: List[Detection]
-    config: test
+    config: test_common
     
 
 class TestOutputDto:

@@ -157,15 +157,13 @@ class DetectionTestingManager(BaseModel):
         for infrastructure in self.input_dto.config.test_instances:
 
             if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
-
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureContainer(
                         global_config=self.input_dto.config, infrastructure=infrastructure, sync_obj=self.output_dto
                     )
                 )
 
-            elif isinstance(infrastructure, Infrastructure):
-
+            elif (isinstance(self.input_dto.config, test_servers) and isinstance(infrastructure, Infrastructure)):
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureServer(
                         global_config=self.input_dto.config, infrastructure=infrastructure, sync_obj=self.output_dto

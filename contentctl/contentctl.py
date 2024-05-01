@@ -126,7 +126,21 @@ def test_func(config:test):
     raise Exception("There was at least one unsuccessful test")
 
 def test_servers_func(config:test_servers):
-    raise Exception("Not yet done")
+    director_output_dto = build_func(config)
+    gitServer = GitService(director=director_output_dto,config=config)
+    detections_to_test = gitServer.getContent()
+
+    
+
+    test_input_dto = TestInputDto(detections_to_test, config)
+    
+    t = Test()
+    success = t.execute(test_input_dto)
+    if success:
+        #Everything passed!
+        print("All tests have run successfully or been marked as 'skipped'")
+        return
+    raise Exception("There was at least one unsuccessful test")
 
     
 
@@ -171,7 +185,7 @@ def main():
             "inspect": inspect.model_construct(**t.__dict__),
             "new":new.model_validate(config_obj),
             "test":test.model_validate(config_obj),
-            "test_servers":test_servers.model_validate(config_obj),
+            "test_servers":test_servers.model_construct(**t.__dict__),
             "deploy_acs": deploy_acs.model_construct(**t.__dict__),
             #"deploy_rest":deploy_rest()
         }

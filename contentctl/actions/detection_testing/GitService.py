@@ -14,7 +14,7 @@ from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.detection import Detection
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.config import test, All, Changes, Selected
+from contentctl.objects.config import test_common, All, Changes, Selected
 
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -28,7 +28,7 @@ from contentctl.input.director import DirectorOutputDto
 
 class GitService(BaseModel):
     director: DirectorOutputDto
-    config: test
+    config: test_common
     gitHash: Optional[str] = None
     
     def getHash(self)->str:

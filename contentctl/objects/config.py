@@ -6,7 +6,7 @@ from pydantic import (
     ValidationInfo
 )
 from contentctl.output.yml_writer import YmlWriter
-
+from os import environ
 from datetime import datetime, UTC
 from typing import Optional,Any,Dict,Annotated,List,Union, Self
 import semantic_version
@@ -714,6 +714,37 @@ class test(test_common):
 
 class test_servers(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    test_instances:List[Infrastructure] = Field([Infrastructure(instance_name="splunk_target", instance_address="splunkServerAddress.com")],description="Test against one or more preconfigured servers.")
+    test_instances:List[Infrastructure] = Field([],description="Test against one or more preconfigured servers.", validate_default=True)
+
+    @field_validator('test_instances',mode='before')
+    @classmethod
+    def check_environment_variable_for_config(cls, v:List[Infrastructure]):
+        import code
+        code.interact(local=locals())
+        if len(v) != 0:
+            return v
+        TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
+        
+        
+        #environment variable is present. try to parse it
+        infrastructures:List[Infrastructure] = []
+        server_info:str|None = environ.get(TEST_ARGS_ENV)
+        if server_info is None:
+            raise ValueError(f"test_instances not passed on command line or in environment variable {TEST_ARGS_ENV}")
+        
+        
+        index = 0
+        for server in server_info.split(';'):
+                address, username, password, web_ui_port, hec_port, api_port = server.split(",")
+                infrastructures.append(Infrastructure(splunk_app_username = username, splunk_app_password=password, 
+                                   instance_address=address, hec_port = int(hec_port), 
+                                   web_ui_port= int(web_ui_port),api_port=int(api_port), instance_name=f"test_server_{index}")
+                )
+                index+=1
+
+
+        
+        
+    
 
 

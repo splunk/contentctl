@@ -661,10 +661,13 @@ class test(test_common):
 
 
     def getLocalAppDir(self)->pathlib.Path:
-        return self.path / "apps"
+        #docker really wants abolsute paths
+        path = self.path / "apps"
+        return path.absolute()
     
     def getContainerAppDir(self)->pathlib.Path:
-        return pathlib.Path("/tmp/apps")
+        #docker really wants abolsute paths
+        return pathlib.Path("/tmp/apps").absolute()
     
     
     @model_validator(mode='after')

@@ -6,10 +6,6 @@ import docker.models.resource
 import docker.models.containers
 import docker
 import docker.types
-from contentctl.objects.test_config import (
-    CONTAINER_APP_DIR,
-    LOCAL_APP_DIR,
-)
 
 
 class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
@@ -78,8 +74,8 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
 
         mounts = [
             docker.types.Mount(
-                source=str(LOCAL_APP_DIR.absolute()),
-                target=str(CONTAINER_APP_DIR.absolute()),
+                source=str(self.global_config.getLocalAppDir()),
+                target=str(self.global_config.getContainerAppDir()),
                 type="bind",
                 read_only=True,
             )

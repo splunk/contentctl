@@ -227,6 +227,9 @@ def main():
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
     except Exception as e:
-        print(e)
+        import traceback
+        traceback.print_exc()
+        traceback.print_stack()
+        #print(e)
         sys.exit(1)
     

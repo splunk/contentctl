@@ -3,7 +3,6 @@ import datetime
 
 from pydantic import BaseModel
 
-from contentctl.objects.test_config import TestConfig
 from contentctl.objects.config import test_common
 
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (

@@ -23,7 +23,7 @@ import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
 
-from contentctl.objects.config import test, test_servers, test_common, Infrastructure
+from contentctl.objects.config import test_common, Infrastructure
 from contentctl.objects.enums import PostTestBehavior, AnalyticsType
 from contentctl.objects.detection import Detection
 from contentctl.objects.base_test import BaseTest
@@ -32,7 +32,6 @@ from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.integration_test_result import IntegrationTestResult
-#from contentctl.objects.test_config import TestConfig, Infrastructure
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.correlation_search import CorrelationSearch, PbarData
@@ -79,7 +78,7 @@ class DetectionTestingManagerOutputDto():
 
 class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     # thread: threading.Thread = threading.Thread()
-    global_config: Union[test,test_servers]
+    global_config: test_common
     infrastructure: Infrastructure
     sync_obj: DetectionTestingManagerOutputDto
     hec_token: str = ""

@@ -1,25 +1,7 @@
 from __future__ import annotations
-
 from typing import Optional
-from pydantic import BaseModel, Field, HttpUrl, FilePath
-import pathlib
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from contentctl.objects.unit_test_attack_data import UnitTestAttackData
-    from contentctl.objects.unit_test_result import UnitTestResult
-
-from typing import Union
-
-from pydantic import Field, field_serializer
-
-# from contentctl.objects.security_content_object import SecurityContentObject
-# from contentctl.objects.enums import SecurityContentType
-from contentctl.objects.unit_test_baseline import UnitTestBaseline
-from contentctl.objects.unit_test_attack_data import UnitTestAttackData
-from contentctl.objects.unit_test_result import UnitTestResult
-from contentctl.objects.base_test import BaseTest, TestType
-from contentctl.objects.base_test_result import TestResultStatus
-
+from pydantic import BaseModel, Field
+from pydantic import Field
 
 
 class UnitTestAttackDataSSA(BaseModel):

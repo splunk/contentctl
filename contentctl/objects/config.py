@@ -2,13 +2,13 @@ from __future__ import annotations
 from pydantic import (
     BaseModel, Field, field_validator, 
     field_serializer, ConfigDict, DirectoryPath,
-    PositiveInt, FilePath, HttpUrl, AnyUrl, computed_field, model_validator,
+    PositiveInt, FilePath, HttpUrl, AnyUrl, model_validator,
     ValidationInfo
 )
 from contentctl.output.yml_writer import YmlWriter
 from os import environ
 from datetime import datetime, UTC
-from typing import Optional,Any,Dict,Annotated,List,Union, Self
+from typing import Optional,Any,Annotated,List,Union, Self
 import semantic_version
 import random
 from enum import StrEnum, auto
@@ -17,7 +17,6 @@ from contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 from contentctl.objects.enums import PostTestBehavior
-from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 
 

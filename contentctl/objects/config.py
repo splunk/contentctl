@@ -559,7 +559,7 @@ class test_common(build):
                            "This flag is useful for building your app and generating a test plan to run on different infrastructure.  "
                            "This flag does not actually perform the test. Instead, it builds validates all content and builds the app(s).  "
                            "It MUST be used with mode.changes and must run in the context of a git repo.")
-    suppress_tqdm:bool = Field(default=False, exclude=True, description="The tdqm library (https://github.com/tqdm/tqdm) is used to facilitate a richer,"
+    disable_tqdm:bool = Field(default=False, exclude=True, description="The tdqm library (https://github.com/tqdm/tqdm) is used to facilitate a richer,"
                                " interactive command line workflow that can display progress bars and status information frequently. "
                                "Unfortunately it is incompatible with, or may cause poorly formatted logs, in many CI/CD systems or other unattended environments. "
                                "If you are running contentctl in CI/CD, then please set this argument to True. Note that if you are running in a CI/CD context, "
@@ -574,7 +574,7 @@ class test_common(build):
         self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
         self.post_test_behavior = PostTestBehavior.never_pause.value
         #required so that CI/CD does not get too much output or hang
-        self.suppress_tqdm = True
+        self.disable_tqdm = True
 
         # We will still parse the app, but no need to do enrichments or 
         # output to dist. We have already built it!
@@ -633,7 +633,7 @@ class test_common(build):
     
     @model_validator(mode='after')
     def suppressTQDM(self)->Self:
-        if self.suppress_tqdm:
+        if self.disable_tqdm:
             tqdm.tqdm.__init__ = partialmethod(tqdm.tqdm.__init__, disable=True)
             if self.post_test_behavior != PostTestBehavior.never_pause.value:
                 raise ValueError(f"You have disabled tqdm, presumably because you are "

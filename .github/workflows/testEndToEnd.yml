@@ -73,7 +73,7 @@ jobs:
         if: startsWith(matrix.operating_system, 'ubuntu')
         run: |
           cd my_splunk_content_pack
-          poetry run contentctl test --suppress-tqdm --post-test-behavior never_pause
+          poetry run contentctl test --disable-tqdm --post-test-behavior never_pause
       
       - uses: actions/upload-artifact@v4
         with:

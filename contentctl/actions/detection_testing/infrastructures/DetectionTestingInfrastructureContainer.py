@@ -117,12 +117,17 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             detach=True,
             platform="linux/amd64"
         )
-
+        
+        if self.global_config.enterpriseSecurityInApps():
+            #ES sets up https, so make sure it is included in the link
+            address = f"https://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
+        else:
+            address = f"http://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
         print(f"Started container:\n"
               f"\tname     : {self.get_name()}\n"
-              f"\taddress  : {self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}\n"
-              f"\tusername : {self.global_config.splunk_api_username}\n"
-              f"\tpassword : {self.global_config.splunk_api_password}\n"
+              f"\taddress  : {address}\n"
+              f"\tusername : {self.infrastructure.splunk_app_username}\n"
+              f"\tpassword : {self.infrastructure.splunk_app_password}\n"
               )
 
         return container

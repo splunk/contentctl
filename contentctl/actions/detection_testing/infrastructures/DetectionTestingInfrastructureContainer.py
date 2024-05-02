@@ -84,7 +84,9 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         environment = {}
         environment["SPLUNK_START_ARGS"] = "--accept-license"
         environment["SPLUNK_PASSWORD"] = self.infrastructure.splunk_app_password
-        environment["SPLUNK_APPS_URL"] = self.global_config.getContainerEnvironmentString(stage_file=True)
+        # Files have already been staged by the time that we call this. Files must only be staged
+        # once, not staged by every container
+        environment["SPLUNK_APPS_URL"] = self.global_config.getContainerEnvironmentString(stage_file=False)
         if (
             self.global_config.splunk_api_username is not None
             and self.global_config.splunk_api_password is not None

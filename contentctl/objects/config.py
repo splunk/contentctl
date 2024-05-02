@@ -696,7 +696,7 @@ class test(test_common):
         return self
 
     
-    def getContainerEnvironmentString(self,stage_file:bool=True, include_custom_app:bool=True)->str:
+    def getContainerEnvironmentString(self,stage_file:bool=False, include_custom_app:bool=True)->str:
         apps:List[App_Base] = self.apps
         if include_custom_app:
             apps.append(self.app)

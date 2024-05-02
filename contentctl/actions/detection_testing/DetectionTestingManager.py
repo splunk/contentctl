@@ -154,9 +154,17 @@ class DetectionTestingManager(BaseModel):
                 except Exception as e:
                     raise Exception(f"Failed to pull docker container image [{self.input_dto.config.container_settings.full_image_path}]: {str(e)}")
 
+        already_staged_container_files = False
         for infrastructure in self.input_dto.config.test_instances:
 
             if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
+                # Stage the files in the apps dir so that they can be passed directly to
+                # subsequent containers. Do this here, instead of inside each container, to
+                # avoid duplicate downloads/moves/copies
+                if not already_staged_container_files:
+                    self.input_dto.config.getContainerEnvironmentString(stage_file=True)
+                    already_staged_container_files = True
+
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureContainer(
                         global_config=self.input_dto.config, infrastructure=infrastructure, sync_obj=self.output_dto

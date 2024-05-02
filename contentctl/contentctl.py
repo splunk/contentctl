@@ -18,6 +18,7 @@ import sys
 import warnings
 import pathlib
 from contentctl.input.yml_reader import YmlReader
+from contentctl.actions.release_notes import ReleaseNotes
 
 # def print_ascii_art():
 #     print(
@@ -85,7 +86,7 @@ def inspect_func(config:inspect)->str:
     
 
 def release_notes_func(config:release_notes)->None:
-    print(config)
+    ReleaseNotes().release_notes(config)
 
 def new_func(config:new):
     NewContent().execute(config)

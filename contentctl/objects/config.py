@@ -789,57 +789,68 @@ class release_notes(Config_Base):
     latest_branch:Optional[str] = Field(None, description="Branch for which we are generating release notes")
 
     @model_validator(mode='after')
-    def ensureTagsAndBranch(self)->Self:
-        #get the repo
-        import pygit2
-        from pygit2 import Commit
-        repo = pygit2.Repository(path=str(self.path))
-        tags = list(repo.references.iterator(references_return_type=pygit2.enums.ReferenceFilter.TAGS))
+    def ensureNewTagOrLatestBranch(self):
+        '''
+        Exactly one of latest_branch or new_tag must be defined. otherwise, throw an error
+        '''
+        if self.new_tag is not None and self.latest_branch is not None:
+            raise ValueError("Both new_tag and latest_branch are defined.  EXACTLY one of these MUST be defiend.")
+        elif self.new_tag is None and self.latest_branch is None:
+            raise ValueError("Neither new_tag nor latest_branch are defined. EXACTLY one of these MUST be defined.")
+        return self
+
+    # @model_validator(mode='after')
+    # def ensureTagsAndBranch(self)->Self:
+    #     #get the repo
+    #     import pygit2
+    #     from pygit2 import Commit
+    #     repo = pygit2.Repository(path=str(self.path))
+    #     tags = list(repo.references.iterator(references_return_type=pygit2.enums.ReferenceFilter.TAGS))
         
-        #Sort all tags by commit time from newest to oldest
-        sorted_tags = sorted(tags, key=lambda tag:  repo.lookup_reference(tag.name).peel(Commit).commit_time, reverse=True)
+    #     #Sort all tags by commit time from newest to oldest
+    #     sorted_tags = sorted(tags, key=lambda tag:  repo.lookup_reference(tag.name).peel(Commit).commit_time, reverse=True)
         
 
-        tags_names:List[str] = [t.shorthand for t in sorted_tags]
-        print(tags_names)
-        if self.new_tag is not None and self.new_tag not in tags_names:
-            raise ValueError(f"The new_tag '{self.new_tag}' was not found in the set name tags for this repo: {tags_names}")
-        elif self.new_tag is None:
-            try:
-                self.new_tag = tags_names[0]
-            except Exception:
-                raise ValueError("Error getting new_tag - there were no tags in the repo")
-        elif self.new_tag in tags_names:
-            pass
-        else:
-            raise ValueError(f"Unknown error getting new_tag {self.new_tag}")
+    #     tags_names:List[str] = [t.shorthand for t in sorted_tags]
+    #     print(tags_names)
+    #     if self.new_tag is not None and self.new_tag not in tags_names:
+    #         raise ValueError(f"The new_tag '{self.new_tag}' was not found in the set name tags for this repo: {tags_names}")
+    #     elif self.new_tag is None:
+    #         try:
+    #             self.new_tag = tags_names[0]
+    #         except Exception:
+    #             raise ValueError("Error getting new_tag - there were no tags in the repo")
+    #     elif self.new_tag in tags_names:
+    #         pass
+    #     else:
+    #         raise ValueError(f"Unknown error getting new_tag {self.new_tag}")
         
             
             
-        if self.old_tag is not None and self.old_tag not in tags_names:
-            raise ValueError(f"The old_tag '{self.new_tag}' was not found in the set name tags for this repo: {tags_names}")
-        elif self.new_tag == self.old_tag:
-            raise ValueError(f"old_tag '{self.old_tag}' cannot equal new_tag '{self.new_tag}'")
-        elif self.old_tag is None:
-            try:
-                self.old_tag = tags_names[tags_names.index(self.new_tag) + 1]
-            except Exception:
-                raise ValueError(f"Error getting old_tag. new_tag '{self.new_tag}' is the oldest tag in the repo.")
-        elif self.old_tag in tags_names:
-            pass
-        else:
-            raise ValueError(f"Unknown error getting old_tag {self.old_tag}")
+    #     if self.old_tag is not None and self.old_tag not in tags_names:
+    #         raise ValueError(f"The old_tag '{self.new_tag}' was not found in the set name tags for this repo: {tags_names}")
+    #     elif self.new_tag == self.old_tag:
+    #         raise ValueError(f"old_tag '{self.old_tag}' cannot equal new_tag '{self.new_tag}'")
+    #     elif self.old_tag is None:
+    #         try:
+    #             self.old_tag = tags_names[tags_names.index(self.new_tag) + 1]
+    #         except Exception:
+    #             raise ValueError(f"Error getting old_tag. new_tag '{self.new_tag}' is the oldest tag in the repo.")
+    #     elif self.old_tag in tags_names:
+    #         pass
+    #     else:
+    #         raise ValueError(f"Unknown error getting old_tag {self.old_tag}")
         
         
         
-        if not tags_names.index(self.new_tag) < tags_names.index(self.old_tag):
-            raise ValueError(f"The new_tag '{self.new_tag}' is not newer than the old_tag '{self.old_tag}'")
+    #     if not tags_names.index(self.new_tag) < tags_names.index(self.old_tag):
+    #         raise ValueError(f"The new_tag '{self.new_tag}' is not newer than the old_tag '{self.old_tag}'")
         
-        if self.latest_branch is not None:
-            if repo.lookup_branch(self.latest_branch) is None:
-                raise ValueError("The latest_branch '{self.latest_branch}' was not found in the repository")
+    #     if self.latest_branch is not None:
+    #         if repo.lookup_branch(self.latest_branch) is None:
+    #             raise ValueError("The latest_branch '{self.latest_branch}' was not found in the repository")
         
         
-        return self
+    #     return self
 
 

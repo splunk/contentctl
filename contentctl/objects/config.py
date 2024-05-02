@@ -169,9 +169,9 @@ class validate(Config_Base):
                                                          "This is useful when outputting a release build "\
                                                          "and validating these values, but should otherwise "\
                                                          "be avoided for performance reasons.")
-    build_app: bool = Field(default=True, description="Should an app be built and output in the {build_path}?")
-    build_api: bool = Field(default=False, description="Should api objects be built and output in the {build_path}?")
-    build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the {build_path}?")
+    build_app: bool = Field(default=True, description="Should an app be built and output in the build_path?")
+    build_api: bool = Field(default=False, description="Should api objects be built and output in the build_path?")
+    build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the build_path?")
 
     def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
         return self.path/atomic_red_team_repo_name

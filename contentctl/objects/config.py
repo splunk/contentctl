@@ -540,7 +540,16 @@ DEFAULT_APPS:List[TestApp] = [
 
 class test_common(build):
     mode:Union[Changes, Selected, All] = Field(All(), union_mode='left_to_right')
-    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
+    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="Controls what to do when a test completes.\n\n"
+                                                                                                        f"'{PostTestBehavior.always_pause.value}' -  the state of "
+                                                                                                        "the test will always pause after a test, allowing the user to log into the "
+                                                                                                        "server and experiment with the search and data before it is removed.\n\n"
+                                                                                                        f"'{PostTestBehavior.pause_on_failure.value}' - pause execution ONLY when a test fails. The user may press ENTER in the terminal "
+                                                                                                        "running the test to move on to the next test.\n\n"
+                                                                                                        f"'{PostTestBehavior.never_pause.value}' -  never stop testing, even if a test fails.\n\n"
+                                                                                                        "***SPECIAL NOTE FOR CI/CD*** 'never_pause' MUST be used for a test to "
+                                                                                                        "run in an unattended manner or in a CI/CD system - otherwise a single failed test "
+                                                                                                        "will result in the testing never finishing as the tool waits for input.")
     test_instances:List[Infrastructure] = Field(...)
     enable_integration_testing: bool = Field(default=False, description="Enable integration testing, which REQUIRES Splunk Enterprise Security "
                                              "to be installed on the server. This checks for a number of different things including generation "
@@ -553,7 +562,9 @@ class test_common(build):
     suppress_tqdm:bool = Field(default=False, exclude=True, description="The tdqm library (https://github.com/tqdm/tqdm) is used to facilitate a richer,"
                                " interactive command line workflow that can display progress bars and status information frequently. "
                                "Unfortunately it is incompatible with, or may cause poorly formatted logs, in many CI/CD systems or other unattended environments. "
-                               "If you are running contentctl in CI/CD, then please set this argument to True.")
+                               "If you are running contentctl in CI/CD, then please set this argument to True. Note that if you are running in a CI/CD context, "
+                               f"you also MUST set post_test_behavior to {PostTestBehavior.never_pause.value}. Otherwiser, a failed detection will cause"
+                               "the CI/CD running to pause indefinitely.")
 
     apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=False, description="List of apps to install in test environment")
     
@@ -562,13 +573,16 @@ class test_common(build):
         output_file = self.path / "test_plan.yml"
         self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
         self.post_test_behavior = PostTestBehavior.never_pause.value
-        
+        #required so that CI/CD does not get too much output or hang
+        self.suppress_tqdm = True
+
         # We will still parse the app, but no need to do enrichments or 
         # output to dist. We have already built it!
         self.build_app = False
         self.build_api = False
         self.build_ssa = False
         self.enrichments = False
+        
         self.enable_integration_testing = True
 
         data = self.model_dump()
@@ -621,6 +635,13 @@ class test_common(build):
     def suppressTQDM(self)->Self:
         if self.suppress_tqdm:
             tqdm.tqdm.__init__ = partialmethod(tqdm.tqdm.__init__, disable=True)
+            if self.post_test_behavior != PostTestBehavior.never_pause.value:
+                raise ValueError(f"You have disabled tqdm, presumably because you are "
+                                 f"running in CI/CD or another unattended context.\n"
+                                 f"However, post_test_behavior is set to [{self.post_test_behavior}].\n"
+                                 f"If that is the case, then you MUST set post_test_behavior "
+                                 f"to [{PostTestBehavior.never_pause.value}].\n"
+                                 "Otherwise, if a detection fails in CI/CD, your CI/CD runner will hang forever.")
         return self
                          
 

@@ -136,10 +136,13 @@ def main():
         # We MUST load a config (with testing info) object so that we can
         # properly construct the command line, including 'contentctl test' parameters.
         if not configFile.is_file():
-            if "init" not in sys.argv:
+            if "init" not in sys.argv and "--help" not in sys.argv and "-h" not in sys.argv:
                 raise Exception(f"'{configFile}' not found in the current directory.\n"
                                 "Please ensure you are in the correct directory or run 'contentctl init' to create a new content pack.")
             
+            if "--help" in sys.argv or "-h" in sys.argv:
+                print("Warning - contentctl.yml is missing from this directory. The configuration values showed at the default and are informational only.\n"
+                      "Please ensure that contentctl.yml exists by manually creating it or running 'contentctl init'")
             # Otherwise generate a stub config file.
             # It will be used during init workflow
 

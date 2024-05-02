@@ -51,16 +51,27 @@ class ReleaseNotes:
 
                                 if data['status'] == "validation":
                                     updates.append("- "+f"{data['name']}"+" (Validation Mode)")   
+                                
 
                             # Check and create detection link
-                            if 'name' in data and 'id' in data and 'detections' in file_path.parts and not 'ssa_detections' in file_path.parts:
-                                temp_link = "https://research.splunk.com" + str(file_path).replace(str(repo_path),"")
-                                pattern = r'(?<=/)[^/]*$'
-                                detection_link = re.sub(pattern, data['id'], temp_link)
-                                detection_link = detection_link.replace("detections","" )
-                                detection_link = detection_link.replace(".com//",".com/" )
-                                updates.append("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")") 
-
+                            if 'name' in data and 'id' in data and 'detections' in file_path.parts and not 'ssa_detections' in file_path.parts and 'detections/deprecated' not in file_path.parts:
+                                
+                                if data['status'] == "production":
+                                    temp_link = "https://research.splunk.com" + str(file_path).replace(str(repo_path),"")
+                                    pattern = r'(?<=/)[^/]*$'
+                                    detection_link = re.sub(pattern, data['id'], temp_link)
+                                    detection_link = detection_link.replace("detections","" )
+                                    detection_link = detection_link.replace(".com//",".com/" )
+                                    updates.append("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")") 
+                                
+                                if data['status'] == "deprecated":
+                                    temp_link = "https://research.splunk.com" + str(file_path).replace(str(repo_path),"")
+                                    pattern = r'(?<=/)[^/]*$'
+                                    detection_link = re.sub(pattern, data['id'], temp_link)
+                                    detection_link = detection_link.replace("detections","" )
+                                    detection_link = detection_link.replace(".com//",".com/" )
+                                    updates.append("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")")
+                            
                         except yaml.YAMLError as exc:
                             raise Exception(f"Error parsing YAML file for release_notes {file_path}: {str(exc)}")
             else:
@@ -136,11 +147,14 @@ class ReleaseNotes:
         macros_modified:List[pathlib.Path] = []
         lookups_modified:List[pathlib.Path] = []
         playbooks_modified:List[pathlib.Path] = []
+        detections_deprecated:List[pathlib.Path] = []
 
         for file in modified_files:
             file= config.path / file
-            if 'detections' in file.parts and 'ssa_detections' not in file.parts:
+            if 'detections' in file.parts and 'ssa_detections' not in file.parts and 'deprecated' not in file.parts:
                 detections_modified.append(file)
+            if 'detections' in file.parts and 'ssa_detections' not in file.parts and 'deprecated' in file.parts:
+                detections_deprecated.append(file)
             if 'stories' in file.parts:
                 stories_modified.append(file)
             if 'macros' in file.parts:
@@ -187,7 +201,8 @@ class ReleaseNotes:
                 self.create_notes(config.path,lookups_added, header="Lookups Added"),
                 self.create_notes(config.path,lookups_modified, header="Lookups Updated"),
                 self.create_notes(config.path,playbooks_added, header="Playbooks Added"),
-                self.create_notes(config.path,playbooks_modified, header="Playbooks Updated")]
+                self.create_notes(config.path,playbooks_modified, header="Playbooks Updated"),
+                self.create_notes(config.path,detections_deprecated, header="Deprecated Analytics")]
         
         #generate and show ba_notes in a different section
         ba_notes = [self.create_notes(config.path,ba_detections_added, header="New BA Analytics"),

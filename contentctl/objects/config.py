@@ -552,6 +552,44 @@ class test_common(build):
     apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=False, description="List of apps to install in test environment")
     
 
+    def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
+        output_file = self.path / "test_plan.yml"
+        self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
+        self.post_test_behavior = PostTestBehavior.never_pause.value
+        
+        # We will still parse the app, but no need to do enrichments or 
+        # output to dist. We have already built it!
+        self.build_app = False
+        self.build_api = False
+        self.build_ssa = False
+        self.enrichments = False
+        self.enable_integration_testing = True
+
+        data = self.model_dump()
+        
+        #Add the hash of the current commit
+        data['githash'] = str(githash)
+        
+        #Remove some fields that are not relevant
+        del(data['container_settings'])
+        
+
+        try:
+            YmlWriter.writeYmlFile(str(output_file), data)
+            print(f"Successfully wrote a test plan for [{len(self.mode.files)} detections] using [{len(self.apps)} apps] to [{output_file}]")
+        except Exception as e:
+            raise Exception(f"Error writing test plan file [{output_file}]: {str(e)}")
+
+
+    def getLocalAppDir(self)->pathlib.Path:
+        #docker really wants abolsute paths
+        path = self.path / "apps"
+        return path.absolute()
+    
+    def getContainerAppDir(self)->pathlib.Path:
+        #docker really wants abolsute paths
+        return pathlib.Path("/tmp/apps").absolute()
+
     def enterpriseSecurityInApps(self)->bool:
         
         for app in self.apps:
@@ -631,42 +669,7 @@ class test(test_common):
         except Exception as e:
             raise ValueError(f"Error constructing test_instances: {str(e)}")
     
-    def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
-        output_file = self.path / "test_plan.yml"
-        self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
-        self.post_test_behavior = PostTestBehavior.never_pause.value
-        
-        # We will still parse the app, but no need to do enrichments or 
-        # output to dist. We have already built it!
-        self.build_app = False
-        self.build_api = False
-        self.build_ssa = False
-        self.enrichments = False
-        self.enable_integration_testing = True
-
-        data = self.model_dump()
-        #Add relevant fields
-        data['githash'] = str(githash)
-        
-        #Remove some fields that are not relevant
-        del(data['container_settings'])
-        #del(data['apps'])
-
-        try:
-            YmlWriter.writeYmlFile(str(output_file), data)
-            print(f"Successfully wrote a test plan for [{len(self.mode.files)} detections] using [{len(self.apps)} apps] to [{output_file}]")
-        except Exception as e:
-            raise Exception(f"Error writing test plan file [{output_file}]: {str(e)}")
-
-
-    def getLocalAppDir(self)->pathlib.Path:
-        #docker really wants abolsute paths
-        path = self.path / "apps"
-        return path.absolute()
     
-    def getContainerAppDir(self)->pathlib.Path:
-        #docker really wants abolsute paths
-        return pathlib.Path("/tmp/apps").absolute()
     
     
     @model_validator(mode='after')
@@ -777,7 +780,66 @@ class test_servers(test_common):
 
 
         
+class release_notes(Config_Base):
+    old_tag:Optional[str] = Field(None, description="Name of the tag to diff against to find new content. "
+                                          "If it is not supplied, then it will be inferred as the "
+                                          "second newest tag at runtime.")
+    new_tag:Optional[str] = Field(None, description="Name of the tag containing new content. If it is not supplied,"
+                                          " then it will be inferred as the newest tag at runtime.")
+    latest_branch:Optional[str] = Field(None, description="Branch for which we are generating release notes")
+
+    @model_validator(mode='after')
+    def ensureTagsAndBranch(self)->Self:
+        #get the repo
+        import pygit2
+        from pygit2 import Commit
+        repo = pygit2.Repository(path=str(self.path))
+        tags = list(repo.references.iterator(references_return_type=pygit2.enums.ReferenceFilter.TAGS))
         
-    
+        #Sort all tags by commit time from newest to oldest
+        sorted_tags = sorted(tags, key=lambda tag:  repo.lookup_reference(tag.name).peel(Commit).commit_time, reverse=True)
+        
+
+        tags_names:List[str] = [t.shorthand for t in sorted_tags]
+        print(tags_names)
+        if self.new_tag is not None and self.new_tag not in tags_names:
+            raise ValueError(f"The new_tag '{self.new_tag}' was not found in the set name tags for this repo: {tags_names}")
+        elif self.new_tag is None:
+            try:
+                self.new_tag = tags_names[0]
+            except Exception:
+                raise ValueError("Error getting new_tag - there were no tags in the repo")
+        elif self.new_tag in tags_names:
+            pass
+        else:
+            raise ValueError(f"Unknown error getting new_tag {self.new_tag}")
+        
+            
+            
+        if self.old_tag is not None and self.old_tag not in tags_names:
+            raise ValueError(f"The old_tag '{self.new_tag}' was not found in the set name tags for this repo: {tags_names}")
+        elif self.new_tag == self.old_tag:
+            raise ValueError(f"old_tag '{self.old_tag}' cannot equal new_tag '{self.new_tag}'")
+        elif self.old_tag is None:
+            try:
+                self.old_tag = tags_names[tags_names.index(self.new_tag) + 1]
+            except Exception:
+                raise ValueError(f"Error getting old_tag. new_tag '{self.new_tag}' is the oldest tag in the repo.")
+        elif self.old_tag in tags_names:
+            pass
+        else:
+            raise ValueError(f"Unknown error getting old_tag {self.old_tag}")
+        
+        
+        
+        if not tags_names.index(self.new_tag) < tags_names.index(self.old_tag):
+            raise ValueError(f"The new_tag '{self.new_tag}' is not newer than the old_tag '{self.old_tag}'")
+        
+        if self.latest_branch is not None:
+            if repo.lookup_branch(self.latest_branch) is None:
+                raise ValueError("The latest_branch '{self.latest_branch}' was not found in the repository")
+        
+        
+        return self
 
 

@@ -1,6 +1,6 @@
 from contentctl.actions.initialize import Initialize
 import tyro
-from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, report
+from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, report, test_common, release_notes
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
 from contentctl.actions.detection_testing.GitService import GitService
@@ -84,6 +84,9 @@ def inspect_func(config:inspect)->str:
     return inspect_token
     
 
+def release_notes_func(config:release_notes)->None:
+    print(config)
+
 def new_func(config:new):
     NewContent().execute(config)
 
@@ -97,7 +100,7 @@ def deploy_rest_func(config:deploy_rest):
     raise Exception("deploy rest not yet implemented")
     
 
-def test_func(config:test):
+def test_common_func(config:test_common):
     director_output_dto = build_func(config)
     gitServer = GitService(director=director_output_dto,config=config)
     detections_to_test = gitServer.getContent()
@@ -124,25 +127,6 @@ def test_func(config:test):
         print("All tests have run successfully or been marked as 'skipped'")
         return
     raise Exception("There was at least one unsuccessful test")
-
-def test_servers_func(config:test_servers):
-    director_output_dto = build_func(config)
-    gitServer = GitService(director=director_output_dto,config=config)
-    detections_to_test = gitServer.getContent()
-
-    
-
-    test_input_dto = TestInputDto(detections_to_test, config)
-    
-    t = Test()
-    success = t.execute(test_input_dto)
-    if success:
-        #Everything passed!
-        print("All tests have run successfully or been marked as 'skipped'")
-        return
-    raise Exception("There was at least one unsuccessful test")
-
-    
 
 def main():
     try:
@@ -186,6 +170,7 @@ def main():
             "new":new.model_validate(config_obj),
             "test":test.model_validate(config_obj),
             "test_servers":test_servers.model_construct(**t.__dict__),
+            "release_notes": release_notes.model_construct(**config_obj),
             "deploy_acs": deploy_acs.model_construct(**t.__dict__),
             #"deploy_rest":deploy_rest()
         }
@@ -215,15 +200,15 @@ def main():
             new_func(config)
         elif type(config) == inspect:
             inspect_func(config)
+        elif type(config) == release_notes:
+            release_notes_func(config)
         elif type(config) == deploy_acs:
             updated_config = deploy_acs.model_validate(config)
             deploy_acs_func(updated_config)
         elif type(config) == deploy_rest:
             deploy_rest_func(config)
-        elif type(config) == test:
-            test_func(config)
-        elif type(config) == test_servers:
-            test_servers_func(config)
+        elif type(config) == test or type(config) == test_servers:
+            test_common_func(config)
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
     except Exception as e:

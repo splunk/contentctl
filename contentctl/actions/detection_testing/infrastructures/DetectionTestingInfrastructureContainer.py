@@ -118,6 +118,13 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             platform="linux/amd64"
         )
 
+        print(f"Started container:\n"
+              f"\tname     : {self.get_name()}\n"
+              f"\taddress  : {self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}\n"
+              f"\tusername : {self.global_config.splunk_api_username}\n"
+              f"\tpassword : {self.global_config.splunk_api_password}\n"
+              )
+
         return container
 
     def removeContainer(self, removeVolumes: bool = True, forceRemove: bool = True):

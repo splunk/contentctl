@@ -179,32 +179,45 @@ class ReleaseNotes:
             print("\n## Release notes for ESCU " + config.latest_branch)
 
         notes = [self.create_notes(config.path, stories_added, header="New Analytic Story"),
-        self.create_notes(config.path,stories_modified, header="Updated Analytic Story"),
-        self.create_notes(config.path,detections_added, header="New Analytics"),
-        self.create_notes(config.path,detections_modified, header="Updated Analytics"),
-        self.create_notes(config.path,macros_added, header="Macros Added"),
-        self.create_notes(config.path,macros_modified, header="Macros Updated"),
-        self.create_notes(config.path,lookups_added, header="Lookups Added"),
-        self.create_notes(config.path,lookups_modified, header="Lookups Updated"),
-        self.create_notes(config.path,playbooks_added, header="Playbooks Added"),
-        self.create_notes(config.path,playbooks_modified, header="Playbooks Updated"),
-        self.create_notes(config.path,ba_detections_added, header="New BA Analytics"),
-        self.create_notes(config.path,ba_detections_modified, header="Updated BA Analytics") ]
-        num_changes = sum([len(note['changes']) for note in notes])
-        num_warnings = sum([len(note['warnings']) for note in notes])
-        print(f"Total New and Updated Content: [{num_changes}]")
-        for note in notes:
-            print("")
-            print(note['header'])
-            print('\n'.join(note['changes']))
+                self.create_notes(config.path,stories_modified, header="Updated Analytic Story"),
+                self.create_notes(config.path,detections_added, header="New Analytics"),
+                self.create_notes(config.path,detections_modified, header="Updated Analytics"),
+                self.create_notes(config.path,macros_added, header="Macros Added"),
+                self.create_notes(config.path,macros_modified, header="Macros Updated"),
+                self.create_notes(config.path,lookups_added, header="Lookups Added"),
+                self.create_notes(config.path,lookups_modified, header="Lookups Updated"),
+                self.create_notes(config.path,playbooks_added, header="Playbooks Added"),
+                self.create_notes(config.path,playbooks_modified, header="Playbooks Updated")]
         
-        print(f"\n\nTotal Warnings: [{num_warnings}]")
-        for note in notes:
-            if len(note['warnings']) > 0:
-                print(note['warning_header'])
-                print('\n'.join(note['warnings']))
+        #generate and show ba_notes in a different section
+        ba_notes = [self.create_notes(config.path,ba_detections_added, header="New BA Analytics"),
+                    self.create_notes(config.path,ba_detections_modified, header="Updated BA Analytics") ]
+        
+        
+        def printNotes(notes:List[dict[str,Union[List[str], str]]], outfile:Union[pathlib.Path,None]=None):
+            num_changes = sum([len(note['changes']) for note in notes])
+            num_warnings = sum([len(note['warnings']) for note in notes])
+            lines:List[str] = []
+            lines.append(f"Total New and Updated Content: [{num_changes}]")
+            for note in notes:
+                lines.append("")
+                lines.append(note['header'])
+                lines+=(note['changes'])
+            
+            lines.append(f"\n\nTotal Warnings: [{num_warnings}]")
+            for note in notes:
+                if len(note['warnings']) > 0:
+                    lines.append(note['warning_header'])
+                    lines+=note['warnings']
+            text_blob = '\n'.join(lines)
+            print(text_blob)
+            if outfile is not None:
+                with open(outfile,'w') as writer:
+                    writer.write(text_blob)
+            
+        printNotes(notes, config.releaseNotesFilename(f"release_notes.txt"))
 
-        
-        print("\n### Other Updates\n-\n")
+        print("\n\n### Other Updates\n-\n")
         print("\n## BA Release Notes")
+        printNotes(ba_notes, config.releaseNotesFilename("ba_release_notes.txt"))
         print(f"Release notes completed succesfully")

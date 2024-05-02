@@ -787,6 +787,16 @@ class release_notes(Config_Base):
     new_tag:Optional[str] = Field(None, description="Name of the tag containing new content. If it is not supplied,"
                                           " then it will be inferred as the newest tag at runtime.")
     latest_branch:Optional[str] = Field(None, description="Branch for which we are generating release notes")
+    
+    def releaseNotesFilename(self, filename:str)->pathlib.Path:
+        #Assume that notes are written to dist/. This does not respect build_dir since that is
+        #only a member of build
+        p =  self.path / "dist"
+        try:
+            p.mkdir(exist_ok=True,parents=True)
+        except Exception:
+            raise Exception(f"Error making the directory '{p}' to hold release_notes: {str(e)}")
+        return p/filename
 
     @model_validator(mode='after')
     def ensureNewTagOrLatestBranch(self):

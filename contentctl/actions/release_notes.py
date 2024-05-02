@@ -4,13 +4,14 @@ from git import Repo
 import re
 import yaml
 import pathlib
-from typing import List
+from typing import List, Union
 
 
 
 class ReleaseNotes:
-    def create_notes(self,repo_path:pathlib.Path, file_paths:List[pathlib.Path]):
+    def create_notes(self,repo_path:pathlib.Path, file_paths:List[pathlib.Path], header:str)->dict[str,Union[List[str], str]]:
         updates:List[str] = []
+        warnings:List[str] = []
         for file_path in file_paths:
             # Check if the file exists
             if file_path.exists() and file_path.is_file():
@@ -61,11 +62,15 @@ class ReleaseNotes:
                                 updates.append("- "+"["+f"{data['name']}"+"]"+"("+detection_link+")") 
 
                         except yaml.YAMLError as exc:
-                            raise Exception(f"Error parsing YAML file  for release_notes {file_path}: {exc}")
+                            raise Exception(f"Error parsing YAML file for release_notes {file_path}: {str(exc)}")
             else:
-                raise Exception(f"Eror parsing YAML file for release_notes. File not found or is not a file: {file_path}")
+                warnings.append(f"Error parsing YAML file for release_notes. File not found or is not a file: {file_path}")
         #print out all updates at once
-        print('\n'.join(sorted(updates)))
+        success_header = f'### {header} - [{len(updates)}]'
+        warning_header = f'### {header} - [{len(warnings)}]'
+        return {'header': success_header, 'changes': sorted(updates), 
+                'warning_header': warning_header, 'warnings': warnings}
+        
 
     def release_notes(self, config:release_notes) -> None:
 
@@ -173,37 +178,33 @@ class ReleaseNotes:
             print(f"Compared against               - \033[92m{compare_against}\033[0m")
             print("\n## Release notes for ESCU " + config.latest_branch)
 
-        print("\n### New Analytic Story")
-        self.create_notes(config.path, stories_added)
-        print("\n### Updated Analytic Story")
-        self.create_notes(config.path,stories_modified)
-        print("\n### New Analytics")
-        self.create_notes(config.path,detections_added)
-        print("\n### Updated Analytics")    
-        self.create_notes(config.path,detections_modified)
-        print("\n### Macros Added")    
-        self.create_notes(config.path,macros_added)
-        print("\n### Macros Updated")    
-        self.create_notes(config.path,macros_modified)
-        print("\n### Lookups Added")    
-        self.create_notes(config.path,lookups_added)
-        print("\n### Lookups Updated")    
-        self.create_notes(config.path,lookups_modified)
-        print("\n### Playbooks Added")    
-        self.create_notes(config.path,playbooks_added)
-        print("\n### Playbooks Updated")    
-        self.create_notes(config.path,playbooks_modified)
-
-        print("\n### Other Updates\n-\n")
-
-        print("\n## BA Release Notes")
-
-        print("\n### New BA Analytics")
-        self.create_notes(config.path,ba_detections_added)
-
-        print("\n### Updated BA Analytics")    
-        self.create_notes(config.path,ba_detections_modified) 
-
+        notes = [self.create_notes(config.path, stories_added, header="New Analytic Story"),
+        self.create_notes(config.path,stories_modified, header="Updated Analytic Story"),
+        self.create_notes(config.path,detections_added, header="New Analytics"),
+        self.create_notes(config.path,detections_modified, header="Updated Analytics"),
+        self.create_notes(config.path,macros_added, header="Macros Added"),
+        self.create_notes(config.path,macros_modified, header="Macros Updated"),
+        self.create_notes(config.path,lookups_added, header="Lookups Added"),
+        self.create_notes(config.path,lookups_modified, header="Lookups Updated"),
+        self.create_notes(config.path,playbooks_added, header="Playbooks Added"),
+        self.create_notes(config.path,playbooks_modified, header="Playbooks Updated"),
+        self.create_notes(config.path,ba_detections_added, header="New BA Analytics"),
+        self.create_notes(config.path,ba_detections_modified, header="Updated BA Analytics") ]
+        num_changes = sum([len(note['changes']) for note in notes])
+        num_warnings = sum([len(note['warnings']) for note in notes])
+        print(f"Total New and Updated Content: [{num_changes}]")
+        for note in notes:
+            print("")
+            print(note['header'])
+            print('\n'.join(note['changes']))
+        
+        print(f"\n\nTotal Warnings: [{num_warnings}]")
+        for note in notes:
+            if len(note['warnings']) > 0:
+                print(note['warning_header'])
+                print('\n'.join(note['warnings']))
 
         
+        print("\n### Other Updates\n-\n")
+        print("\n## BA Release Notes")
         print(f"Release notes completed succesfully")

@@ -51,7 +51,7 @@ jobs:
       - name: Run contentctl init
         run: |
           cd my_splunk_content_pack
-          poetry run contentctl init
+          poetry run contentctl init  
 
       - name: Clone the AtomicRedTeam Repo
         run: |
@@ -73,7 +73,7 @@ jobs:
         if: startsWith(matrix.operating_system, 'ubuntu')
         run: |
           cd my_splunk_content_pack
-          poetry run contentctl test
+          poetry run contentctl test --suppress-tqdm
       
       - uses: actions/upload-artifact@v4
         with:

@@ -19,6 +19,8 @@ from abc import ABC, abstractmethod
 from contentctl.objects.enums import PostTestBehavior
 from contentctl.objects.detection import Detection
 
+import tqdm
+from functools import partialmethod
 
 ENTERPRISE_SECURITY_UID = 263
 COMMON_INFORMATION_MODEL_UID = 1621
@@ -548,6 +550,10 @@ class test_common(build):
                            "This flag is useful for building your app and generating a test plan to run on different infrastructure.  "
                            "This flag does not actually perform the test. Instead, it builds validates all content and builds the app(s).  "
                            "It MUST be used with mode.changes and must run in the context of a git repo.")
+    suppress_tqdm:bool = Field(default=False, exclude=True, description="The tdqm library (https://github.com/tqdm/tqdm) is used to facilitate a richer,"
+                               " interactive command line workflow that can display progress bars and status information frequently. "
+                               "Unfortunately it is incompatible with, or may cause poorly formatted logs, in many CI/CD systems or other unattended environments. "
+                               "If you are running contentctl in CI/CD, then please set this argument to True.")
 
     apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=False, description="List of apps to install in test environment")
     
@@ -610,7 +616,12 @@ class test_common(build):
         raise ValueError(f"Common Information Model/CIM "
                          f"(uid: [{COMMON_INFORMATION_MODEL_UID}]) is not listed in apps. "
                          f"contentctl test MUST include Common Information Model")
-                         
+    
+    @model_validator(mode='after')
+    def suppressTQDM(self)->Self:
+        if self.suppress_tqdm:
+            tqdm.tqdm.__init__ = partialmethod(tqdm.tqdm.__init__, disable=True)
+        return self
                          
 
 

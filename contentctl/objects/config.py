@@ -689,17 +689,13 @@ class test(test_common):
     splunk_api_password: Optional[str] = Field(default=None, exclude = True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
     
     
-    @model_validator(mode='after')
-    def get_test_instances(self)->Self:
-        
-        if len(self.test_instances) > 0:
-            return self
+    def getContainerInfrastructureObjects(self)->Self:
         try:
             self.test_instances = self.container_settings.getContainers()
             return self
             
         except Exception as e:
-            raise ValueError(f"Error constructing test_instances: {str(e)}")
+            raise ValueError(f"Error constructing container test_instances: {str(e)}")
     
     
     
@@ -748,12 +744,16 @@ class test(test_common):
         return self.path / "apps.yml"
 
 
-
+TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
 class test_servers(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     test_instances:List[Infrastructure] = Field([],description="Test against one or more preconfigured servers.", validate_default=True)
-    server_info:Optional[str] = Field(None, validate_default=True)
-
+    server_info:Optional[str] = Field(None, validate_default=True, description='String of pre-configured servers to use for testing.  The list MUST be in the format:\n'
+                                      'address,username,web_ui_port,hec_port,api_port;address_2,username_2,web_ui_port_2,hec_port_2,api_port_2'
+                                      '\nFor example, the following string will use 2 preconfigured test instances:\n'
+                                      '127.0.0.1,firstUser,firstUserPassword,8000,8088,8089;1.2.3.4,secondUser,secondUserPassword,8000,8088,8089\n'
+                                      'Note that these test_instances may be hosted on the same system, such as localhost/127.0.0.1 or a docker server, or different hosts.\n'
+                                      f'This value may also be passed by setting the environment variable [{TEST_ARGS_ENV}] with the value above.')
 
     @model_validator(mode='before')
     @classmethod
@@ -761,7 +761,7 @@ class test_servers(test_common):
         #Ignore whatever is in the file or defaults, these must be supplied on command line
         #if len(v) != 0:
         #    return v
-        TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
+        
         
         if isinstance(data.get("server_info"),str) :
             server_info = data.get("server_info")

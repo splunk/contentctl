@@ -114,14 +114,14 @@ def test_common_func(config:test_common):
     
     # Remove detections that we do not want to test because they are
     # not production, the correct type, or manual_test only
-    t.filter_detections(test_input_dto)
+    filted_test_input_dto = t.filter_detections(test_input_dto)
     
     if config.plan_only:
         #Emit the test plan and quit. Do not actually run the test
-        config.dumpCICDPlanAndQuit(gitServer.getHash(),test_input_dto.detections)
+        config.dumpCICDPlanAndQuit(gitServer.getHash(),filted_test_input_dto.detections)
         return 
     
-    success = t.execute(test_input_dto)
+    success = t.execute(filted_test_input_dto)
     
     if success:
         #Everything passed!
@@ -212,6 +212,10 @@ def main():
         elif type(config) == deploy_rest:
             deploy_rest_func(config)
         elif type(config) == test or type(config) == test_servers:
+            if type(config) == test:
+                #construct the container Infrastructure objects
+                config.getContainerInfrastructureObjects()
+                #otherwise, they have already been passed as servers
             test_common_func(config)
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")

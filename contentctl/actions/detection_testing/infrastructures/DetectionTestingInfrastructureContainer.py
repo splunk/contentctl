@@ -123,7 +123,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             address = f"https://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
         else:
             address = f"http://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
-        print(f"Started container with the following information:\n"
+        print(f"\nStarted container with the following information:\n"
               f"\tname    : [{self.get_name()}]\n"
               f"\taddress : [{address}]\n"
               f"\tusername: [{self.infrastructure.splunk_app_username}]\n"

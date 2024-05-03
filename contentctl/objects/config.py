@@ -591,7 +591,10 @@ class test_common(build):
         data['githash'] = str(githash)
         
         #Remove some fields that are not relevant
-        del(data['container_settings'])
+        for k in ['container_settings', 'test_instances']:
+            if k in data:
+                del(data[k]) 
+        
         
 
         try:

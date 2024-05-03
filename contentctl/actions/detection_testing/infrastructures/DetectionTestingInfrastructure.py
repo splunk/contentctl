@@ -395,7 +395,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             try:
                 self.test_detection(detection)
             except ContainerStoppedException:
-                self.pbar.write(f"Stopped container [{self.get_name()}]")
+                self.pbar.write(f"Warning - container was stopped when trying to execute detection [{self.get_name()}]")
                 self.finish()
                 return
             except Exception as e:
@@ -1356,7 +1356,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         pass
 
     def finish(self):
-        self.pbar.bar_format = f"Stopped container [{self.get_name()}]"
+        self.pbar.bar_format = f"Finished running tests on instance: [{self.get_name()}]"
         self.pbar.update()
         self.pbar.close()
 

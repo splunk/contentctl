@@ -150,6 +150,8 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             # container was found, so now we try to remove it
             # v also removes volumes linked to the container
             container.remove(v=removeVolumes, force=forceRemove)
+            print(f"container [{self.get_name()}] successfully removed")
+
             # remove it even if it is running. remove volumes as well
             # No need to print that the container has been removed, it is expected behavior
 

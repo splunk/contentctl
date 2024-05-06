@@ -656,10 +656,12 @@ class test_common(build):
         if self.enterpriseSecurityInApps():
             return self
             
-        raise ValueError(f"enable_integration_testing is [{self.enable_integration_testing}], "
-                         f"but the Splunk Enterprise Security "
-                         f"App (uid: [{ENTERPRISE_SECURITY_UID}]) is not listed in apps. "
-                         f"Integration Testing MUST include Enterprise Security.")
+        print(f"INFO: enable_integration_testing is [{self.enable_integration_testing}], "
+              f"but the Splunk Enterprise Security "
+              f"App (uid: [{ENTERPRISE_SECURITY_UID}]) is not listed in apps.\n"
+              f"Integration Testing MUST include Enterprise Security.\n"
+              f"Please note this message is only informational.")
+        return self
         
 
 

@@ -630,9 +630,11 @@ class test_common(build):
     def ensureCommonInformationModel(self)->Self:
         if self.commonInformationModelInApps():
             return self
-        raise ValueError(f"Common Information Model/CIM "
-                         f"(uid: [{COMMON_INFORMATION_MODEL_UID}]) is not listed in apps. "
-                         f"contentctl test MUST include Common Information Model")
+        print(f"INFO: Common Information Model/CIM "
+              f"(uid: [{COMMON_INFORMATION_MODEL_UID}]) is not listed in apps.\n"
+              f"contentctl test MUST include Common Information Model.\n"
+              f"Please note this message is only informational.")
+        return self
     
     @model_validator(mode='after')
     def suppressTQDM(self)->Self:

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import uuid
 import string
 import requests
@@ -14,8 +15,8 @@ from contentctl.objects.enums import DataModel
 from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.ssa_detection_tags import SSADetectionTags
-from contentctl.objects.config import ConfigDetectionConfiguration
-from contentctl.objects.unit_test import UnitTest
+from contentctl.objects.unit_test_ssa import UnitTestSSA
+from contentctl.objects.unit_test_old import UnitTestOld
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.baseline import Baseline
@@ -40,7 +41,7 @@ class SSADetection(BaseModel):
     known_false_positives: str
     references: list
     tags: SSADetectionTags
-    tests: list[UnitTest] = None
+    tests: list[UnitTestSSA] = None
 
     # enrichments
     annotations: dict = None
@@ -48,7 +49,7 @@ class SSADetection(BaseModel):
     mappings: dict = None
     file_path: str = None
     source: str = None
-    test: Union[UnitTest, dict] = None
+    test: Union[UnitTestSSA, dict, UnitTestOld] = None
     runtime: str = None
     internalVersion: int = None
 
@@ -61,6 +62,7 @@ class SSADetection(BaseModel):
     class Config:
         use_enum_values = True
 
+    '''
     @validator("name")
     def name_invalid_chars(cls, v):
         invalidChars = set(string.punctuation.replace("-", ""))
@@ -150,3 +152,5 @@ class SSADetection(BaseModel):
                 "At least one test is required for a production or validation detection: " + values["name"]
             )
         return v
+
+    '''

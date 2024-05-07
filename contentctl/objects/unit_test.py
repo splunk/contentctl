@@ -1,4 +1,9 @@
-
+from __future__ import annotations
+from pydantic import Field
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.unit_test_attack_data import UnitTestAttackData
+    from contentctl.objects.unit_test_result import UnitTestResult
 
 from typing import Union
 
@@ -20,7 +25,7 @@ class UnitTest(BaseTest):
     # contentType: SecurityContentType = SecurityContentType.unit_tests
 
     # The test type (unit)
-    test_type: TestType = Field(TestType.UNIT, const=True)
+    test_type: TestType = Field(TestType.UNIT)
 
     # The condition to check if the search was successful
     pass_condition: Union[str, None] = None

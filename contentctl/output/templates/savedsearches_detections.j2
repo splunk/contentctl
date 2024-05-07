@@ -6,22 +6,22 @@
 action.escu = 0
 action.escu.enabled = 1
 {% if detection.status == "deprecated" %}
-description = **WARNING**, this detection has been marked **DEPRECATED** by the Splunk Threat Research Team. This means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }}
+description = **WARNING**, this detection has been marked **DEPRECATED** by the Splunk Threat Research Team. This means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description | escapeNewlines() }} 
 {% elif detection.status == "experimental" %}
-description = **WARNING**, this detection is marked **EXPERIMENTAL** by the Splunk Threat Research Team. This means that the detection has been manually tested but we do not have the associated attack data to perform automated testing or cannot share this attack dataset due to its sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description }} 
+description = **WARNING**, this detection is marked **EXPERIMENTAL** by the Splunk Threat Research Team. This means that the detection has been manually tested but we do not have the associated attack data to perform automated testing or cannot share this attack dataset due to its sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description | escapeNewlines() }} 
 {% else %}
-description = {{ detection.description }}
+description = {{ detection.description | escapeNewlines() }}
 {% endif %}
 action.escu.mappings = {{ detection.mappings | tojson }}
 action.escu.data_models = {{ detection.datamodel | tojson }}
-action.escu.eli5 = {{ detection.description }}
-{% if detection.how_to_implement is defined %}
-action.escu.how_to_implement = {{ detection.how_to_implement }}
+action.escu.eli5 = {{ detection.description | escapeNewlines() }}
+{% if detection.how_to_implement %}
+action.escu.how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}
 action.escu.how_to_implement = none
 {% endif %}
-{% if detection.known_false_positives is defined %}
-action.escu.known_false_positives = {{ detection.known_false_positives }}
+{% if detection.known_false_positives %}
+action.escu.known_false_positives = {{ detection.known_false_positives | escapeNewlines() }}
 {% else %}
 action.escu.known_false_positives = None
 {% endif %}
@@ -33,16 +33,19 @@ action.escu.search_type = detection
 {% if detection.tags.product is defined %}
 action.escu.product = {{ detection.tags.product | tojson }}
 {% endif %}
-{% if detection.providing_technologies is defined %}
+{% if detection.tags.atomic_guid %}
+action.escu.atomic_red_team_guids = {{ detection.tags.getAtomicGuidStringArray() | tojson }}
+{% endif %}
+{% if detection.providing_technologies | length > 0  %}
 action.escu.providing_technologies = {{ detection.providing_technologies | tojson }}
 {% else %}
-action.escu.providing_technologies = []
+action.escu.providing_technologies = null
 {% endif %}
-{% if detection.tags.analytic_story is defined %}
-action.escu.analytic_story = {{ detection.tags.analytic_story | tojson }}
-{% if detection.deployment.rba.enabled is defined %}
+{% if detection.tags.analytic_story %}
+action.escu.analytic_story = {{ objectListToNameList(detection.tags.analytic_story) | tojson }}
+{% if detection.deployment.alert_action.rba.enabled%}
 action.risk = 1
-action.risk.param._risk_message = {{ detection.tags.message }}
+action.risk.param._risk_message = {{ detection.tags.message | escapeNewlines() }}
 action.risk.param._risk = {{ detection.risk | tojson }}
 action.risk.param._risk_score = 0
 action.risk.param.verbose = 0
@@ -69,34 +72,34 @@ action.correlationsearch.metadata = {{ detection.getMetadata() | tojson }}
 schedule_window = {{ detection.deployment.scheduling.schedule_window }}
 {% endif %}
 {% if detection.deployment is defined %}
-{% if detection.deployment.notable.rule_title is defined %}
+{% if detection.deployment.alert_action.notable %}
 action.notable = 1
-{% if detection.nes_fields is defined %}
+{% if detection.nes_fields %}
 action.notable.param.nes_fields = {{ detection.nes_fields }}
 {% endif %}
-action.notable.param.rule_description = {{ detection.deployment.notable.rule_description | custom_jinja2_enrichment_filter(detection) }}
-action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
-action.notable.param.security_domain = {{ detection.tags.security_domain }}
+action.notable.param.rule_description = {{ detection.deployment.alert_action.notable.rule_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines()}}
+action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
+action.notable.param.security_domain = {{ detection.tags.security_domain.value }}
 action.notable.param.severity = high
 {% endif %}
-{% if detection.deployment.email.to is defined %}
-action.email.subject.alert = {{ detection.deployment.email.subject | custom_jinja2_enrichment_filter(detection) }}
-action.email.to = {{ detection.deployment.email.to }}
-action.email.message.alert = {{ detection.deployment.email.message | custom_jinja2_enrichment_filter(detection) }}
+{% if detection.deployment.alert_action.email %}
+action.email.subject.alert = {{ detection.deployment.alert_action.email.subject | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.email.to = {{ detection.deployment.alert_action.email.to }}
+action.email.message.alert = {{ detection.deployment.alert_action.email.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.email.useNSSubject = 1
 {% endif %}
-{% if detection.deployment.slack.channel is defined %}
+{% if detection.deployment.alert_action.slack %}
 action.slack = 1
-action.slack.param.channel = {{ detection.deployment.slack.channel | custom_jinja2_enrichment_filter(detection) }}
-action.slack.param.message = {{ detection.deployment.slack.message | custom_jinja2_enrichment_filter(detection) }}
+action.slack.param.channel = {{ detection.deployment.alert_action.slack.channel | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.slack.param.message = {{ detection.deployment.alert_action.slack.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 {% endif %}
-{% if detection.deployment.phantom.phantom_server is defined %}
+{% if detection.deployment.alert_action.phantom%}
 action.sendtophantom = 1
-action.sendtophantom.param._cam_workers = {{ detection.deployment.phantom.cam_workers | custom_jinja2_enrichment_filter(detection) }}
-action.sendtophantom.param.label = {{ detection.deployment.phantom.label | custom_jinja2_enrichment_filter(detection) }}
-action.sendtophantom.param.phantom_server = {{ detection.deployment.phantom.phantom_server | custom_jinja2_enrichment_filter(detection) }}
-action.sendtophantom.param.sensitivity = {{ detection.deployment.phantom.sensitivity | custom_jinja2_enrichment_filter(detection) }}
-action.sendtophantom.param.severity = {{ detection.deployment.phantom.severity | custom_jinja2_enrichment_filter(detection) }}
+action.sendtophantom.param._cam_workers = {{ detection.deployment.alert_action.phantom.cam_workers | custom_jinja2_enrichment_filter(detection) }}
+action.sendtophantom.param.label = {{ detection.deployment.alert_action.phantom.label | custom_jinja2_enrichment_filter(detection) }}
+action.sendtophantom.param.phantom_server = {{ detection.deployment.alert_action.phantom.phantom_server | custom_jinja2_enrichment_filter(detection) }}
+action.sendtophantom.param.sensitivity = {{ detection.deployment.alert_action.phantom.sensitivity | custom_jinja2_enrichment_filter(detection) }}
+action.sendtophantom.param.severity = {{ detection.deployment.alert_action.phantom.severity | custom_jinja2_enrichment_filter(detection) }}
 {% endif %}
 {% endif %}
 alert.digest_mode = 1
@@ -112,7 +115,7 @@ relation = greater than
 quantity = 0
 realtime_schedule = 0
 is_visible = false
-search = {{ detection.search }}
+search = {{ detection.search | escapeNewlines() }}
 
 {% endif %}
 {% endfor %}

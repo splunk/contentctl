@@ -13,7 +13,7 @@ class DocGenInputDto:
 class DocGen:
 
     def execute(self, input_dto: DocGenInputDto) -> None:
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[])
+        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[],[])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)
 

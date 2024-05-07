@@ -2,6 +2,7 @@ name: ESCU Default Configuration Correlation
 id: 36ba498c-46e8-4b62-8bde-67e984a40fb4
 date: '2021-12-21'
 author: Patrick Bareiss
+type: Correlation
 description: This configuration file applies to all detections of type Correlation.
   These correlations will generate Notable Events.
 scheduling:
@@ -16,5 +17,4 @@ alert_action:
     nes_fields: 
     - user
     - dest
-tags:
-  type: 'Correlation'
+

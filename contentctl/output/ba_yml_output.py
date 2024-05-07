@@ -21,7 +21,7 @@ class BAYmlOutput():
             YmlWriter.writeYmlFile(file_path, object)
 
 
-    def writeObjects(self, objects: list, output_path: str, type: SecurityContentType = None) -> None:
+    def writeObjects(self, objects: list, output_path: str, contentType: SecurityContentType = None) -> None:
         for obj in objects: 
             file_name = "ssa___" + self.convertNameToFileName(obj.name, obj.tags)
             if self.isComplexBARule(obj.search):
@@ -46,8 +46,9 @@ class BAYmlOutput():
                 }
                 test_dict["tests"][0]["name"] = obj.name
                 for count in range(len(test_dict["tests"][0]["attack_data"])):
-                    a = urlparse(test_dict["tests"][0]["attack_data"][count]["data"])
+                    a = urlparse(str(test_dict["tests"][0]["attack_data"][count]["data"]))
                     test_dict["tests"][0]["attack_data"][count]["file_name"] = os.path.basename(a.path)
+
                 test = UnitTestOld.parse_obj(test_dict)
 
                 obj.test = test
@@ -149,5 +150,4 @@ class BAYmlOutput():
 
     def isComplexBARule(self, search):
         return re.findall("stats|first_time_event|adaptive_threshold", search)
-
 

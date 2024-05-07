@@ -1,31 +1,15 @@
-from contentctl.objects.test_config import TestConfig
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
-    DetectionTestingInfrastructure,
-)
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import (
-    DetectionTestingInfrastructureContainer,
-)
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import (
-    DetectionTestingInfrastructureServer,
-)
-
-from contentctl.objects.app import App
-import pathlib
-import os
-from contentctl.helper.utils import Utils
+from typing import List,Union
+from contentctl.objects.config import test, test_servers, Container,Infrastructure
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import DetectionTestingInfrastructure
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import DetectionTestingInfrastructureContainer
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import DetectionTestingInfrastructureServer
 from urllib.parse import urlparse
-import time
 from copy import deepcopy
 from contentctl.objects.enums import DetectionTestingTargetInfrastructure
 import signal
 import datetime
-
 # from queue import Queue
-
-CONTAINER_APP_PATH = pathlib.Path("apps")
-
 from dataclasses import dataclass
-
 # import threading
 import ctypes
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
@@ -35,23 +19,17 @@ from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfras
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
-
 from contentctl.objects.enums import PostTestBehavior
-
 from pydantic import BaseModel, Field
-from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.detection import Detection
-
-
 import concurrent.futures
-
-import tqdm
+import docker
 
 
 @dataclass(frozen=False)
 class DetectionTestingManagerInputDto:
-    config: TestConfig
-    testContent: DirectorOutputDto
+    config: Union[test,test_servers]
+    detections: List[Detection]
     views: list[DetectionTestingView]
 
 
@@ -67,7 +45,7 @@ class DetectionTestingManager(BaseModel):
 
         # for content in self.input_dto.testContent.detections:
         #    self.pending_queue.put(content)
-        self.output_dto.inputQueue = self.input_dto.testContent.detections
+        self.output_dto.inputQueue = self.input_dto.detections
         self.create_DetectionTestingInfrastructureObjects()
 
     def execute(self) -> DetectionTestingManagerOutputDto:
@@ -87,13 +65,13 @@ class DetectionTestingManager(BaseModel):
                 print("*******************************")
 
         signal.signal(signal.SIGINT, sigint_handler)
-
+        
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self.input_dto.config.infrastructure_config.infrastructures),
+            max_workers=len(self.input_dto.config.test_instances),
         ) as instance_pool, concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self.input_dto.views)
         ) as view_runner, concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self.input_dto.config.infrastructure_config.infrastructures),
+            max_workers=len(self.input_dto.config.test_instances),
         ) as view_shutdowner:
 
             # Start all the views
@@ -151,14 +129,41 @@ class DetectionTestingManager(BaseModel):
         return self.output_dto
 
     def create_DetectionTestingInfrastructureObjects(self):
-        import sys
+        #Make sure that, if we need to, we pull the appropriate container
+        for infrastructure in self.input_dto.config.test_instances:
+            if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
+                try:
+                    client = docker.from_env()
+                except Exception as e:
+                    raise Exception("Unable to connect to docker.  Are you sure that docker is running on this host?")
+                try:
+                    
+                    parts = self.input_dto.config.container_settings.full_image_path.split(':')
+                    if len(parts) != 2:
+                        raise Exception(f"Expected to find a name:tag in {self.input_dto.config.container_settings.full_image_path}, "
+                                        f"but instead found {parts}. Note that this path MUST include the tag, which is separated by ':'")
+                    
+                    print(
+                        f"Getting the latest version of the container image [{self.input_dto.config.container_settings.full_image_path}]...",
+                        end="",
+                        flush=True,
+                    )
+                    client.images.pull(parts[0], tag=parts[1], platform="linux/amd64")
+                    print("done!")
+                    break
+                except Exception as e:
+                    raise Exception(f"Failed to pull docker container image [{self.input_dto.config.container_settings.full_image_path}]: {str(e)}")
 
-        for infrastructure in self.input_dto.config.infrastructure_config.infrastructures:
+        already_staged_container_files = False
+        for infrastructure in self.input_dto.config.test_instances:
 
-            if (
-                self.input_dto.config.infrastructure_config.infrastructure_type
-                == DetectionTestingTargetInfrastructure.container
-            ):
+            if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
+                # Stage the files in the apps dir so that they can be passed directly to
+                # subsequent containers. Do this here, instead of inside each container, to
+                # avoid duplicate downloads/moves/copies
+                if not already_staged_container_files:
+                    self.input_dto.config.getContainerEnvironmentString(stage_file=True)
+                    already_staged_container_files = True
 
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureContainer(
@@ -166,11 +171,7 @@ class DetectionTestingManager(BaseModel):
                     )
                 )
 
-            elif (
-                self.input_dto.config.infrastructure_config.infrastructure_type
-                == DetectionTestingTargetInfrastructure.server
-            ):
-
+            elif (isinstance(self.input_dto.config, test_servers) and isinstance(infrastructure, Infrastructure)):
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureServer(
                         global_config=self.input_dto.config, infrastructure=infrastructure, sync_obj=self.output_dto
@@ -179,7 +180,5 @@ class DetectionTestingManager(BaseModel):
 
             else:
 
-                print(
-                    f"Unsupported target infrastructure '{self.input_dto.config.infrastructure_config.infrastructure_type}'"
-                )
-                sys.exit(1)
+                raise Exception(f"Unsupported target infrastructure '{infrastructure}' and config type {self.input_dto.config}")
+                

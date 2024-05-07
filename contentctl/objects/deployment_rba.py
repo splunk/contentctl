@@ -1,7 +1,6 @@
-
-
-from pydantic import BaseModel, validator, ValidationError
+from __future__ import annotations
+from pydantic import BaseModel
 
 
 class DeploymentRBA(BaseModel):
-    enabled: str
+    enabled: bool = False

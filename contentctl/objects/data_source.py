@@ -1,8 +1,6 @@
+from __future__ import annotations
+from pydantic import BaseModel
 
-
-
-from pydantic import BaseModel, validator, ValidationError
-from dataclasses import dataclass
 
 
 class DataSource(BaseModel):

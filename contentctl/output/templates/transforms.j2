@@ -2,19 +2,19 @@
 {% for lookup in objects %}
 [{{ lookup.name }}]
 {% if lookup.filename is defined and lookup.filename != None %}
-filename = {{ lookup.filename  }}
+filename = {{ lookup.filename.name  }}
 {% else %}
 collection = {{ lookup.collection }}
 external_type = kvstore
 {% endif %}
 {% if lookup.default_match is defined and lookup.default_match != None  %}
-default_match = {{ lookup.default_match }}
+default_match = {{ lookup.default_match | lower }}
 {% endif %}
 {% if lookup.case_sensitive_match is defined and lookup.case_sensitive_match != None %}
-case_sensitive_match = {{ lookup.case_sensitive_match }}
+case_sensitive_match = {{ lookup.case_sensitive_match | lower }}
 {% endif %}
 {% if lookup.description is defined and lookup.description != None %}
-# description = {{ lookup.description }}
+# description = {{ lookup.description | escapeNewlines() }}
 {% endif %}
 {% if lookup.match_type is defined and lookup.match_type != None %}
 match_type = {{ lookup.match_type }}

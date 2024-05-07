@@ -3,7 +3,7 @@ import re
 import os
 
 from pydantic import ValidationError
-
+from typing import List
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -12,19 +12,20 @@ from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.enrichments.splunk_app_enrichment import SplunkAppEnrichment
 from contentctl.objects.ssa_detection import SSADetection
-from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
-
+from contentctl.objects.constants import *
+from contentctl.input.director import DirectorOutputDto
+from contentctl.enrichments.attack_enrichment import AttackEnrichment
 
 class SSADetectionBuilder():
     security_content_obj : SSADetection
 
 
-    def setObject(self, path: str) -> None:
+    def setObject(self, path: str,
+                  output_dto:DirectorOutputDto ) -> None:
         yml_dict = YmlReader.load_file(path)
-        yml_dict["tags"]["name"] = yml_dict["name"]
+        #self.security_content_obj = SSADetection.model_validate(yml_dict, context={"output_dto":output_dto})     
         self.security_content_obj = SSADetection.parse_obj(yml_dict)
-        self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]      
-
+        self.security_content_obj.source = os.path.split(os.path.dirname(self.security_content_obj.file_path))[-1]
 
     def addProvidingTechnologies(self) -> None:
         if self.security_content_obj:
@@ -90,6 +91,14 @@ class SSADetectionBuilder():
                         else:
                             #print("mitre_attack_id " + mitre_attack_id + " doesn't exist for detecction " + self.security_content_obj.name)
                             raise ValueError("mitre_attack_id " + mitre_attack_id + " doesn't exist for detection " + self.security_content_obj.name)
+    def addMitreAttackEnrichmentNew(self, attack_enrichment: AttackEnrichment) -> None:
+        if self.security_content_obj and self.security_content_obj.tags.mitre_attack_id:
+            self.security_content_obj.tags.mitre_attack_enrichments = []
+            for mitre_attack_id in self.security_content_obj.tags.mitre_attack_id:
+                enrichment_obj = attack_enrichment.getEnrichmentByMitreID(mitre_attack_id)
+                if enrichment_obj is not None:
+                    self.security_content_obj.tags.mitre_attack_enrichments.append(enrichment_obj)
+
 
 
     def addCIS(self) -> None:

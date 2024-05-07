@@ -13,7 +13,7 @@ class IntegrationTest(BaseTest):
     An integration test for a detection against ES
     """
     # The test type (integration)
-    test_type: TestType = Field(TestType.INTEGRATION, const=True)
+    test_type: TestType = Field(TestType.INTEGRATION)
 
     # The test result
     result: Union[None, IntegrationTestResult] = None

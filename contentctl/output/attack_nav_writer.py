@@ -1,7 +1,7 @@
 
 import json
-
-
+from typing import Union, List
+import pathlib
 VERSION = "4.3"
 NAME = "Detection Coverage"
 DESCRIPTION = "security_content detection coverage"
@@ -11,7 +11,7 @@ DOMAIN = "mitre-enterprise"
 class AttackNavWriter():
 
     @staticmethod
-    def writeAttackNavFile(mitre_techniques : dict, output_path : str) -> None:
+    def writeAttackNavFile(mitre_techniques : dict[str,dict[str,Union[List[str],int]]], output_path : pathlib.Path) -> None:
         max_count = 0
         for technique_id in mitre_techniques.keys():
             if mitre_techniques[technique_id]['score'] > max_count:

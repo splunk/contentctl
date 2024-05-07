@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from contentctl.objects.config import test
+from contentctl.objects.config import test_common
 from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
 from contentctl.objects.detection import Detection
 
@@ -40,16 +40,13 @@ MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 @dataclass(frozen=True)
 class TestInputDto:
     detections: List[Detection]
-    config: test
+    config: test_common
     
-
-class TestOutputDto:
-    results: list
-
 
 class Test:
 
-    def filter_detections(self, input_dto: TestInputDto):
+    def filter_detections(self, input_dto: TestInputDto)->TestInputDto:
+        
         if not input_dto.config.enable_integration_testing:
             #Skip all integraiton tests if integration testing is not enabled:
             for detection in input_dto.detections:
@@ -57,15 +54,21 @@ class Test:
                     if isinstance(test, IntegrationTest):
                         test.skip("TEST SKIPPED: Skipping all integration tests")
         
+        list_after_filtering:List[Detection] = []
         #extra filtering which may be removed/modified in the future
         for detection in input_dto.detections:
             if (detection.status != DetectionStatus.production.value):
                 #print(f"{detection.name} - Not testing because [STATUS: {detection.status}]")
-                input_dto.detections.remove(detection)
+                pass
             elif detection.type == AnalyticsType.Correlation:
                 #print(f"{detection.name} - Not testing because [  TYPE: {detection.type}]")
-                input_dto.detections.remove(detection)
-
+                pass
+            else:
+                list_after_filtering.append(detection)
+        
+        return TestInputDto(list_after_filtering, input_dto.config)
+        
+        
     def execute(self, input_dto: TestInputDto) -> bool:
 
         

@@ -1,10 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING,List
 from contentctl.objects.story_tags import StoryTags
-from pydantic import field_validator, Field, ValidationInfo, model_serializer,computed_field, model_validator
+from pydantic import Field, model_serializer,computed_field, model_validator
 import re
-from contentctl.objects.enums import DataModel, KillChainPhase
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment, MitreTactics
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation

@@ -34,7 +34,7 @@ class Initialize:
             source_directory = pathlib.Path(os.path.dirname(__file__))/templateDir
             target_directory = config.path/targetDir
             #Throw an exception if the target exists
-            shutil.copytree(source_directory, targetDir, dirs_exist_ok=False)
+            shutil.copytree(source_directory, target_directory, dirs_exist_ok=False)
         
         #Create the config file as well
         shutil.copyfile(pathlib.Path(os.path.dirname(__file__))/'../templates/README','README')

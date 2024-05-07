@@ -1,6 +1,6 @@
 from contentctl.actions.initialize import Initialize
 import tyro
-from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect
+from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, report, test_common, release_notes
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
 from contentctl.actions.detection_testing.GitService import GitService
@@ -12,12 +12,13 @@ from contentctl.actions.build import (
 
 from contentctl.actions.test import Test
 from contentctl.actions.test import TestInputDto
-
+from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.inspect import Inspect
 import sys
 import warnings
 import pathlib
 from contentctl.input.yml_reader import YmlReader
+from contentctl.actions.release_notes import ReleaseNotes
 
 # def print_ascii_art():
 #     print(
@@ -60,6 +61,16 @@ def validate_func(config:validate)->DirectorOutputDto:
     validate = Validate()
     return validate.execute(config)
 
+def report_func(config:report)->None:
+    # First, perform validation. Remember that the validate
+    # configuration is actually a subset of the build configuration
+    director_output_dto = validate_func(config)
+    
+    r = Reporting() 
+    return r.execute(ReportingInputDto(director_output_dto=director_output_dto, 
+                                       config=config))
+    
+
 def build_func(config:build)->DirectorOutputDto:
     # First, perform validation. Remember that the validate
     # configuration is actually a subset of the build configuration
@@ -74,6 +85,9 @@ def inspect_func(config:inspect)->str:
     return inspect_token
     
 
+def release_notes_func(config:release_notes)->None:
+    ReleaseNotes().release_notes(config)
+
 def new_func(config:new):
     NewContent().execute(config)
 
@@ -87,7 +101,7 @@ def deploy_rest_func(config:deploy_rest):
     raise Exception("deploy rest not yet implemented")
     
 
-def test_func(config:test):
+def test_common_func(config:test_common):
     director_output_dto = build_func(config)
     gitServer = GitService(director=director_output_dto,config=config)
     detections_to_test = gitServer.getContent()
@@ -100,25 +114,20 @@ def test_func(config:test):
     
     # Remove detections that we do not want to test because they are
     # not production, the correct type, or manual_test only
-    t.filter_detections(test_input_dto)
+    filted_test_input_dto = t.filter_detections(test_input_dto)
     
     if config.plan_only:
         #Emit the test plan and quit. Do not actually run the test
-        config.dumpCICDPlanAndQuit(gitServer.getHash(),test_input_dto.detections)
+        config.dumpCICDPlanAndQuit(gitServer.getHash(),filted_test_input_dto.detections)
         return 
     
-    success = t.execute(test_input_dto)
+    success = t.execute(filted_test_input_dto)
     
     if success:
         #Everything passed!
         print("All tests have run successfully or been marked as 'skipped'")
         return
     raise Exception("There was at least one unsuccessful test")
-
-def test_servers_func(config:test_servers):
-    raise Exception("Not yet done")
-
-    
 
 def main():
     try:
@@ -127,10 +136,13 @@ def main():
         # We MUST load a config (with testing info) object so that we can
         # properly construct the command line, including 'contentctl test' parameters.
         if not configFile.is_file():
-            if "init" not in sys.argv:
+            if "init" not in sys.argv and "--help" not in sys.argv and "-h" not in sys.argv:
                 raise Exception(f"'{configFile}' not found in the current directory.\n"
                                 "Please ensure you are in the correct directory or run 'contentctl init' to create a new content pack.")
             
+            if "--help" in sys.argv or "-h" in sys.argv:
+                print("Warning - contentctl.yml is missing from this directory. The configuration values showed at the default and are informational only.\n"
+                      "Please ensure that contentctl.yml exists by manually creating it or running 'contentctl init'")
             # Otherwise generate a stub config file.
             # It will be used during init workflow
 
@@ -156,11 +168,13 @@ def main():
         {
             "init":init.model_validate(config_obj),
             "validate": validate.model_validate(config_obj),
+            "report": report.model_validate(config_obj),
             "build":build.model_validate(config_obj),
             "inspect": inspect.model_construct(**t.__dict__),
             "new":new.model_validate(config_obj),
             "test":test.model_validate(config_obj),
-            "test_servers":test_servers.model_validate(config_obj),
+            "test_servers":test_servers.model_construct(**t.__dict__),
+            "release_notes": release_notes.model_construct(**config_obj),
             "deploy_acs": deploy_acs.model_construct(**t.__dict__),
             #"deploy_rest":deploy_rest()
         }
@@ -182,24 +196,33 @@ def main():
             init_func(t)
         elif type(config) == validate:
             validate_func(config)
+        elif type(config) == report:
+            report_func(config)
         elif type(config) == build:
             build_func(config)
         elif type(config) == new:
             new_func(config)
         elif type(config) == inspect:
             inspect_func(config)
+        elif type(config) == release_notes:
+            release_notes_func(config)
         elif type(config) == deploy_acs:
             updated_config = deploy_acs.model_validate(config)
             deploy_acs_func(updated_config)
         elif type(config) == deploy_rest:
             deploy_rest_func(config)
-        elif type(config) == test:
-            test_func(config)
-        elif type(config) == test_servers:
-            test_servers_func(config)
+        elif type(config) == test or type(config) == test_servers:
+            if type(config) == test:
+                #construct the container Infrastructure objects
+                config.getContainerInfrastructureObjects()
+                #otherwise, they have already been passed as servers
+            test_common_func(config)
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
     except Exception as e:
-        print(e)
+        import traceback
+        traceback.print_exc()
+        traceback.print_stack()
+        #print(e)
         sys.exit(1)
     

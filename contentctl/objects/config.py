@@ -2,13 +2,13 @@ from __future__ import annotations
 from pydantic import (
     BaseModel, Field, field_validator, 
     field_serializer, ConfigDict, DirectoryPath,
-    PositiveInt, FilePath, HttpUrl, AnyUrl, computed_field, model_validator,
+    PositiveInt, FilePath, HttpUrl, AnyUrl, model_validator,
     ValidationInfo
 )
 from contentctl.output.yml_writer import YmlWriter
-
+from os import environ
 from datetime import datetime, UTC
-from typing import Optional,Any,Dict,Annotated,List,Union, Self
+from typing import Optional,Any,Annotated,List,Union, Self
 import semantic_version
 import random
 from enum import StrEnum, auto
@@ -17,9 +17,10 @@ from contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 from contentctl.objects.enums import PostTestBehavior
-from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 
+import tqdm
+from functools import partialmethod
 
 ENTERPRISE_SECURITY_UID = 263
 COMMON_INFORMATION_MODEL_UID = 1621
@@ -168,12 +169,18 @@ class validate(Config_Base):
                                                          "This is useful when outputting a release build "\
                                                          "and validating these values, but should otherwise "\
                                                          "be avoided for performance reasons.")
-    build_app: bool = Field(default=True, description="Should an app be built and output in the {build_path}?")
-    build_api: bool = Field(default=False, description="Should api objects be built and output in the {build_path}?")
-    build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the {build_path}?")
+    build_app: bool = Field(default=True, description="Should an app be built and output in the build_path?")
+    build_api: bool = Field(default=False, description="Should api objects be built and output in the build_path?")
+    build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the build_path?")
 
     def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
         return self.path/atomic_red_team_repo_name
+
+class report(validate):
+    #reporting takes no extra args, but we define it here so that it can be a mode on the command line    
+    def getReportingPath(self)->pathlib.Path:
+        return self.path/"reporting/"
+
 
 
 class build(validate):
@@ -223,6 +230,7 @@ class build(validate):
 
     def getAppTemplatePath(self)->pathlib.Path:
         return self.path/"app_template"
+    
 
 
 class StackType(StrEnum):
@@ -532,7 +540,16 @@ DEFAULT_APPS:List[TestApp] = [
 
 class test_common(build):
     mode:Union[Changes, Selected, All] = Field(All(), union_mode='left_to_right')
-    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="")
+    post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="Controls what to do when a test completes.\n\n"
+                                                                                                        f"'{PostTestBehavior.always_pause.value}' -  the state of "
+                                                                                                        "the test will always pause after a test, allowing the user to log into the "
+                                                                                                        "server and experiment with the search and data before it is removed.\n\n"
+                                                                                                        f"'{PostTestBehavior.pause_on_failure.value}' - pause execution ONLY when a test fails. The user may press ENTER in the terminal "
+                                                                                                        "running the test to move on to the next test.\n\n"
+                                                                                                        f"'{PostTestBehavior.never_pause.value}' -  never stop testing, even if a test fails.\n\n"
+                                                                                                        "***SPECIAL NOTE FOR CI/CD*** 'never_pause' MUST be used for a test to "
+                                                                                                        "run in an unattended manner or in a CI/CD system - otherwise a single failed test "
+                                                                                                        "will result in the testing never finishing as the tool waits for input.")
     test_instances:List[Infrastructure] = Field(...)
     enable_integration_testing: bool = Field(default=False, description="Enable integration testing, which REQUIRES Splunk Enterprise Security "
                                              "to be installed on the server. This checks for a number of different things including generation "
@@ -542,9 +559,59 @@ class test_common(build):
                            "This flag is useful for building your app and generating a test plan to run on different infrastructure.  "
                            "This flag does not actually perform the test. Instead, it builds validates all content and builds the app(s).  "
                            "It MUST be used with mode.changes and must run in the context of a git repo.")
+    disable_tqdm:bool = Field(default=False, exclude=True, description="The tdqm library (https://github.com/tqdm/tqdm) is used to facilitate a richer,"
+                               " interactive command line workflow that can display progress bars and status information frequently. "
+                               "Unfortunately it is incompatible with, or may cause poorly formatted logs, in many CI/CD systems or other unattended environments. "
+                               "If you are running contentctl in CI/CD, then please set this argument to True. Note that if you are running in a CI/CD context, "
+                               f"you also MUST set post_test_behavior to {PostTestBehavior.never_pause.value}. Otherwiser, a failed detection will cause"
+                               "the CI/CD running to pause indefinitely.")
 
     apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=False, description="List of apps to install in test environment")
     
+
+    def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
+        output_file = self.path / "test_plan.yml"
+        self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
+        self.post_test_behavior = PostTestBehavior.never_pause.value
+        #required so that CI/CD does not get too much output or hang
+        self.disable_tqdm = True
+
+        # We will still parse the app, but no need to do enrichments or 
+        # output to dist. We have already built it!
+        self.build_app = False
+        self.build_api = False
+        self.build_ssa = False
+        self.enrichments = False
+        
+        self.enable_integration_testing = True
+
+        data = self.model_dump()
+        
+        #Add the hash of the current commit
+        data['githash'] = str(githash)
+        
+        #Remove some fields that are not relevant
+        for k in ['container_settings', 'test_instances']:
+            if k in data:
+                del(data[k]) 
+        
+        
+
+        try:
+            YmlWriter.writeYmlFile(str(output_file), data)
+            print(f"Successfully wrote a test plan for [{len(self.mode.files)} detections] using [{len(self.apps)} apps] to [{output_file}]")
+        except Exception as e:
+            raise Exception(f"Error writing test plan file [{output_file}]: {str(e)}")
+
+
+    def getLocalAppDir(self)->pathlib.Path:
+        #docker really wants abolsute paths
+        path = self.path / "apps"
+        return path.absolute()
+    
+    def getContainerAppDir(self)->pathlib.Path:
+        #docker really wants abolsute paths
+        return pathlib.Path("/tmp/apps").absolute()
 
     def enterpriseSecurityInApps(self)->bool:
         
@@ -563,10 +630,24 @@ class test_common(build):
     def ensureCommonInformationModel(self)->Self:
         if self.commonInformationModelInApps():
             return self
-        raise ValueError(f"Common Information Model/CIM "
-                         f"(uid: [{COMMON_INFORMATION_MODEL_UID}]) is not listed in apps. "
-                         f"contentctl test MUST include Common Information Model")
-                         
+        print(f"INFO: Common Information Model/CIM "
+              f"(uid: [{COMMON_INFORMATION_MODEL_UID}]) is not listed in apps.\n"
+              f"contentctl test MUST include Common Information Model.\n"
+              f"Please note this message is only informational.")
+        return self
+    
+    @model_validator(mode='after')
+    def suppressTQDM(self)->Self:
+        if self.disable_tqdm:
+            tqdm.tqdm.__init__ = partialmethod(tqdm.tqdm.__init__, disable=True)
+            if self.post_test_behavior != PostTestBehavior.never_pause.value:
+                raise ValueError(f"You have disabled tqdm, presumably because you are "
+                                 f"running in CI/CD or another unattended context.\n"
+                                 f"However, post_test_behavior is set to [{self.post_test_behavior}].\n"
+                                 f"If that is the case, then you MUST set post_test_behavior "
+                                 f"to [{PostTestBehavior.never_pause.value}].\n"
+                                 "Otherwise, if a detection fails in CI/CD, your CI/CD runner will hang forever.")
+        return self
                          
 
 
@@ -577,10 +658,12 @@ class test_common(build):
         if self.enterpriseSecurityInApps():
             return self
             
-        raise ValueError(f"enable_integration_testing is [{self.enable_integration_testing}], "
-                         f"but the Splunk Enterprise Security "
-                         f"App (uid: [{ENTERPRISE_SECURITY_UID}]) is not listed in apps. "
-                         f"Integration Testing MUST include Enterprise Security.")
+        print(f"INFO: enable_integration_testing is [{self.enable_integration_testing}], "
+              f"but the Splunk Enterprise Security "
+              f"App (uid: [{ENTERPRISE_SECURITY_UID}]) is not listed in apps.\n"
+              f"Integration Testing MUST include Enterprise Security.\n"
+              f"Please note this message is only informational.")
+        return self
         
 
 
@@ -613,51 +696,15 @@ class test(test_common):
     splunk_api_password: Optional[str] = Field(default=None, exclude = True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
     
     
-    @model_validator(mode='after')
-    def get_test_instances(self)->Self:
-        
-        if len(self.test_instances) > 0:
-            return self
+    def getContainerInfrastructureObjects(self)->Self:
         try:
             self.test_instances = self.container_settings.getContainers()
             return self
             
         except Exception as e:
-            raise ValueError(f"Error constructing test_instances: {str(e)}")
+            raise ValueError(f"Error constructing container test_instances: {str(e)}")
     
-    def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
-        output_file = self.path / "test_plan.yml"
-        self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
-        self.post_test_behavior = PostTestBehavior.never_pause.value
-        
-        # We will still parse the app, but no need to do enrichments or 
-        # output to dist. We have already built it!
-        self.build_app = False
-        self.build_api = False
-        self.build_ssa = False
-        self.enrichments = False
-        self.enable_integration_testing = True
-
-        data = self.model_dump()
-        #Add relevant fields
-        data['githash'] = str(githash)
-        
-        #Remove some fields that are not relevant
-        del(data['container_settings'])
-        #del(data['apps'])
-
-        try:
-            YmlWriter.writeYmlFile(str(output_file), data)
-            print(f"Successfully wrote a test plan for [{len(self.mode.files)} detections] using [{len(self.apps)} apps] to [{output_file}]")
-        except Exception as e:
-            raise Exception(f"Error writing test plan file [{output_file}]: {str(e)}")
-
-
-    def getLocalAppDir(self)->pathlib.Path:
-        return self.path / "apps"
     
-    def getContainerAppDir(self)->pathlib.Path:
-        return pathlib.Path("/tmp/apps")
     
     
     @model_validator(mode='after')
@@ -684,7 +731,7 @@ class test(test_common):
         return self
 
     
-    def getContainerEnvironmentString(self,stage_file:bool=True, include_custom_app:bool=True)->str:
+    def getContainerEnvironmentString(self,stage_file:bool=False, include_custom_app:bool=True)->str:
         apps:List[App_Base] = self.apps
         if include_custom_app:
             apps.append(self.app)
@@ -704,9 +751,155 @@ class test(test_common):
         return self.path / "apps.yml"
 
 
-
+TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
 class test_servers(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    test_instances:List[Infrastructure] = Field([Infrastructure(instance_name="splunk_target", instance_address="splunkServerAddress.com")],description="Test against one or more preconfigured servers.")
+    test_instances:List[Infrastructure] = Field([],description="Test against one or more preconfigured servers.", validate_default=True)
+    server_info:Optional[str] = Field(None, validate_default=True, description='String of pre-configured servers to use for testing.  The list MUST be in the format:\n'
+                                      'address,username,web_ui_port,hec_port,api_port;address_2,username_2,web_ui_port_2,hec_port_2,api_port_2'
+                                      '\nFor example, the following string will use 2 preconfigured test instances:\n'
+                                      '127.0.0.1,firstUser,firstUserPassword,8000,8088,8089;1.2.3.4,secondUser,secondUserPassword,8000,8088,8089\n'
+                                      'Note that these test_instances may be hosted on the same system, such as localhost/127.0.0.1 or a docker server, or different hosts.\n'
+                                      f'This value may also be passed by setting the environment variable [{TEST_ARGS_ENV}] with the value above.')
+
+    @model_validator(mode='before')
+    @classmethod
+    def parse_config(cls, data:Any, info: ValidationInfo)->Any:
+        #Ignore whatever is in the file or defaults, these must be supplied on command line
+        #if len(v) != 0:
+        #    return v
+        
+        
+        if isinstance(data.get("server_info"),str) :
+            server_info = data.get("server_info")
+        elif isinstance(environ.get(TEST_ARGS_ENV),str):
+            server_info = environ.get(TEST_ARGS_ENV)
+        else:
+            raise ValueError(f"server_info not passed on command line or in environment variable {TEST_ARGS_ENV}")
+
+        infrastructures:List[Infrastructure] = []
+        
+        
+        index = 0
+        for server in server_info.split(';'):
+                address, username, password, web_ui_port, hec_port, api_port = server.split(",")
+                infrastructures.append(Infrastructure(splunk_app_username = username, splunk_app_password=password, 
+                                   instance_address=address, hec_port = int(hec_port), 
+                                   web_ui_port= int(web_ui_port),api_port=int(api_port), instance_name=f"test_server_{index}")
+                )
+                index+=1
+        data['test_instances'] = infrastructures
+        return data
+
+    @field_validator('test_instances',mode='before')
+    @classmethod
+    def check_environment_variable_for_config(cls, v:List[Infrastructure]):
+        return v
+        #Ignore whatever is in the file or defaults, these must be supplied on command line
+        #if len(v) != 0:
+        #    return v
+        TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
+        
+        
+        #environment variable is present. try to parse it
+        infrastructures:List[Infrastructure] = []
+        server_info:str|None = environ.get(TEST_ARGS_ENV)
+        if server_info is None:
+            raise ValueError(f"test_instances not passed on command line or in environment variable {TEST_ARGS_ENV}")
+        
+        
+        index = 0
+        for server in server_info.split(';'):
+                address, username, password, web_ui_port, hec_port, api_port = server.split(",")
+                infrastructures.append(Infrastructure(splunk_app_username = username, splunk_app_password=password, 
+                                   instance_address=address, hec_port = int(hec_port), 
+                                   web_ui_port= int(web_ui_port),api_port=int(api_port), instance_name=f"test_server_{index}")
+                )
+                index+=1
+
+
+        
+class release_notes(Config_Base):
+    old_tag:Optional[str] = Field(None, description="Name of the tag to diff against to find new content. "
+                                          "If it is not supplied, then it will be inferred as the "
+                                          "second newest tag at runtime.")
+    new_tag:Optional[str] = Field(None, description="Name of the tag containing new content. If it is not supplied,"
+                                          " then it will be inferred as the newest tag at runtime.")
+    latest_branch:Optional[str] = Field(None, description="Branch for which we are generating release notes")
+    
+    def releaseNotesFilename(self, filename:str)->pathlib.Path:
+        #Assume that notes are written to dist/. This does not respect build_dir since that is
+        #only a member of build
+        p =  self.path / "dist"
+        try:
+            p.mkdir(exist_ok=True,parents=True)
+        except Exception:
+            raise Exception(f"Error making the directory '{p}' to hold release_notes: {str(e)}")
+        return p/filename
+
+    @model_validator(mode='after')
+    def ensureNewTagOrLatestBranch(self):
+        '''
+        Exactly one of latest_branch or new_tag must be defined. otherwise, throw an error
+        '''
+        if self.new_tag is not None and self.latest_branch is not None:
+            raise ValueError("Both new_tag and latest_branch are defined.  EXACTLY one of these MUST be defiend.")
+        elif self.new_tag is None and self.latest_branch is None:
+            raise ValueError("Neither new_tag nor latest_branch are defined. EXACTLY one of these MUST be defined.")
+        return self
+
+    # @model_validator(mode='after')
+    # def ensureTagsAndBranch(self)->Self:
+    #     #get the repo
+    #     import pygit2
+    #     from pygit2 import Commit
+    #     repo = pygit2.Repository(path=str(self.path))
+    #     tags = list(repo.references.iterator(references_return_type=pygit2.enums.ReferenceFilter.TAGS))
+        
+    #     #Sort all tags by commit time from newest to oldest
+    #     sorted_tags = sorted(tags, key=lambda tag:  repo.lookup_reference(tag.name).peel(Commit).commit_time, reverse=True)
+        
+
+    #     tags_names:List[str] = [t.shorthand for t in sorted_tags]
+    #     print(tags_names)
+    #     if self.new_tag is not None and self.new_tag not in tags_names:
+    #         raise ValueError(f"The new_tag '{self.new_tag}' was not found in the set name tags for this repo: {tags_names}")
+    #     elif self.new_tag is None:
+    #         try:
+    #             self.new_tag = tags_names[0]
+    #         except Exception:
+    #             raise ValueError("Error getting new_tag - there were no tags in the repo")
+    #     elif self.new_tag in tags_names:
+    #         pass
+    #     else:
+    #         raise ValueError(f"Unknown error getting new_tag {self.new_tag}")
+        
+            
+            
+    #     if self.old_tag is not None and self.old_tag not in tags_names:
+    #         raise ValueError(f"The old_tag '{self.new_tag}' was not found in the set name tags for this repo: {tags_names}")
+    #     elif self.new_tag == self.old_tag:
+    #         raise ValueError(f"old_tag '{self.old_tag}' cannot equal new_tag '{self.new_tag}'")
+    #     elif self.old_tag is None:
+    #         try:
+    #             self.old_tag = tags_names[tags_names.index(self.new_tag) + 1]
+    #         except Exception:
+    #             raise ValueError(f"Error getting old_tag. new_tag '{self.new_tag}' is the oldest tag in the repo.")
+    #     elif self.old_tag in tags_names:
+    #         pass
+    #     else:
+    #         raise ValueError(f"Unknown error getting old_tag {self.old_tag}")
+        
+        
+        
+    #     if not tags_names.index(self.new_tag) < tags_names.index(self.old_tag):
+    #         raise ValueError(f"The new_tag '{self.new_tag}' is not newer than the old_tag '{self.old_tag}'")
+        
+    #     if self.latest_branch is not None:
+    #         if repo.lookup_branch(self.latest_branch) is None:
+    #             raise ValueError("The latest_branch '{self.latest_branch}' was not found in the repository")
+        
+        
+    #     return self
 
 

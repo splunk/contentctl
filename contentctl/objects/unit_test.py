@@ -1,7 +1,5 @@
 from __future__ import annotations
-
-from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.objects.unit_test_attack_data import UnitTestAttackData

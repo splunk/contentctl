@@ -6,10 +6,6 @@ import docker.models.resource
 import docker.models.containers
 import docker
 import docker.types
-from contentctl.objects.test_config import (
-    CONTAINER_APP_DIR,
-    LOCAL_APP_DIR,
-)
 
 
 class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
@@ -78,8 +74,8 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
 
         mounts = [
             docker.types.Mount(
-                source=str(LOCAL_APP_DIR.absolute()),
-                target=str(CONTAINER_APP_DIR.absolute()),
+                source=str(self.global_config.getLocalAppDir()),
+                target=str(self.global_config.getContainerAppDir()),
                 type="bind",
                 read_only=True,
             )
@@ -88,7 +84,9 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         environment = {}
         environment["SPLUNK_START_ARGS"] = "--accept-license"
         environment["SPLUNK_PASSWORD"] = self.infrastructure.splunk_app_password
-        environment["SPLUNK_APPS_URL"] = self.global_config.getContainerEnvironmentString(stage_file=True)
+        # Files have already been staged by the time that we call this. Files must only be staged
+        # once, not staged by every container
+        environment["SPLUNK_APPS_URL"] = self.global_config.getContainerEnvironmentString(stage_file=False)
         if (
             self.global_config.splunk_api_username is not None
             and self.global_config.splunk_api_password is not None
@@ -119,6 +117,18 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             detach=True,
             platform="linux/amd64"
         )
+        
+        if self.global_config.enterpriseSecurityInApps():
+            #ES sets up https, so make sure it is included in the link
+            address = f"https://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
+        else:
+            address = f"http://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
+        print(f"\nStarted container with the following information:\n"
+              f"\tname    : [{self.get_name()}]\n"
+              f"\taddress : [{address}]\n"
+              f"\tusername: [{self.infrastructure.splunk_app_username}]\n"
+              f"\tpassword: [{self.infrastructure.splunk_app_password}]\n"
+              )
 
         return container
 
@@ -140,6 +150,8 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             # container was found, so now we try to remove it
             # v also removes volumes linked to the container
             container.remove(v=removeVolumes, force=forceRemove)
+            print(f"container [{self.get_name()}] successfully removed")
+
             # remove it even if it is running. remove volumes as well
             # No need to print that the container has been removed, it is expected behavior
 

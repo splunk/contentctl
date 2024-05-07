@@ -108,7 +108,7 @@ class Detection_Abstract(SecurityContentObject):
             annotations_dict["cve"] = self.tags.cve        
         annotations_dict["impact"] = self.tags.impact
         annotations_dict["type"] = self.type
-        annotations_dict["version"] = self.version
+        #annotations_dict["version"] = self.version
 
         #The annotations object is a superset of the mappings object.
         # So start with the mapping object.

@@ -1,10 +1,13 @@
-
+from __future__ import annotations
 from pycvesearch import CVESearch
 import functools
 import os
 import shelve
 import time
-import sys
+from typing import Annotated
+from pydantic import BaseModel,Field,ConfigDict
+
+from decimal import Decimal
 CVESSEARCH_API_URL = 'https://cve.circl.lu'
 
 CVE_CACHE_FILENAME = "lookups/CVE_CACHE.db"
@@ -12,7 +15,7 @@ CVE_CACHE_FILENAME = "lookups/CVE_CACHE.db"
 NON_PERSISTENT_CACHE = {}
 
 
-
+''''''
 @functools.cache
 def cvesearch_helper(url:str, cve_id:str, force_cached_or_offline:bool=False, max_api_attempts:int=3, retry_sleep_seconds:int=5):
     if max_api_attempts < 1:
@@ -63,10 +66,22 @@ def cvesearch_id_helper(url:str):
 
 
 
-class CveEnrichment():
 
+class CveEnrichmentObj(BaseModel):
+    id:Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]
+    cvss:Annotated[Decimal, Field(ge=.1, le=10, decimal_places=1)]
+    summary:str
+
+
+    @staticmethod
+    def buildEnrichmentOnFailure(id:Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"], errorMessage:str)->CveEnrichmentObj:
+        message = f"{errorMessage}. Default CVSS of 5.0 used"
+        print(message)
+        return CveEnrichmentObj(id=id, cvss=Decimal(5.0), summary=message)
+
+class CveEnrichment():
     @classmethod
-    def enrich_cve(self, cve_id: str, force_cached_or_offline: bool = False) -> dict:
+    def enrich_cve(cls, cve_id: str, force_cached_or_offline: bool = False, treat_failures_as_warnings:bool=True) -> CveEnrichmentObj:
         cve_enriched = dict()
         try:
             
@@ -74,12 +89,12 @@ class CveEnrichment():
             cve_enriched['id'] = cve_id
             cve_enriched['cvss'] = result['cvss']
             cve_enriched['summary'] = result['summary']
-        except TypeError as TypeErr:
-            # there was a error calling the circl api lets just empty the object
-            print("WARNING, issue enriching {0}, with error: {1}".format(cve_id, str(TypeErr)))
-            cve_enriched = dict()
-            
         except Exception as e:
-            print("WARNING - {0}".format(str(e)))
-    
-        return cve_enriched
+            message = f"issue enriching {cve_id}, with error: {str(e)}"
+            if treat_failures_as_warnings: 
+                return CveEnrichmentObj.buildEnrichmentOnFailure(id = cve_id, errorMessage=f"WARNING, {message}")
+            else:
+                raise ValueError(f"ERROR, {message}")
+        
+        return CveEnrichmentObj.model_validate(cve_enriched)
+        

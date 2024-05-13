@@ -7,7 +7,7 @@
 type = investigation
 explanation = none
 {% if detection.how_to_implement is defined %}
-how_to_implement = {{ detection.how_to_implement }}
+how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}
 how_to_implement = none
 {% endif %}

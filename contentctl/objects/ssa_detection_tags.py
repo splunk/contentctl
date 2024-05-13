@@ -1,13 +1,15 @@
+from __future__ import annotations
 import re
+from typing import List
+from pydantic import BaseModel, validator, ValidationError, model_validator, Field
 
-from pydantic import BaseModel, validator, ValidationError, root_validator
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
-
+from contentctl.objects.enums import SecurityContentProductName
 
 class SSADetectionTags(BaseModel):
     # detection spec
-    name: str
+    #name: str
     analytic_story: list
     asset_type: str
     automated_detection_testing: str = None
@@ -19,7 +21,7 @@ class SSADetectionTags(BaseModel):
     mitre_attack_id: list = None
     nist: list = None
     observable: list
-    product: list
+    product: List[SecurityContentProductName] = Field(...,min_length=1)
     required_fields: list
     risk_score: int
     security_domain: str
@@ -77,7 +79,7 @@ class SSADetectionTags(BaseModel):
     def tags_confidence(cls, v, values):
         v = int(v)
         if not (v > 0 and v <= 100):
-             raise ValueError('confidence score is out of range 1-100: ' + values["name"])
+             raise ValueError('confidence score is out of range 1-100.' )
         else:
             return v
 
@@ -85,7 +87,7 @@ class SSADetectionTags(BaseModel):
     @validator('impact')
     def tags_impact(cls, v, values):
         if not (v > 0 and v <= 100):
-             raise ValueError('impact score is out of range 1-100: ' + values["name"])
+             raise ValueError('impact score is out of range 1-100.')
         else:
             return v
 
@@ -94,7 +96,7 @@ class SSADetectionTags(BaseModel):
         valid_kill_chain_phases = SES_KILL_CHAIN_MAPPINGS.keys()
         for value in v:
             if value not in valid_kill_chain_phases:
-                raise ValueError('kill chain phase not valid for ' + values["name"] + '. valid options are ' + str(valid_kill_chain_phases))
+                raise ValueError('kill chain phase not valid. Valid options are ' + str(valid_kill_chain_phases))
         return v
 
     @validator('mitre_attack_id')
@@ -102,20 +104,10 @@ class SSADetectionTags(BaseModel):
         pattern = 'T[0-9]{4}'
         for value in v:
             if not re.match(pattern, value):
-                raise ValueError('Mitre Attack ID are not following the pattern Txxxx: ' + values["name"])
+                raise ValueError('Mitre Attack ID are not following the pattern Txxxx:' )
         return v
 
-    @validator('product')
-    def tags_product(cls, v, values):
-        valid_products = [
-            "Splunk Enterprise", "Splunk Enterprise Security", "Splunk Cloud",
-            "Splunk Security Analytics for AWS", "Splunk Behavioral Analytics"
-        ]
 
-        for value in v:
-            if value not in valid_products:
-                raise ValueError('product is not valid for ' + values['name'] + '. valid products are ' + str(valid_products))
-        return v
 
     @validator('risk_score')
     def tags_calculate_risk_score(cls, v, values):
@@ -125,21 +117,22 @@ class SSADetectionTags(BaseModel):
                              f"\n  Expected risk_score={calculated_risk_score}, found risk_score={int(v)}: {values['name']}")
         return v
 
-    @root_validator
-    def tags_observable(cls, values):
+
+    @model_validator(mode="after")
+    def tags_observable(self):
         valid_roles = SES_OBSERVABLE_ROLE_MAPPING.keys()
         valid_types = SES_OBSERVABLE_TYPE_MAPPING.keys()
         
-        for value in values["observable"]:
+        for value in self.observable:
             if value['type'] in valid_types:
-                if 'Splunk Behavioral Analytics' in values["product"]:
+                if 'Splunk Behavioral Analytics' in self.product:
                     continue
 
                 if 'role' not in value:
-                    raise ValueError('Observable role is missing for ' + values["name"])
+                    raise ValueError('Observable role is missing')
                 for role in value['role']:
                     if role not in valid_roles:
-                        raise ValueError('Observable role ' + role + ' not valid for ' + values["name"] + '. valid options are ' + str(valid_roles))
+                        raise ValueError(f'Observable role ' + role + ' not valid. Valid options are {str(valid_roles)}')
             else:
-                raise ValueError('Observable type ' + value['type'] + ' not valid for ' + values["name"] + '. valid options are ' + str(valid_types))
-        return values
+                raise ValueError(f'Observable type ' + value['type'] + ' not valid. Valid options are {str(valid_types)}')
+        return self

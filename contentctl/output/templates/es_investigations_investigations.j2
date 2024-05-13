@@ -2,19 +2,19 @@
 {% for response_task in objects %}
 [panel://workbench_panel_{{ response_task.lowercase_name }}___response_task]
 label = {{ response_task.name }}
-description = {{ response_task.description }}
+description = {{ response_task.description | escapeNewlines() }}
 disabled = 0
 tokens = {\
 {% for token in response_task.inputs %}
 {% if token == 'user' %}
-    "user": {\
-      "valuePrefix": "\"",\
-      "valueSuffix": "\"",\
-      "delimiter": " OR {{ token }}=",\
-      "valueType": "primitive",\
-      "value": "identity",\
-      "default": "null"\
-    }{% elif token == 'dest'%}
+  "user": {\
+    "valuePrefix": "\"",\
+    "valueSuffix": "\"",\
+    "delimiter": " OR {{ token }}=",\
+    "valueType": "primitive",\
+    "value": "identity",\
+    "default": "null"\
+    }\{% elif token == 'dest'%}
     "dest": {\
       "valuePrefix": "\"",\
       "valueSuffix": "\"",\
@@ -22,7 +22,7 @@ tokens = {\
       "valueType": "primitive",\
       "value": "asset",\
       "default": "null"\
-    }{% else %}
+    }\{% else %}
     "{{ token }}": {\
       "valuePrefix": "\"",\
       "valueSuffix": "\"",\
@@ -30,9 +30,9 @@ tokens = {\
       "valueType": "primitive",\
       "value": "file",\
       "default": "null"\
-    }{% endif %}{{ "," if not loop.last }}\
+    }\{% endif %}{{ "," if not loop.last }}
 {% endfor %}
-}\
+  }\
 
 
 {% endfor %}

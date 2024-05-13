@@ -2,32 +2,43 @@ import os
 
 from dataclasses import dataclass
 
-from contentctl.input.director import DirectorInputDto, Director, DirectorOutputDto
+from contentctl.input.director import DirectorOutputDto
 from contentctl.output.svg_output import SvgOutput
 from contentctl.output.attack_nav_output import AttackNavOutput
-
+from contentctl.objects.config import report
 
 @dataclass(frozen=True)
 class ReportingInputDto:
-    director_input_dto: DirectorInputDto
+    director_output_dto: DirectorOutputDto
+    config: report
 
 class Reporting:
 
     def execute(self, input_dto: ReportingInputDto) -> None:
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[])
-        director = Director(director_output_dto)
-        director.execute(input_dto.director_input_dto)
 
+
+        #Ensure the reporting path exists
+        try:
+            input_dto.config.getReportingPath().mkdir(exist_ok=True,parents=True)
+        except Exception as e:
+            if input_dto.config.getReportingPath().is_file():
+                raise Exception(f"Error writing reporting: '{input_dto.config.getReportingPath()}' is a file, not a directory.")
+            else:
+                raise Exception(f"Error writing reporting : '{input_dto.config.getReportingPath()}': {str(e)}")
+
+        print("Creating GitHub Badges...")
+        #Generate GitHub Badges
         svg_output = SvgOutput()
         svg_output.writeObjects(
-            director_output_dto.detections, 
-            os.path.join(input_dto.director_input_dto.input_path, "reporting")
-        )
+            input_dto.director_output_dto.detections, 
+            input_dto.config.getReportingPath())
         
-        attack_nav_output = AttackNavOutput()        
+        #Generate coverage json
+        print("Generating coverage.json...")
+        attack_nav_output = AttackNavOutput()       
         attack_nav_output.writeObjects(
-            director_output_dto.detections, 
-            os.path.join(input_dto.director_input_dto.input_path, "reporting")
+            input_dto.director_output_dto.detections, 
+            input_dto.config.getReportingPath()
         )
         
-        print('Reporting of security content successful.')
+        print(f"Reporting successfully written to '{input_dto.config.getReportingPath()}'")

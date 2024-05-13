@@ -11,30 +11,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python_version: ["3.9", "3.10", "3.11"]
-        operating_system: ["ubuntu-20.04", "ubuntu-22.04"]
+        python_version: ["3.11", "3.12"]
+        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14"]
         #operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
 
 
     runs-on: ${{ matrix.operating_system }}
     steps:
-      - name: Install Docker for macOS
-        run: |
-          brew install docker
-          #import magic fails on macos runner
-          brew install libmagic
-          colima start
-          # Mapping below is required to get the Python docker library working
-          sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
-        if: matrix.operating_system == 'macos-latest'
+      #- name: Install Docker for macOS
+      #  run: |
+      #     brew install docker
+      #     # import magic fails on macos runner
+      #     brew install libmagic colima
+      #     colima start
+      #     # Mapping below is required to get the Python docker library working
+      #     sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
+      #  if: matrix.operating_system == 'macos-latest'
 
       #Checkout the current branch
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       #Install the given version of Python we will test against
       - name: Install Required Python Version
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_version }}
           architecture: "x64"
@@ -51,7 +51,12 @@ jobs:
       - name: Run contentctl init
         run: |
           cd my_splunk_content_pack
-          poetry run contentctl init
+          poetry run contentctl init  
+
+      - name: Clone the AtomicRedTeam Repo
+        run: |
+          cd my_splunk_content_pack
+          git clone --depth 1 https://github.com/redcanaryco/atomic-red-team
 
       - name: Run contentctl validate
         run: |
@@ -65,11 +70,12 @@ jobs:
 
       #Do not pause on a failed detection
       - name: Run contentctl test
+        if: startsWith(matrix.operating_system, 'ubuntu')
         run: |
           cd my_splunk_content_pack
-          poetry run contentctl test --unattended
+          poetry run contentctl test --disable-tqdm --post-test-behavior never_pause
       
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: content_pack_${{ matrix.python_version }}_${{ matrix.operating_system }}
           path: |

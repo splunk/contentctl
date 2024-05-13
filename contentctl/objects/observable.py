@@ -1,5 +1,6 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, SES_OBSERVABLE_ROLE_MAPPING
+
 
 
 class Observable(BaseModel):
@@ -7,14 +8,14 @@ class Observable(BaseModel):
     type: str
     role: list[str]
 
-    @validator('name')
-    def check_name(cls, v, values):
+    @field_validator('name')
+    def check_name(cls, v:str):
         if v == "":
             raise ValueError("No name provided for observable")
         return v
 
-    @validator('type')
-    def check_type(cls, v, values):
+    @field_validator('type')
+    def check_type(cls, v:str):
         if v not in SES_OBSERVABLE_TYPE_MAPPING.keys():
             raise ValueError(
                 f"Invalid type '{v}' provided for observable.  Valid observable types are "
@@ -22,17 +23,14 @@ class Observable(BaseModel):
             )
         return v
 
-    @validator('role', each_item=False)
-    def check_roles_not_empty(cls, v, values):
+    @field_validator('role')
+    def check_roles(cls, v:list[str]):
         if len(v) == 0:
-            raise ValueError("At least one role must be defined for observable")
-        return v
-
-    @validator('role', each_item=True)
-    def check_roles(cls, v, values):
-        if v not in SES_OBSERVABLE_ROLE_MAPPING.keys():
-            raise ValueError(
-                f"Invalid role '{v}' provided for observable.  Valid observable types are "
-                f"{SES_OBSERVABLE_ROLE_MAPPING.keys()}"
-            )
+            raise ValueError("Error, at least 1 role must be listed for Observable.")
+        for role in v:
+            if role not in SES_OBSERVABLE_ROLE_MAPPING.keys():
+                raise ValueError(
+                    f"Invalid role '{role}' provided for observable.  Valid observable types are "
+                    f"{SES_OBSERVABLE_ROLE_MAPPING.keys()}"
+                )
         return v

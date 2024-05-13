@@ -11,13 +11,13 @@ jobs:
 
       #Checkout the current branch
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       #Install the given version of Python we will test against
       - name: Install Required Python Version
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.11"
           architecture: "x64"
 
       - name: Install Poetry

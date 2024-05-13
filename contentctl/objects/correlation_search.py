@@ -216,7 +216,7 @@ class CorrelationSearch(BaseModel):
 
     # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
     # to conflict w/ tqdm)
-    logger: logging.Logger = Field(default_factory=get_logger, const=True)
+    logger: logging.Logger = Field(default_factory=get_logger)
 
     # The search name (e.g. "ESCU - Windows Modify Registry EnableLinkedConnections - Rule")
     name: Optional[str] = None

@@ -1,6 +1,4 @@
 from typing import Optional
-
-from contentctl.objects.test_config import Infrastructure
 from contentctl.objects.base_test_result import BaseTestResult
 
 

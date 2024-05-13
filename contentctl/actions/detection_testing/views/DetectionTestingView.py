@@ -3,7 +3,8 @@ import datetime
 
 from pydantic import BaseModel
 
-from contentctl.objects.test_config import TestConfig
+from contentctl.objects.config import test_common
+
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
@@ -12,7 +13,7 @@ from contentctl.objects.enums import DetectionStatus
 
 
 class DetectionTestingView(BaseModel, abc.ABC):
-    config: TestConfig
+    config: test_common
     sync_obj: DetectionTestingManagerOutputDto
 
     interval: float = 10

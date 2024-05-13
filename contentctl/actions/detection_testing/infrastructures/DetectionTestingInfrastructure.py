@@ -10,11 +10,11 @@ import pathlib
 from tempfile import TemporaryDirectory, mktemp
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
-from dataclasses import dataclass
+#from dataclasses import dataclass
 from shutil import copyfile
 from typing import Union, Optional
 
-from pydantic import BaseModel, PrivateAttr, Field
+from pydantic import BaseModel, PrivateAttr, Field, dataclasses
 import requests                                                                                     # type: ignore
 import splunklib.client as client                                                                   # type: ignore
 from splunklib.binding import HTTPError                                                             # type: ignore
@@ -23,6 +23,7 @@ import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
 
+from contentctl.objects.config import test_common, Infrastructure
 from contentctl.objects.enums import PostTestBehavior, AnalyticsType
 from contentctl.objects.detection import Detection
 from contentctl.objects.base_test import BaseTest
@@ -31,14 +32,10 @@ from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.integration_test_result import IntegrationTestResult
-from contentctl.objects.test_config import TestConfig, Infrastructure
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.correlation_search import CorrelationSearch, PbarData
 from contentctl.helper.utils import Utils
-from contentctl.actions.detection_testing.DataManipulation import (
-    DataManipulation,
-)
 from contentctl.actions.detection_testing.progress_bar import (
     format_pbar_string,
     TestReportingType,
@@ -66,8 +63,8 @@ class ContainerStoppedException(Exception):
     pass
 
 
-@dataclass(frozen=False)
-class DetectionTestingManagerOutputDto:
+@dataclasses.dataclass(frozen=False)
+class DetectionTestingManagerOutputDto():
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
     skippedQueue: list[Detection] = Field(default_factory=list)
@@ -81,7 +78,7 @@ class DetectionTestingManagerOutputDto:
 
 class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     # thread: threading.Thread = threading.Thread()
-    global_config: TestConfig
+    global_config: test_common
     infrastructure: Infrastructure
     sync_obj: DetectionTestingManagerOutputDto
     hec_token: str = ""
@@ -237,6 +234,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.pbar.write(
                     f"Error getting API connection (not quitting) '{type(e).__name__}': {str(e)}"
                 )
+                print("wow")
                 # self.pbar.write(
                 #     f"Unhandled exception getting connection to splunk server: {str(e)}"
                 # )
@@ -393,7 +391,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             try:
                 self.test_detection(detection)
             except ContainerStoppedException:
-                self.pbar.write(f"Stopped container [{self.get_name()}]")
+                self.pbar.write(f"Warning - container was stopped when trying to execute detection [{self.get_name()}]")
                 self.finish()
                 return
             except Exception as e:
@@ -1197,19 +1195,17 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     ):
         tempfile = mktemp(dir=tmp_dir)
 
-        if not (
-            attack_data_file.data.startswith("https://")
-            or attack_data_file.data.startswith("http://")
-        ):
-            if pathlib.Path(attack_data_file.data).is_file():
-                self.format_pbar_string(
-                    TestReportingType.GROUP,
-                    test_group.name,
-                    "Copying Data",
-                    start_time=test_group_start_time
-                )
+
+        if not (str(attack_data_file.data).startswith("http://") or 
+                str(attack_data_file.data).startswith("https://")) :
+            if pathlib.Path(str(attack_data_file.data)).is_file():
+                self.format_pbar_string(TestReportingType.GROUP, 
+                                        test_group.name, 
+                                        "Copying Data", 
+                                        test_group_start_time)
+
                 try:
-                    copyfile(attack_data_file.data, tempfile)
+                    copyfile(str(attack_data_file.data), tempfile)
                 except Exception as e:
                     raise Exception(
                         f"Error copying local Attack Data File for [{test_group.name}] - [{attack_data_file.data}]: "
@@ -1235,7 +1231,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 )
 
                 Utils.download_file_from_http(
-                    attack_data_file.data, tempfile, self.pbar, overwrite_file=True
+                    str(attack_data_file.data), tempfile, self.pbar, overwrite_file=True
                 )
             except Exception as e:
                 raise (
@@ -1244,12 +1240,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     )
                 )
 
-        # Update timestamps before replay
-        if attack_data_file.update_timestamp:
-            data_manipulation = DataManipulation()
-            data_manipulation.manipulate_timestamp(
-                tempfile, attack_data_file.sourcetype, attack_data_file.source
-            )
 
         # Upload the data
         self.format_pbar_string(
@@ -1372,7 +1362,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         pass
 
     def finish(self):
-        self.pbar.bar_format = f"Stopped container [{self.get_name()}]"
+        self.pbar.bar_format = f"Finished running tests on instance: [{self.get_name()}]"
         self.pbar.update()
         self.pbar.close()
 

@@ -1,5 +1,5 @@
 import os
-
+from typing import Any
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -20,7 +20,7 @@ class JinjaWriter:
 
 
     @staticmethod
-    def writeObject(template_name : str, output_path : str, object : dict) -> None:
+    def writeObject(template_name : str, output_path : str, object: dict[str,Any]) -> None:
 
         j2_env = Environment(
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')), 

@@ -34,7 +34,7 @@ class ConfWriter():
         # Failing to do so will result in an improperly formatted conf files that
         # cannot be parsed
         if isinstance(obj,str):
-            return obj.replace(f"\n","\\\n")
+            return obj.replace(f"\n"," \\\n")
         else:
             return obj
 

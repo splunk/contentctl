@@ -11,6 +11,76 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.config import build
 import xml.etree.ElementTree as ET
 
+# This list is not exhaustive of all default conf files, but should be
+# sufficient for our purposes.
+DEFAULT_CONF_FILES = [
+    "alert_actions.conf",
+    "app.conf",
+    "audit.conf",
+    "authentication.conf",
+    "authorize.conf",
+    "bookmarks.conf",
+    "checklist.conf",
+    "collections.conf",
+    "commands.conf",
+    "conf.conf",
+    "datamodels.conf",
+    "datatypesbnf.conf",
+    "default-mode.conf",
+    "deploymentclient.conf",
+    "distsearch.conf",
+    "event_renderers.conf",
+    "eventdiscoverer.conf",
+    "eventtypes.conf",
+    "federated.conf",
+    "fields.conf",
+    "global-banner.conf",
+    "health.conf",
+    "indexes.conf",
+    "inputs.conf",
+    "limits.conf",
+    "literals.conf",
+    "livetail.conf",
+    "macros.conf",
+    "messages.conf",
+    "metric_alerts.conf",
+    "metric_rollups.conf",
+    "multikv.conf",
+    "outputs.conf",
+    "passwords.conf",
+    "procmon-filters.conf",
+    "props.conf",
+    "pubsub.conf",
+    "restmap.conf",
+    "rolling_upgrade.conf",
+    "savedsearches.conf",
+    "searchbnf.conf",
+    "segmenters.conf",
+    "server.conf",
+    "serverclass.conf",
+    "serverclass.seed.xml.conf",
+    "source-classifier.conf",
+    "sourcetypes.conf",
+    "tags.conf",
+    "telemetry.conf",
+    "times.conf",
+    "transactiontypes.conf",
+    "transforms.conf",
+    "ui-prefs.conf",
+    "ui-tour.conf",
+    "user-prefs.conf",
+    "user-seed.conf",
+    "viewstates.conf",
+    "visualizations.conf",
+    "web-features.conf",
+    "web.conf",
+    "wmi.conf",
+    "workflow_actions.conf",
+    "workload_policy.conf",
+    "workload_pools.conf",
+    "workload_rules.conf",
+]
+
 class ConfWriter():
 
     @staticmethod
@@ -54,6 +124,52 @@ class ConfWriter():
         return output_path
 
     @staticmethod
+    def getCustomConfFileStems(config:build)->list[str]:
+        # Get all the conf files in the default directory. We must make a reload.conf_file = simple key/value for them if
+        # they are custom conf files
+        default_path = config.getPackageDirectoryPath()/"default"
+        conf_files = default_path.glob("*.conf")
+        
+        custom_conf_file_stems = [conf_file.stem for conf_file in conf_files if conf_file.name not in DEFAULT_CONF_FILES]
+        return sorted(custom_conf_file_stems)
+
+    @staticmethod
+    def writeServerConf(config: build) -> pathlib.Path:
+        app_output_path = pathlib.Path("default/server.conf")
+        template_name = "server.conf.j2"
+
+        j2_env = ConfWriter.getJ2Environment()
+        template = j2_env.get_template(template_name)
+
+        output = template.render(custom_conf_files=ConfWriter.getCustomConfFileStems(config))
+        
+        output_path = config.getPackageDirectoryPath()/app_output_path
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, 'a') as f:
+            output = output.encode('utf-8', 'ignore').decode('utf-8')
+            f.write(output)
+        return output_path
+
+
+    @staticmethod
+    def writeAppConf(config: build) -> pathlib.Path:
+        app_output_path = pathlib.Path("default/app.conf")
+        template_name = "app.conf.j2"
+
+        j2_env = ConfWriter.getJ2Environment()
+        template = j2_env.get_template(template_name)
+
+        output = template.render(custom_conf_files=ConfWriter.getCustomConfFileStems(config), 
+                                 app=config.app)
+        
+        output_path = config.getPackageDirectoryPath()/app_output_path
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, 'a') as f:
+            output = output.encode('utf-8', 'ignore').decode('utf-8')
+            f.write(output)
+        return output_path
+
+    @staticmethod
     def writeManifestFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list) -> pathlib.Path:
         j2_env = ConfWriter.getJ2Environment()
         template = j2_env.get_template(template_name)
@@ -66,6 +182,7 @@ class ConfWriter():
             output = output.encode('utf-8', 'ignore').decode('utf-8')
             f.write(output)
         return output_path
+    
 
 
     @staticmethod
@@ -198,8 +315,3 @@ class ConfWriter():
                 _ = json.load(manifestFile)
         except Exception as e:
             raise Exception(f"Failed to validate .manifest file {str(path)} (Note that .manifest files should contain only valid JSON-formatted data): {str(e)}")
-            
-
-
-
-

@@ -238,7 +238,7 @@ class StackType(StrEnum):
     victoria = auto()
 
 class inspect(build):
-    splunk_api_username: str = Field(description="Splunk API username used for running appinspect.")
+    splunk_api_username: str = Field(exclude=True, description="Splunk API username used for running appinspect.")
     splunk_api_password: str = Field(exclude=True, description="Splunk API password used for running appinspect.")
     stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
 

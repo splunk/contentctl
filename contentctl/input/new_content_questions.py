@@ -130,7 +130,7 @@ class NewContentQuestions:
                 "name": "story_author",
             },
             {
-                "type": "checkbox",
+                "type": "select",
                 "message": "select a category",
                 "name": "category",
                 "choices": [

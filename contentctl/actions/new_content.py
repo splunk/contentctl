@@ -87,7 +87,6 @@ class NewContent:
         answers['tags']['usecase'] = answers['usecase']
         del answers['usecase']
         answers['tags']['cve'] = ['UPDATE WITH CVE(S) IF APPLICABLE']
-        del answers['detection_kind']
         return answers
     
 

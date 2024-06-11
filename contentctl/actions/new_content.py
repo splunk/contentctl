@@ -57,7 +57,7 @@ class NewContent:
                 'name': "True Positive Test",
                 'attack_data': [ 
                     {
-                    'data': "Enter URL for Dataset Here.  This may also be a relative or absolute path on your local system for testing.",
+                    'data': "https://github.com/splunk/contentctl/wiki",
                     "sourcetype": "UPDATE SOURCETYPE",
                     "source": "UPDATE SOURCE"
                     }

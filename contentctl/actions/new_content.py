@@ -80,7 +80,6 @@ class NewContent:
         answers['narrative'] = 'UPDATE_NARRATIVE'
         answers['references'] = []
         answers['tags'] = dict()
-        answers['tags']['analytic_story'] = answers['name']
         answers['tags']['category'] = answers['category']
         del answers['category']
         answers['tags']['product'] = ['Splunk Enterprise','Splunk Enterprise Security','Splunk Cloud']

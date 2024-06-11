@@ -28,6 +28,7 @@ class NewContent:
         answers['status'] = "production" #start everything as production since that's what we INTEND the content to become   
         answers['description'] = 'UPDATE_DESCRIPTION'   
         file_name = answers['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
+        answers['kind'] = answers['detection_kind']
         answers['search'] = answers['detection_search'] + ' | `' + file_name + '_filter`'
         answers['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
         answers['known_false_positives'] = 'UPDATE_KNOWN_FALSE_POSITIVES'            
@@ -84,7 +85,7 @@ class NewContent:
     def execute(self, input_dto: new) -> None:
         if input_dto.type == NewContentType.detection:
             content_dict = self.buildDetection()
-            subdirectory = pathlib.Path('detections') / content_dict.get('type')
+            subdirectory = pathlib.Path('detections') / content_dict.get('detection_kind')
         elif input_dto.type == NewContentType.story:
             content_dict = self.buildStory()
             subdirectory = pathlib.Path('stories')

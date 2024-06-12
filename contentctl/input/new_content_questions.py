@@ -28,11 +28,6 @@ class NewContentQuestions:
                 'name': 'detection_author',
             },
             {
-                "type": "text",
-                "message": "enter author name",
-                "name": "detection_author",
-            },
-            {
                 "type": "select",
                 "message": "select a detection type",
                 "name": "detection_type",

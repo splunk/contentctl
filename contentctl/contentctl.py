@@ -14,6 +14,7 @@ from contentctl.actions.test import Test
 from contentctl.actions.test import TestInputDto
 from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.inspect import Inspect
+from contentctl.actions.acs_deploy import Deploy
 import sys
 import warnings
 import pathlib
@@ -81,8 +82,8 @@ def build_func(config:build)->DirectorOutputDto:
 def inspect_func(config:inspect)->str:
     #Make sure that we have built the most recent version of the app
     _ = build_func(config)
-    inspect_token = Inspect().execute(config)
-    return inspect_token
+    appinspect_token = Inspect().execute(config)
+    return appinspect_token
     
 
 def release_notes_func(config:release_notes)->None:
@@ -94,8 +95,10 @@ def new_func(config:new):
 
 
 def deploy_acs_func(config:deploy_acs):
-    #This is a bit challenging to get to work with the default values.
-    raise Exception("deploy acs not yet implemented")
+    appinspect_token = inspect_func(config)
+    Deploy().execute(config, appinspect_token)
+
+    
 
 def deploy_rest_func(config:deploy_rest):
     raise Exception("deploy rest not yet implemented")
@@ -175,7 +178,7 @@ def main():
             "test":test.model_validate(config_obj),
             "test_servers":test_servers.model_construct(**t.__dict__),
             "release_notes": release_notes.model_construct(**config_obj),
-            "deploy_acs": deploy_acs.model_construct(**t.__dict__),
+            "deploy_acs": deploy_acs.model_construct(**config_obj),
             #"deploy_rest":deploy_rest()
         }
     )

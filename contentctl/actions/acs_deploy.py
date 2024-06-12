@@ -1,38 +1,55 @@
-from dataclasses import dataclass
-from contentctl.input.director import DirectorInputDto
-from contentctl.output.conf_output import ConfOutput
-
-
-from typing import Union
-
-@dataclass(frozen=True)
-class ACSDeployInputDto:
-    director_input_dto: DirectorInputDto
-    splunk_api_username: str
-    splunk_api_password: str
-    splunk_cloud_jwt_token: str
-    splunk_cloud_stack: str
-    stack_type: str
+from contentctl.objects.config import deploy_acs, StackType
+from requests import post
+import pprint
 
 
 class Deploy:
-    def execute(self, input_dto: ACSDeployInputDto) -> None:
+    def execute(self, config: deploy_acs, appinspect_token:str) -> None:
         
-        conf_output = ConfOutput(input_dto.director_input_dto.input_path, input_dto.director_input_dto.config)
+        #The following common headers are used by both Clasic and Victoria
+        headers = {
+            'Authorization': f'Bearer {config.splunk_cloud_jwt_token}',
+            'ACS-Legal-Ack': 'Y'
+        }
+        try:
+            
+            with open(config.getPackageFilePath(include_version=False),'rb') as app_data:
+                #request_data = app_data.read()
+                if config.stack_type == StackType.classic:
+                    # Classic instead uses a form to store token and package
+                    # https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps#Manage_private_apps_using_the_ACS_API_on_Classic_Experience
+                    address = f"https://admin.splunk.com/{config.splunk_cloud_stack}/adminconfig/v2/apps"
+                    
+                    form_data = {
+                        'token': (None, appinspect_token),
+                        'package': app_data
+                    }
+                    res = post(address, headers=headers, files = form_data)
+                elif config.stack_type == StackType.victoria:
+                    # Victoria uses the X-Splunk-Authorization Header
+                    # It also uses --data-binary for the app content
+                    # https://docs.splunk.com/Documentation/SplunkCloud/9.1.2308/Config/ManageApps#Manage_private_apps_using_the_ACS_API_on_Victoria_Experience
+                    headers.update({'X-Splunk-Authorization':  appinspect_token})
+                    address = f"https://admin.splunk.com/{config.splunk_cloud_stack}/adminconfig/v2/apps/victoria"
+                    res = post(address, headers=headers, data=app_data.read())
+                else:
+                    raise Exception(f"Unsupported stack type: '{config.stack_type}'")
+        except Exception as e:
+            raise Exception(f"Error installing to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS:\n{str(e)}")
         
-        appinspect_token = conf_output.inspectAppAPI(input_dto.splunk_api_username, input_dto.splunk_api_password, input_dto.stack_type)
+        try:
+            # Request went through and completed, but may have returned a non-successful error code.
+            # This likely includes a more verbose response describing the error
+            res.raise_for_status()
+        except Exception as e:
+            try:
+                error_text = res.json()
+            except Exception as e:
+                error_text = "No error text - request failed"
+            formatted_error_text = pprint.pformat(error_text)
+            raise Exception(f"Error installing to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS:\n{formatted_error_text}")
         
-
-        if input_dto.splunk_cloud_jwt_token is None or input_dto.splunk_cloud_stack is None:
-            if input_dto.splunk_cloud_jwt_token is None:
-                raise Exception("Cannot deploy app via ACS, --splunk_cloud_jwt_token was not defined on command line.")
-            else:
-                raise Exception("Cannot deploy app via ACS, --splunk_cloud_stack was not defined on command line.")
-        
-        conf_output.deploy_via_acs(input_dto.splunk_cloud_jwt_token,
-                                input_dto.splunk_cloud_stack, 
-                                appinspect_token,
-                                input_dto.stack_type)
+        print(f"'{config.getPackageFilePath(include_version=False)}' successfully installed to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS!")
 
         
         

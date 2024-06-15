@@ -3,7 +3,7 @@
 
 {% for detection in objects %}
 {% if (detection.type == 'Investigation') %}
-[savedsearch://{{APP_NAME}} - {{ detection.name }} - Response Task]
+[savedsearch://{{app.label}} - {{ detection.name }} - Response Task]
 type = investigation
 explanation = none
 {% if detection.how_to_implement is defined %}

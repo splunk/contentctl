@@ -54,6 +54,56 @@ class Detection_Abstract(SecurityContentObject):
     # A list of groups of tests, relying on the same data
     test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)
 
+
+    @field_validator("search", mode="before")
+    @classmethod
+    def validate_presence_of_filter_macro(cls, value:Union[str, dict[str,Any]], info:ValidationInfo)->Union[str, dict[str,Any]]:
+        """
+        Validates that, if required to be present, the filter macro is present with the proper name.
+        The filter macro MUST be derived from the name of the detection
+
+
+        Args:
+            value (Union[str, dict[str,Any]]): The search. It can either be a string (and should be SPL) 
+                                               or a dict, in which case it is Sigma-formatted.
+            info (ValidationInfo): The validation info can contain a number of different objects. Today it only contains the director. 
+
+        Returns:
+            Union[str, dict[str,Any]]: The search, either in sigma or SPL format.
+        """        
+        
+        if isinstance(value,dict):
+            #If the search is a dict, then it is in Sigma format so return it
+            return value
+        
+        # Otherwise, the search is SPL.
+        FORCE_FILTER_MACRO = True
+        
+        # In the future, we will may add support that makes the inclusion of the 
+        # filter macro optional or automatically generates it for searches that 
+        # do not have it. For now, continue to require that all searches have a filter macro.
+        if not FORCE_FILTER_MACRO:
+            return value
+        
+        # Get the required macro name, which is derived from the search name.
+        # Note that a separate validation ensures that the file name matches the content name
+        name:Union[str,None] = info.data.get("name",None)
+        if name is None:
+            #The search was sigma formatted (or failed other validation and was None), so we will not validate macros in it
+            raise ValueError("Cannot validate filter macro, field 'name' (which is required to validate the macro) was missing from the detection YML.")
+        
+        #Get the file name without the extension. Note this is not a full path!
+        file_name = pathlib.Path(cls.contentNameToFileName(name)).stem
+        file_name_with_filter = f"`{file_name}_filter`"
+
+        if not value.endswith(file_name_with_filter):
+
+            raise ValueError(f"Detection does not end with the exact filter macro {file_name_with_filter}.")
+        
+        return value
+
+
+
     @field_validator("test_groups")
     @classmethod
     def validate_test_groups(cls, value:Union[None, List[TestGroup]], info:ValidationInfo) -> Union[List[TestGroup], None]:
@@ -382,7 +432,7 @@ class Detection_Abstract(SecurityContentObject):
             filter_macro = Macro.model_validate({"name":filter_macro_name, 
                                                 "definition":'search *', 
                                                 "description":'Update this macro to limit the output results to filter out false positives.'})
-            director.macros.append(filter_macro)
+            director.addContentToDictMappings(filter_macro)
         
         macros_from_search = Macro.get_macros(search, director)
         

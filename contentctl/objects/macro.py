@@ -10,7 +10,8 @@ from contentctl.objects.security_content_object import SecurityContentObject
 
 
 
-MACROS_TO_IGNORE = set(["_filter", "drop_dm_object_name"])
+#MACROS_TO_IGNORE = set(["_filter", "drop_dm_object_name"])
+MACROS_TO_IGNORE = set(["drop_dm_object_name"])
 #Should all of the following be included as well?
 MACROS_TO_IGNORE.add("get_asset" )
 MACROS_TO_IGNORE.add("get_risk_severity")

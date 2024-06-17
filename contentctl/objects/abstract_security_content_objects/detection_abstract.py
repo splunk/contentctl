@@ -77,11 +77,12 @@ class Detection_Abstract(SecurityContentObject):
             return value
         
         # Otherwise, the search is SPL.
-        FORCE_FILTER_MACRO = True
+        
         
         # In the future, we will may add support that makes the inclusion of the 
         # filter macro optional or automatically generates it for searches that 
         # do not have it. For now, continue to require that all searches have a filter macro.
+        FORCE_FILTER_MACRO = True
         if not FORCE_FILTER_MACRO:
             return value
         
@@ -95,10 +96,11 @@ class Detection_Abstract(SecurityContentObject):
         #Get the file name without the extension. Note this is not a full path!
         file_name = pathlib.Path(cls.contentNameToFileName(name)).stem
         file_name_with_filter = f"`{file_name}_filter`"
-
-        if not value.endswith(file_name_with_filter):
-
-            raise ValueError(f"Detection does not end with the exact filter macro {file_name_with_filter}.")
+        
+        if file_name_with_filter not in value:
+            raise ValueError(f"Detection does not contain the EXACT filter macro {file_name_with_filter}. "
+                             "This filter macro MUST be present in the search. It usually placed at the end "
+                             "of the search and is useful for environment-specific filtering of False Positive or noisy results.")
         
         return value
 

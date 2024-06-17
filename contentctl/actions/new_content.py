@@ -19,16 +19,21 @@ class NewContent:
         answers = questionary.prompt(questions)
         answers.update(answers)
         answers['name'] = answers['detection_name']
+        del answers['detection_name']
         answers['id'] = str(uuid.uuid4())
         answers['version'] = 1
         answers['date'] = datetime.today().strftime('%Y-%m-%d')
         answers['author'] = answers['detection_author']
+        del answers['detection_author']
         answers['data_source'] = answers['data_source']
         answers['type'] = answers['detection_type']
+        del answers['detection_type']
         answers['status'] = "production" #start everything as production since that's what we INTEND the content to become   
         answers['description'] = 'UPDATE_DESCRIPTION'   
         file_name = answers['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
+        answers['kind'] = answers['detection_kind']
         answers['search'] = answers['detection_search'] + ' | `' + file_name + '_filter`'
+        del answers['detection_search']
         answers['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
         answers['known_false_positives'] = 'UPDATE_KNOWN_FALSE_POSITIVES'            
         answers['references'] = ['REFERENCE']
@@ -52,7 +57,7 @@ class NewContent:
                 'name': "True Positive Test",
                 'attack_data': [ 
                     {
-                    'data': "Enter URL for Dataset Here.  This may also be a relative or absolute path on your local system for testing.",
+                    'data': "https://github.com/splunk/contentctl/wiki",
                     "sourcetype": "UPDATE SOURCETYPE",
                     "source": "UPDATE SOURCE"
                     }
@@ -65,18 +70,21 @@ class NewContent:
         questions = NewContentQuestions.get_questions_story()
         answers = questionary.prompt(questions)
         answers['name'] = answers['story_name']
+        del answers['story_name']
         answers['id'] = str(uuid.uuid4())
         answers['version'] = 1
         answers['date'] = datetime.today().strftime('%Y-%m-%d')
         answers['author'] = answers['story_author']
+        del answers['story_author']
         answers['description'] = 'UPDATE_DESCRIPTION'
         answers['narrative'] = 'UPDATE_NARRATIVE'
         answers['references'] = []
         answers['tags'] = dict()
-        answers['tags']['analytic_story'] = answers['name']
         answers['tags']['category'] = answers['category']
+        del answers['category']
         answers['tags']['product'] = ['Splunk Enterprise','Splunk Enterprise Security','Splunk Cloud']
         answers['tags']['usecase'] = answers['usecase']
+        del answers['usecase']
         answers['tags']['cve'] = ['UPDATE WITH CVE(S) IF APPLICABLE']
         return answers
     
@@ -84,13 +92,13 @@ class NewContent:
     def execute(self, input_dto: new) -> None:
         if input_dto.type == NewContentType.detection:
             content_dict = self.buildDetection()
-            subdirectory = pathlib.Path('detections') / content_dict.get('type')
+            subdirectory = pathlib.Path('detections') / content_dict.pop('detection_kind')
         elif input_dto.type == NewContentType.story:
             content_dict = self.buildStory()
             subdirectory = pathlib.Path('stories')
         else:
             raise Exception(f"Unsupported new content type: [{input_dto.type}]")
-    
+
         full_output_path = input_dto.path / subdirectory / SecurityContentObject_Abstract.contentNameToFileName(content_dict.get('name'))
         YmlWriter.writeYmlFile(str(full_output_path), content_dict)
 

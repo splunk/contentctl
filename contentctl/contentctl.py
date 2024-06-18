@@ -226,10 +226,12 @@ def main():
                   "The entire stack trace is provided below (please include it if filing a bug report).\n")
             traceback.print_exc()
         elif config.verbose:
-            print("Verbose logging is enabled.\n"
+            print("Verbose error logging is ENABLED.\n"
                   "The entire stack trace has been provided below (please include it if filing a bug report):\n")
             traceback.print_exc()
         else:
+            print("Verbose error logging is DISABLED.\n"
+                  "Please use the --verbose command line argument if you need more context for your error or file a bug report.")
             print(e)
             
         sys.exit(1)

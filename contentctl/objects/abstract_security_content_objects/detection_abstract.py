@@ -438,7 +438,7 @@ class Detection_Abstract(SecurityContentObject):
         
         macros_from_search = Macro.get_macros(search, director)
         
-        return  macros_from_search + [filter_macro]
+        return  macros_from_search
 
     def get_content_dependencies(self)->list[SecurityContentObject]:
         #Do this separately to satisfy type checker

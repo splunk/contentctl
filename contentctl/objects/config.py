@@ -154,6 +154,10 @@ class Config_Base(BaseModel):
 
     path: DirectoryPath = Field(default=DirectoryPath("."), description="The root of your app.")
     app:CustomApp = Field(default_factory=CustomApp)
+    verbose:bool = Field(default=False, description="Enable verbose error logging, including a stacktrace. "
+                         "This option makes debugging contentctl errors much easier, but produces way more "
+                         "output than is useful under most uses cases. "
+                         "Please use this flag if you are submitting a bug report or issue on GitHub.")
     
     @field_serializer('path',when_used='always')
     def serialize_path(path: DirectoryPath)->str:

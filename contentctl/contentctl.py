@@ -1,5 +1,10 @@
-from contentctl.actions.initialize import Initialize
+import traceback
+import sys
+import warnings
+import pathlib
 import tyro
+
+from contentctl.actions.initialize import Initialize
 from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, report, test_common, release_notes
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
@@ -9,14 +14,10 @@ from contentctl.actions.build import (
      DirectorOutputDto,
      Build,
 )
-
 from contentctl.actions.test import Test
 from contentctl.actions.test import TestInputDto
 from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.inspect import Inspect
-import sys
-import warnings
-import pathlib
 from contentctl.input.yml_reader import YmlReader
 from contentctl.actions.release_notes import ReleaseNotes
 
@@ -183,7 +184,7 @@ def main():
 
 
    
-    
+    config = None
     try:
         # Since some model(s) were constructed and not model_validated, we have to catch
         # warnings again when creating the cli
@@ -220,9 +221,16 @@ def main():
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        traceback.print_stack()
-        #print(e)
+        if config is None:
+            print("There was a serious issue where the config file could not be created.\n"
+                  "The entire stack trace is provided below (please include it if filing a bug report).\n")
+            traceback.print_exc()
+        elif config.verbose:
+            print("Verbose logging is enabled.\n"
+                  "The entire stack trace has been provided below (please include it if filing a bug report):\n")
+            traceback.print_exc()
+        else:
+            print(e)
+            
         sys.exit(1)
     

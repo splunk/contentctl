@@ -31,8 +31,9 @@ jobs:
       # Checkout the develop (default) branch of security_content
       - name: Checkout repo
         uses: actions/checkout@v4
-        path: 'security_content'
-        repository: 'https://github.com/splunk/security_content'
+        with: 
+          path: security_content
+          repository: splunk/security_content
 
       #Install the given version of Python we will test against
       - name: Install Required Python Version

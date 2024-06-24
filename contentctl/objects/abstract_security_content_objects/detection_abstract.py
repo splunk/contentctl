@@ -40,7 +40,6 @@ class Detection_Abstract(SecurityContentObject):
     search: Union[str, dict[str,Any]] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    check_references: bool = False  
     #data_source: Optional[List[DataSource]] = None
 
     enabled_by_default: bool = False
@@ -147,6 +146,7 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def cve_enrichment(self)->List[CveEnrichmentObj]:
+        
         raise Exception("CVE Enrichment Functionality not currently supported.  It will be re-added at a later time.")
         enriched_cves = []
         for cve_id in self.tags.cve:

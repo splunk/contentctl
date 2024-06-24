@@ -4,67 +4,17 @@ import functools
 import os
 import shelve
 import time
-from typing import Annotated
-from pydantic import BaseModel,Field,ConfigDict
-
+from typing import Annotated, Any, Union, TYPE_CHECKING
+from pydantic import BaseModel,Field
 from decimal import Decimal
+from requests.exceptions import ReadTimeout
+
+if TYPE_CHECKING:
+    from contentctl.objects.config import validate
+
+
+
 CVESSEARCH_API_URL = 'https://cve.circl.lu'
-
-CVE_CACHE_FILENAME = "lookups/CVE_CACHE.db"
-
-NON_PERSISTENT_CACHE = {}
-
-
-''''''
-@functools.cache
-def cvesearch_helper(url:str, cve_id:str, force_cached_or_offline:bool=False, max_api_attempts:int=3, retry_sleep_seconds:int=5):
-    if max_api_attempts < 1:
-            raise(Exception(f"The minimum number of CVESearch API attempts is 1.  You have passed {max_api_attempts}"))
-
-    if force_cached_or_offline:
-        if not os.path.exists(CVE_CACHE_FILENAME):
-            print(f"Cache at {CVE_CACHE_FILENAME} not found - Creating it.")
-        cache = shelve.open(CVE_CACHE_FILENAME, flag='c', writeback=True)
-    else:
-        cache = NON_PERSISTENT_CACHE
-    if cve_id in cache:
-        result = cache[cve_id]
-        #print(f"hit cve_enrichment:  {time.time() - start:.2f}")
-    else:
-        api_attempts_remaining = max_api_attempts
-        result = None
-        while api_attempts_remaining > 0:
-            api_attempts_remaining -= 1
-            try:
-                cve = cvesearch_id_helper(url)
-                result = cve.id(cve_id)
-                break
-            except Exception as e:
-                if api_attempts_remaining > 0:
-                    print(f"The option 'force_cached_or_offline' was used, but {cve_id} not found in {CVE_CACHE_FILENAME} and unable to connect to {CVESSEARCH_API_URL}: {str(e)}")
-                    print(f"Retrying the CVESearch API up to {api_attempts_remaining} more times after a sleep of {retry_sleep_seconds} seconds...")
-                    time.sleep(retry_sleep_seconds)
-                else:
-                    raise(Exception(f"The option 'force_cached_or_offline' was used, but {cve_id} not found in {CVE_CACHE_FILENAME} and unable to connect to {CVESSEARCH_API_URL} after {max_api_attempts} attempts: {str(e)}"))
-            
-        if result is None:
-            raise(Exception(f'CveEnrichment for [ {cve_id} ] failed - CVE does not exist'))
-        cache[cve_id] = result
-        
-    if isinstance(cache, shelve.Shelf):
-        #close the cache if it was a shelf
-        cache.close()
-
-    return result
-
-@functools.cache
-def cvesearch_id_helper(url:str):
-    #The initial CVESearch call takes some time.
-    #We cache it to avoid making this call each time we need to do a lookup
-    cve = CVESearch(CVESSEARCH_API_URL)
-    return cve
-
-
 
 
 class CveEnrichmentObj(BaseModel):
@@ -74,27 +24,74 @@ class CveEnrichmentObj(BaseModel):
 
 
     @staticmethod
-    def buildEnrichmentOnFailure(id:Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"], errorMessage:str)->CveEnrichmentObj:
+    def buildEnrichmentOnFailure(id:Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"], errorMessage:str, 
+                                 raise_exception_on_failure:bool=True)->CveEnrichmentObj:
+        if raise_exception_on_failure:
+            raise Exception(errorMessage)
         message = f"{errorMessage}. Default CVSS of 5.0 used"
         print(message)
         return CveEnrichmentObj(id=id, cvss=Decimal(5.0), summary=message)
 
-class CveEnrichment():
-    @classmethod
-    def enrich_cve(cls, cve_id: str, force_cached_or_offline: bool = False, treat_failures_as_warnings:bool=True) -> CveEnrichmentObj:
-        cve_enriched = dict()
+
+# We need a MUCH better way to handle issues with the cve.circl.lu API.
+# It is often extremely slow or down, which means that we cannot enrich CVEs.
+# Downloading the entire database is VERY large, but I don't know that there
+# is an alternative.
+# Being able to include CVEs that have not made it into this database, or additonal
+# enriching comments on pre-existing CVEs, would also be extremely useful.
+timeout_error = False
+class CveEnrichment(BaseModel):
+    use_enrichment: bool = True
+    cve_api_obj: Union[CVESearch,None] = None
+    
+
+    class Config:
+        # Arbitrary_types are allowed to let us use the CVESearch Object
+        arbitrary_types_allowed = True
+        frozen = True
+        
+
+    @staticmethod
+    def getCveEnrichment(config:validate, timeout_seconds:int=10)->CveEnrichment:
+
+        if config.enrichments:
+            try:
+                cve_api_obj = CVESearch(CVESSEARCH_API_URL, timeout=timeout_seconds)
+                return CveEnrichment(use_enrichment=True, cve_api_obj=cve_api_obj)
+            except Exception as e:
+                raise Exception(f"Error setting CVE_SEARCH API to: {CVESSEARCH_API_URL}: {str(e)}")
+        
+        return CveEnrichment(use_enrichment=False, cve_api_obj=None)
+
+
+    @functools.cache
+    def enrich_cve(self, cve_id:str, raise_exception_on_failure:bool=True)->Union[CveEnrichmentObj,None]:
+        global timeout_error
+
+        if not self.use_enrichment:
+            return None
+        
+        if timeout_error:
+            message = f"Previous timeout during enrichment - CVE {cve_id} enrichment skipped."
+            return CveEnrichmentObj.buildEnrichmentOnFailure(id = cve_id, errorMessage=f"WARNING, {message}", 
+                                                             raise_exception_on_failure=raise_exception_on_failure) 
+ 
+        cve_enriched:dict[str,Any] = dict()
+
         try:
-            
-            result = cvesearch_helper(CVESSEARCH_API_URL, cve_id, force_cached_or_offline)
+            result = self.cve_api_obj.id(cve_id)
             cve_enriched['id'] = cve_id
             cve_enriched['cvss'] = result['cvss']
             cve_enriched['summary'] = result['summary']
+            return CveEnrichmentObj.model_validate(cve_enriched)
+        except ReadTimeout as e:
+            message = f"Timeout enriching CVE {cve_id}: {str(e)} after {self.cve_api_obj.timeout} seconds."\
+                      f" All other CVE Enrichment has been disabled"
+            #Set a global value to true so future runs don't waste time on this
+            timeout_error = True
+            return CveEnrichmentObj.buildEnrichmentOnFailure(id = cve_id, errorMessage=f"ERROR, {message}", 
+                                                             raise_exception_on_failure=raise_exception_on_failure)
         except Exception as e:
-            message = f"issue enriching {cve_id}, with error: {str(e)}"
-            if treat_failures_as_warnings: 
-                return CveEnrichmentObj.buildEnrichmentOnFailure(id = cve_id, errorMessage=f"WARNING, {message}")
-            else:
-                raise ValueError(f"ERROR, {message}")
-        
-        return CveEnrichmentObj.model_validate(cve_enriched)
-        
+            message = f"Error enriching CVE {cve_id}. Are you positive this CVE exists: {str(e)}"
+            return CveEnrichmentObj.buildEnrichmentOnFailure(id = cve_id, errorMessage=f"WARNING, {message}", 
+                                                             raise_exception_on_failure=raise_exception_on_failure)

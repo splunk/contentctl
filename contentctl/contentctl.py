@@ -5,7 +5,7 @@ import pathlib
 import tyro
 
 from contentctl.actions.initialize import Initialize
-from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, report, test_common, release_notes
+from contentctl.objects.config import init, validate, build,  new, deploy_acs, test, test_servers, inspect, report, test_common, release_notes
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
 from contentctl.actions.detection_testing.GitService import GitService
@@ -96,11 +96,7 @@ def new_func(config:new):
 
 def deploy_acs_func(config:deploy_acs):
     #This is a bit challenging to get to work with the default values.
-    raise Exception("deploy acs not yet implemented")
-
-def deploy_rest_func(config:deploy_rest):
-    raise Exception("deploy rest not yet implemented")
-    
+    raise Exception("deploy acs not yet implemented") 
 
 def test_common_func(config:test_common):
     director_output_dto = build_func(config)
@@ -176,8 +172,7 @@ def main():
             "test":test.model_validate(config_obj),
             "test_servers":test_servers.model_construct(**t.__dict__),
             "release_notes": release_notes.model_construct(**config_obj),
-            "deploy_acs": deploy_acs.model_construct(**t.__dict__),
-            #"deploy_rest":deploy_rest()
+            "deploy_acs": deploy_acs.model_construct(**t.__dict__)
         }
     )
     
@@ -210,8 +205,6 @@ def main():
         elif type(config) == deploy_acs:
             updated_config = deploy_acs.model_validate(config)
             deploy_acs_func(updated_config)
-        elif type(config) == deploy_rest:
-            deploy_rest_func(config)
         elif type(config) == test or type(config) == test_servers:
             if type(config) == test:
                 #construct the container Infrastructure objects

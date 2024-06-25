@@ -3,7 +3,7 @@ from typing import Any, Union, Type
 #from contentctl import contentctl
 from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.config import test_common, test_servers, test
-
+from contentctl.objects.security_content_object import SecurityContentObject
 
 
 def configFromFile(path:Path=Path("contentctl.yml"), config: dict[str,Any]={}, 
@@ -122,3 +122,18 @@ def updateConfig(config:Union[test,test_servers], **key_value_updates:dict[str,A
     
     return config_copy
     
+
+from contentctl.input.director import DirectorOutputDto
+def contentToDict(director:DirectorOutputDto)->dict[str,list[dict[str,Any]]]:
+    output_dict:dict[str,list[dict[str,Any]]] = {}
+    for contentType in ['detections','stories','baselines','investigations',
+                        'playbooks','macros','lookups','deployments','ssa_detections']:
+        
+        output_dict[contentType] = []
+        t:list[SecurityContentObject] = getattr(director,contentType)
+        
+        for item in t:
+            print(item.model_dump())
+            output_dict[contentType].append(item.model_dump())
+    return output_dict
+            

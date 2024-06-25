@@ -273,14 +273,6 @@ class Infrastructure(BaseModel):
     instance_name: str = Field(...)
 
 
-class deploy_rest(build):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    
-    target:Infrastructure = Infrastructure(instance_name="splunk_target_host", instance_address="localhost")
-    #This will overwrite existing content without promprting for confirmation
-    overwrite_existing_content:bool = Field(default=True, description="Overwrite existing macros and savedsearches in your enviornment")
-
-
 class Container(Infrastructure):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     instance_address:str = Field(default="localhost", description="Address of your splunk server.")

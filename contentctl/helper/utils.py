@@ -6,12 +6,16 @@ import random
 import string
 from timeit import default_timer
 import pathlib
-import datetime
+
 from typing import Union, Tuple
-from pydantic import ValidationError
 import tqdm
-from contentctl.objects.security_content_object import SecurityContentObject
 from math import ceil
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.security_content_object import SecurityContentObject
+
 
 TOTAL_BYTES = 0
 ALWAYS_PULL = True
@@ -179,19 +183,19 @@ class Utils:
 
         return hash
 
-    @staticmethod
-    def check_required_fields(
-        thisField: str, definedFields: dict, requiredFields: list[str]
-    ):
-        missing_fields = [
-            field for field in requiredFields if field not in definedFields
-        ]
-        if len(missing_fields) > 0:
-            raise (
-                ValueError(
-                    f"Could not validate - please resolve other errors resulting in missing fields {missing_fields}"
-                )
-            )
+    # @staticmethod
+    # def check_required_fields(
+    #     thisField: str, definedFields: dict, requiredFields: list[str]
+    # ):
+    #     missing_fields = [
+    #         field for field in requiredFields if field not in definedFields
+    #     ]
+    #     if len(missing_fields) > 0:
+    #         raise (
+    #             ValueError(
+    #                 f"Could not validate - please resolve other errors resulting in missing fields {missing_fields}"
+    #             )
+    #         )
 
     @staticmethod
     def verify_file_exists(
@@ -207,15 +211,16 @@ class Utils:
 
         # Try to make a head request to verify existence of the file
         try:
+            
             req = requests.head(
                 file_path, timeout=timeout_seconds, verify=True, allow_redirects=True
             )
             if req.status_code > 400:
-                raise (Exception(f"Return code {req.status_code}"))
+                raise (Exception(f"Return code={req.status_code}"))
         except Exception as e:
             raise (
                 Exception(
-                    f"Cannot confirm the existence of '{file_path}' - are you sure it exists: {str(e)}"
+                    f"HTTP Resolution Failed: {str(e)}"
                 )
             )
 

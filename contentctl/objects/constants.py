@@ -8,11 +8,10 @@ ATTACK_TACTICS_KILLCHAIN_MAPPING = {
     "Privilege Escalation": "Exploitation",
     "Defense Evasion": "Exploitation",
     "Credential Access": "Exploitation",
-    "Discovery": "Exploitation", 
+    "Discovery": "Exploitation",
     "Lateral Movement": "Exploitation",
     "Collection": "Exploitation",
-    "Command And Control": "Command And Control",
-    "Command And Control": "Command And Control",
+    "Command And Control": "Command and Control",
     "Exfiltration": "Actions on Objectives",
     "Impact": "Actions on Objectives"
 }
@@ -74,7 +73,7 @@ SES_KILL_CHAIN_MAPPINGS = {
     "Delivery": 3,
     "Exploitation": 4,
     "Installation": 5,
-    "Command And Control": 6,
+    "Command and Control": 6,
     "Actions on Objectives": 7
 }
 

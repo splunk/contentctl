@@ -2,7 +2,7 @@
 {% for response_task in objects %}
 [panel://workbench_panel_{{ response_task.lowercase_name }}___response_task]
 label = {{ response_task.name }}
-description = {{ response_task.description }}
+description = {{ response_task.description | escapeNewlines() }}
 disabled = 0
 tokens = {\
 {% for token in response_task.inputs %}

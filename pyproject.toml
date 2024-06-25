@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "contentctl"
-version = "2.0.1"
+version = "4.0.6"
 description = "Splunk Content Control Tool"
 authors = ["STRT <research@splunk.com>"]
 license = "Apache 2.0"
@@ -10,25 +10,28 @@ readme = "README.md"
 contentctl = 'contentctl.contentctl:main'
 
 [tool.poetry.dependencies]
-python = "^3.9"
-pydantic = "^1.10.11"
-PyYAML = "^6.0"
-requests = "^2.28.1"
+python = "^3.11"
+pydantic = "^2.5.1"
+PyYAML = "^6.0.1"
+requests = "~2.32.2"
 pycvesearch = "^1.2"
 xmltodict = "^0.13.0"
 attackcti = "^0.3.7"
 Jinja2 = "^3.1.2"
-questionary = "^1.10.0"
-gitpython = "^3.1.29"
-docker = "^6.0.1"
-splunk-sdk = "^1.7.2"
-validators = "^0.20.0"
+questionary = "^2.0.1"
+docker = "^7.1.0"
+splunk-sdk = "^2.0.1"
+validators = "^0.22.0"
 semantic-version = "^2.10.0"
-bottle = "^0.12.23"
-tqdm = "^4.65.0"
+bottle = "^0.12.25"
+tqdm = "^4.66.1"
 #splunk-appinspect = "^2.36.0"
-splunk-packaging-toolkit = "^1.0.1"
-
+pysigma = "^0.10.8"
+pysigma-backend-splunk = "^1.0.3"
+pygit2 = "^1.14.1"
+tyro = "^0.8.3"
+gitpython = "^3.1.43"
+setuptools = "^69.5.1"
 [tool.poetry.dev-dependencies]
 
 [build-system]

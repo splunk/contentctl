@@ -5,17 +5,21 @@
 {% if (detection.type == 'TTP' or detection.type == 'Anomaly' or detection.type == 'Hunting' or detection.type == 'Correlation') %}
 [savedsearch://{{APP_NAME}} - {{ detection.name }} - Rule]
 type = detection
-asset_type = {{ detection.tags.asset_type }}
+asset_type = {{ detection.tags.asset_type.value }}
 confidence = medium
-explanation = {{ detection.description }}
+explanation = {{ detection.description | escapeNewlines() }}
 {% if detection.how_to_implement is defined %}
-how_to_implement = {{ detection.how_to_implement }}
+how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}
 how_to_implement = none
 {% endif %}
 annotations = {{ detection.mappings | tojson }}
-known_false_positives = {{ detection.known_false_positives }}
+known_false_positives = {{ detection.known_false_positives | escapeNewlines() }}
+{% if detection.providing_technologies | length > 0  %}
 providing_technologies = {{ detection.providing_technologies | tojson }}
+{% else %}
+providing_technologies = null
+{% endif %}
 
 {% endif %}
 {% endfor %}

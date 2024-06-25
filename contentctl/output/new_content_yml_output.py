@@ -1,46 +1,28 @@
 import os
-
+import pathlib
 from contentctl.objects.enums import SecurityContentType
 from contentctl.output.yml_writer import YmlWriter
-
-
+import pathlib
+from contentctl.objects.config import NewContentType
 class NewContentYmlOutput():
-    output_path: str
+    output_path: pathlib.Path
     
-    def __init__(self, output_path:str):
+    def __init__(self, output_path:pathlib.Path):
         self.output_path = output_path
     
     
-    def writeObjectNewContent(self, object: dict, type: SecurityContentType) -> None:
-        if type == SecurityContentType.detections:
-            file_path = os.path.join(self.output_path, 'detections', self.convertNameToFileName(object['name'], object['tags']['product']))
-            test_obj = {}
-            test_obj['name'] = object['name'] + ' Unit Test'
-            test_obj['tests'] = [
-                {
-                    'name': object['name'],
-                    'file': self.convertNameToFileName(object['name'],object['tags']['product']),
-                    'pass_condition': '| stats count | where count > 0',
-                    'earliest_time': '-24h',
-                    'latest_time': 'now',
-                    'attack_data': [
-                        {
-                            'file_name': 'UPDATE',
-                            'data': 'UPDATE',
-                            'source': 'UPDATE',
-                            'sourcetype': 'UPDATE',
-                            'update_timestamp': True
-                        }
-                    ]
-                }
-            ]
-            file_path_test = os.path.join(self.output_path, 'tests', self.convertNameToTestFileName(object['name'], object['tags']['product']))
-            YmlWriter.writeYmlFile(file_path_test, test_obj)
-            #object.pop('source')
+    def writeObjectNewContent(self, object: dict, subdirectory_name: str, type: NewContentType) -> None:
+        if type == NewContentType.detection:
+
+            file_path = os.path.join(self.output_path, 'detections', subdirectory_name, self.convertNameToFileName(object['name'], object['tags']['product']))
+            output_folder = pathlib.Path(self.output_path)/'detections'/subdirectory_name
+            #make sure the output folder exists for this detection
+            output_folder.mkdir(exist_ok=True)
+
             YmlWriter.writeYmlFile(file_path, object)
             print("Successfully created detection " + file_path)
         
-        elif type == SecurityContentType.stories:
+        elif type == NewContentType.story:
             file_path = os.path.join(self.output_path, 'stories', self.convertNameToFileName(object['name'], object['tags']['product']))
             YmlWriter.writeYmlFile(file_path, object)
             print("Successfully created story " + file_path)        

@@ -1,5 +1,5 @@
-
-from pydantic import BaseModel, validator, ValidationError
+from __future__ import annotations
+from pydantic import BaseModel
 
 
 class DeploymentEmail(BaseModel):

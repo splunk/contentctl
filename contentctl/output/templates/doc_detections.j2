@@ -5,7 +5,7 @@ excerpt: "{% if object.tags.mitre_attack_enrichments %}{% for attack in object.t
 {% if not loop.last -%}, {% endif -%}
 {% endfor %}{% endif -%}"
 categories:
-  - {{object.source|capitalize}}
+  - {{object.getSource()|capitalize}}
 last_modified_at: {{object.date}}
 toc: true
 toc_label: ""
@@ -207,4 +207,4 @@ Alternatively you can replay a dataset into a [Splunk Attack Range](https://gith
 {% endfor %}
 {% endif %}
 
-[*source*](https://github.com/splunk/security_content/tree/develop/detections/{% if object.experimental is sameas true -%}experimental/{%- endif -%}{{object.source}}/{{ object.name | lower | replace (" ", "_") | replace("-", "_") }}.yml) \| *version*: **{{object.version}}**
+[*source*](https://github.com/splunk/security_content/tree/develop/detections/{% if object.experimental is sameas true -%}experimental/{%- endif -%}{{object.getSource()}}/{{ object.name | lower | replace (" ", "_") | replace("-", "_") }}.yml) \| *version*: **{{object.version}}**

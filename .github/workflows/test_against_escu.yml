@@ -1,0 +1,69 @@
+# The default branch of security_content should always be correct.
+# As such, we should use it in our test workflow, here, to ensure
+# that contentctl is also correct and does not throw unexpected errors.
+
+# We should remember that if contentctl introduces NEW validations that have
+# note yet been fixed in security_content, we may see this workflow fail.
+name: test_against_escu
+on:
+  push:
+  pull_request:
+    types: [opened, reopened]
+  schedule:
+    - cron: "44 4 * * *"
+
+jobs:
+  smoketest_escu:
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ["3.11", "3.12"]
+        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14"]
+        #operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
+
+
+    runs-on: ${{ matrix.operating_system }}
+    steps:
+      # Checkout the current branch of contentctl repo
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Checkout the develop (default) branch of security_content
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with: 
+          path: security_content
+          repository: splunk/security_content
+
+      #Install the given version of Python we will test against
+      - name: Install Required Python Version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_version }}
+          architecture: "x64"
+          
+      - name: Install Poetry
+        run: 
+          python -m pip install poetry
+
+      - name: Install contentctl and activate the shell
+        run: |
+          poetry install --no-interaction
+
+
+      - name: Clone the AtomicRedTeam Repo (for extended validation)
+        run: |
+          cd security_content
+          git clone --depth 1 https://github.com/redcanaryco/atomic-red-team
+
+      
+      # We do not separately run validate and build 
+      # since a build ALSO performs a validate
+      - name: Run contentctl build
+        run: |
+          cd security_content
+          poetry run contentctl build --enrichments
+
+      # Do not run a test - it will take far too long!
+      # Do not upload any artifacts
+      

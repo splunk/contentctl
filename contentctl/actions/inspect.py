@@ -61,7 +61,7 @@ class Inspect:
         if not package_path.is_file():
             raise Exception(f"Cannot run Appinspect API on App '{config.app.title}' - "
                             f"no package exists as expected path '{package_path}'.\nAre you "
-                            "trying to 'contentctl acs_deploy' the package BEFORE running 'contentctl build'?")
+                            "trying to 'contentctl deploy_acs' the package BEFORE running 'contentctl build'?")
         
         files = {
             "app_package": open(package_path,"rb"),

@@ -55,11 +55,11 @@ class CveEnrichment(BaseModel):
         return CveEnrichment(use_enrichment=False, cve_api_obj=None)
 
 
-    def enrich_cve(self, cve_id:str, raise_exception_on_failure:bool=True)->Union[CveEnrichmentObj,None]:
+    def enrich_cve(self, cve_id:str, raise_exception_on_failure:bool=True)->CveEnrichmentObj:
 
         if not self.use_enrichment:
-            CveEnrichmentObj(id=cve_id,cvss=Decimal(5.0),summary="SUMMARY NOT AVAILABLE! ONLY THE LINK WILL BE USED AT THIS TIME")
+            return CveEnrichmentObj(id=cve_id,cvss=Decimal(5.0),summary="SUMMARY NOT AVAILABLE! ONLY THE LINK WILL BE USED AT THIS TIME")
         else:
             print("WARNING - Dynamic enrichment not supported at this time.")
-            CveEnrichmentObj(id=cve_id,cvss=Decimal(5.0),summary="SUMMARY NOT AVAILABLE! ONLY THE LINK WILL BE USED AT THIS TIME")
+            return CveEnrichmentObj(id=cve_id,cvss=Decimal(5.0),summary="SUMMARY NOT AVAILABLE! ONLY THE LINK WILL BE USED AT THIS TIME")
         # Depending on needs, we may add dynamic enrichment functionality back to the tool

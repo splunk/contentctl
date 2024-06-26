@@ -146,7 +146,7 @@ class Detection_Abstract(SecurityContentObject):
     cve_enrichment: list[CveEnrichmentObj] = Field([], validate_default=True)
     
     @model_validator(mode="after")
-    def cve_enrichment_func(self, info:ValidationInfo)->Detection_Abstract:
+    def cve_enrichment_func(self, info:ValidationInfo):
         if len(self.cve_enrichment) > 0:
             raise ValueError(f"Error, field 'cve_enrichment' should be empty and "
                              f"dynamically populated at runtime. Instead, this field contained: {self.cve_enrichment}")
@@ -155,20 +155,15 @@ class Detection_Abstract(SecurityContentObject):
         if output_dto is None:
             raise ValueError("Context not provided to detection model post validator")
         
-        if output_dto.cve_enrichment.use_enrichment is False:    
-            return self
         
         enriched_cves:list[CveEnrichmentObj] = []
+
         for cve_id in self.tags.cve:
             try:
-                enrichment = output_dto.cve_enrichment.enrich_cve(cve_id, raise_exception_on_failure=False)
-                if enrichment is None:
-                    print(f"WARNING: Failed to find cve_id '{cve_id}'")
-                else:
-                    enriched_cves.append(enrichment)
+                enriched_cves.append(output_dto.cve_enrichment.enrich_cve(cve_id, raise_exception_on_failure=False))
             except Exception as e:
                 raise ValueError(f"{e}")
-
+        self.cve_enrichment = enriched_cves
         return self
     
 

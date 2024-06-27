@@ -25,7 +25,7 @@
         <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
           <h2 style="color: #721c24; margin: 0;">
             <i class="icon-info-circle" style="margin-right: 10px;"></i>
-            Explore the Analytic Stories included with 
+            Explore Splunk Security Content using 
             <a href="/app/SplunkEnterpriseSecuritySuite/ess_use_case_library" style="color: #721c24; text-decoration: underline;">Splunk Enterprise Security</a>
           </h2>
         </div>

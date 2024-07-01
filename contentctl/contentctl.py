@@ -99,6 +99,11 @@ def deploy_acs_func(config:deploy_acs):
     raise Exception("deploy acs not yet implemented") 
 
 def test_common_func(config:test_common):
+    if type(config) == test:
+        #construct the container Infrastructure objects
+        config.getContainerInfrastructureObjects()
+        #otherwise, they have already been passed as servers
+
     director_output_dto = build_func(config)
     gitServer = GitService(director=director_output_dto,config=config)
     detections_to_test = gitServer.getContent()
@@ -206,10 +211,6 @@ def main():
             updated_config = deploy_acs.model_validate(config)
             deploy_acs_func(updated_config)
         elif type(config) == test or type(config) == test_servers:
-            if type(config) == test:
-                #construct the container Infrastructure objects
-                config.getContainerInfrastructureObjects()
-                #otherwise, they have already been passed as servers
             test_common_func(config)
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")

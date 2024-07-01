@@ -31,7 +31,6 @@ class Baseline(SecurityContentObject):
     search: str = Field(..., min_length=4)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    check_references: bool = False #Validation is done in order, this field must be defined first
     tags: BaselineTags = Field(...)
 
     # enrichment

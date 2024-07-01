@@ -26,7 +26,7 @@ from contentctl.objects.integration_test import IntegrationTest
 
 #from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import DataSource,ProvidingTechnology
-from contentctl.enrichments.cve_enrichment import CveEnrichment, CveEnrichmentObj
+from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 
 
 class Detection_Abstract(SecurityContentObject):
@@ -40,7 +40,6 @@ class Detection_Abstract(SecurityContentObject):
     search: Union[str, dict[str,Any]] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    check_references: bool = False  
     #data_source: Optional[List[DataSource]] = None
 
     enabled_by_default: bool = False
@@ -144,17 +143,30 @@ class Detection_Abstract(SecurityContentObject):
     macros: list[Macro] = Field([],validate_default=True)
     lookups: list[Lookup] = Field([],validate_default=True)
 
-    @computed_field
-    @property
-    def cve_enrichment(self)->List[CveEnrichmentObj]:
-        raise Exception("CVE Enrichment Functionality not currently supported.  It will be re-added at a later time.")
-        enriched_cves = []
-        for cve_id in self.tags.cve:
-            print(f"\nEnriching {cve_id}\n")
-            enriched_cves.append(CveEnrichment.enrich_cve(cve_id))
-
-        return enriched_cves
+    cve_enrichment: list[CveEnrichmentObj] = Field([], validate_default=True)
     
+    @model_validator(mode="after")
+    def cve_enrichment_func(self, info:ValidationInfo):
+        if len(self.cve_enrichment) > 0:
+            raise ValueError(f"Error, field 'cve_enrichment' should be empty and "
+                             f"dynamically populated at runtime. Instead, this field contained: {self.cve_enrichment}")
+
+        output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
+        if output_dto is None:
+            raise ValueError("Context not provided to detection model post validator")
+        
+        
+        enriched_cves:list[CveEnrichmentObj] = []
+
+        for cve_id in self.tags.cve:
+            try:
+                enriched_cves.append(output_dto.cve_enrichment.enrich_cve(cve_id, raise_exception_on_failure=False))
+            except Exception as e:
+                raise ValueError(f"{e}")
+        self.cve_enrichment = enriched_cves
+        return self
+    
+
     splunk_app_enrichment: Optional[List[dict]] = None
     
     @computed_field

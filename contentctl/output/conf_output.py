@@ -170,13 +170,12 @@ class ConfOutput:
     def packageAppSlim(self) -> None:
         
 
-        # input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
+        input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
         
-        # readme_file = pathlib.Path("README")
-        # if not readme_file.is_file():
-        #     raise Exception("The README file does not exist in this directory. Cannot build app.")
-        # shutil.copyfile(readme_file, input_app_path/readme_file.name)
-        
+        readme_file = list(pathlib.Path(".").glob("README*"))[0]
+        if not readme_file.is_file():
+            raise Exception("The README file does not exist in this directory. Cannot build app.")
+        shutil.copyfile(readme_file, input_app_path/readme_file.name)  
         
         try:
             import slim

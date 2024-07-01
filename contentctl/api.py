@@ -1,13 +1,12 @@
 from pathlib import Path
 from typing import Any, Union, Type
-#from contentctl import contentctl
 from contentctl.input.yml_reader import YmlReader
-from contentctl.objects.config import test_common, test_servers, test
+from contentctl.objects.config import test_common, test, test_servers
 from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.input.director import DirectorOutputDto
 
-
-def configFromFile(path:Path=Path("contentctl.yml"), config: dict[str,Any]={}, 
-                   configType:Type[Union[test,test_servers]]=test)->Union[test,test_servers]:
+def config_from_file(path:Path=Path("contentctl.yml"), config: dict[str,Any]={}, 
+                   configType:Type[Union[test,test_servers]]=test)->test_common:
     
     """
     Fetch a configuration object that can be used for a number of different contentctl
@@ -36,7 +35,7 @@ def configFromFile(path:Path=Path("contentctl.yml"), config: dict[str,Any]={},
     except Exception as e:
         raise Exception(f"Failed to load contentctl configuration from file '{path}': {str(e)}")
     
-    #Apply settings that have been overridden from the ones in the file
+    # Apply settings that have been overridden from the ones in the file
     try:
         yml_dict.update(config)
     except Exception as e:
@@ -44,15 +43,15 @@ def configFromFile(path:Path=Path("contentctl.yml"), config: dict[str,Any]={},
                         f" with the dictionary of arguments passed: {str(e)}")
 
     # The function below will throw its own descriptive exception if it fails
-    configObject = configFromDict(yml_dict, configType=configType)
+    configObject = config_from_dict(yml_dict, configType=configType)
 
     return configObject
 
 
 
 
-def configFromDict(config: dict[str,Any]={}, 
-                   configType:Type[Union[test,test_servers]]=test)->Union[test,test_servers]:
+def config_from_dict(config: dict[str,Any]={}, 
+                   configType:Type[Union[test,test_servers]]=test)->test_common:
     """
     Fetch a configuration object that can be used for a number of different contentctl
     operations including validate, build, inspect, test, and test_servers. A dict will 
@@ -79,7 +78,7 @@ def configFromDict(config: dict[str,Any]={},
     return test_object
 
 
-def updateConfig(config:Union[test,test_servers], **key_value_updates:dict[str,Any])->Union[test,test_servers]:
+def update_config(config:Union[test,test_servers], **key_value_updates:dict[str,Any])->test_common:
     
     """Update any relevant keys in a config file with the specified values.
     Full validation will be performed after this update and descriptive errors
@@ -109,8 +108,8 @@ def updateConfig(config:Union[test,test_servers], **key_value_updates:dict[str,A
     # Collect any errors that may occur
     errors:list[Exception] = []
     
-    #We need to do this one by one because the extra:forbid argument does not appear to 
-    #be respected, but validate_assignmen
+    # We need to do this one by one because the extra:forbid argument does not appear to 
+    # be respected at this time.
     for key, value in key_value_updates.items():
         try:
             setattr(config_copy,key,value)
@@ -123,8 +122,8 @@ def updateConfig(config:Union[test,test_servers], **key_value_updates:dict[str,A
     return config_copy
     
 
-from contentctl.input.director import DirectorOutputDto
-def contentToDict(director:DirectorOutputDto)->dict[str,list[dict[str,Any]]]:
+
+def content_to_dict(director:DirectorOutputDto)->dict[str,list[dict[str,Any]]]:
     output_dict:dict[str,list[dict[str,Any]]] = {}
     for contentType in ['detections','stories','baselines','investigations',
                         'playbooks','macros','lookups','deployments','ssa_detections']:
@@ -133,7 +132,6 @@ def contentToDict(director:DirectorOutputDto)->dict[str,list[dict[str,Any]]]:
         t:list[SecurityContentObject] = getattr(director,contentType)
         
         for item in t:
-            print(item.model_dump())
             output_dict[contentType].append(item.model_dump())
     return output_dict
             

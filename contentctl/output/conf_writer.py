@@ -8,6 +8,7 @@ from xmlrpc.client import APPLICATION_ERROR
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 import pathlib
 from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.dashboard import Dashboard
 from contentctl.objects.config import build
 import xml.etree.ElementTree as ET
 
@@ -104,6 +105,17 @@ class ConfWriter():
 
     
 
+    @staticmethod
+    def writeDashboardFiles(config:build, dashboards:list[Dashboard])->set[pathlib.Path]:
+        written_files:set[pathlib.Path] = set()
+        for dashboard in dashboards:
+            output_file_path = dashboard.getOutputFilepathRelativeToAppRoot(config)
+            ConfWriter.writeXmlFileHeader(output_file_path, config)
+            dashboard.writeDashboardFile(ConfWriter.getJ2Environment(), config)
+            ConfWriter.validateXmlFile(config.getPackageDirectoryPath()/output_file_path)
+            written_files.add(output_file_path)
+        return written_files
+
 
     @staticmethod
     def writeXmlFileHeader(app_output_path:pathlib.Path, config: build) -> None:
@@ -112,6 +124,7 @@ class ConfWriter():
 
         output_path = config.getPackageDirectoryPath()/app_output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"wrote {output_path}")
         with open(output_path, 'w') as f:
             output_with_xml_comment = output_with_xml_comment.encode('utf-8', 'ignore').decode('utf-8')
             f.write(output_with_xml_comment)

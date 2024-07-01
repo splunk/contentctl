@@ -152,6 +152,10 @@ class ConfOutput:
                                     'macros.j2',
                                     self.config, objects))
         
+        elif type == SecurityContentType.dashboards:
+            written_files.update(ConfWriter.writeDashboardFiles(self.config, objects))
+
+
         return written_files
             
 

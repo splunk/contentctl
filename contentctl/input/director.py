@@ -20,6 +20,7 @@ from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.atomic import AtomicTest
+from contentctl.objects.dashboard import Dashboard
 from contentctl.objects.security_content_object import SecurityContentObject
 
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
@@ -43,6 +44,7 @@ class DirectorOutputDto:
      macros: list[Macro]
      lookups: list[Lookup]
      deployments: list[Deployment]
+     dashboards: list[Dashboard]
      ssa_detections: list[SSADetection]
      #cve_enrichment: CveEnrichment
 
@@ -110,7 +112,7 @@ class Director():
         self.createSecurityContent(SecurityContentType.investigations)
         self.createSecurityContent(SecurityContentType.playbooks)
         self.createSecurityContent(SecurityContentType.detections)
-
+        self.createSecurityContent(SecurityContentType.dashboards)
 
         self.createSecurityContent(SecurityContentType.ssa_detections)
         
@@ -127,7 +129,8 @@ class Director():
                              SecurityContentType.baselines,
                              SecurityContentType.investigations,
                              SecurityContentType.playbooks,
-                             SecurityContentType.detections]:
+                             SecurityContentType.detections,
+                             SecurityContentType.dashboards,]:
             files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, str(contentType.name)))
             security_content_files = [f for f in files if not f.name.startswith('ssa___')]
         else:
@@ -183,6 +186,11 @@ class Director():
                         detection = Detection.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.detections.append(detection)
                         self.addContentToDictMappings(detection)
+                
+                elif contentType == SecurityContentType.dashboards:
+                        dashboard = Dashboard.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.dashboards.append(dashboard)
+                        self.addContentToDictMappings(dashboard)
 
                 elif contentType == SecurityContentType.ssa_detections:
                         self.constructSSADetection(self.ssa_detection_builder, self.output_dto,str(file))

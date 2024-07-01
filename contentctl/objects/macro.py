@@ -9,13 +9,14 @@ if TYPE_CHECKING:
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
-
-MACROS_TO_IGNORE = set(["_filter", "drop_dm_object_name"])
-#Should all of the following be included as well?
-MACROS_TO_IGNORE.add("get_asset" )
-MACROS_TO_IGNORE.add("get_risk_severity")
-MACROS_TO_IGNORE.add("cim_corporate_web_domain_search")
-MACROS_TO_IGNORE.add("prohibited_processes")
+#The following macros are included in commonly-installed apps.
+#As such, we will ignore if they are missing from our app.
+#Included in 
+MACROS_TO_IGNORE = set(["drop_dm_object_name"]) # Part of CIM/Splunk_SA_CIM
+MACROS_TO_IGNORE.add("get_asset") #SA-IdentityManagement, part of Enterprise Security
+MACROS_TO_IGNORE.add("get_risk_severity") #SA-ThreatIntelligence, part of Enterprise Security
+MACROS_TO_IGNORE.add("cim_corporate_web_domain_search") #Part of CIM/Splunk_SA_CIM
+#MACROS_TO_IGNORE.add("prohibited_processes")
 
 
 class Macro(SecurityContentObject):

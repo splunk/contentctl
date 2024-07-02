@@ -29,10 +29,11 @@ from contentctl.objects.config import validate
 
 @dataclass
 class DirectorOutputDto:
-    # Atomic Tests are first because parsing them
+    # Atomic Tests are first because parsing them 
     # is far quicker than attack_enrichment
-    atomic_tests: Union[list[AtomicTest], None]
+    atomic_tests: Union[list[AtomicTest],None]
     attack_enrichment: AttackEnrichment
+    cve_enrichment: CveEnrichment
     detections: list[Detection]
     stories: list[Story]
     baselines: list[Baseline]
@@ -42,7 +43,6 @@ class DirectorOutputDto:
     lookups: list[Lookup]
     deployments: list[Deployment]
     ssa_detections: list[SSADetection]
-    # cve_enrichment: CveEnrichment
 
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
     uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)

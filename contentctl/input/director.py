@@ -87,6 +87,8 @@ class DirectorOutputDto:
             self.detections.append(content)
         elif isinstance(content, SSADetection):
             self.ssa_detections.append(content)
+        elif isinstance(content, Dashboard):
+            self.dashboards.append(content)            
         else:
              raise Exception(f"Unknown security content type: {type(content)}")
 
@@ -195,7 +197,6 @@ class Director():
                 
                 elif contentType == SecurityContentType.dashboards:
                         dashboard = Dashboard.model_validate(modelDict,context={"output_dto":self.output_dto})
-                        self.output_dto.dashboards.append(dashboard)
                         self.output_dto.addContentToDictMappings(dashboard)
 
 

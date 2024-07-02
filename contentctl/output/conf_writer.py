@@ -124,7 +124,6 @@ class ConfWriter():
 
         output_path = config.getPackageDirectoryPath()/app_output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        print(f"wrote {output_path}")
         with open(output_path, 'w') as f:
             output_with_xml_comment = output_with_xml_comment.encode('utf-8', 'ignore').decode('utf-8')
             f.write(output_with_xml_comment)

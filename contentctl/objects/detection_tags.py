@@ -145,7 +145,7 @@ class DetectionTags(BaseModel):
     @model_validator(mode="after")
     def addAttackEnrichment(self, info:ValidationInfo):
         if len(self.mitre_attack_enrichments) > 0:
-            raise ValueError(f"Error, field 'mitre_attack_enrichment' should be empty and dynamically populated at runtime. Instead, this field contained: {str(v)}")
+            raise ValueError(f"Error, field 'mitre_attack_enrichment' should be empty and dynamically populated at runtime. Instead, this field contained: {self.mitre_attack_enrichments}")
         
         output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
         if output_dto is None:

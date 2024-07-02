@@ -23,7 +23,9 @@ class Validate:
         director_output_dto = DirectorOutputDto(AtomicTest.getAtomicTestsFromArtRepo(repo_path=input_dto.getAtomicRedTeamRepoPath(), 
                                                                                      enabled=input_dto.enrichments),
                                                 AttackEnrichment.getAttackEnrichment(input_dto),
+                                                CveEnrichment.getCveEnrichment(input_dto),
                                                 [],[],[],[],[],[],[],[],[],[])
+
 
         
         director = Director(director_output_dto)

@@ -14,6 +14,8 @@ class StoryUseCase(str,Enum):
    APPLICATION_SECURITY = "Application Security"
    SECURITY_MONITORING = "Security Monitoring"
    ADVANCED_THREAD_DETECTION = "Advanced Threat Detection"
+   INSIDER_THREAT = "Insider Threat"
+   OTHER = "Other"
 
 class StoryTags(BaseModel):
    model_config = ConfigDict(extra='forbid', use_enum_values=True)

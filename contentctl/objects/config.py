@@ -154,6 +154,10 @@ class Config_Base(BaseModel):
 
     path: DirectoryPath = Field(default=DirectoryPath("."), description="The root of your app.")
     app:CustomApp = Field(default_factory=CustomApp)
+    verbose:bool = Field(default=False, description="Enable verbose error logging, including a stacktrace. "
+                         "This option makes debugging contentctl errors much easier, but produces way more "
+                         "output than is useful under most uses cases. "
+                         "Please use this flag if you are submitting a bug report or issue on GitHub.")
     
     @field_serializer('path',when_used='always')
     def serialize_path(path: DirectoryPath)->str:
@@ -267,14 +271,6 @@ class Infrastructure(BaseModel):
     web_ui_port: int = Field(default=8000, gt=1, lt=65536, title="Web UI Port")
     api_port: int = Field(default=8089, gt=1, lt=65536, title="REST API Port")
     instance_name: str = Field(...)
-
-
-class deploy_rest(build):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
-    
-    target:Infrastructure = Infrastructure(instance_name="splunk_target_host", instance_address="localhost")
-    #This will overwrite existing content without promprting for confirmation
-    overwrite_existing_content:bool = Field(default=True, description="Overwrite existing macros and savedsearches in your enviornment")
 
 
 class Container(Infrastructure):

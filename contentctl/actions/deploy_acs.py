@@ -50,6 +50,3 @@ class Deploy:
             raise Exception(f"Error installing to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS:\n{formatted_error_text}")
         
         print(f"'{config.getPackageFilePath(include_version=False)}' successfully installed to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS!")
-
-        
-        

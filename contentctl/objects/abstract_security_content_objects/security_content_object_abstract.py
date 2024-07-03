@@ -12,6 +12,7 @@ import re
 import abc
 import uuid
 import datetime
+import pprint
 from pydantic import BaseModel, field_validator, Field, ValidationInfo, FilePath, HttpUrl, NonNegativeInt, ConfigDict, model_validator, model_serializer
 from typing import Tuple, Optional, List, Union
 import pathlib
@@ -181,6 +182,22 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         for object in all_objects:
             name_dict[str(pathlib.Path(object.file_path))] = object
         return name_dict
+
+
+    def __repr__(self)->str:
+        # Just use the model_dump functionality that
+        # has already been written. This loses some of the
+        # richness where objects reference themselves, but
+        # is usable
+        m = self.model_dump()
+        return pprint.pformat(m, indent=3)
+
+    def __str__(self)->str:
+        return(self.__repr__())
+        
+
+    
+
     
 
     

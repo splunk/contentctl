@@ -26,7 +26,7 @@ from contentctl.objects.integration_test import IntegrationTest
 
 #from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import DataSource,ProvidingTechnology
-from contentctl.enrichments.cve_enrichment import CveEnrichment, CveEnrichmentObj
+from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 
 
 class Detection_Abstract(SecurityContentObject):
@@ -40,7 +40,6 @@ class Detection_Abstract(SecurityContentObject):
     search: Union[str, dict[str,Any]] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    check_references: bool = False  
     #data_source: Optional[List[DataSource]] = None
 
     enabled_by_default: bool = False
@@ -53,6 +52,58 @@ class Detection_Abstract(SecurityContentObject):
     tests: List[Annotated[Union[UnitTest, IntegrationTest], Field(union_mode='left_to_right')]] = []
     # A list of groups of tests, relying on the same data
     test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)
+
+
+    @field_validator("search", mode="before")
+    @classmethod
+    def validate_presence_of_filter_macro(cls, value:Union[str, dict[str,Any]], info:ValidationInfo)->Union[str, dict[str,Any]]:
+        """
+        Validates that, if required to be present, the filter macro is present with the proper name.
+        The filter macro MUST be derived from the name of the detection
+
+
+        Args:
+            value (Union[str, dict[str,Any]]): The search. It can either be a string (and should be SPL) 
+                                               or a dict, in which case it is Sigma-formatted.
+            info (ValidationInfo): The validation info can contain a number of different objects. Today it only contains the director. 
+
+        Returns:
+            Union[str, dict[str,Any]]: The search, either in sigma or SPL format.
+        """        
+        
+        if isinstance(value,dict):
+            #If the search is a dict, then it is in Sigma format so return it
+            return value
+        
+        # Otherwise, the search is SPL.
+        
+        
+        # In the future, we will may add support that makes the inclusion of the 
+        # filter macro optional or automatically generates it for searches that 
+        # do not have it. For now, continue to require that all searches have a filter macro.
+        FORCE_FILTER_MACRO = True
+        if not FORCE_FILTER_MACRO:
+            return value
+        
+        # Get the required macro name, which is derived from the search name.
+        # Note that a separate validation ensures that the file name matches the content name
+        name:Union[str,None] = info.data.get("name",None)
+        if name is None:
+            #The search was sigma formatted (or failed other validation and was None), so we will not validate macros in it
+            raise ValueError("Cannot validate filter macro, field 'name' (which is required to validate the macro) was missing from the detection YML.")
+        
+        #Get the file name without the extension. Note this is not a full path!
+        file_name = pathlib.Path(cls.contentNameToFileName(name)).stem
+        file_name_with_filter = f"`{file_name}_filter`"
+        
+        if file_name_with_filter not in value:
+            raise ValueError(f"Detection does not contain the EXACT filter macro {file_name_with_filter}. "
+                             "This filter macro MUST be present in the search. It usually placed at the end "
+                             "of the search and is useful for environment-specific filtering of False Positive or noisy results.")
+        
+        return value
+
+
 
     @field_validator("test_groups")
     @classmethod
@@ -144,17 +195,30 @@ class Detection_Abstract(SecurityContentObject):
     macros: list[Macro] = Field([],validate_default=True)
     lookups: list[Lookup] = Field([],validate_default=True)
 
-    @computed_field
-    @property
-    def cve_enrichment(self)->List[CveEnrichmentObj]:
-        raise Exception("CVE Enrichment Functionality not currently supported.  It will be re-added at a later time.")
-        enriched_cves = []
-        for cve_id in self.tags.cve:
-            print(f"\nEnriching {cve_id}\n")
-            enriched_cves.append(CveEnrichment.enrich_cve(cve_id))
-
-        return enriched_cves
+    cve_enrichment: list[CveEnrichmentObj] = Field([], validate_default=True)
     
+    @model_validator(mode="after")
+    def cve_enrichment_func(self, info:ValidationInfo):
+        if len(self.cve_enrichment) > 0:
+            raise ValueError(f"Error, field 'cve_enrichment' should be empty and "
+                             f"dynamically populated at runtime. Instead, this field contained: {self.cve_enrichment}")
+
+        output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
+        if output_dto is None:
+            raise ValueError("Context not provided to detection model post validator")
+        
+        
+        enriched_cves:list[CveEnrichmentObj] = []
+
+        for cve_id in self.tags.cve:
+            try:
+                enriched_cves.append(output_dto.cve_enrichment.enrich_cve(cve_id, raise_exception_on_failure=False))
+            except Exception as e:
+                raise ValueError(f"{e}")
+        self.cve_enrichment = enriched_cves
+        return self
+    
+
     splunk_app_enrichment: Optional[List[dict]] = None
     
     @computed_field
@@ -382,11 +446,11 @@ class Detection_Abstract(SecurityContentObject):
             filter_macro = Macro.model_validate({"name":filter_macro_name, 
                                                 "definition":'search *', 
                                                 "description":'Update this macro to limit the output results to filter out false positives.'})
-            director.macros.append(filter_macro)
+            director.addContentToDictMappings(filter_macro)
         
         macros_from_search = Macro.get_macros(search, director)
         
-        return  macros_from_search + [filter_macro]
+        return  macros_from_search
 
     def get_content_dependencies(self)->list[SecurityContentObject]:
         #Do this separately to satisfy type checker

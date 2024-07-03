@@ -598,7 +598,6 @@ class Detection_Abstract(SecurityContentObject):
         return self
         
 
-
     @model_validator(mode='after')
     def ensurePresenceOfRequiredTests(self):
         # TODO (cmcginley): Fix detection_abstract.tests_validate so that it surfaces validation errors

@@ -41,12 +41,15 @@ class Deploy:
             # Request went through and completed, but may have returned a non-successful error code.
             # This likely includes a more verbose response describing the error
             res.raise_for_status()
+            print(res.json())
         except Exception as e:
             try:
                 error_text = res.json()
             except Exception as e:
                 error_text = "No error text - request failed"
             formatted_error_text = pprint.pformat(error_text)
+            print("While this may not be the cause of your error, ensure that the uid and appid of your Private App does not exist in Splunkbase\n"
+                  "ACS cannot deploy and app with the same uid or appid as one that exists in Splunkbase.")
             raise Exception(f"Error installing to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS:\n{formatted_error_text}")
         
         print(f"'{config.getPackageFilePath(include_version=False)}' successfully installed to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS!")

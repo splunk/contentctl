@@ -25,7 +25,8 @@ class NewContent:
         answers['date'] = datetime.today().strftime('%Y-%m-%d')
         answers['author'] = answers['detection_author']
         del answers['detection_author']
-        answers['data_source'] = answers['data_source']
+        answers['data_sources'] = answers['data_source']
+        del answers['data_source']
         answers['type'] = answers['detection_type']
         del answers['detection_type']
         answers['status'] = "production" #start everything as production since that's what we INTEND the content to become   
@@ -49,6 +50,7 @@ class NewContent:
         answers['tags']['required_fields'] = ['UPDATE']
         answers['tags']['risk_score'] = 'UPDATE (impact * confidence)/100'
         answers['tags']['security_domain'] = answers['security_domain']
+        del answers["security_domain"]
         answers['tags']['cve'] = ['UPDATE WITH CVE(S) IF APPLICABLE']
         
         #generate the tests section
@@ -64,6 +66,7 @@ class NewContent:
                 ]
             }
         ]
+        del answers["mitre_attack_ids"]
         return answers
 
     def buildStory(self)->dict[str,Any]:
@@ -111,12 +114,12 @@ class NewContent:
             #make sure the output folder exists for this detection
             output_folder.mkdir(exist_ok=True)
 
-            YmlWriter.writeYmlFile(file_path, object)
+            YmlWriter.writeDetection(file_path, object)
             print("Successfully created detection " + file_path)
         
         elif type == NewContentType.story:
             file_path = os.path.join(self.output_path, 'stories', self.convertNameToFileName(object['name'], object['tags']['product']))
-            YmlWriter.writeYmlFile(file_path, object)
+            YmlWriter.writeStory(file_path, object)
             print("Successfully created story " + file_path)        
         
         else:

@@ -32,6 +32,22 @@ class Utils:
     
         return sorted(listOfFiles)
 
+    @staticmethod
+    def get_all_yml_files_from_directory_one_layer_deep(path: str) -> list[pathlib.Path]:
+        listOfFiles: list[pathlib.Path] = []
+        base_path = pathlib.Path(path)
+        # Check the base directory
+        for item in base_path.iterdir():
+            if item.is_file() and item.suffix == '.yml':
+                listOfFiles.append(item)
+        # Check one subfolder level deep
+        for subfolder in base_path.iterdir():
+            if subfolder.is_dir() and subfolder.name != "cim":
+                for item in subfolder.iterdir():
+                    if item.is_file() and item.suffix == '.yml':
+                        listOfFiles.append(item)
+        return sorted(listOfFiles)
+
 
     @staticmethod
     def add_id(id_dict:dict[str, list[pathlib.Path]], obj:SecurityContentObject, path:pathlib.Path) -> None:     

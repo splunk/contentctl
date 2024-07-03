@@ -1,13 +1,16 @@
 import os
 import sys
-import pathlib
-from dataclasses import dataclass
+from typing import Union
+from dataclasses import dataclass, field
 from pydantic import ValidationError
-
+from uuid import UUID
+from contentctl.input.yml_reader import YmlReader
 
 
 from contentctl.objects.detection import Detection
 from contentctl.objects.story import Story
+
+from contentctl.objects.enums import SecurityContentProduct
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.playbook import Playbook
@@ -15,213 +18,212 @@ from contentctl.objects.deployment import Deployment
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.ssa_detection import SSADetection
+from contentctl.objects.atomic import AtomicTest
+from contentctl.objects.security_content_object import SecurityContentObject
 
-from contentctl.input.basic_builder import BasicBuilder
-from contentctl.input.detection_builder import DetectionBuilder
+from contentctl.enrichments.attack_enrichment import AttackEnrichment
+from contentctl.enrichments.cve_enrichment import CveEnrichment
+
+from contentctl.objects.config import validate
+
+
+@dataclass
+class DirectorOutputDto:
+    # Atomic Tests are first because parsing them 
+    # is far quicker than attack_enrichment
+    atomic_tests: Union[list[AtomicTest],None]
+    attack_enrichment: AttackEnrichment
+    cve_enrichment: CveEnrichment
+    detections: list[Detection]
+    stories: list[Story]
+    baselines: list[Baseline]
+    investigations: list[Investigation]
+    playbooks: list[Playbook]
+    macros: list[Macro]
+    lookups: list[Lookup]
+    deployments: list[Deployment]
+    ssa_detections: list[SSADetection]
+
+    name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
+    uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
+
+    def addContentToDictMappings(self, content: SecurityContentObject):
+        content_name = content.name
+        if isinstance(content, SSADetection):
+            # Since SSA detections may have the same name as ESCU detection,
+            # for this function we prepend 'SSA ' to the name.
+            content_name = f"SSA {content_name}"
+        if content_name in self.name_to_content_map:
+            raise ValueError(
+                f"Duplicate name '{content_name}' with paths:\n"
+                f" - {content.file_path}\n"
+                f" - {self.name_to_content_map[content_name].file_path}"
+            )
+        elif content.id in self.uuid_to_content_map:
+            raise ValueError(
+                f"Duplicate id '{content.id}' with paths:\n"
+                f" - {content.file_path}\n"
+                f" - {self.name_to_content_map[content_name].file_path}"
+            )
+
+        if isinstance(content, Lookup):
+            self.lookups.append(content)
+        elif isinstance(content, Macro):
+            self.macros.append(content)
+        elif isinstance(content, Deployment):
+            self.deployments.append(content)
+        elif isinstance(content, Playbook):
+            self.playbooks.append(content)
+        elif isinstance(content, Baseline):
+            self.baselines.append(content)
+        elif isinstance(content, Investigation):
+            self.investigations.append(content)
+        elif isinstance(content, Story):
+            self.stories.append(content)
+        elif isinstance(content, Detection):
+            self.detections.append(content)
+        elif isinstance(content, SSADetection):
+            self.ssa_detections.append(content)
+        else:
+             raise Exception(f"Unknown security content type: {type(content)}")
+
+
+        self.name_to_content_map[content_name] = content
+        self.uuid_to_content_map[content.id] = content
+
+
 from contentctl.input.ssa_detection_builder import SSADetectionBuilder
-from contentctl.input.playbook_builder import PlaybookBuilder
-from contentctl.input.baseline_builder import BaselineBuilder
-from contentctl.input.investigation_builder import InvestigationBuilder
-from contentctl.input.story_builder import StoryBuilder
 from contentctl.objects.enums import SecurityContentType
-from contentctl.objects.enums import SecurityContentProduct
+
 from contentctl.objects.enums import DetectionStatus 
 from contentctl.helper.utils import Utils
-from contentctl.enrichments.attack_enrichment import AttackEnrichment
-from contentctl.objects.config import Config
-
-from contentctl.objects.config import Config
-
-
-
-@dataclass(frozen=True)
-class DirectorInputDto:
-    input_path: pathlib.Path
-    product: SecurityContentProduct
-    config: Config
-
-
-@dataclass()
-class DirectorOutputDto:
-     detections: list[Detection]
-     stories: list[Story]
-     baselines: list[Baseline]
-     investigations: list[Investigation]
-     playbooks: list[Playbook]
-     macros: list[Macro]
-     lookups: list[Lookup]
-     deployments: list[Deployment]
-     ssa_detections: list[SSADetection]
 
 
 class Director():
-    input_dto: DirectorInputDto
+    input_dto: validate
     output_dto: DirectorOutputDto
-    basic_builder: BasicBuilder
-    playbook_builder: PlaybookBuilder
-    baseline_builder: BaselineBuilder
-    investigation_builder: InvestigationBuilder
-    story_builder: StoryBuilder
-    detection_builder: DetectionBuilder
     ssa_detection_builder: SSADetectionBuilder
-    attack_enrichment: dict
-    config: Config
+    
 
 
     def __init__(self, output_dto: DirectorOutputDto) -> None:
         self.output_dto = output_dto
-        self.attack_enrichment = dict()
-
-
-    def execute(self, input_dto: DirectorInputDto) -> None:
-        self.input_dto = input_dto
-        
-        if self.input_dto.config.enrichments.attack_enrichment:
-            self.attack_enrichment = AttackEnrichment.get_attack_lookup(self.input_dto.input_path)
-        
-        self.basic_builder = BasicBuilder()
-        self.playbook_builder = PlaybookBuilder(self.input_dto.input_path)
-        self.baseline_builder = BaselineBuilder()
-        self.investigation_builder = InvestigationBuilder()
-        self.story_builder = StoryBuilder()
-        self.detection_builder = DetectionBuilder()
         self.ssa_detection_builder = SSADetectionBuilder()
-        if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
-            self.createSecurityContent(SecurityContentType.deployments)
-            self.createSecurityContent(SecurityContentType.lookups)
-            self.createSecurityContent(SecurityContentType.macros)
-            self.createSecurityContent(SecurityContentType.baselines)
-            self.createSecurityContent(SecurityContentType.investigations)
-            self.createSecurityContent(SecurityContentType.playbooks)
-            self.createSecurityContent(SecurityContentType.detections)
-            self.createSecurityContent(SecurityContentType.stories)
-        elif self.input_dto.product == SecurityContentProduct.SSA:
-            self.createSecurityContent(SecurityContentType.ssa_detections)
+        
+    def execute(self, input_dto: validate) -> None:
+        self.input_dto = input_dto
+
+        
+        self.createSecurityContent(SecurityContentType.deployments)
+        self.createSecurityContent(SecurityContentType.lookups)
+        self.createSecurityContent(SecurityContentType.macros)
+        self.createSecurityContent(SecurityContentType.stories)
+        self.createSecurityContent(SecurityContentType.baselines)
+        self.createSecurityContent(SecurityContentType.investigations)
+        self.createSecurityContent(SecurityContentType.playbooks)
+        self.createSecurityContent(SecurityContentType.detections)
+
+
+        self.createSecurityContent(SecurityContentType.ssa_detections)
         
 
-    def createSecurityContent(self, type: SecurityContentType) -> None:
-        if type == SecurityContentType.ssa_detections:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'ssa_detections'))
-        elif type == SecurityContentType.unit_tests:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, 'tests'))
+    def createSecurityContent(self, contentType: SecurityContentType) -> None:
+        if contentType == SecurityContentType.ssa_detections:
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, 'ssa_detections'))
+            security_content_files = [f for f in files if f.name.startswith('ssa___')]
+            
+        elif contentType in [SecurityContentType.deployments, 
+                             SecurityContentType.lookups, 
+                             SecurityContentType.macros, 
+                             SecurityContentType.stories,
+                             SecurityContentType.baselines,
+                             SecurityContentType.investigations,
+                             SecurityContentType.playbooks,
+                             SecurityContentType.detections]:
+            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.path, str(contentType.name)))
+            security_content_files = [f for f in files if not f.name.startswith('ssa___')]
         else:
-            files = Utils.get_all_yml_files_from_directory(os.path.join(self.input_dto.input_path, str(type.name)))
+             raise(Exception(f"Cannot createSecurityContent for unknown product."))
 
         validation_errors = []
                 
         already_ran = False
         progress_percent = 0
-
-        if self.input_dto.product == SecurityContentProduct.SPLUNK_APP or self.input_dto.product == SecurityContentProduct.API:
-            security_content_files = [f for f in files if not f.name.startswith('ssa___')]
-        elif self.input_dto.product == SecurityContentProduct.SSA:
-            security_content_files = [f for f in files if f.name.startswith('ssa___')]
-        else:
-            raise(Exception(f"Cannot createSecurityContent for unknown product '{self.input_dto.product}'"))
-
         
         for index,file in enumerate(security_content_files):
             progress_percent = ((index+1)/len(security_content_files)) * 100
             try:
-                type_string = type.name.upper()
-                if type == SecurityContentType.lookups:
-                        self.constructLookup(self.basic_builder, file)
-                        lookup = self.basic_builder.getObject()
-                        self.output_dto.lookups.append(lookup)
-                
-                elif type == SecurityContentType.macros:
-                        self.constructMacro(self.basic_builder, file)
-                        macro = self.basic_builder.getObject()
-                        self.output_dto.macros.append(macro)
-                
-                elif type == SecurityContentType.deployments:
-                        self.constructDeployment(self.basic_builder, file)
-                        deployment = self.basic_builder.getObject()
-                        self.output_dto.deployments.append(deployment)
-                
-                elif type == SecurityContentType.playbooks:
-                        self.constructPlaybook(self.playbook_builder, file)
-                        playbook = self.playbook_builder.getObject()
-                        self.output_dto.playbooks.append(playbook)                    
-                
-                elif type == SecurityContentType.baselines:
-                        self.constructBaseline(self.baseline_builder, file)
-                        baseline = self.baseline_builder.getObject()
-                        self.output_dto.baselines.append(baseline)
-                
-                elif type == SecurityContentType.investigations:
-                        self.constructInvestigation(self.investigation_builder, file)
-                        investigation = self.investigation_builder.getObject()
-                        self.output_dto.investigations.append(investigation)
+                type_string = contentType.name.upper()
+                modelDict = YmlReader.load_file(file)
 
-                elif type == SecurityContentType.stories:
-                        self.constructStory(self.story_builder, file)
-                        story = self.story_builder.getObject()
-                        self.output_dto.stories.append(story)
+                if contentType == SecurityContentType.lookups:
+                        lookup = Lookup.model_validate(modelDict,context={"output_dto":self.output_dto, "config":self.input_dto})
+                        self.output_dto.addContentToDictMappings(lookup)
+                
+                elif contentType == SecurityContentType.macros:
+                        macro = Macro.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.addContentToDictMappings(macro)
+                
+                elif contentType == SecurityContentType.deployments:
+                        deployment = Deployment.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.addContentToDictMappings(deployment)
+                
+                elif contentType == SecurityContentType.playbooks:
+                        playbook = Playbook.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.addContentToDictMappings(playbook)                  
+                
+                elif contentType == SecurityContentType.baselines:
+                        baseline = Baseline.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.addContentToDictMappings(baseline)
+                
+                elif contentType == SecurityContentType.investigations:
+                        investigation = Investigation.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.addContentToDictMappings(investigation)
+
+                elif contentType == SecurityContentType.stories:
+                        story = Story.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.addContentToDictMappings(story)
             
-                elif type == SecurityContentType.detections:
-                        self.constructDetection(self.detection_builder, file)
-                        detection = self.detection_builder.getObject()
-                        self.output_dto.detections.append(detection)
+                elif contentType == SecurityContentType.detections:
+                        detection = Detection.model_validate(modelDict,context={"output_dto":self.output_dto, "app":self.input_dto.app})
+                        self.output_dto.addContentToDictMappings(detection)
 
-                elif type == SecurityContentType.ssa_detections:
-                        self.constructSSADetection(self.ssa_detection_builder, file)
-                        detection = self.ssa_detection_builder.getObject()
-                        if detection.status in  [DetectionStatus.production.value, DetectionStatus.validation.value]:
-                            self.output_dto.ssa_detections.append(detection)
+                elif contentType == SecurityContentType.ssa_detections:
+                        self.constructSSADetection(self.ssa_detection_builder, self.output_dto,str(file))
+                        ssa_detection = self.ssa_detection_builder.getObject()
+                        if ssa_detection.status in [DetectionStatus.production.value, DetectionStatus.validation.value]:
+                            self.output_dto.addContentToDictMappings(ssa_detection)
 
                 else:
-                        raise Exception(f"Unsupported type: [{type}]")
+                        raise Exception(f"Unsupported type: [{contentType}]")
                 
                 if (sys.stdout.isatty() and sys.stdin.isatty() and sys.stderr.isatty()) or not already_ran:
                         already_ran = True
                         print(f"\r{f'{type_string} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
             
             except (ValidationError, ValueError) as e:
-                relative_path = file.absolute().relative_to(self.input_dto.input_path.absolute())
+                relative_path = file.absolute().relative_to(self.input_dto.path.absolute())
                 validation_errors.append((relative_path,e))
+                
 
-        print(f"\r{f'{type.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
+        print(f"\r{f'{contentType.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...", end="", flush=True)
         print("Done!")
 
         if len(validation_errors) > 0:
-            errors_string = '\n\n'.join([f"{e_tuple[0]}\n{str(e_tuple[1])}" for e_tuple in validation_errors])
+            errors_string = '\n\n'.join([f"File: {e_tuple[0]}\nError: {str(e_tuple[1])}" for e_tuple in validation_errors])
+            #print(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
+            # We quit after validation a single type/group of content because it can cause significant cascading errors in subsequent
+            # types of content (since they may import or otherwise use it)
             raise Exception(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
 
 
-    def constructDetection(self, builder: DetectionBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path)
-        builder.addDeployment(self.output_dto.deployments)
-        builder.addMitreAttackEnrichment(self.attack_enrichment)
-        builder.addKillChainPhase()
-        builder.addCIS()
-        builder.addNist()
-        builder.addDatamodel()
-        builder.addRBA()
-        builder.addProvidingTechnologies()
-        builder.addNesFields()
-        builder.addAnnotations()
-        builder.addMappings()
-        builder.addBaseline(self.output_dto.baselines)
-        builder.addPlaybook(self.output_dto.playbooks)
-        builder.addMacros(self.output_dto.macros)
-        builder.addLookups(self.output_dto.lookups)
-        
-        if self.input_dto.config.enrichments.attack_enrichment:
-            builder.addMitreAttackEnrichment(self.attack_enrichment)
-
-        if self.input_dto.config.enrichments.cve_enrichment:
-            builder.addCve()
     
-        if self.input_dto.config.enrichments.splunk_app_enrichment:
-            builder.addSplunkApp()
+    
 
-
-    def constructSSADetection(self, builder: DetectionBuilder, file_path: str) -> None:
+    def constructSSADetection(self, builder: SSADetectionBuilder, directorOutput:DirectorOutputDto, file_path: str) -> None:
         builder.reset()
-        builder.setObject(file_path)
-        builder.addMitreAttackEnrichment(self.attack_enrichment)
+        builder.setObject(file_path,self.output_dto)
+        builder.addMitreAttackEnrichmentNew(directorOutput.attack_enrichment)
         builder.addKillChainPhase()
         builder.addCIS()
         builder.addNist()
@@ -229,55 +231,3 @@ class Director():
         builder.addMappings()
         builder.addUnitTest()
         builder.addRBA()
-
-
-    def constructStory(self, builder: StoryBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path)
-        builder.addDetections(self.output_dto.detections, self.input_dto.config)
-        builder.addInvestigations(self.output_dto.investigations)
-        builder.addBaselines(self.output_dto.baselines)
-        builder.addAuthorCompanyName()
-
-
-    def constructBaseline(self, builder: BaselineBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path)
-        builder.addDeployment(self.output_dto.deployments)
-
-
-    def constructDeployment(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, SecurityContentType.deployments)
-
-
-    def constructLookup(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, SecurityContentType.lookups)
-
-
-    def constructMacro(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, SecurityContentType.macros)
-
-
-    def constructPlaybook(self, builder: PlaybookBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path)
-        builder.addDetections()
-
-
-    def constructTest(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path, SecurityContentType.unit_tests)
-
-
-    def constructInvestigation(self, builder: InvestigationBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path)
-        builder.addInputs()
-        builder.addLowercaseName()
-
-    def constructObjects(self, builder: BasicBuilder, file_path: str) -> None:
-        builder.reset()
-        builder.setObject(file_path)

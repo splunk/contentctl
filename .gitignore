@@ -1,5 +1,8 @@
 
 poetry.lock
+# usual mac files
+.DS_Store
+*/.DS_Store
 
 # custom
 dist/*
@@ -7,6 +10,7 @@ apps*
 test_results*
 attack_data*
 security_content/
+contentctl.yml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

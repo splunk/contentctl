@@ -1,19 +1,68 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-
-        {
-            "name": "contentctl test",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/splunk_contentctl/contentctl.py",
-            "cwd": "${workspaceFolder}/splunk_contentctl",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "args": ["-p", "tmp", "test"]
-        }
-    ]
+"configurations": [
+    {
+        "name": "contentctl init",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../ddd/",
+        "args": ["init"]
+    },
+    {
+        "name": "contentctl validate",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["validate"]
+    },
+    {
+        "name": "contentctl validate enrich",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["validate", "--enrichments"]
+    },
+    {
+        "name": "contentctl build",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["build"]
+    },
+    {
+        "name": "contentctl build enrich",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["build", "--enrichments"]
+    },
+    {
+        "name": "contentctl test",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["test"]
+    },
+    {
+        "name": "contentctl --help",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["--help"]
+    },
+    {
+        "name": "contentctl test detection",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/.venv/bin/contentctl",
+        "cwd": "${workspaceFolder}/../",
+        "args": ["test", "mode:selected", "--mode.files", "detections/endpoint/3cx_supply_chain_attack_network_indicators.yml"]
+    }
+]
 }

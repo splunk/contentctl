@@ -1,36 +1,66 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING,Self
+from pydantic import model_validator, Field, FilePath
 
-import uuid
-import string
 
-from pydantic import BaseModel, validator, ValidationError
-
-from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.playbook_tags import PlaybookTag
-from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType
+from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.enums import PlaybookType
 
 
 class Playbook(SecurityContentObject):
-    #name: str
-    #id: str
-    #version: int
-    #date: str
-    #author: str
-    #contentType: SecurityContentType = SecurityContentType.playbooks
-    type: str
-    #description: str
-    how_to_implement: str
-    playbook: str
-    check_references: bool = False #Validation is done in order, this field must be defined first
-    references: list
-    app_list: list
-    tags: PlaybookTag
+    type: PlaybookType = Field(...)
+    
+    # Override the type definition for filePath.
+    # This MUST be backed by a file and cannot be None
+    file_path: FilePath
+    
+    how_to_implement: str = Field(min_length=4)
+    playbook: str = Field(min_length=4)
+    app_list: list[str] = Field(...,min_length=0) 
+    tags: PlaybookTag = Field(...)
+    
+
+    
+    @model_validator(mode="after")
+    def ensureJsonAndPyFilesExist(self)->Self:
+        json_file_path = self.file_path.with_suffix(".json")
+        python_file_path = self.file_path.with_suffix(".py")
+        missing:list[str] = []
+        if not json_file_path.is_file():
+            missing.append(f"Playbook file named '{self.file_path.name}' MUST "\
+                           f"have a .json file named '{json_file_path.name}', "\
+                            "but it does not exist")
+            
+        if not python_file_path.is_file():
+            missing.append(f"Playbook file named '{self.file_path.name}' MUST "\
+                           f"have a .py file named '{python_file_path.name}', "\
+                            "but it does not exist")
+            
+        
+        if len(missing) == 0:
+            return self
+        else:
+            missing_files_string = '\n - '.join(missing)
+            raise ValueError(f"Playbook files missing:\n -{missing_files_string}")
 
 
-    @validator('references')
-    def references_check(cls, v, values):
-        return LinkValidator.SecurityContentObject_validate_references(v, values)
+    #Override playbook file name checking FOR NOW
+    @model_validator(mode="after")
+    def ensureFileNameMatchesSearchName(self)->Self:
+        file_name = self.name \
+            .replace(' ', '_') \
+            .replace('-','_') \
+            .replace('.','_') \
+            .replace('/','_') \
+            .lower() + ".yml"
+        
+        #allow different capitalization FOR NOW in playbook file names
+        if (self.file_path is not None and file_name != self.file_path.name.lower()):
+            raise ValueError(f"The file name MUST be based off the content 'name' field:\n"\
+                            f"\t- Expected File Name: {file_name}\n"\
+                            f"\t- Actual File Name  : {self.file_path.name}")
 
-    @validator('how_to_implement')
-    def encode_error(cls, v, values, field):
-        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+        return self
+
+    

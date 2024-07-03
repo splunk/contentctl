@@ -59,11 +59,13 @@ class FindingReportObject():
             detection.tags.risk_level = "Critical"  
 
         evidence_str = "{"
-        for i in range(len(detection.tags.observable)):            
-            evidence_str = evidence_str + '"' + detection.tags.observable[i]["name"] + '": ' + detection.tags.observable[i]["name"].replace(".", "_")
-            if not i == (len(detection.tags.observable) - 1):
+        for i in range(len(detection.tags.required_fields)):            
+            evidence_str = evidence_str + '"' + detection.tags.required_fields[i] + '": ' + detection.tags.required_fields[i].replace(".", "_")
+            if not i == (len(detection.tags.required_fields) - 1):
                 evidence_str = evidence_str + ', '
-        evidence_str = evidence_str + '}'        
+
+        evidence_str = evidence_str + ', "sourceType": metadata.source_type, "source": metadata.source}'        
+
 
         detection.tags.evidence_str = evidence_str
 

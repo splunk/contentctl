@@ -1,67 +1,76 @@
-import enum
-import uuid
-import string
+from __future__ import annotations
 import re
-import requests
-
-from pydantic import BaseModel, validator, ValidationError
-from dataclasses import dataclass
-from datetime import datetime
-
+from typing import TYPE_CHECKING, Optional, List, Any
+from pydantic import field_validator, computed_field, Field, ValidationInfo, ConfigDict,model_serializer
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
-from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.investigation_tags import InvestigationTags
-from contentctl.helper.link_validator import LinkValidator
 
 
 class Investigation(SecurityContentObject):
-    # investigation spec
-    #contentType: SecurityContentType = SecurityContentType.investigations
-    #name: str
-    #id: str
-    #version: int
-    #date: str
-    #author: str
-    type: str
-    datamodel: list
-    #description: str
-    search: str
-    how_to_implement: str
-    known_false_positives: str
-    check_references: bool = False #Validation is done in order, this field must be defined first
-    references: list
-    inputs: list = None
+    model_config = ConfigDict(use_enum_values=True,validate_default=False)
+    type: str = Field(...,pattern="^Investigation$")
+    datamodel: list[DataModel] = Field(...)
+    
+    search: str = Field(...)
+    how_to_implement: str = Field(...)
+    known_false_positives: str = Field(...)
+    
+    
     tags: InvestigationTags
 
     # enrichment
-    lowercase_name: str = None
+    @computed_field
+    @property
+    def inputs(self)->List[str]:
+        #Parse out and return all inputs from the searchj
+        inputs = []
+        pattern = r"\$([^\s.]*)\$"
 
-    # check_fields=False because we want to override the 
-    # name validator in SecurityContentObject 
-    # (since we allow longer than the default length)
-    @validator('name',check_fields=False)
-    def name_max_length(cls, v):
-        if len(v) > 75:
-            raise ValueError('name is longer then 75 chars: ' + v)
-        return v
+        for input in re.findall(pattern, self.search):
+            inputs.append(input)
 
-    @validator('datamodel')
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError('not valid data model: ' + values["name"])
-        return v
+        return inputs
 
-    @validator('how_to_implement')
-    def encode_error(cls, v, values, field):
-        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+    @computed_field
+    @property
+    def lowercase_name(self)->str:
+        return self.name.replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower().replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
+
+
+    @model_serializer
+    def serialize_model(self):
+        #Call serializer for parent
+        super_fields = super().serialize_model()
+        
+        #All fields custom to this model
+        model= {
+            "type": self.type,
+            "datamodel": self.datamodel,
+            "search": self.search,
+            "how_to_implement": self.how_to_implement,
+            "known_false_positives": self.known_false_positives,
+            "inputs": self.inputs,
+            "tags": self.tags.model_dump(),
+            "lowercase_name":self.lowercase_name
+        }
+        
+        #Combine fields from this model with fields from parent
+        super_fields.update(model)
+        
+        #return the model
+        return super_fields
+
+
+    def model_post_init(self, ctx:dict[str,Any]):
+        # director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
+        # if not isinstance(director,DirectorOutputDto):
+        #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")
+        director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
+        for story in self.tags.analytic_story:
+            story.investigations.append(self)
     
-    @validator('references')
-    def references_check(cls, v, values):
-        return LinkValidator.SecurityContentObject_validate_references(v, values)
-    @validator('search')
-    def search_validate(cls, v, values):
-        # write search validator
-        return v
+
+    

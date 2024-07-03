@@ -1,17 +1,21 @@
-import string
-import uuid
-import requests
 
-from pydantic import BaseModel, validator, ValidationError
-from dataclasses import dataclass
-from datetime import datetime
+from __future__ import annotations
+from typing import TYPE_CHECKING, Annotated, Optional, List,Any
+from pydantic import field_validator, ValidationInfo, Field, model_serializer
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
 
-from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import DataModel
-from contentctl.objects.baseline_tags import BaselineTags
 from contentctl.objects.deployment import Deployment
-from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType
+from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.enums import DataModel, AnalyticsType
+from contentctl.objects.baseline_tags import BaselineTags
+from contentctl.objects.enums import DeploymentType
+#from contentctl.objects.deployment import Deployment
+
+# from typing import TYPE_CHECKING
+# if TYPE_CHECKING:
+#     from contentctl.input.director import DirectorOutputDto
+
 
 class Baseline(SecurityContentObject):
     # baseline spec
@@ -21,43 +25,39 @@ class Baseline(SecurityContentObject):
     #date: str
     #author: str
     #contentType: SecurityContentType = SecurityContentType.baselines
-    type: str
-    datamodel: list
+    type: Annotated[str,Field(pattern="^Baseline$")] = Field(...)
+    datamodel: Optional[List[DataModel]] = None
     #description: str
-    search: str
-    how_to_implement: str
-    known_false_positives: str
-    check_references: bool = False #Validation is done in order, this field must be defined first
-    references: list
-    tags: BaselineTags
+    search: str = Field(..., min_length=4)
+    how_to_implement: str = Field(..., min_length=4)
+    known_false_positives: str = Field(..., min_length=4)
+    tags: BaselineTags = Field(...)
 
     # enrichment
-    deployment: Deployment = None
+    deployment: Deployment = Field({})
 
+    @field_validator("deployment", mode="before")
+    def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
+        return Deployment.getDeployment(v,info)
+    
 
-
-
-    @validator('type')
-    def type_valid(cls, v, values):
-        if v != "Baseline":
-            raise ValueError('not valid analytics type: ' + values["name"])
-        return v
-
-    @validator('datamodel')
-    def datamodel_valid(cls, v, values):
-        for datamodel in v:
-            if datamodel not in [el.name for el in DataModel]:
-                raise ValueError('not valid data model: ' + values["name"])
-        return v
-
-    @validator('how_to_implement')
-    def encode_error(cls, v, values, field):
-        return SecurityContentObject.free_text_field_valid(cls,v,values,field)
+    @model_serializer
+    def serialize_model(self):
+        #Call serializer for parent
+        super_fields = super().serialize_model()
         
-    # @validator('references')
-    # def references_check(cls, v, values):
-    #     return LinkValidator.SecurityContentObject_validate_references(v, values)
-    @validator('search')
-    def search_validate(cls, v, values):
-        # write search validator
-        return v
+        #All fields custom to this model
+        model= {
+            "tags": self.tags.model_dump(),
+            "type": self.type,
+            "search": self.search,
+            "how_to_implement":self.how_to_implement,
+            "known_false_positives":self.known_false_positives,
+            "datamodel": self.datamodel,
+        }
+        
+        #Combine fields from this model with fields from parent
+        super_fields.update(model)
+        
+        #return the model
+        return super_fields

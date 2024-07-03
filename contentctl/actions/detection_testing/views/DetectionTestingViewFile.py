@@ -1,11 +1,3 @@
-from pydantic import BaseModel
-import abc
-from typing import Callable
-from contentctl.objects.test_config import TestConfig
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
-    DetectionTestingManagerOutputDto,
-)
-
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )

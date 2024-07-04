@@ -22,6 +22,7 @@ from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.atomic import AtomicTest
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.data_source import DataSource
+from contentctl.objects.event_source import EventSource
 
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
@@ -57,6 +58,7 @@ class DirectorOutputDto:
     deployments: list[Deployment]
     ssa_detections: list[SSADetection]
     data_sources: list[DataSource]
+    event_sources: list[EventSource]
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
     uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
 
@@ -122,6 +124,7 @@ class Director():
         self.createSecurityContent(SecurityContentType.stories)
         self.createSecurityContent(SecurityContentType.baselines)
         self.createSecurityContent(SecurityContentType.investigations)
+        self.createSecurityContent(SecurityContentType.event_sources)
         self.createSecurityContent(SecurityContentType.data_sources)
         self.createSecurityContent(SecurityContentType.playbooks)
         self.createSecurityContent(SecurityContentType.detections)
@@ -138,6 +141,21 @@ class Director():
             security_content_files = (
                 Utils.get_all_yml_files_from_directory_one_layer_deep(
                     os.path.join(self.input_dto.path, "data_sources")
+                )
+            )
+
+        elif contentType == SecurityContentType.event_sources:
+            security_content_files = Utils.get_all_yml_files_from_directory(
+                os.path.join(self.input_dto.path, "data_sources", "cloud", "event_sources")
+            )
+            security_content_files.extend(
+                Utils.get_all_yml_files_from_directory(
+                    os.path.join(self.input_dto.path, "data_sources", "endpoint", "event_sources")
+                )
+            )
+            security_content_files.extend(
+                Utils.get_all_yml_files_from_directory(
+                    os.path.join(self.input_dto.path, "data_sources", "network", "event_sources")
                 )
             )
 
@@ -183,12 +201,6 @@ class Director():
                         deployment = Deployment.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.addContentToDictMappings(deployment)
 
-                elif contentType == SecurityContentType.data_sources:
-                    data_source = DataSource.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.data_sources.append(data_source)
-
                 elif contentType == SecurityContentType.playbooks:
                         playbook = Playbook.model_validate(modelDict,context={"output_dto":self.output_dto})
                         self.output_dto.addContentToDictMappings(playbook)                  
@@ -214,6 +226,18 @@ class Director():
                         ssa_detection = self.ssa_detection_builder.getObject()
                         if ssa_detection.status in [DetectionStatus.production.value, DetectionStatus.validation.value]:
                             self.output_dto.addContentToDictMappings(ssa_detection)
+                
+                elif contentType == SecurityContentType.data_sources:
+                    data_source = DataSource.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
+                    self.output_dto.data_sources.append(data_source)
+
+                elif contentType == SecurityContentType.event_sources:
+                    event_source = EventSource.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
+                    self.output_dto.event_sources.append(event_source)
 
                 else:
                     raise Exception(f"Unsupported type: [{contentType}]")
@@ -262,7 +286,7 @@ class Director():
         file_path: str,
     ) -> None:
         builder.reset()
-        builder.setObject(file_path, self.output_dto)
+        builder.setObject(file_path)
         builder.addMitreAttackEnrichmentNew(directorOutput.attack_enrichment)
         builder.addKillChainPhase()
         builder.addCIS()

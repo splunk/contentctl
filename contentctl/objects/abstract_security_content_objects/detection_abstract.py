@@ -369,8 +369,6 @@ class Detection_Abstract(SecurityContentObject):
         # if not isinstance(director,DirectorOutputDto):
         #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")
         director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
-        for story in self.tags.analytic_story:
-            story.detections.append(self)
         
         #Ensure that all baselines link to this detection
         for baseline in self.baselines:
@@ -398,6 +396,10 @@ class Detection_Abstract(SecurityContentObject):
             if data_source_obj.name not in unique_data_sources:
                 unique_data_sources[data_source_obj.name] = data_source_obj
         self.data_source_objects = list(unique_data_sources.values())
+
+        for story in self.tags.analytic_story:
+            story.detections.append(self)
+            story.data_sources.extend(self.data_source_objects)
 
         return self
 

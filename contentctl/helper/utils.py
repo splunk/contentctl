@@ -25,6 +25,9 @@ class Utils:
     @staticmethod
     def get_all_yml_files_from_directory(path: str) -> list[pathlib.Path]:
         listOfFiles:list[pathlib.Path] = []
+        base_path = pathlib.Path(path)
+        if not base_path.exists():
+            return listOfFiles
         for (dirpath, dirnames, filenames) in os.walk(path):
             for file in filenames:
                 if file.endswith(".yml"):
@@ -36,6 +39,8 @@ class Utils:
     def get_all_yml_files_from_directory_one_layer_deep(path: str) -> list[pathlib.Path]:
         listOfFiles: list[pathlib.Path] = []
         base_path = pathlib.Path(path)
+        if not base_path.exists():
+            return listOfFiles
         # Check the base directory
         for item in base_path.iterdir():
             if item.is_file() and item.suffix == '.yml':

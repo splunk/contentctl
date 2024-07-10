@@ -76,33 +76,28 @@ class GitService(BaseModel):
                 if diff.delta.status in (DeltaStatus.ADDED, DeltaStatus.MODIFIED, DeltaStatus.RENAMED):
                     #print(f"{DeltaStatus(diff.delta.status).name:<8}:{diff.delta.new_file.raw_path}")
                     decoded_path = pathlib.Path(diff.delta.new_file.raw_path.decode('utf-8'))
-                    if 'app_template/' in str(decoded_path) or 'ssa_detections' in str(decoded_path) or str(self.config.getBuildDir()) in str(decoded_path):
-                        #Ignore anything that is embedded in the app template.
-                        #Also ignore ssa detections
-                        pass
-                    elif 'detections/' in str(decoded_path) and decoded_path.suffix == ".yml":
+                    # Note that we only handle updates to detections, lookups, and macros at this time. All other changes are ignored.
+                    if decoded_path.is_relative_to(self.config.path/"detections") and decoded_path.suffix == ".yml":
                         detectionObject = filepath_to_content_map.get(decoded_path, None)
                         if isinstance(detectionObject, Detection):
                             updated_detections.append(detectionObject)
                         else:
                             raise Exception(f"Error getting detection object for file {str(decoded_path)}")
                         
-                    elif 'macros/' in str(decoded_path) and decoded_path.suffix == ".yml":
+                    elif decoded_path.is_relative_to(self.config.path/"macros") and decoded_path.suffix == ".yml":
                         macroObject = filepath_to_content_map.get(decoded_path, None)
                         if isinstance(macroObject, Macro):
                             updated_macros.append(macroObject)
                         else:
                             raise Exception(f"Error getting macro object for file {str(decoded_path)}")
 
-                    elif 'lookups/' in str(decoded_path):
+                    elif decoded_path.is_relative_to(self.config.path/"lookups"):
                         # We need to convert this to a yml. This means we will catch
                         # both changes to a csv AND changes to the YML that uses it
-                        
-                        
                         if decoded_path.suffix == ".yml":
                             updatedLookup = filepath_to_content_map.get(decoded_path, None)
                             if not isinstance(updatedLookup,Lookup):
-                                raise Exception(f"Expected {decoded_path} to be type {type(Lookup)}, but instead if was {(type(lookupObject))}")
+                                raise Exception(f"Expected {decoded_path} to be type {type(Lookup)}, but instead if was {(type(updatedLookup))}")
                             updated_lookups.append(updatedLookup)
 
                         elif decoded_path.suffix == ".csv":
@@ -127,12 +122,8 @@ class GitService(BaseModel):
                     else:
                         pass
                         #print(f"Ignore changes to file {decoded_path} since it is not a detection, macro, or lookup.")
-                
-                # else:
-                #     print(f"{diff.delta.new_file.raw_path}:{DeltaStatus(diff.delta.status).name} (IGNORED)")
-                #     pass
             else:
-                raise Exception(f"Unrecognized type {type(diff)}")
+                raise Exception(f"Unrecognized diff type {type(diff)}")
 
 
         # If a detection has at least one dependency on changed content,
@@ -153,7 +144,7 @@ class GitService(BaseModel):
         #Print out the names of all modified/new content
         modifiedAndNewContentString = "\n - ".join(sorted([d.name for d in updated_detections]))
 
-        print(f"[{len(updated_detections)}] Pieces of modifed and new content to test:\n - {modifiedAndNewContentString}")
+        print(f"[{len(updated_detections)}] Pieces of modifed and new content (this may include experimental/deprecated/manual_test content):\n - {modifiedAndNewContentString}")
         return updated_detections
 
     def getSelected(self, detectionFilenames:List[FilePath])->List[Detection]:

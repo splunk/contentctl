@@ -40,7 +40,7 @@ class Detection_Abstract(SecurityContentObject):
     search: Union[str, dict[str,Any]] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    #data_source: Optional[List[DataSource]] = None
+    data_source_objects: Optional[List[DataSource]] = None
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -369,8 +369,6 @@ class Detection_Abstract(SecurityContentObject):
         # if not isinstance(director,DirectorOutputDto):
         #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")
         director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
-        for story in self.tags.analytic_story:
-            story.detections.append(self)
         
         #Ensure that all baselines link to this detection
         for baseline in self.baselines:
@@ -385,10 +383,25 @@ class Detection_Abstract(SecurityContentObject):
             if replaced is False:
                 raise ValueError(f"Error, failed to replace detection reference in Baseline '{baseline.name}' to detection '{self.name}'")             
             baseline.tags.detections = new_detections
-        
+
+        self.data_source_objects = []
+        for data_source_obj in director.data_sources:
+            for detection_data_source in self.data_source:
+                if data_source_obj.name in detection_data_source:
+                    self.data_source_objects.append(data_source_obj)
+
+        # Remove duplicate data source objects based on their 'name' property
+        unique_data_sources = {}
+        for data_source_obj in self.data_source_objects:
+            if data_source_obj.name not in unique_data_sources:
+                unique_data_sources[data_source_obj.name] = data_source_obj
+        self.data_source_objects = list(unique_data_sources.values())
+
+        for story in self.tags.analytic_story:
+            story.detections.append(self)
+            story.data_sources.extend(self.data_source_objects)
+
         return self
-
-
 
     
     @field_validator('lookups',mode="before")

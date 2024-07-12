@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
     from contentctl.objects.baseline import Baseline
-    
+    from contentctl.objects.data_source import DataSource
 
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -33,7 +33,7 @@ class Story(SecurityContentObject):
     detections:List[Detection] = []
     investigations: List[Investigation] = []
     baselines: List[Baseline] = []
-
+    data_sources: List[DataSource] = []
 
     def storyAndInvestigationNamesWithApp(self, app_name:str)->List[str]:
         return [f"{app_name} - {name} - Rule" for name in self.detection_names] + \

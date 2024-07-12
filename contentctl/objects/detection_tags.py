@@ -138,7 +138,7 @@ class DetectionTags(BaseModel):
             "risk_score": self.risk_score,
             "security_domain": self.security_domain,
             "risk_severity": self.risk_severity,
-            "mitre_attack_ids": self.mitre_attack_id,
+            "mitre_attack_id": self.mitre_attack_id,
             "mitre_attack_enrichments": self.mitre_attack_enrichments
         }
     

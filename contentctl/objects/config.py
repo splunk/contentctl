@@ -148,11 +148,6 @@ class CustomApp(App_Base):
                                 verbose_print=True)
         return str(destination)
     
-    def get_ui_dispatch_app(self)->str:
-        '''
-        Populate the request.ui_dispatch_app field in savedsearches.conf
-        '''
-        return "SplunkEnterpriseSecuritySuite"
 
 
 class Config_Base(BaseModel):

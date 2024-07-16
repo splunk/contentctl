@@ -19,6 +19,7 @@ from contentctl.actions.test import TestInputDto
 from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.inspect import Inspect
 from contentctl.input.yml_reader import YmlReader
+from contentctl.actions.deploy_acs import Deploy
 from contentctl.actions.release_notes import ReleaseNotes
 
 # def print_ascii_art():
@@ -95,8 +96,11 @@ def new_func(config:new):
 
 
 def deploy_acs_func(config:deploy_acs):
-    #This is a bit challenging to get to work with the default values.
-    raise Exception("deploy acs not yet implemented") 
+    print("Building and inspecting app...")
+    token = inspect_func(config)
+    print("App successfully built and inspected.")
+    print("Deploying app...")
+    Deploy().execute(config, token)
 
 def test_common_func(config:test_common):
     if type(config) == test:

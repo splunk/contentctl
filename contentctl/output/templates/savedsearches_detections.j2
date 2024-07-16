@@ -115,6 +115,11 @@ relation = greater than
 quantity = 0
 realtime_schedule = 0
 is_visible = false
+{% if detection.tags.alert_suppression %}
+alert.suppress = true
+alert.suppress.fields = {{ detection.tags.alert_suppression.conf_formatted_fields() }}
+alert.suppress.period = {{ detection.tags.alert_suppression.period }}
+{% endif %}
 search = {{ detection.search | escapeNewlines() }}
 
 {% endif %}

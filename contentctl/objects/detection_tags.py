@@ -3,6 +3,7 @@ import uuid
 from typing import TYPE_CHECKING, List, Optional, Annotated, Union
 from pydantic import BaseModel,Field, NonNegativeInt, PositiveInt, computed_field, UUID4, HttpUrl, ConfigDict, field_validator, ValidationInfo, model_serializer, model_validator
 from contentctl.objects.story import Story
+from contentctl.objects.alert_suppression import AlertSuppression
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
@@ -37,7 +38,7 @@ class DetectionTags(BaseModel):
     message: Optional[str] = Field(...)
     product: list[SecurityContentProductName] = Field(...,min_length=1)
     required_fields: list[str] = Field(min_length=1)
-    
+    alert_suppression: Optional[AlertSuppression] = None
     security_domain: SecurityDomain = Field(...)
 
     @computed_field
@@ -52,7 +53,7 @@ class DetectionTags(BaseModel):
 
 
     
-    cve: List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]] = []
+    cve: List[Annotated[str, Field(pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")]] = []
     atomic_guid: List[AtomicTest] = []
     drilldown_search: Optional[str] = None
 

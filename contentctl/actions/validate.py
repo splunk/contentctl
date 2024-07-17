@@ -42,6 +42,7 @@ class Validate:
 
         director = Director(director_output_dto)
         director.execute(input_dto)
+
         return director_output_dto
 
     def validate_duplicate_uuids(

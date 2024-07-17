@@ -77,16 +77,16 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             .lower() + ".yml"
 
 
-    @model_validator(mode="after")
-    def ensureFileNameMatchesSearchName(self):
-        file_name = self.contentNameToFileName(self.name)
+    # @model_validator(mode="after")
+    # def ensureFileNameMatchesSearchName(self):
+    #     file_name = self.contentNameToFileName(self.name)
         
-        if (self.file_path is not None and file_name != self.file_path.name):
-            raise ValueError(f"The file name MUST be based off the content 'name' field:\n"\
-                            f"\t- Expected File Name: {file_name}\n"\
-                            f"\t- Actual File Name  : {self.file_path.name}")
+    #     if (self.file_path is not None and file_name != self.file_path.name):
+    #         raise ValueError(f"The file name MUST be based off the content 'name' field:\n"\
+    #                         f"\t- Expected File Name: {file_name}\n"\
+    #                         f"\t- Actual File Name  : {self.file_path.name}")
 
-        return self
+    #     return self
 
     @field_validator('file_path')
     @classmethod

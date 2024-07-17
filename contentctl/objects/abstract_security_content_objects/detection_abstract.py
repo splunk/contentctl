@@ -22,7 +22,7 @@ from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
-
+from contentctl.objects.event_source import EventSource
 
 #from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import DataSource,ProvidingTechnology
@@ -41,6 +41,7 @@ class Detection_Abstract(SecurityContentObject):
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     data_source_objects: Optional[List[DataSource]] = None
+    event_source_objects: Optional[List[EventSource]] = None
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -161,10 +162,12 @@ class Detection_Abstract(SecurityContentObject):
         annotations_dict["type"] = self.type
         #annotations_dict["version"] = self.version
 
+        annotations_dict["data_source"] = self.data_source
+
         #The annotations object is a superset of the mappings object.
         # So start with the mapping object.
         annotations_dict.update(self.mappings)
-
+        
         #Make sure that the results are sorted for readability/easier diffs
         return dict(sorted(annotations_dict.items(), key=lambda item: item[0]))
         
@@ -385,21 +388,42 @@ class Detection_Abstract(SecurityContentObject):
             baseline.tags.detections = new_detections
 
         self.data_source_objects = []
-        for data_source_obj in director.data_sources:
-            for detection_data_source in self.data_source:
-                if data_source_obj.name in detection_data_source:
-                    self.data_source_objects.append(data_source_obj)
+        self.event_source_objects = []
+        for detection_data_source in self.data_source:
+            split_data_sources = [ds.strip() for ds in detection_data_source.split('AND')]
+            for split_data_source in split_data_sources:
+                data_source_found = False
+                for data_source_obj in director.data_sources:
+                    if data_source_obj.name in split_data_source:
+                        self.data_source_objects.append(data_source_obj)
+                        data_source_found = True
+                        break
+                for event_source_obj in director.event_sources:
+                    if event_source_obj.name == split_data_source:
+                        self.event_source_objects.append(event_source_obj)
+                        data_source_found = True
+                        break
 
-        # Remove duplicate data source objects based on their 'name' property
+                if not data_source_found:
+                    raise ValueError(f"Error, data source object '{split_data_source}' not found.")
+
+        
         unique_data_sources = {}
         for data_source_obj in self.data_source_objects:
             if data_source_obj.name not in unique_data_sources:
                 unique_data_sources[data_source_obj.name] = data_source_obj
-        self.data_source_objects = list(unique_data_sources.values())
+        self.data_source_objects = list(unique_data_sources.values())      
+
+        unique_event_sources = {}
+        for event_source_obj in self.event_source_objects:
+            if event_source_obj.name not in unique_event_sources:
+                unique_event_sources[event_source_obj.name] = event_source_obj
+        self.event_source_objects = list(unique_event_sources.values())
 
         for story in self.tags.analytic_story:
             story.detections.append(self)
             story.data_sources.extend(self.data_source_objects)
+            story.event_sources.extend(self.event_source_objects)
 
         return self
 

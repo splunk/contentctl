@@ -137,27 +137,6 @@ class Director():
             )
             security_content_files = [f for f in files if f.name.startswith("ssa___")]
 
-        elif contentType == SecurityContentType.data_sources:
-            security_content_files = (
-                Utils.get_all_yml_files_from_directory_one_layer_deep(
-                    os.path.join(self.input_dto.path, "data_sources")
-                )
-            )
-
-        elif contentType == SecurityContentType.event_sources:
-            security_content_files = Utils.get_all_yml_files_from_directory(
-                os.path.join(self.input_dto.path, "data_sources", "cloud", "event_sources")
-            )
-            security_content_files.extend(
-                Utils.get_all_yml_files_from_directory(
-                    os.path.join(self.input_dto.path, "data_sources", "endpoint", "event_sources")
-                )
-            )
-            security_content_files.extend(
-                Utils.get_all_yml_files_from_directory(
-                    os.path.join(self.input_dto.path, "data_sources", "network", "event_sources")
-                )
-            )
 
         elif contentType in [
             SecurityContentType.deployments,
@@ -168,6 +147,8 @@ class Director():
             SecurityContentType.investigations,
             SecurityContentType.playbooks,
             SecurityContentType.detections,
+            SecurityContentType.data_sources,
+            SecurityContentType.event_sources,
         ]:
             files = Utils.get_all_yml_files_from_directory(
                 os.path.join(self.input_dto.path, str(contentType.name))

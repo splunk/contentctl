@@ -10,6 +10,7 @@ from contentctl.output.conf_output import ConfOutput
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.output.ba_yml_output import BAYmlOutput
 from contentctl.output.api_json_output import ApiJsonOutput
+from contentctl.output.data_source_writer import DataSourceWriter
 import pathlib
 import json
 import datetime
@@ -28,7 +29,11 @@ class Build:
 
 
     def execute(self, input_dto: BuildInputDto) -> DirectorOutputDto:
-        if input_dto.config.build_app:    
+        if input_dto.config.build_app:
+
+            DataSourceWriter.writeDataSourceCsv(input_dto.director_output_dto.data_sources, str(input_dto.config.path) + "/lookups/data_sources.csv")
+            DataSourceWriter.writeEventSourceCsv(input_dto.director_output_dto.event_sources, str(input_dto.config.path) + "/lookups/event_sources.csv")
+
             updated_conf_files:set[pathlib.Path] = set()
             conf_output = ConfOutput(input_dto.config)
             updated_conf_files.update(conf_output.writeHeaders())

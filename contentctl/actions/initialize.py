@@ -28,6 +28,8 @@ class Initialize:
             ('../templates/app_template/', 'app_template'),
             ('../templates/deployments/', 'deployments'),
             ('../templates/detections/', 'detections'),
+            ('../templates/data_sources/', 'data_sources'),
+            ('../templates/event_sources/', 'event_sources'),
             ('../templates/macros/','macros'),
             ('../templates/stories/', 'stories'),
         ]:

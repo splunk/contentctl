@@ -1,8 +1,12 @@
 from __future__ import annotations
-from typing import Union, Optional, List
-from pydantic import model_validator, Field, FilePath
+from typing import Union, Optional, List, TYPE_CHECKING
+from pydantic import model_validator, Field, FilePath, field_validator, ValidationInfo
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.event_source import EventSource
+
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
+    
 
 class DataSource(SecurityContentObject):
     source: str = Field(...)
@@ -10,20 +14,13 @@ class DataSource(SecurityContentObject):
     separator: Optional[str] = None
     configuration: Optional[str] = None
     supported_TA: Optional[list] = None
-    event_names: Optional[list] = None
     fields: Optional[list] = None
     example_log: Optional[str] = None
+    event_sources: list[EventSource] = []
 
-    event_sources: Optional[list[EventSource]] = None
 
-
-    def model_post_init(self, ctx:dict[str,Any]):
-        context = ctx.get("output_dto")
-        
-        if self.event_names:
-            self.event_sources = []
-            for event_source in context.event_sources:
-                if any(event['event_name'] == event_source.name for event in self.event_names):
-                    self.event_sources.append(event_source)
-
-        return self
+    @field_validator('event_sources',mode="before")
+    @classmethod
+    def map_event_source_names_to_event_source_objects(cls, v:list[str], info:ValidationInfo)->list[EventSource]:
+        director:DirectorOutputDto = info.context.get("output_dto",None)
+        return EventSource.mapNamesToSecurityContentObjects(v, director)

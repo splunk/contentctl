@@ -23,9 +23,10 @@ from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.event_source import EventSource
+from contentctl.objects.data_source import DataSource
 
 #from contentctl.objects.playbook import Playbook
-from contentctl.objects.enums import DataSource,ProvidingTechnology
+from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 
 
@@ -35,13 +36,23 @@ class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
-    data_source: Optional[List[str]] = None
+    
     tags: DetectionTags = Field(...)
     search: Union[str, dict[str,Any]] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    data_source_objects: Optional[List[DataSource]] = None
-    event_source_objects: Optional[List[EventSource]] = None
+    data_source: list[DataSource] = Field([], description="Data Sources against which this detection can run")
+    
+    @computed_field
+    @property
+    def event_source(self)->List[EventSource]:
+        # Event Sources are determined wholly by the datasources that make up this detection
+        all_event_sources:set[EventSource] = set()
+        for ds in self.data_source:
+            all_event_sources.union(set(ds.event_sources))
+        return sorted(list(all_event_sources),key=lambda e:e.name)
+        
+    
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -367,6 +378,20 @@ class Detection_Abstract(SecurityContentObject):
         return super_fields
 
 
+    @field_validator('data_source',mode="before")
+    @classmethod
+    def map_data_source_names_to_data_source_objects(cls, v:list[str], info:ValidationInfo)->list[DataSource]:
+        # Data source may be defined 1 on each line, OR they may be defined as
+        # SOUCE_1 AND ANOTHERSOURCE AND A_THIRD_SOURCE
+        # if more than 1 data source is required for a detection (for example, because it includes a join)
+        # Parse and update the list to resolve individual names and remove potential duplicates
+        updated_data_source_names:set[str] = set()
+        for ds in v:
+            split_data_sources = {d.strip() for d in ds.split('AND')}
+            updated_data_source_names.union(split_data_sources)
+        director:DirectorOutputDto = info.context.get("output_dto",None)
+        return DataSource.mapNamesToSecurityContentObjects(sorted(list(updated_data_source_names)), director)
+
     def model_post_init(self, ctx:dict[str,Any]):
         # director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
         # if not isinstance(director,DirectorOutputDto):
@@ -387,44 +412,9 @@ class Detection_Abstract(SecurityContentObject):
                 raise ValueError(f"Error, failed to replace detection reference in Baseline '{baseline.name}' to detection '{self.name}'")             
             baseline.tags.detections = new_detections
 
-        self.data_source_objects = []
-        self.event_source_objects = []
-        for detection_data_source in self.data_source:
-            split_data_sources = [ds.strip() for ds in detection_data_source.split('AND')]
-            for split_data_source in split_data_sources:
-                data_source_found = False
-                for data_source_obj in director.data_sources:
-                    if data_source_obj.name in split_data_source:
-                        self.data_source_objects.append(data_source_obj)
-                        data_source_found = True
-                        break
-                for event_source_obj in director.event_sources:
-                    if event_source_obj.name == split_data_source:
-                        self.event_source_objects.append(event_source_obj)
-                        data_source_found = True
-                        break
-
-                if not data_source_found:
-                    raise ValueError(f"Error, data source object '{split_data_source}' not found.")
-
-        
-        unique_data_sources = {}
-        for data_source_obj in self.data_source_objects:
-            if data_source_obj.name not in unique_data_sources:
-                unique_data_sources[data_source_obj.name] = data_source_obj
-        self.data_source_objects = list(unique_data_sources.values())      
-
-        unique_event_sources = {}
-        for event_source_obj in self.event_source_objects:
-            if event_source_obj.name not in unique_event_sources:
-                unique_event_sources[event_source_obj.name] = event_source_obj
-        self.event_source_objects = list(unique_event_sources.values())
-
         for story in self.tags.analytic_story:
             story.detections.append(self)
-            story.data_sources.extend(self.data_source_objects)
-            story.event_sources.extend(self.event_source_objects)
-
+            
         return self
 
     
@@ -459,6 +449,9 @@ class Detection_Abstract(SecurityContentObject):
                 baselines.append(baseline)
 
         return baselines
+
+
+    
 
     @field_validator('macros',mode="before")
     @classmethod

@@ -34,8 +34,24 @@ class Story(SecurityContentObject):
     detections:List[Detection] = []
     investigations: List[Investigation] = []
     baselines: List[Baseline] = []
-    data_sources: List[DataSource] = []
-    event_sources: List[EventSource] = []
+
+    @computed_field
+    @property
+    def data_sources(self)->list[DataSource]:
+        all_data_sources:set[DataSource] = set()
+        for detection in self.detections:
+            all_data_sources.union(set(detection.data_source))
+        return sorted(list(all_data_sources),key=lambda d:d.name)
+    
+    @computed_field
+    @property
+    def event_sources(self)->list[EventSource]:
+        # Event Sources are determined wholly by the datasources that make up this detection
+        all_event_sources:set[EventSource] = set()
+        for ds in self.data_sources:
+            all_event_sources.union(set(ds.event_sources))
+        return sorted(list(all_event_sources),key=lambda e:e.name)
+
 
     def storyAndInvestigationNamesWithApp(self, app_name:str)->List[str]:
         return [f"{app_name} - {name} - Rule" for name in self.detection_names] + \

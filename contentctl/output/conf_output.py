@@ -15,6 +15,7 @@ import json
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.config import build
+from contentctl.output.data_source_writer import DataSourceWriter
 from requests import Session, post, get
 from requests.auth import HTTPBasicAuth
 
@@ -33,6 +34,7 @@ class ConfOutput:
         
         #Copy all the template files into the app
         shutil.copytree(config.getAppTemplatePath(), config.getPackageDirectoryPath())
+
         
 
     def writeHeaders(self) -> set[pathlib.Path]:
@@ -151,6 +153,10 @@ class ConfOutput:
             written_files.add(ConfWriter.writeConfFile(pathlib.Path('default/macros.conf'),
                                     'macros.j2',
                                     self.config, objects))
+        
+        
+        else:
+            raise Exception(f"Attempting to output unsupported type during App Build : {type}")
         
         return written_files
             

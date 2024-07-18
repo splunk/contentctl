@@ -31,11 +31,14 @@ class Build:
     def execute(self, input_dto: BuildInputDto) -> DirectorOutputDto:
         if input_dto.config.build_app:
 
-            DataSourceWriter.writeDataSourceCsv(input_dto.director_output_dto.data_sources, str(input_dto.config.path) + "/lookups/data_sources.csv")
-            DataSourceWriter.writeEventSourceCsv(input_dto.director_output_dto.event_sources, str(input_dto.config.path) + "/lookups/event_sources.csv")
+
 
             updated_conf_files:set[pathlib.Path] = set()
             conf_output = ConfOutput(input_dto.config)
+            # Write bits in support of data_sources and event_sources
+            DataSourceWriter.writeDataSourceCsv(input_dto.director_output_dto.data_sources, input_dto.config.getPackageDirectoryPath() / "lookups/data_sources.csv")
+            DataSourceWriter.writeEventSourceCsv(input_dto.director_output_dto.event_sources, input_dto.config.getPackageDirectoryPath() / "lookups/event_sources.csv")
+            # Write all conf and conf-related files
             updated_conf_files.update(conf_output.writeHeaders())
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.detections, SecurityContentType.detections))
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.stories, SecurityContentType.stories))
@@ -44,6 +47,7 @@ class Build:
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.lookups, SecurityContentType.lookups))
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.macros, SecurityContentType.macros))
             updated_conf_files.update(conf_output.writeAppConf())
+
             
             #Ensure that the conf file we just generated/update is syntactically valid
             for conf_file in updated_conf_files:

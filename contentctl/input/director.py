@@ -3,7 +3,7 @@ import sys
 import pathlib
 from typing import Union
 from dataclasses import dataclass, field
-from pydantic import ValidationError
+from pydantic import ValidationError, FilePath
 from uuid import UUID
 from contentctl.input.yml_reader import YmlReader
 
@@ -115,6 +115,15 @@ class Director():
     def __init__(self, output_dto: DirectorOutputDto) -> None:
         self.output_dto = output_dto
         self.ssa_detection_builder = SSADetectionBuilder()
+
+        # Director must be pre-populated with lookups for data_source and event_source
+        self.output_dto.addContentToDictMappings(Lookup.model_construct(description= "A lookup file that will contain the event source objects for detections.", 
+                                                                        filename=pathlib.Path("event_sources.csv"), 
+                                                                        name="event_sources"))
+        self.output_dto.addContentToDictMappings(Lookup.model_construct(description= "A lookup file that will contain the data source objects for detections.", 
+                                                                        filename=pathlib.Path("data_sources.csv"), 
+                                                                        name="data_sources"))
+        
 
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto

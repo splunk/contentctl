@@ -49,7 +49,7 @@ class Detection_Abstract(SecurityContentObject):
         # Event Sources are determined wholly by the datasources that make up this detection
         all_event_sources:set[EventSource] = set()
         for ds in self.data_source:
-            all_event_sources.union(set(ds.event_sources))
+            all_event_sources.update(set(ds.event_sources))
         return sorted(list(all_event_sources),key=lambda e:e.name)
         
     
@@ -386,11 +386,36 @@ class Detection_Abstract(SecurityContentObject):
         # if more than 1 data source is required for a detection (for example, because it includes a join)
         # Parse and update the list to resolve individual names and remove potential duplicates
         updated_data_source_names:set[str] = set()
+        
         for ds in v:
             split_data_sources = {d.strip() for d in ds.split('AND')}
-            updated_data_source_names.union(split_data_sources)
+            updated_data_source_names.update(split_data_sources)
         director:DirectorOutputDto = info.context.get("output_dto",None)
-        return DataSource.mapNamesToSecurityContentObjects(sorted(list(updated_data_source_names)), director)
+        sources = sorted(list(updated_data_source_names))
+        
+        # Even though this field is called data_sources, it can actually include a reference to a data_source or to event sources
+        # as such, try to resolve them separately
+        matched_data_sources:list[DataSource] = []
+        matched_event_sources:list[EventSource] = []
+        missing_sources: list[str] = []
+        for source in sources:
+            try:
+                matched_data_sources += DataSource.mapNamesToSecurityContentObjects([source], director)
+            except Exception as data_source_mapping_exception:
+                # This was not a data source, so we will try to patch to an event source
+                try:
+                    matched_event_sources += EventSource.mapNamesToSecurityContentObjects([source], director)
+                except Exception as event_source_mapping_exception:
+                    # We were unable to map an event source as well. This should be a real exception that the user sees
+                    # Add both exceptions which we will expose to the user
+                    missing_sources.append(source)
+        if len(missing_sources) > 0:
+            raise ValueError(f"The following exception occurred when mapping the data_source field to DataSource or EventSource objects:{missing_sources}")
+        
+        return matched_data_sources
+
+
+        
 
     def model_post_init(self, ctx:dict[str,Any]):
         # director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)

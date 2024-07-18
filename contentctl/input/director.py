@@ -99,6 +99,10 @@ class DirectorOutputDto:
             self.detections.append(content)
         elif isinstance(content, SSADetection):
             self.ssa_detections.append(content)
+        elif isinstance(content,DataSource):
+             self.data_sources.append(content)
+        elif isinstance(content,EventSource):
+             self.event_sources.append(content)
         else:
              raise Exception(f"Unknown security content type: {type(content)}")
 
@@ -221,13 +225,13 @@ class Director():
                     data_source = DataSource.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
-                    self.output_dto.data_sources.append(data_source)
+                    self.output_dto.addContentToDictMappings(data_source)
 
                 elif contentType == SecurityContentType.event_sources:
                     event_source = EventSource.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
-                    self.output_dto.event_sources.append(event_source)
+                    self.output_dto.addContentToDictMappings(event_source)
 
                 else:
                     raise Exception(f"Unsupported type: [{contentType}]")

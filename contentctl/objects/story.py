@@ -40,7 +40,7 @@ class Story(SecurityContentObject):
     def data_sources(self)->list[DataSource]:
         all_data_sources:set[DataSource] = set()
         for detection in self.detections:
-            all_data_sources.union(set(detection.data_source))
+            all_data_sources.update(set(detection.data_source))
         return sorted(list(all_data_sources),key=lambda d:d.name)
     
     @computed_field
@@ -49,7 +49,7 @@ class Story(SecurityContentObject):
         # Event Sources are determined wholly by the datasources that make up this detection
         all_event_sources:set[EventSource] = set()
         for ds in self.data_sources:
-            all_event_sources.union(set(ds.event_sources))
+            all_event_sources.update(set(ds.event_sources))
         return sorted(list(all_event_sources),key=lambda e:e.name)
 
 

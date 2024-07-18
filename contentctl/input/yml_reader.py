@@ -27,11 +27,13 @@ class YmlReader():
                     print(f"Error loading YML file {file_path}: {str(e)}")
                     sys.exit(1)
             try:
-                #yml_obj = list(yaml.safe_load_all(file_handler))[0]
                 yml_obj = yaml.load(file_handler, Loader=yaml.CSafeLoader)
             except yaml.YAMLError as exc:
                 print(exc)
                 sys.exit(1)
+            
+            if yml_obj is None:
+                raise Exception(f"Error loading YML file '{file_path}'. Ensure that the file is properly formatted YML and not empty.")
 
         except OSError as exc:
             print(exc)
@@ -39,7 +41,10 @@ class YmlReader():
         
         if add_fields == False:
             return yml_obj
-        
-        yml_obj['file_path'] = str(file_path)
+        try:
+            yml_obj['file_path'] = str(file_path)
+        except Exception as e:
+            import code
+            code.interact(local=locals())
 
         return yml_obj

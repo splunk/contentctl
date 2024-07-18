@@ -78,7 +78,7 @@ class DirectorOutputDto:
             raise ValueError(
                 f"Duplicate id '{content.id}' with paths:\n"
                 f" - {content.file_path}\n"
-                f" - {self.name_to_content_map[content_name].file_path}"
+                f" - {self.uuid_to_content_map[content.id].file_path}"
             )
 
         if isinstance(content, Lookup):
@@ -181,6 +181,7 @@ class Director():
             progress_percent = ((index + 1) / len(security_content_files)) * 100
             try:
                 type_string = contentType.name.upper()
+                
                 modelDict = YmlReader.load_file(file)
 
                 if contentType == SecurityContentType.lookups:

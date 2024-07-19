@@ -16,7 +16,11 @@ class NewContent:
 
     def buildDetection(self)->dict[str,Any]:
         questions = NewContentQuestions.get_questions_detection()
-        answers = questionary.prompt(questions)
+        answers: dict[str,str] = questionary.prompt(
+            questions, 
+            kbi_msg="User did not answer all of the prompt questions. Exiting...")
+        if not answers:
+            raise ValueError("User didn't answer one or more questions!")
         answers.update(answers)
         answers['name'] = answers['detection_name']
         del answers['detection_name']
@@ -71,7 +75,9 @@ class NewContent:
 
     def buildStory(self)->dict[str,Any]:
         questions = NewContentQuestions.get_questions_story()
-        answers = questionary.prompt(questions, kbi_msg="User did not answer all of the prompt questions. Exiting...")
+        answers = questionary.prompt(
+            questions, 
+            kbi_msg="User did not answer all of the prompt questions. Exiting...")
         if not answers:
             raise ValueError("User didn't answer one or more questions!")
         answers['name'] = answers['story_name']

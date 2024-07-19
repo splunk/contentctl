@@ -120,13 +120,16 @@ class Detection_Abstract(SecurityContentObject):
 
         # iterate over the unit tests and create a TestGroup (and as a result, an IntegrationTest) for each
         test_groups: list[TestGroup] = []
-        for unit_test in info.data.get("tests"):
-            test_group = TestGroup.derive_from_unit_test(unit_test, info.data.get("name"))
+
+        tests = info.data.get("tests", [])
+        for unit_test in tests:
+            test_group = TestGroup.derive_from_unit_test(unit_test, info.data["name"])
             test_groups.append(test_group)
 
         # now add each integration test to the list of tests
         for test_group in test_groups:
-            info.data.get("tests").append(test_group.integration_test)
+            tests.append(test_group.integration_test)
+        info.data['tests'] = tests
         return test_groups
 
 

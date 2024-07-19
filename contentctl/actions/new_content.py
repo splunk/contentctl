@@ -71,7 +71,9 @@ class NewContent:
 
     def buildStory(self)->dict[str,Any]:
         questions = NewContentQuestions.get_questions_story()
-        answers = questionary.prompt(questions)
+        answers = questionary.prompt(questions, kbi_msg="User did not answer all of the prompt questions. Exiting...")
+        if not answers:
+            raise ValueError("User didn't answer one or more questions!")
         answers['name'] = answers['story_name']
         del answers['story_name']
         answers['id'] = str(uuid.uuid4())

@@ -1,6 +1,11 @@
-from contentctl.actions.initialize import Initialize
+import traceback
+import sys
+import warnings
+import pathlib
 import tyro
-from contentctl.objects.config import init, validate, build,  new, deploy_acs, deploy_rest, test, test_servers, inspect, report, test_common, release_notes
+
+from contentctl.actions.initialize import Initialize
+from contentctl.objects.config import init, validate, build,  new, deploy_acs, test, test_servers, inspect, report, test_common, release_notes
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
 from contentctl.actions.detection_testing.GitService import GitService
@@ -9,14 +14,10 @@ from contentctl.actions.build import (
      DirectorOutputDto,
      Build,
 )
-
 from contentctl.actions.test import Test
 from contentctl.actions.test import TestInputDto
 from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.inspect import Inspect
-import sys
-import warnings
-import pathlib
 from contentctl.input.yml_reader import YmlReader
 from contentctl.actions.release_notes import ReleaseNotes
 
@@ -95,13 +96,14 @@ def new_func(config:new):
 
 def deploy_acs_func(config:deploy_acs):
     #This is a bit challenging to get to work with the default values.
-    raise Exception("deploy acs not yet implemented")
-
-def deploy_rest_func(config:deploy_rest):
-    raise Exception("deploy rest not yet implemented")
-    
+    raise Exception("deploy acs not yet implemented") 
 
 def test_common_func(config:test_common):
+    if type(config) == test:
+        #construct the container Infrastructure objects
+        config.getContainerInfrastructureObjects()
+        #otherwise, they have already been passed as servers
+
     director_output_dto = build_func(config)
     gitServer = GitService(director=director_output_dto,config=config)
     detections_to_test = gitServer.getContent()
@@ -175,15 +177,14 @@ def main():
             "test":test.model_validate(config_obj),
             "test_servers":test_servers.model_construct(**t.__dict__),
             "release_notes": release_notes.model_construct(**config_obj),
-            "deploy_acs": deploy_acs.model_construct(**t.__dict__),
-            #"deploy_rest":deploy_rest()
+            "deploy_acs": deploy_acs.model_construct(**t.__dict__)
         }
     )
     
 
 
    
-    
+    config = None
     try:
         # Since some model(s) were constructed and not model_validated, we have to catch
         # warnings again when creating the cli
@@ -209,20 +210,23 @@ def main():
         elif type(config) == deploy_acs:
             updated_config = deploy_acs.model_validate(config)
             deploy_acs_func(updated_config)
-        elif type(config) == deploy_rest:
-            deploy_rest_func(config)
         elif type(config) == test or type(config) == test_servers:
-            if type(config) == test:
-                #construct the container Infrastructure objects
-                config.getContainerInfrastructureObjects()
-                #otherwise, they have already been passed as servers
             test_common_func(config)
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        traceback.print_stack()
-        #print(e)
+        if config is None:
+            print("There was a serious issue where the config file could not be created.\n"
+                  "The entire stack trace is provided below (please include it if filing a bug report).\n")
+            traceback.print_exc()
+        elif config.verbose:
+            print("Verbose error logging is ENABLED.\n"
+                  "The entire stack trace has been provided below (please include it if filing a bug report):\n")
+            traceback.print_exc()
+        else:
+            print("Verbose error logging is DISABLED.\n"
+                  "Please use the --verbose command line argument if you need more context for your error or file a bug report.")
+            print(e)
+            
         sys.exit(1)
     

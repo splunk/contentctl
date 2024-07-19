@@ -31,7 +31,7 @@ class DetectionTags(BaseModel):
         return round((self.confidence * self.impact)/100)
     
     
-    mitre_attack_id: List[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]] = []
+    mitre_attack_id: List[Annotated[str, Field(pattern="^T[0-9]{4}(.[0-9]{3})?$")]] = []
     nist: list[NistCategory] = []
     observable: List[Observable] = []
     message: Optional[str] = Field(...)
@@ -138,6 +138,7 @@ class DetectionTags(BaseModel):
             "risk_score": self.risk_score,
             "security_domain": self.security_domain,
             "risk_severity": self.risk_severity,
+            "mitre_attack_id": self.mitre_attack_id,
             "mitre_attack_enrichments": self.mitre_attack_enrichments
         }
     
@@ -145,7 +146,7 @@ class DetectionTags(BaseModel):
     @model_validator(mode="after")
     def addAttackEnrichment(self, info:ValidationInfo):
         if len(self.mitre_attack_enrichments) > 0:
-            raise ValueError(f"Error, field 'mitre_attack_enrichment' should be empty and dynamically populated at runtime. Instead, this field contained: {str(v)}")
+            raise ValueError(f"Error, field 'mitre_attack_enrichment' should be empty and dynamically populated at runtime. Instead, this field contained: {self.mitre_attack_enrichments}")
         
         output_dto:Union[DirectorOutputDto,None]= info.context.get("output_dto",None)
         if output_dto is None:

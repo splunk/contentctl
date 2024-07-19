@@ -2,20 +2,27 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
-
 class DataSource(BaseModel):
     name: str
     id: str
-    date: str
     author: str
-    type: str
     source: str
     sourcetype: str
-    category: str = None
-    product: str
-    service: str = None
-    supported_TA: list
-    references: list
-    raw_fields: list
-    field_mappings: list = None
-    convert_to_log_source: list = None
+    separator: str = None
+    configuration: str = None
+    supported_TA: dict
+    event_names: list = None
+    event_sources: list = None
+    fields: list = None
+    example_log: str = None
+
+    def model_post_init(self, ctx:dict[str,Any]):
+        context = ctx.get("output_dto")
+        
+        if self.event_names:
+            self.event_sources = []
+            for event_source in context.event_sources:
+                if any(event['event_name'] == event_source.event_name for event in self.event_names):
+                    self.event_sources.append(event_source)
+
+        return self

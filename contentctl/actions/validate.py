@@ -1,5 +1,5 @@
 import sys
-
+import pathlib
 from dataclasses import dataclass
 
 from pydantic import ValidationError
@@ -42,7 +42,18 @@ class Validate:
 
         director = Director(director_output_dto)
         director.execute(input_dto)
+        self.ensure_no_orphaned_lookup_files(input_dto.path, director_output_dto)
         return director_output_dto
+
+    def ensure_no_orphaned_lookup_files(self, repo_path:pathlib.Path, director_output_dto:DirectorOutputDto):
+        # get all files in the lookup folder
+        usedLookupFiles:list[pathlib.Path] = [lookup.filename for lookup in director_output_dto.lookups if lookup.filename is not None] + [lookup.file_path for lookup in director_output_dto.lookups if lookup.file_path is not None]
+        lookupsDirectory = repo_path/"lookups"
+        unusedLookupFiles:list[pathlib.Path] = [testFile for testFile in lookupsDirectory.glob("**/*.*") if testFile not in usedLookupFiles]
+        if len(unusedLookupFiles) > 0:
+            raise ValueError(f"The following files exist in '{lookupsDirectory}', but either do not end in .yml, .csv, or .mlmodel or are not used by a YML file: {[str(path) for path in unusedLookupFiles]}")
+        return
+
 
     def validate_duplicate_uuids(
         self, security_content_objects: list[SecurityContentObject_Abstract]

@@ -36,7 +36,6 @@ class NewContent:
         answers['status'] = "production" #start everything as production since that's what we INTEND the content to become   
         answers['description'] = 'UPDATE_DESCRIPTION'   
         file_name = answers['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
-        answers['kind'] = answers['detection_kind']
         answers['search'] = answers['detection_search'] + ' | `' + file_name + '_filter`'
         del answers['detection_search']
         answers['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'

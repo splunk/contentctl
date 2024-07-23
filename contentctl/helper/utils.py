@@ -34,6 +34,49 @@ class Utils:
                     listOfFiles.append(pathlib.Path(os.path.join(dirpath, file)))
     
         return sorted(listOfFiles)
+    
+    @staticmethod
+    def get_security_content_files_from_directory(path: pathlib.Path, allowedFileExtensions:list[str]=[".yml"], fileExtensionsToReturn:list[str]=[".yml"]) -> list[pathlib.Path]:
+    
+        """
+        Get all of the Security Content Object Files rooted in a given directory.  These will almost
+        certain be YML files, but could be other file types as specified by the user
+
+        Args:
+            path (pathlib.Path): The root path at which to enumerate all Security Content Files. All directories will be traversed. 
+            allowedFileExtensions (set[str], optional): File extensions which are allowed to be  present in this directory.  In most cases, we do not want to allow the presence of non-YML files. Defaults to [".yml"].
+            fileExtensionsToReturn (set[str], optional): Filenames with extensions that should be returned from this function. For example, the lookups/ directory contains YML, CSV, and MLMODEL directories, but only the YMLs are Security Content Objects for constructing Lookyps. Defaults to[".yml"].
+
+        Raises:
+            Exception: Will raise an exception if allowedFileExtensions is not a subset of fileExtensionsToReturn.
+            Exception: Will raise an exception if the path passed to the function does not exist or is not a directory
+            Exception: Will raise an exception if there are any files rooted in the directory which are not in allowedFileExtensions
+
+        Returns:
+            list[pathlib.Path]: list of files with an extension in fileExtensionsToReturn found in path
+        """
+        if not set(fileExtensionsToReturn).issubset(set(allowedFileExtensions)):
+            raise Exception(f"allowedFileExtensions {allowedFileExtensions} MUST be a subset of fileExtensionsToReturn {fileExtensionsToReturn}, but it is not")
+        
+        if not path.exists() or not path.is_dir():
+            raise Exception(f"Unable to get security_content files, required directory '{str(path)}' does not exist or is not a directory")
+        
+        allowedFiles:list[pathlib.Path] = []
+        erroneousFiles:list[pathlib.Path] = []
+        #Get every single file extension 
+        for filePath in path.glob("**/*.*"):
+            if filePath.suffix in allowedFileExtensions:
+                # Yes these are allowed
+                allowedFiles.append(filePath)
+            else:
+                # No these have not been allowed
+                erroneousFiles.append(filePath)
+
+        if len(erroneousFiles):
+            raise Exception(f"The following files are not allowed in the directory '{path}'. Only files with the extensions {allowedFileExtensions} are allowed:{[str(filePath) for filePath in erroneousFiles]}")
+        
+        # There were no errorneous files, so return the requested files
+        return [filePath for filePath in allowedFiles if filePath.suffix in fileExtensionsToReturn]
 
     @staticmethod
     def get_all_yml_files_from_directory_one_layer_deep(path: str) -> list[pathlib.Path]:

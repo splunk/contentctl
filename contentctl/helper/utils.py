@@ -76,7 +76,7 @@ class Utils:
             raise Exception(f"The following files are not allowed in the directory '{path}'. Only files with the extensions {allowedFileExtensions} are allowed:{[str(filePath) for filePath in erroneousFiles]}")
         
         # There were no errorneous files, so return the requested files
-        return [filePath for filePath in allowedFiles if filePath.suffix in fileExtensionsToReturn]
+        return sorted([filePath for filePath in allowedFiles if filePath.suffix in fileExtensionsToReturn])
 
     @staticmethod
     def get_all_yml_files_from_directory_one_layer_deep(path: str) -> list[pathlib.Path]:

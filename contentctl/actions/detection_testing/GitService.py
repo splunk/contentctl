@@ -111,11 +111,19 @@ class GitService(BaseModel):
                                 raise Exception(f"More than 1 Lookup reference the modified CSV file '{decoded_path}': {[l.file_path for l in matched ]}")
                             else:
                                 updatedLookup = matched[0]
+                        elif decoded_path.suffix == ".mlmodel":
+                            # Detected a changed .mlmodel file. However, since we do not have testing for these detections at 
+                            # this time, we will ignore this change.
+                            updatedLookup = None
+                            
+
                         else:
-                            raise Exception(f"Error getting lookup object for file {str(decoded_path)}")
+                            raise Exception(f"Detected a changed file in the lookups/ directory '{str(decoded_path)}'.\n"
+                                            "Only files ending in .csv, .yml, or .mlmodel are supported in this "
+                                            "directory. This file must be removed from the lookups/ directory.")
                         
-                        if updatedLookup not in updated_lookups:
-                            # It is possible that both th CSV and YML have been modified for the same lookup,
+                        if updatedLookup is not None and updatedLookup not in updated_lookups:
+                            # It is possible that both the CSV and YML have been modified for the same lookup,
                             # and we do not want to add it twice. 
                             updated_lookups.append(updatedLookup)
 

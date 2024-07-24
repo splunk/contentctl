@@ -11,7 +11,8 @@ class DataSource(SecurityContentObject):
     configuration: Optional[str] = None
     supported_TA: Optional[list] = None
     fields: Optional[list] = None
+    field_mappings: Optional[list] = None
+    convert_to_log_source: Optional[list] = None
     example_log: Optional[str] = None
 
-    event_sources: Optional[list] = None
 

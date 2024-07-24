@@ -40,6 +40,10 @@ class YmlReader():
         if add_fields == False:
             return yml_obj
         
-        yml_obj['file_path'] = str(file_path)
+        try:
+            yml_obj['file_path'] = str(file_path)
+        except Exception as e:
+            import code
+            code.interact(local=locals())
 
         return yml_obj

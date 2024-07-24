@@ -23,9 +23,10 @@ from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.event_source import EventSource
+from contentctl.objects.data_source import DataSource
 
 #from contentctl.objects.playbook import Playbook
-from contentctl.objects.enums import DataSource,ProvidingTechnology
+from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 
 
@@ -40,8 +41,6 @@ class Detection_Abstract(SecurityContentObject):
     search: Union[str, dict[str,Any]] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    data_source_objects: Optional[List[DataSource]] = None
-    event_source_objects: Optional[List[EventSource]] = None
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -53,6 +52,8 @@ class Detection_Abstract(SecurityContentObject):
     tests: List[Annotated[Union[UnitTest, IntegrationTest], Field(union_mode='left_to_right')]] = []
     # A list of groups of tests, relying on the same data
     test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)
+
+    data_source_objects: Optional[List[DataSource]] = None
 
 
     @field_validator("search", mode="before")
@@ -139,6 +140,7 @@ class Detection_Abstract(SecurityContentObject):
         else:
             return []
     
+
     @computed_field
     @property
     def source(self)->str:
@@ -387,43 +389,34 @@ class Detection_Abstract(SecurityContentObject):
                 raise ValueError(f"Error, failed to replace detection reference in Baseline '{baseline.name}' to detection '{self.name}'")             
             baseline.tags.detections = new_detections
 
-        self.data_source_objects = []
-        self.event_source_objects = []
-        for detection_data_source in self.data_source:
-            split_data_sources = [ds.strip() for ds in detection_data_source.split('AND')]
-            for split_data_source in split_data_sources:
-                data_source_found = False
-                for data_source_obj in director.data_sources:
-                    if data_source_obj.name in split_data_source:
-                        self.data_source_objects.append(data_source_obj)
-                        data_source_found = True
-                        break
-                for event_source_obj in director.event_sources:
-                    if event_source_obj.name == split_data_source:
-                        self.event_source_objects.append(event_source_obj)
-                        data_source_found = True
-                        break
-
-                if not data_source_found:
-                    raise ValueError(f"Error, data source object '{split_data_source}' not found.")
-
+        # Data source may be defined 1 on each line, OR they may be defined as
+        # SOUCE_1 AND ANOTHERSOURCE AND A_THIRD_SOURCE
+        # if more than 1 data source is required for a detection (for example, because it includes a join)
+        # Parse and update the list to resolve individual names and remove potential duplicates
+        updated_data_source_names:set[str] = set()
         
-        unique_data_sources = {}
-        for data_source_obj in self.data_source_objects:
-            if data_source_obj.name not in unique_data_sources:
-                unique_data_sources[data_source_obj.name] = data_source_obj
-        self.data_source_objects = list(unique_data_sources.values())      
-
-        unique_event_sources = {}
-        for event_source_obj in self.event_source_objects:
-            if event_source_obj.name not in unique_event_sources:
-                unique_event_sources[event_source_obj.name] = event_source_obj
-        self.event_source_objects = list(unique_event_sources.values())
+        for ds in self.data_source:
+            split_data_sources = {d.strip() for d in ds.split('AND')}
+            updated_data_source_names.update(split_data_sources)
+        
+        sources = sorted(list(updated_data_source_names))
+        
+        matched_data_sources:list[DataSource] = []
+        missing_sources: list[str] = []
+        for source in sources:
+            try:
+                matched_data_sources += DataSource.mapNamesToSecurityContentObjects([source], director)
+            except Exception as data_source_mapping_exception:
+                missing_sources.append(source)
+        if len(missing_sources) > 0:
+            # This will be changed to ValueError when we have a complete list of data sources
+            print(f"WARNING: The following exception occurred when mapping the data_source field to DataSource objects:{missing_sources}")
+        
+        self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
             story.detections.append(self)
             story.data_sources.extend(self.data_source_objects)
-            story.event_sources.extend(self.event_source_objects)
 
         return self
 

@@ -2,11 +2,12 @@ import csv
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.event_source import EventSource
 from typing import List
+import pathlib
 
 class DataSourceWriter:
 
     @staticmethod
-    def writeDataSourceCsv(data_source_objects: List[DataSource], file_path: str):
+    def writeDataSourceCsv(data_source_objects: List[DataSource], file_path: pathlib.Path):
         with open(file_path, mode='w', newline='') as file:
             writer = csv.writer(file)
             # Write the header
@@ -36,21 +37,4 @@ class DataSourceWriter:
                     supported_TA_version,
                     supported_TA_url,
                     data_source.description,
-                ])
-    @staticmethod
-    def writeEventSourceCsv(event_source_objects: List[EventSource], file_path: str):
-        with open(file_path, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            # Write the header
-            writer.writerow([
-                "name", "id", "author", "description", "fields"
-            ])
-            # Write the data
-            for event_source in event_source_objects:
-                writer.writerow([
-                    event_source.name,
-                    event_source.id,
-                    event_source.author,
-                    event_source.description,
-                    "; ".join(event_source.fields)
                 ])

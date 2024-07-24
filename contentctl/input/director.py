@@ -118,10 +118,6 @@ class Director():
         self.output_dto = output_dto
         self.ssa_detection_builder = SSADetectionBuilder()
 
-        self.output_dto.addContentToDictMappings(Lookup.model_construct(description= "A lookup file that will contain the data source objects for detections.", 
-                                                                        filename=pathlib.Path("data_sources.csv"), 
-                                                                        name="data_sources"))
-
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
         self.createSecurityContent(SecurityContentType.deployments)

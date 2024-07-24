@@ -29,6 +29,7 @@ from contentctl.objects.data_source import DataSource
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 
+MISSING_SOURCES:set[str] = set()
 
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
@@ -402,12 +403,16 @@ class Detection_Abstract(SecurityContentObject):
         sources = sorted(list(updated_data_source_names))
         
         matched_data_sources:list[DataSource] = []
-        missing_sources: list[str] = []
+        missing_sources:list[str] = []
         for source in sources:
             try:
                 matched_data_sources += DataSource.mapNamesToSecurityContentObjects([source], director)
             except Exception as data_source_mapping_exception:
-                missing_sources.append(source)
+                # We gobble this up and add it to a global set so that we
+                # can print it ONCE at the end of the build of datasources.
+                # This will be removed later as per the note below
+                MISSING_SOURCES.add(source)
+                
         if len(missing_sources) > 0:
             # This will be changed to ValueError when we have a complete list of data sources
             print(f"WARNING: The following exception occurred when mapping the data_source field to DataSource objects:{missing_sources}")

@@ -34,7 +34,7 @@ class Build:
             updated_conf_files:set[pathlib.Path] = set()
             conf_output = ConfOutput(input_dto.config)
 
-            DataSourceWriter.writeDataSourceCsv(input_dto.director_output_dto.data_sources, str(input_dto.config.path) + "/lookups/data_sources.csv")
+            DataSourceWriter.writeDataSourceCsv(input_dto.director_output_dto.data_sources, input_dto.config.path / "lookups" / "data_sources.csv")
 
             updated_conf_files.update(conf_output.writeHeaders())
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.detections, SecurityContentType.detections))

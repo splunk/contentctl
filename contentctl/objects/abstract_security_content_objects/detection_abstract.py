@@ -37,7 +37,7 @@ class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
-    data_source: Optional[List[str]] = None
+    data_source: list[str] = []
     tags: DetectionTags = Field(...)
     search: Union[str, dict[str,Any]] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
@@ -54,7 +54,7 @@ class Detection_Abstract(SecurityContentObject):
     # A list of groups of tests, relying on the same data
     test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)
 
-    data_source_objects: Optional[List[DataSource]] = None
+    data_source_objects: list[DataSource] = []
 
 
     @field_validator("search", mode="before")
@@ -420,9 +420,7 @@ class Detection_Abstract(SecurityContentObject):
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
-            story.detections.append(self)
-            story.data_sources.extend(self.data_source_objects)
-
+            story.detections.append(self)            
         return self
 
     
@@ -446,14 +444,16 @@ class Detection_Abstract(SecurityContentObject):
             raise ValueError("Error, baselines are constructed automatically at runtime.  Please do not include this field.")
 
         
-        name:Union[str,dict] = info.data.get("name",None)
+        name:Union[str,None] = info.data.get("name",None)
         if name is None:
             raise ValueError("Error, cannot get Baselines because the Detection does not have a 'name' defined.")
-        
+         
         director:DirectorOutputDto = info.context.get("output_dto",None)
         baselines:List[Baseline] = []
         for baseline in director.baselines:
-            if name in baseline.tags.detections:
+            # This matching is a bit strange, because baseline.tags.detections starts as a list of strings, but 
+            # is eventually updated to a list of Detections as we construct all of the detection objects. 
+            if name in [detection_name for detection_name in baseline.tags.detections if isinstance(detection_name,str)]:
                 baselines.append(baseline)
 
         return baselines

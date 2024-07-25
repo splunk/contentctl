@@ -194,6 +194,33 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
     def __str__(self)->str:
         return(self.__repr__())
+
+    def __lt__(self, other:object)->bool:
+        if not isinstance(other,SecurityContentObject_Abstract):
+            raise Exception(f"SecurityContentObject can only be compared to each other, not to {type(other)}")
+        return self.name < other.name 
+
+    def __eq__(self, other:object)->bool: 
+        if not isinstance(other,SecurityContentObject_Abstract):
+            raise Exception(f"SecurityContentObject can only be compared to each other, not to {type(other)}")
+        
+        if id(self) == id(other) and self.name == other.name and self.id == other.id:
+            # Yes, this is the same object
+            return True
+        
+        elif id(self) == id(other) or self.name == other.name or self.id == other.id:
+            raise Exception("Attempted to compare two SecurityContentObjects, but their fields indicate they were not globally unique:"
+                            f"\n\tid(obj1)  : {id(self)}"
+                            f"\n\tid(obj2)  : {id(other)}"
+                            f"\n\tobj1.name : {self.name}"
+                            f"\n\tobj2.name : {other.name}"
+                            f"\n\tobj1.id   : {self.id}"
+                            f"\n\tobj2.id   : {other.id}")
+        else:
+            return False
+    
+    def __hash__(self) -> NonNegativeInt:
+        return id(self)
         
 
     

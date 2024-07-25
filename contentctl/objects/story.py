@@ -33,7 +33,17 @@ class Story(SecurityContentObject):
     detections:List[Detection] = []
     investigations: List[Investigation] = []
     baselines: List[Baseline] = []
-    data_sources: List[DataSource] = []
+    
+    
+    @computed_field
+    @property
+    def data_sources(self)-> list[DataSource]:
+        # Only add a data_source if it does not already exist in the story
+        data_source_objects:set[DataSource] = set()
+        for detection in self.detections:
+            data_source_objects.update(set(detection.data_source_objects))
+        
+        return sorted(list(data_source_objects))
 
 
     def storyAndInvestigationNamesWithApp(self, app_name:str)->List[str]:

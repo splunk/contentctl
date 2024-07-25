@@ -22,12 +22,14 @@ from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
-
+from contentctl.objects.event_source import EventSource
+from contentctl.objects.data_source import DataSource
 
 #from contentctl.objects.playbook import Playbook
-from contentctl.objects.enums import DataSource,ProvidingTechnology
+from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 
+MISSING_SOURCES:set[str] = set()
 
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
@@ -35,12 +37,11 @@ class Detection_Abstract(SecurityContentObject):
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
-    data_source: Optional[List[str]] = None
+    data_source: list[str] = []
     tags: DetectionTags = Field(...)
     search: Union[str, dict[str,Any]] = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    data_source_objects: Optional[List[DataSource]] = None
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -52,6 +53,8 @@ class Detection_Abstract(SecurityContentObject):
     tests: List[Annotated[Union[UnitTest, IntegrationTest], Field(union_mode='left_to_right')]] = []
     # A list of groups of tests, relying on the same data
     test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)
+
+    data_source_objects: list[DataSource] = []
 
 
     @field_validator("search", mode="before")
@@ -141,6 +144,7 @@ class Detection_Abstract(SecurityContentObject):
         else:
             return []
     
+
     @computed_field
     @property
     def source(self)->str:
@@ -164,10 +168,12 @@ class Detection_Abstract(SecurityContentObject):
         annotations_dict["type"] = self.type
         #annotations_dict["version"] = self.version
 
+        annotations_dict["data_source"] = self.data_source
+
         #The annotations object is a superset of the mappings object.
         # So start with the mapping object.
         annotations_dict.update(self.mappings)
-
+        
         #Make sure that the results are sorted for readability/easier diffs
         return dict(sorted(annotations_dict.items(), key=lambda item: item[0]))
         
@@ -387,23 +393,37 @@ class Detection_Abstract(SecurityContentObject):
                 raise ValueError(f"Error, failed to replace detection reference in Baseline '{baseline.name}' to detection '{self.name}'")             
             baseline.tags.detections = new_detections
 
-        self.data_source_objects = []
-        for data_source_obj in director.data_sources:
-            for detection_data_source in self.data_source:
-                if data_source_obj.name in detection_data_source:
-                    self.data_source_objects.append(data_source_obj)
-
-        # Remove duplicate data source objects based on their 'name' property
-        unique_data_sources = {}
-        for data_source_obj in self.data_source_objects:
-            if data_source_obj.name not in unique_data_sources:
-                unique_data_sources[data_source_obj.name] = data_source_obj
-        self.data_source_objects = list(unique_data_sources.values())
+        # Data source may be defined 1 on each line, OR they may be defined as
+        # SOUCE_1 AND ANOTHERSOURCE AND A_THIRD_SOURCE
+        # if more than 1 data source is required for a detection (for example, because it includes a join)
+        # Parse and update the list to resolve individual names and remove potential duplicates
+        updated_data_source_names:set[str] = set()
+        
+        for ds in self.data_source:
+            split_data_sources = {d.strip() for d in ds.split('AND')}
+            updated_data_source_names.update(split_data_sources)
+        
+        sources = sorted(list(updated_data_source_names))
+        
+        matched_data_sources:list[DataSource] = []
+        missing_sources:list[str] = []
+        for source in sources:
+            try:
+                matched_data_sources += DataSource.mapNamesToSecurityContentObjects([source], director)
+            except Exception as data_source_mapping_exception:
+                # We gobble this up and add it to a global set so that we
+                # can print it ONCE at the end of the build of datasources.
+                # This will be removed later as per the note below
+                MISSING_SOURCES.add(source)
+                
+        if len(missing_sources) > 0:
+            # This will be changed to ValueError when we have a complete list of data sources
+            print(f"WARNING: The following exception occurred when mapping the data_source field to DataSource objects:{missing_sources}")
+        
+        self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
-            story.detections.append(self)
-            story.data_sources.extend(self.data_source_objects)
-
+            story.detections.append(self)            
         return self
 
     
@@ -427,14 +447,16 @@ class Detection_Abstract(SecurityContentObject):
             raise ValueError("Error, baselines are constructed automatically at runtime.  Please do not include this field.")
 
         
-        name:Union[str,dict] = info.data.get("name",None)
+        name:Union[str,None] = info.data.get("name",None)
         if name is None:
             raise ValueError("Error, cannot get Baselines because the Detection does not have a 'name' defined.")
-        
+         
         director:DirectorOutputDto = info.context.get("output_dto",None)
         baselines:List[Baseline] = []
         for baseline in director.baselines:
-            if name in baseline.tags.detections:
+            # This matching is a bit strange, because baseline.tags.detections starts as a list of strings, but 
+            # is eventually updated to a list of Detections as we construct all of the detection objects. 
+            if name in [detection_name for detection_name in baseline.tags.detections if isinstance(detection_name,str)]:
                 baselines.append(baseline)
 
         return baselines

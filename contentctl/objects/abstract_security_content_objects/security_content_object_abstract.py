@@ -125,9 +125,9 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         errors:list[str] = []
         if len(missing_objects) > 0:
             errors.append(f"Failed to find the following '{cls.__name__}': {missing_objects}")
-        if len(missing_objects) > 0:
+        if len(mistyped_objects) > 0:
             for mistyped_object in mistyped_objects:
-                errors.append(f"'{mistyped_object.name}' expected to have type '{type(Self)}', but actually had type '{type(mistyped_object)}'")
+                errors.append(f"'{mistyped_object.name}' expected to have type '{cls}', but actually had type '{type(mistyped_object)}'")
         
         if len(errors) > 0:
             error_string = "\n  - ".join(errors)

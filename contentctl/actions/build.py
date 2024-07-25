@@ -11,6 +11,7 @@ from contentctl.output.conf_writer import ConfWriter
 from contentctl.output.ba_yml_output import BAYmlOutput
 from contentctl.output.api_json_output import ApiJsonOutput
 from contentctl.output.data_source_writer import DataSourceWriter
+from contentctl.objects.lookup import Lookup
 import pathlib
 import json
 import datetime
@@ -34,7 +35,14 @@ class Build:
             updated_conf_files:set[pathlib.Path] = set()
             conf_output = ConfOutput(input_dto.config)
 
-            DataSourceWriter.writeDataSourceCsv(input_dto.director_output_dto.data_sources, str(input_dto.config.path) + "/lookups/data_sources.csv")
+            # Construct a special lookup whose CSV is created at runtime and
+            # written directly into the output folder. It is created with model_construct,
+            # not model_validate, because the CSV does not exist yet.
+            data_sources_lookup_csv_path = input_dto.config.getPackageDirectoryPath() / "lookups" / "data_sources.csv"
+            DataSourceWriter.writeDataSourceCsv(input_dto.director_output_dto.data_sources, data_sources_lookup_csv_path)
+            input_dto.director_output_dto.addContentToDictMappings(Lookup.model_construct(description= "A lookup file that will contain the data source objects for detections.", 
+                                                                        filename=data_sources_lookup_csv_path, 
+                                                                        name="data_sources"))
 
             updated_conf_files.update(conf_output.writeHeaders())
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.detections, SecurityContentType.detections))

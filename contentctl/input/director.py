@@ -68,7 +68,7 @@ class DirectorOutputDto:
             # for this function we prepend 'SSA ' to the name.
             content_name = f"SSA {content_name}"
         
-        if content_name in self.name_to_content_map and isinstance(self.name_to_content_map[content_name], type(content)):
+        if content_name in self.name_to_content_map:
             raise ValueError(
                 f"Duplicate name '{content_name}' with paths:\n"
                 f" - {content.file_path}\n"
@@ -130,6 +130,16 @@ class Director():
         self.createSecurityContent(SecurityContentType.playbooks)
         self.createSecurityContent(SecurityContentType.detections)
         self.createSecurityContent(SecurityContentType.ssa_detections)
+
+        
+        from contentctl.objects.abstract_security_content_objects.detection_abstract import MISSING_SOURCES
+        if len(MISSING_SOURCES) > 0:
+            missing_sources_string = "\n 🟡 ".join(sorted(list(MISSING_SOURCES)))
+            print("WARNING: The following data_sources have been used in detections, but are not yet defined.\n"
+                  "This is not yet an error since not all data_sources have been defined, but will be convered to an error soon:\n 🟡 "
+                  f"{missing_sources_string}")
+        else:
+            print("No missing data_sources!")
 
     def createSecurityContent(self, contentType: SecurityContentType) -> None:
         if contentType == SecurityContentType.ssa_detections:

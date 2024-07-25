@@ -58,7 +58,6 @@ class DirectorOutputDto:
     deployments: list[Deployment]
     ssa_detections: list[SSADetection]
     data_sources: list[DataSource]
-    event_sources: list[EventSource]
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
     uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
 
@@ -68,17 +67,19 @@ class DirectorOutputDto:
             # Since SSA detections may have the same name as ESCU detection,
             # for this function we prepend 'SSA ' to the name.
             content_name = f"SSA {content_name}"
+        
         if content_name in self.name_to_content_map:
             raise ValueError(
                 f"Duplicate name '{content_name}' with paths:\n"
                 f" - {content.file_path}\n"
                 f" - {self.name_to_content_map[content_name].file_path}"
             )
-        elif content.id in self.uuid_to_content_map:
+        
+        if content.id in self.uuid_to_content_map:
             raise ValueError(
                 f"Duplicate id '{content.id}' with paths:\n"
                 f" - {content.file_path}\n"
-                f" - {self.name_to_content_map[content_name].file_path}"
+                f" - {self.uuid_to_content_map[content.id].file_path}"
             )
 
         if isinstance(content, Lookup):
@@ -99,9 +100,10 @@ class DirectorOutputDto:
             self.detections.append(content)
         elif isinstance(content, SSADetection):
             self.ssa_detections.append(content)
+        elif isinstance(content, DataSource):
+            self.data_sources.append(content)
         else:
-             raise Exception(f"Unknown security content type: {type(content)}")
-
+            raise Exception(f"Unknown security content type: {type(content)}")
 
         self.name_to_content_map[content_name] = content
         self.uuid_to_content_map[content.id] = content
@@ -124,11 +126,20 @@ class Director():
         self.createSecurityContent(SecurityContentType.stories)
         self.createSecurityContent(SecurityContentType.baselines)
         self.createSecurityContent(SecurityContentType.investigations)
-        self.createSecurityContent(SecurityContentType.event_sources)
         self.createSecurityContent(SecurityContentType.data_sources)
         self.createSecurityContent(SecurityContentType.playbooks)
         self.createSecurityContent(SecurityContentType.detections)
         self.createSecurityContent(SecurityContentType.ssa_detections)
+
+        
+        from contentctl.objects.abstract_security_content_objects.detection_abstract import MISSING_SOURCES
+        if len(MISSING_SOURCES) > 0:
+            missing_sources_string = "\n 🟡 ".join(sorted(list(MISSING_SOURCES)))
+            print("WARNING: The following data_sources have been used in detections, but are not yet defined.\n"
+                  "This is not yet an error since not all data_sources have been defined, but will be convered to an error soon:\n 🟡 "
+                  f"{missing_sources_string}")
+        else:
+            print("No missing data_sources!")
 
     def createSecurityContent(self, contentType: SecurityContentType) -> None:
         if contentType == SecurityContentType.ssa_detections:
@@ -136,29 +147,6 @@ class Director():
                 os.path.join(self.input_dto.path, "ssa_detections")
             )
             security_content_files = [f for f in files if f.name.startswith("ssa___")]
-
-        elif contentType == SecurityContentType.data_sources:
-            security_content_files = (
-                Utils.get_all_yml_files_from_directory_one_layer_deep(
-                    os.path.join(self.input_dto.path, "data_sources")
-                )
-            )
-
-        elif contentType == SecurityContentType.event_sources:
-            security_content_files = Utils.get_all_yml_files_from_directory(
-                os.path.join(self.input_dto.path, "data_sources", "cloud", "event_sources")
-            )
-            security_content_files.extend(
-                Utils.get_all_yml_files_from_directory(
-                    os.path.join(self.input_dto.path, "data_sources", "endpoint", "event_sources")
-                )
-            )
-            security_content_files.extend(
-                Utils.get_all_yml_files_from_directory(
-                    os.path.join(self.input_dto.path, "data_sources", "network", "event_sources")
-                )
-            )
-
         elif contentType in [
             SecurityContentType.deployments,
             SecurityContentType.lookups,
@@ -168,6 +156,7 @@ class Director():
             SecurityContentType.investigations,
             SecurityContentType.playbooks,
             SecurityContentType.detections,
+            SecurityContentType.data_sources,
         ]:
             files = Utils.get_all_yml_files_from_directory(
                 os.path.join(self.input_dto.path, str(contentType.name))
@@ -190,54 +179,48 @@ class Director():
                 modelDict = YmlReader.load_file(file)
 
                 if contentType == SecurityContentType.lookups:
-                        lookup = Lookup.model_validate(modelDict,context={"output_dto":self.output_dto, "config":self.input_dto})
-                        self.output_dto.addContentToDictMappings(lookup)
+                    lookup = Lookup.model_validate(modelDict,context={"output_dto":self.output_dto, "config":self.input_dto})
+                    self.output_dto.addContentToDictMappings(lookup)
                 
                 elif contentType == SecurityContentType.macros:
-                        macro = Macro.model_validate(modelDict,context={"output_dto":self.output_dto})
-                        self.output_dto.addContentToDictMappings(macro)
+                    macro = Macro.model_validate(modelDict,context={"output_dto":self.output_dto})
+                    self.output_dto.addContentToDictMappings(macro)
                 
                 elif contentType == SecurityContentType.deployments:
-                        deployment = Deployment.model_validate(modelDict,context={"output_dto":self.output_dto})
-                        self.output_dto.addContentToDictMappings(deployment)
+                    deployment = Deployment.model_validate(modelDict,context={"output_dto":self.output_dto})
+                    self.output_dto.addContentToDictMappings(deployment)
 
                 elif contentType == SecurityContentType.playbooks:
-                        playbook = Playbook.model_validate(modelDict,context={"output_dto":self.output_dto})
-                        self.output_dto.addContentToDictMappings(playbook)                  
+                    playbook = Playbook.model_validate(modelDict,context={"output_dto":self.output_dto})
+                    self.output_dto.addContentToDictMappings(playbook)                  
                 
                 elif contentType == SecurityContentType.baselines:
-                        baseline = Baseline.model_validate(modelDict,context={"output_dto":self.output_dto})
-                        self.output_dto.addContentToDictMappings(baseline)
+                    baseline = Baseline.model_validate(modelDict,context={"output_dto":self.output_dto})
+                    self.output_dto.addContentToDictMappings(baseline)
                 
                 elif contentType == SecurityContentType.investigations:
-                        investigation = Investigation.model_validate(modelDict,context={"output_dto":self.output_dto})
-                        self.output_dto.addContentToDictMappings(investigation)
+                    investigation = Investigation.model_validate(modelDict,context={"output_dto":self.output_dto})
+                    self.output_dto.addContentToDictMappings(investigation)
 
                 elif contentType == SecurityContentType.stories:
-                        story = Story.model_validate(modelDict,context={"output_dto":self.output_dto})
-                        self.output_dto.addContentToDictMappings(story)
+                    story = Story.model_validate(modelDict,context={"output_dto":self.output_dto})
+                    self.output_dto.addContentToDictMappings(story)
             
                 elif contentType == SecurityContentType.detections:
-                        detection = Detection.model_validate(modelDict,context={"output_dto":self.output_dto, "app":self.input_dto.app})
-                        self.output_dto.addContentToDictMappings(detection)
+                    detection = Detection.model_validate(modelDict,context={"output_dto":self.output_dto, "app":self.input_dto.app})
+                    self.output_dto.addContentToDictMappings(detection)
 
                 elif contentType == SecurityContentType.ssa_detections:
-                        self.constructSSADetection(self.ssa_detection_builder, self.output_dto,str(file))
-                        ssa_detection = self.ssa_detection_builder.getObject()
-                        if ssa_detection.status in [DetectionStatus.production.value, DetectionStatus.validation.value]:
-                            self.output_dto.addContentToDictMappings(ssa_detection)
+                    self.constructSSADetection(self.ssa_detection_builder, self.output_dto,str(file))
+                    ssa_detection = self.ssa_detection_builder.getObject()
+                    if ssa_detection.status in [DetectionStatus.production.value, DetectionStatus.validation.value]:
+                        self.output_dto.addContentToDictMappings(ssa_detection)
                 
                 elif contentType == SecurityContentType.data_sources:
                     data_source = DataSource.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
-                    self.output_dto.data_sources.append(data_source)
-
-                elif contentType == SecurityContentType.event_sources:
-                    event_source = EventSource.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.event_sources.append(event_source)
+                    self.output_dto.addContentToDictMappings(data_source)
 
                 else:
                     raise Exception(f"Unsupported type: [{contentType}]")

@@ -155,21 +155,22 @@ class GitService(BaseModel):
         print(f"[{len(updated_detections)}] Pieces of modifed and new content (this may include experimental/deprecated/manual_test content):\n - {modifiedAndNewContentString}")
         return updated_detections
 
-    def getSelected(self, detectionFilenames:List[FilePath])->List[Detection]:
-        filepath_to_content_map:dict[FilePath, SecurityContentObject] = { obj.file_path:obj for (_,obj) in self.director.name_to_content_map.items() if obj.file_path is not None} 
+    def getSelected(self, detectionFilenames: List[FilePath]) -> List[Detection]:
+        filepath_to_content_map: dict[FilePath, SecurityContentObject] = {
+        obj.file_path: obj for (_, obj) in self.director.name_to_content_map.items() if obj.file_path is not None
+    }
         errors = []
-        detections:List[Detection] = []
+        detections: List[Detection] = []
         for name in detectionFilenames:
-            obj = filepath_to_content_map.get(name,None)
-            if obj == None:
+            obj = filepath_to_content_map.get(name, None)
+            if obj is None:
                 errors.append(f"There is no detection file or security_content_object at '{name}'")
             elif not isinstance(obj, Detection):
                 errors.append(f"The security_content_object at '{name}' is of type '{type(obj).__name__}', NOT '{Detection.__name__}'")
             else:
                 detections.append(obj)
 
-        if len(errors) > 0:
+        if errors:
             errorsString = "\n - ".join(errors)
-            raise Exception(f"There following errors were encountered while getting selected detections to test:\n - {errorsString}")
+            raise Exception(f"The following errors were encountered while getting selected detections to test:\n - {errorsString}")
         return detections
-

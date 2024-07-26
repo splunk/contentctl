@@ -1,20 +1,11 @@
-import sys
 
-from dataclasses import dataclass
-
-from pydantic import ValidationError
-from typing import Union
-
-from contentctl.objects.enums import SecurityContentProduct
-from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
-    SecurityContentObject_Abstract,
-)
+import pathlib
 from contentctl.input.director import Director, DirectorOutputDto
-
 from contentctl.objects.config import validate
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.objects.atomic import AtomicTest
+from contentctl.helper.utils import Utils
 
 
 class Validate:
@@ -37,43 +28,48 @@ class Validate:
             [],
             [],
             [],
-            [],
         )
 
         director = Director(director_output_dto)
         director.execute(input_dto)
+        self.ensure_no_orphaned_files_in_lookups(input_dto.path, director_output_dto)
         return director_output_dto
 
-    def validate_duplicate_uuids(
-        self, security_content_objects: list[SecurityContentObject_Abstract]
-    ):
-        all_uuids = set()
-        duplicate_uuids = set()
-        for elem in security_content_objects:
-            if elem.id in all_uuids:
-                # The uuid has been found more than once
-                duplicate_uuids.add(elem.id)
-            else:
-                # This is the first time the uuid has been found
-                all_uuids.add(elem.id)
+    
+    def ensure_no_orphaned_files_in_lookups(self, repo_path:pathlib.Path, director_output_dto:DirectorOutputDto):
+        """
+        This function ensures that only files which are relevant to lookups are included in the lookups folder.
+        This means that a file must be either:
+        1. A lookup YML (.yml)
+        2. A lookup CSV (.csv) which is referenced by a YML
+        3. A lookup MLMODEL (.mlmodel) which is referenced by a YML.
+        
+        All other files, includes CSV and MLMODEL files which are NOT
+        referenced by a YML, will generate an exception from this function.
+        
+        Args:
+            repo_path (pathlib.Path): path to the root of the app
+            director_output_dto (DirectorOutputDto): director object with all constructed content
 
-        if len(duplicate_uuids) == 0:
-            return
+        Raises:
+            Exception: An Exception will be raised if there are any non .yml, .csv, or .mlmodel 
+            files in this directory. Additionally, an exception will be raised if there 
+            exists one or more .csv or .mlmodel files that are not referenced by at least 1 
+            detection .yml file in this directory. 
+            This avoids having additional, unused files in this directory that may be copied into
+            the app when it is built (which can cause appinspect errors or larger app size.)
+        """        
+        lookupsDirectory = repo_path/"lookups"
+        
+        # Get all of the files referneced by Lookups
+        usedLookupFiles:list[pathlib.Path] = [lookup.filename for lookup in director_output_dto.lookups if lookup.filename is not None] + [lookup.file_path for lookup in director_output_dto.lookups if lookup.file_path is not None]
 
-        # At least once duplicate uuid has been found. Enumerate all
-        # the pieces of content that use duplicate uuids
-        duplicate_messages = []
-        for uuid in duplicate_uuids:
-            duplicate_uuid_content = [
-                str(content.file_path)
-                for content in security_content_objects
-                if content.id in duplicate_uuids
-            ]
-            duplicate_messages.append(
-                f"Duplicate UUID [{uuid}] in {duplicate_uuid_content}"
-            )
-
-        raise ValueError(
-            "ERROR: Duplicate ID(s) found in objects:\n"
-            + "\n - ".join(duplicate_messages)
-        )
+        # Get all of the mlmodel and csv files in the lookups directory
+        csvAndMlmodelFiles  = Utils.get_security_content_files_from_directory(lookupsDirectory, allowedFileExtensions=[".yml",".csv",".mlmodel"], fileExtensionsToReturn=[".csv",".mlmodel"])
+        
+        # Generate an exception of any csv or mlmodel files exist but are not used
+        unusedLookupFiles:list[pathlib.Path] = [testFile for testFile in csvAndMlmodelFiles if testFile not in usedLookupFiles]
+        if len(unusedLookupFiles) > 0:
+            raise Exception(f"The following .csv or .mlmodel files exist in '{lookupsDirectory}', but are not referenced by a lookup file: {[str(path) for path in unusedLookupFiles]}")
+        return
+    

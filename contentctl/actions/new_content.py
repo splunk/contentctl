@@ -16,7 +16,11 @@ class NewContent:
 
     def buildDetection(self)->dict[str,Any]:
         questions = NewContentQuestions.get_questions_detection()
-        answers = questionary.prompt(questions)
+        answers: dict[str,str] = questionary.prompt(
+            questions, 
+            kbi_msg="User did not answer all of the prompt questions. Exiting...")
+        if not answers:
+            raise ValueError("User didn't answer one or more questions!")
         answers.update(answers)
         answers['name'] = answers['detection_name']
         del answers['detection_name']
@@ -32,7 +36,6 @@ class NewContent:
         answers['status'] = "production" #start everything as production since that's what we INTEND the content to become   
         answers['description'] = 'UPDATE_DESCRIPTION'   
         file_name = answers['name'].replace(' ', '_').replace('-','_').replace('.','_').replace('/','_').lower()
-        answers['kind'] = answers['detection_kind']
         answers['search'] = answers['detection_search'] + ' | `' + file_name + '_filter`'
         del answers['detection_search']
         answers['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
@@ -71,7 +74,11 @@ class NewContent:
 
     def buildStory(self)->dict[str,Any]:
         questions = NewContentQuestions.get_questions_story()
-        answers = questionary.prompt(questions)
+        answers = questionary.prompt(
+            questions, 
+            kbi_msg="User did not answer all of the prompt questions. Exiting...")
+        if not answers:
+            raise ValueError("User didn't answer one or more questions!")
         answers['name'] = answers['story_name']
         del answers['story_name']
         answers['id'] = str(uuid.uuid4())

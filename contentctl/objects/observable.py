@@ -1,11 +1,12 @@
 from __future__ import annotations
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator,ConfigDict
 
 from contentctl.objects.constants import *
 
 
 
 class Observable(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str
     type: str
     role: list[str]

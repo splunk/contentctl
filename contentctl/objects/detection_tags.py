@@ -18,11 +18,11 @@ from contentctl.objects.atomic import AtomicTest
 
 class DetectionTags(BaseModel):
     # detection spec
-    model_config = ConfigDict(use_enum_values=True,validate_default=False)
+    model_config = ConfigDict(use_enum_values=True,validate_default=False, extra='forbid')
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
-    
-    
+    group: list[str] = []
+    context: list[str] = []
     confidence: NonNegativeInt = Field(...,le=100)
     impact: NonNegativeInt = Field(...,le=100)
     @computed_field

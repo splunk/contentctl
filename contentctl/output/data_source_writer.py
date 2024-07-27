@@ -1,6 +1,5 @@
 import csv
 from contentctl.objects.data_source import DataSource
-from contentctl.objects.event_source import EventSource
 from typing import List
 import pathlib
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
 from typing import List
-from pydantic import BaseModel, Field, field_validator, ValidationInfo, model_serializer
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, model_serializer,ConfigDict
 from contentctl.objects.story import Story
 from contentctl.objects.enums import SecurityContentInvestigationProductName, SecurityDomain
 
 class InvestigationTags(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     analytic_story: List[Story] = Field([],min_length=1)
     product: List[SecurityContentInvestigationProductName] = Field(...,min_length=1)
     required_fields: List[str] = Field(min_length=1)

@@ -1,30 +1,19 @@
 from __future__ import annotations
-import uuid
-import string
-import requests
-import time
-from pydantic import BaseModel, validator, root_validator
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Union
-import re
 
-from contentctl.objects.abstract_security_content_objects.detection_abstract import Detection_Abstract
+from pydantic import BaseModel,ConfigDict
+from typing import Union
+
+
+
 from contentctl.objects.enums import AnalyticsType
-from contentctl.objects.enums import DataModel
 from contentctl.objects.enums import DetectionStatus
-from contentctl.objects.deployment import Deployment
 from contentctl.objects.ssa_detection_tags import SSADetectionTags
 from contentctl.objects.unit_test_ssa import UnitTestSSA
 from contentctl.objects.unit_test_old import UnitTestOld
-from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import Lookup
-from contentctl.objects.baseline import Baseline
-from contentctl.objects.playbook import Playbook
-from contentctl.helper.link_validator import LinkValidator
-from contentctl.objects.enums import SecurityContentType
+
 
 class SSADetection(BaseModel):
+    model_config = ConfigDict(extra="forbid",use_enum_values=True)
     # detection spec
     name: str
     id: str
@@ -59,8 +48,6 @@ class SSADetection(BaseModel):
     #         raise ValueError('name is longer then 67 chars: ' + v)
     #     return v
 
-    class Config:
-        use_enum_values = True
 
     '''
     @validator("name")

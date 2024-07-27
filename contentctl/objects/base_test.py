@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Union
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
+from pydantic import BaseModel,ConfigDict
 
 from contentctl.objects.base_test_result import BaseTestResult
 
@@ -20,6 +20,7 @@ class TestType(str, Enum):
 
 # TODO (cmcginley): enforce distinct test names w/in detections
 class BaseTest(BaseModel, ABC):
+    model_config = ConfigDict(extra="forbid")
     """
     A test case for a detection
     """

@@ -153,7 +153,7 @@ def main():
             
         else:
             #The file exists, so load it up!
-            config_obj = YmlReader().load_file(configFile)
+            config_obj = YmlReader().load_file(configFile,add_fields=False)
             t = test.model_validate(config_obj)
     except Exception as e:
         print(f"Error validating 'contentctl.yml':\n{str(e)}")

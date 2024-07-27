@@ -22,7 +22,6 @@ from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.event_source import EventSource
 from contentctl.objects.data_source import DataSource
 
 #from contentctl.objects.playbook import Playbook

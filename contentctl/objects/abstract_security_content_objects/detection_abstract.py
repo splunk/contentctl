@@ -24,6 +24,7 @@ from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.event_source import EventSource
 from contentctl.objects.data_source import DataSource
+from contentctl.objects.config import CustomApp
 
 #from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
@@ -33,7 +34,7 @@ MISSING_SOURCES:set[str] = set()
 
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
-    
+    name:str = Field(...,max_length=67)
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
@@ -56,6 +57,28 @@ class Detection_Abstract(SecurityContentObject):
 
     data_source_objects: list[DataSource] = []
 
+    def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=99)->str:
+        if self.status != DetectionStatus.production.value:
+            label = f"{app.label} - {self.status.value.capitalize()} - {self.name} - Rule"
+        else:
+            label = self.get_conf_stanza_name(app)
+
+        label_after_saving_in_product = f"{self.tags.security_domain} - {label} - Rule"
+        if len(label_after_saving_in_product) > max_stanza_length:
+            raise ValueError(f"label may only be {max_stanza_length} characters to allow updating in-product, "
+                             f"but stanza was actually {len(label_after_saving_in_product)} characters: '{len}' ")
+
+        return label
+    
+    def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=80)->str:
+        stanza_name = f"{app.label} - {self.name} - Rule"
+        if len(stanza_name) > 80:
+            raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
+                             f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
+        return stanza_name
+    
+        
+    
 
     @field_validator("search", mode="before")
     @classmethod
@@ -371,6 +394,7 @@ class Detection_Abstract(SecurityContentObject):
 
 
     def model_post_init(self, ctx:dict[str,Any]):
+        print(f"\nLENGTH: {len(self.name)}\n")
         # director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
         # if not isinstance(director,DirectorOutputDto):
         #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")

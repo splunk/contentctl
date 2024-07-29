@@ -19,7 +19,7 @@ from contentctl.objects.enums import DeploymentType
 
 class Baseline(SecurityContentObject):
     # baseline spec
-    #name: str
+    name:str = Field(...,max_length=67)
     #id: str
     #version: int
     #date: str

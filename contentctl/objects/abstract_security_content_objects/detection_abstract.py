@@ -146,13 +146,16 @@ class Detection_Abstract(SecurityContentObject):
 
         # iterate over the unit tests and create a TestGroup (and as a result, an IntegrationTest) for each
         test_groups: list[TestGroup] = []
-        for unit_test in info.data.get("tests"):
-            test_group = TestGroup.derive_from_unit_test(unit_test, info.data.get("name"))
+
+        tests = info.data.get("tests", [])
+        for unit_test in tests:
+            test_group = TestGroup.derive_from_unit_test(unit_test, info.data["name"])
             test_groups.append(test_group)
 
         # now add each integration test to the list of tests
         for test_group in test_groups:
-            info.data.get("tests").append(test_group.integration_test)
+            tests.append(test_group.integration_test)
+        info.data['tests'] = tests
         return test_groups
 
 
@@ -684,40 +687,6 @@ class Detection_Abstract(SecurityContentObject):
 
         return self
 
-    @field_validator("tests")
-    def tests_validate(cls, v, info:ValidationInfo):
-        # TODO (cmcginley): Fix detection_abstract.tests_validate so that it surfaces validation errors
-        #   (e.g. a lack of tests) to the final results, instead of just showing a failed detection w/
-        #   no tests (maybe have a message propagated at the detection level? do a separate coverage
-        #   check as part of validation?):
-    
-    
-        #Only production analytics require tests
-        if info.data.get("status","") != DetectionStatus.production.value:
-            return v
-        
-        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
-        # Accordingly, we do not need to do additional checks if the type is Correlation
-        if info.data.get("type","") in set([AnalyticsType.Correlation.value]):
-            return v
-        
-            
-        # Ensure that there is at least 1 test        
-        if len(v) == 0:
-            if info.data.get("tags",None) and info.data.get("tags").manual_test is not None:
-                # Detections that are manual_test MAY have detections, but it is not required.  If they
-                # do not have one, then create one which will be a placeholder.
-                # Note that this fake UnitTest (and by extension, Integration Test) will NOT be generated
-                # if there ARE test(s) defined for a Detection.
-                placeholder_test = UnitTest(name="PLACEHOLDER FOR DETECTION TAGGED MANUAL_TEST WITH NO TESTS SPECIFIED IN YML FILE", attack_data=[])
-                return [placeholder_test]
-            
-            else:
-                raise ValueError("At least one test is REQUIRED for production detection: " + info.data.get("name", "NO NAME FOUND"))
-
-
-        #No issues - at least one test provided for production type requiring testing
-        return v
         
     def all_tests_successful(self) -> bool:
         """

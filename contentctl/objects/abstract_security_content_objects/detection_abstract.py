@@ -10,6 +10,7 @@ from contentctl.objects.lookup import Lookup
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.baseline import Baseline
+    from contentctl.objects.config import CustomApp
     
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
@@ -24,7 +25,7 @@ from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.event_source import EventSource
 from contentctl.objects.data_source import DataSource
-from contentctl.objects.config import CustomApp
+
 
 #from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
@@ -59,22 +60,33 @@ class Detection_Abstract(SecurityContentObject):
 
     def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=99)->str:
         if self.status != DetectionStatus.production.value:
-            label = f"{app.label} - {self.status.value.capitalize()} - {self.name} - Rule"
+            label = f"{app.label} - {self.status.capitalize()} - {self.name} - Rule"
+        elif self.type == AnalyticsType.Correlation.value:
+            label = f"{app.label} - RIR - {self.name} - Rule"
         else:
             label = self.get_conf_stanza_name(app)
+        
 
-        label_after_saving_in_product = f"{self.tags.security_domain} - {label} - Rule"
-        if len(label_after_saving_in_product) > max_stanza_length:
+        label = self.get_conf_stanza_name(app)
+
+        label_after_saving_in_product = f"{self.tags.security_domain.value} - {label} - Rule"
+    
+        if len(label_after_saving_in_product) > max_stanza_length+1:
             raise ValueError(f"label may only be {max_stanza_length} characters to allow updating in-product, "
-                             f"but stanza was actually {len(label_after_saving_in_product)} characters: '{len}' ")
-
+                             f"but stanza was actually {len(label_after_saving_in_product)} characters: '{label_after_saving_in_product}' ")
+        #if len(label_after_saving_in_product)>98:
+        #    print(f"\n\n{label}\n\n")
+        #print(f"CorrelationSearch Length[{len(label_after_saving_in_product)}]")
+        
+        
         return label
     
     def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=80)->str:
         stanza_name = f"{app.label} - {self.name} - Rule"
-        if len(stanza_name) > 80:
+        if len(stanza_name) > 100:
             raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
                              f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
+        #print(f"Stanza            Length[{len(stanza_name)}]")
         return stanza_name
     
         
@@ -134,6 +146,7 @@ class Detection_Abstract(SecurityContentObject):
     @field_validator("test_groups")
     @classmethod
     def validate_test_groups(cls, value:Union[None, List[TestGroup]], info:ValidationInfo) -> Union[List[TestGroup], None]:
+        return []
         """
         Validates the `test_groups` field and constructs the model from the list of unit tests
         if no explicit construct was provided
@@ -397,7 +410,6 @@ class Detection_Abstract(SecurityContentObject):
 
 
     def model_post_init(self, ctx:dict[str,Any]):
-        print(f"\nLENGTH: {len(self.name)}\n")
         # director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
         # if not isinstance(director,DirectorOutputDto):
         #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")

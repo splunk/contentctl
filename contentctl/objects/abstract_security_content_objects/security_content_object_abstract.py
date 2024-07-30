@@ -26,7 +26,7 @@ NO_FILE_NAME = "NO_FILE_NAME"
 
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     model_config = ConfigDict(use_enum_values=True,validate_default=True)
-    # name: str = ...
+    #name:str = Field(...,max_length=50)
     # author: str = Field(...,max_length=255)
     # date: datetime.date = Field(...)
     # version: NonNegativeInt = ...

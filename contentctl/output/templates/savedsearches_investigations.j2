@@ -1,15 +1,15 @@
 
 
-### {{APP_NAME}} RESPONSE TASKS ###
+### {{app.label}} RESPONSE TASKS ###
 
 {% for detection in objects %}
 {% if (detection.type == 'Investigation') %}
 {% if detection.search is defined %}
-[{{APP_NAME}} - {{ detection.name }} - Response Task]
+[{{app.label}} - {{ detection.name }} - Response Task]
 action.escu = 0
 action.escu.enabled = 1
 action.escu.search_type = investigative
-action.escu.full_search_name = {{APP_NAME}} - {{ detection.name }} - Response Task
+action.escu.full_search_name = {{app.label}} - {{ detection.name }} - Response Task
 description = {{ detection.description | escapeNewlines() }}
 action.escu.creation_date = {{ detection.date }}
 action.escu.modification_date = {{ detection.date }}
@@ -35,4 +35,4 @@ search = {{ detection.search | escapeNewlines() }}
 {% endfor %}
 
 
-### END {{ APP_NAME }} RESPONSE TASKS ###
+### END {{ app.label }} RESPONSE TASKS ###

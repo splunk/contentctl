@@ -3,7 +3,7 @@
 
 {% for detection in objects %}
 {% if (detection.type == 'TTP' or detection.type == 'Anomaly' or detection.type == 'Hunting' or detection.type == 'Correlation') %}
-[savedsearch://{{APP_NAME}} - {{ detection.name }} - Rule]
+[savedsearch://{{app.label}} - {{ detection.name }} - Rule]
 type = detection
 asset_type = {{ detection.tags.asset_type.value }}
 confidence = medium

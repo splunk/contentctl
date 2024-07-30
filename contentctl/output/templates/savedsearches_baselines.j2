@@ -1,14 +1,14 @@
 
 
-### {{APP_NAME}} BASELINES ###
+### {{app.label}} BASELINES ###
 
 {% for detection in objects %}
 {% if (detection.type == 'Baseline') %}
-[{{APP_NAME}} - {{ detection.name }}]
+[{{app.label}} - {{ detection.name }}]
 action.escu = 0
 action.escu.enabled = 1
 action.escu.search_type = support
-action.escu.full_search_name = {{APP_NAME}} - {{ detection.name }}
+action.escu.full_search_name = {{app.label}} - {{ detection.name }}
 description = {{ detection.description | escapeNewlines() }}
 action.escu.creation_date = {{ detection.date }}
 action.escu.modification_date = {{ detection.date }}

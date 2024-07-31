@@ -1073,6 +1073,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # Consolidate a set of the distinct observable field names
             observable_fields_set = set([o.name for o in detection.tags.observable])
 
+
             # Ensure the search had at least one result
             if int(job.content.get("resultCount", "0")) > 0:
                 # Initialize the test result
@@ -1080,6 +1081,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                 # Initialize the collection of fields that are empty that shouldn't be
                 empty_fields = set()
+                full_results_fields_set = set()
+                partially_empty_fields = set()
 
                 # Filter out any messages in the results
                 for result in results:
@@ -1088,21 +1091,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     # If not a message, it is a dict and we will process it
                     results_fields_set = set(result.keys())
+                    # Add keys to the full results set
+                    full_results_fields_set.update(results_fields_set)
 
                     # Identify any observable fields that are not available in the results
                     missing_fields = observable_fields_set - results_fields_set
-                    if len(missing_fields) > 0:
-                        # Report a failure in such cases
-                        e = Exception(f"The observable field(s) {missing_fields} are missing in the detection results")
-                        test.result.set_job_content(
-                            job.content,
-                            self.infrastructure,
-                            TestResultStatus.ERROR,
-                            exception=e,
-                            duration=time.time() - search_start_time,
-                        )
-
-                        return
+                    
 
                     # If we find one or more fields that contain the string "null" then they were
                     # not populated and we should throw an error.  This can happen if there is a typo
@@ -1126,6 +1120,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     else:
                         empty_fields = empty_fields.union(current_empty_fields)
 
+                # Allow observable fields to be present in only some results
+                missing_observables_set = observable_fields_set - full_results_fields_set
+                if len(missing_observables_set) == 0:
+                    test.result.set_job_content(
+                        job.content, 
+                        self.infrastructure, 
+                        TestResultStatus.PASS, 
+                        duration=time.time() - search_start_time,)
+                    return
                 # Report a failure if there were empty fields in all results
                 e = Exception(
                     f"One or more required observable fields {empty_fields} contained 'null' values.  Is the "

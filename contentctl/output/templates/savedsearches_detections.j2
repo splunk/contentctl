@@ -93,8 +93,8 @@ action.slack = 1
 action.slack.param.channel = {{ detection.deployment.alert_action.slack.channel | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.slack.param.message = {{ detection.deployment.alert_action.slack.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 {% endif %}
-{% if detection.deployment.alert_action.slack.webhook_url is defined %}
-action.slack.param.webhook_url = {{ detection.deployment.alert_action.slack.webhook_url | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+{% if detection.deployment.alert_action.slack.webhook_url_override is defined %}
+action.slack.param.webhook_url_override = {{ detection.deployment.alert_action.slack.webhook_url_override | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 {% endif %}
 {% if detection.deployment.alert_action.slack.fields is defined %}
 action.slack.param.fields = {{ detection.deployment.alert_action.slack.fields | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}

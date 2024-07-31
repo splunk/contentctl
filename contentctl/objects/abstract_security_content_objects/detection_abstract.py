@@ -54,7 +54,7 @@ class Detection_Abstract(SecurityContentObject):
     # https://github.com/pydantic/pydantic/issues/9101#issuecomment-2019032541
     tests: List[Annotated[Union[UnitTest, IntegrationTest], Field(union_mode='left_to_right')]] = []
     # A list of groups of tests, relying on the same data
-    test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)
+    test_groups: list[TestGroup] = []
 
     data_source_objects: list[DataSource] = []
 
@@ -68,9 +68,9 @@ class Detection_Abstract(SecurityContentObject):
         
         return label
     
-    def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=80)->str:
+    def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=81)->str:
         stanza_name = f"{app.label} - {self.name} - Rule"
-        if len(stanza_name) > 100:
+        if len(stanza_name) > max_stanza_length:
             raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
                              f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
         #print(f"Stanza            Length[{len(stanza_name)}]")
@@ -137,6 +137,7 @@ class Detection_Abstract(SecurityContentObject):
         :param value: the value of the field `test_groups`
         :param values: a dict of the other fields in the Detection model
         """
+        
         test_groups:list[TestGroup] = []
         for unit_test in self.tests:
             if not isinstance(unit_test, UnitTest):
@@ -147,6 +148,7 @@ class Detection_Abstract(SecurityContentObject):
         # now add each integration test to the list of tests
         for test_group in test_groups:
             self.tests.append(test_group.integration_test)
+        self.test_groups = test_groups
         
 
 
@@ -440,7 +442,7 @@ class Detection_Abstract(SecurityContentObject):
             story.detections.append(self)     
 
 
-        #self.add_test_groups()
+        self.add_test_groups()
 
         return self
 
@@ -674,6 +676,8 @@ class Detection_Abstract(SecurityContentObject):
         if self.tags.manual_test is not None:
             for test in self.tests:
                 test.skip(f"TEST SKIPPED: Detection marked as 'manual_test' with explanation: '{self.tags.manual_test}'")
+            print("MANUAL TEST with no tests - are we supposed to create a placeholder here?")
+            return self
 
         if len(self.tests) == 0:
             raise ValueError(f"At least one test is REQUIRED for production detection: {self.name}")

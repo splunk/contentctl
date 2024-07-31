@@ -59,25 +59,12 @@ class Detection_Abstract(SecurityContentObject):
     data_source_objects: list[DataSource] = []
 
     def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=99)->str:
-        if self.status != DetectionStatus.production.value:
-            label = f"{app.label} - {self.status.capitalize()} - {self.name} - Rule"
-        elif self.type == AnalyticsType.Correlation.value:
-            label = f"{app.label} - RIR - {self.name} - Rule"
-        else:
-            label = self.get_conf_stanza_name(app)
-        
-
         label = self.get_conf_stanza_name(app)
-
         label_after_saving_in_product = f"{self.tags.security_domain.value} - {label} - Rule"
     
-        if len(label_after_saving_in_product) > max_stanza_length+1:
+        if len(label_after_saving_in_product) > max_stanza_length:
             raise ValueError(f"label may only be {max_stanza_length} characters to allow updating in-product, "
                              f"but stanza was actually {len(label_after_saving_in_product)} characters: '{label_after_saving_in_product}' ")
-        #if len(label_after_saving_in_product)>98:
-        #    print(f"\n\n{label}\n\n")
-        #print(f"CorrelationSearch Length[{len(label_after_saving_in_product)}]")
-        
         
         return label
     
@@ -143,33 +130,24 @@ class Detection_Abstract(SecurityContentObject):
 
 
 
-    @field_validator("test_groups")
-    @classmethod
-    def validate_test_groups(cls, value:Union[None, List[TestGroup]], info:ValidationInfo) -> Union[List[TestGroup], None]:
-        return []
+    def add_test_groups(self)->None:
         """
         Validates the `test_groups` field and constructs the model from the list of unit tests
         if no explicit construct was provided
         :param value: the value of the field `test_groups`
         :param values: a dict of the other fields in the Detection model
         """
-        # if the value was not the None default, do nothing
-        if value is not None:
-            return value
-
-        # iterate over the unit tests and create a TestGroup (and as a result, an IntegrationTest) for each
-        test_groups: list[TestGroup] = []
-
-        tests = info.data.get("tests", [])
-        for unit_test in tests:
-            test_group = TestGroup.derive_from_unit_test(unit_test, info.data["name"])
+        test_groups:list[TestGroup] = []
+        for unit_test in self.tests:
+            if not isinstance(unit_test, UnitTest):
+                raise ValueError(f"Expected type of UnitTest, but found {type(unit_test)} instead.")
+            test_group = TestGroup.derive_from_unit_test(unit_test, self.name)
             test_groups.append(test_group)
 
         # now add each integration test to the list of tests
         for test_group in test_groups:
-            tests.append(test_group.integration_test)
-        info.data['tests'] = tests
-        return test_groups
+            self.tests.append(test_group.integration_test)
+        
 
 
     @computed_field
@@ -459,7 +437,11 @@ class Detection_Abstract(SecurityContentObject):
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
-            story.detections.append(self)            
+            story.detections.append(self)     
+
+
+        #self.add_test_groups()
+
         return self
 
     

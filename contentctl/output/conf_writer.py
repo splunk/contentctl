@@ -59,7 +59,7 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         template = j2_env.get_template(template_name)
         
-        output = template.render(objects=objects, APP_NAME=config.app.label, currentDate=datetime.datetime.now(datetime.UTC).date().isoformat())
+        output = template.render(objects=objects, app=config.app, currentDate=datetime.datetime.now(datetime.UTC).date().isoformat())
         
         output_path = config.getPackageDirectoryPath()/app_output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +92,7 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         template = j2_env.get_template(template_name)
         
-        output = template.render(objects=objects, APP_NAME=config.app.label)
+        output = template.render(objects=objects, app=config.app)
         
         output_path = config.getPackageDirectoryPath()/app_output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -151,7 +151,7 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         
         template = j2_env.get_template(template_name)
-        output = template.render(objects=objects, APP_NAME=config.app.label)
+        output = template.render(objects=objects, app=config.app)
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'a') as f:

@@ -90,6 +90,9 @@ class Test:
         
         if len(input_dto.detections) == 0:
             print(f"With Detection Testing Mode '{input_dto.config.getModeName()}', there were [0] detections found to test.\nAs such, we will quit immediately.")
+            # Directly call stop so that the summary.yml will be generated. Of course it will not have any test results, but we still want it to contain
+            # a summary showing that now detections were tested.
+            file.stop()
         else:
             print(f"MODE: [{input_dto.config.getModeName()}] - Test [{len(input_dto.detections)}] detections")
             if input_dto.config.mode in [DetectionTestingMode.changes, DetectionTestingMode.selected]:
@@ -98,7 +101,7 @@ class Test:
 
             manager.setup()
             manager.execute()
-
+        
         try:
             summary_results = file.getSummaryObject()
             summary = summary_results.get("summary", {})

@@ -115,10 +115,10 @@ relation = greater than
 quantity = 0
 realtime_schedule = 0
 is_visible = false
-{% if detection.tags.alert_suppression %}
+{% if detection.tags.throttling %}
 alert.suppress = true
-alert.suppress.fields = {{ detection.tags.alert_suppression.conf_formatted_fields() }}
-alert.suppress.period = {{ detection.tags.alert_suppression.period }}
+alert.suppress.fields = {{ detection.tags.throttling.conf_formatted_fields() }}
+alert.suppress.period = {{ detection.tags.throttling.period }}
 {% endif %}
 search = {{ detection.search | escapeNewlines() }}
 

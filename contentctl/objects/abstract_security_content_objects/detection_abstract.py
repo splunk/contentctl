@@ -579,7 +579,7 @@ class Detection_Abstract(SecurityContentObject):
         For throttling to work properly, the fields to throttle on MUST
         exist in the search itself.  If not, then we cannot apply the throttling
         '''
-        if self.tags.alert_suppression is None:
+        if self.tags.throttling is None:
             # No throttling configured for this detection
             return self
         
@@ -587,7 +587,7 @@ class Detection_Abstract(SecurityContentObject):
             # Search is sigma-formatted, so we cannot perform this validation.
             return self
 
-        missing_fields:list[str] = [field for field in self.tags.alert_suppression.fields if field not in self.search]
+        missing_fields:list[str] = [field for field in self.tags.throttling.fields if field not in self.search]
         if len(missing_fields) > 0:
             raise ValueError(f"The following throttle fields were missing from the search: {missing_fields}")
 

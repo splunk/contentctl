@@ -26,6 +26,10 @@ class AttackEnrichment(BaseModel):
         return enrichment
     
     def getEnrichmentByMitreID(self, mitre_id:Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")])->Union[MitreAttackEnrichment,None]:
+        # TODO (cmcginley): do we want to return None when use_enrichment is false? This seems
+        #   confusing, and it seems that we intentionally do not call this function when that
+        #   setting is enabled; I'd vote to have this raise if this flag is set and this function
+        #   is called
         if not self.use_enrichment:
             return None
         

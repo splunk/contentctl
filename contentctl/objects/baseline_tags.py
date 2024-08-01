@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 class BaselineTags(BaseModel):
     analytic_story: list[Story] = Field(...)
     #deployment: Deployment = Field('SET_IN_GET_DEPLOYMENT_FUNCTION')
+    # TODO (cmcginley): can we remove str from the possible types here?
     detections: List[Union[Detection,str]] = Field(...)
     product: list[SecurityContentProductName] = Field(...,min_length=1)
     required_fields: List[str] = Field(...,min_length=1)

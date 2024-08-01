@@ -234,6 +234,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.pbar.write(
                     f"Error getting API connection (not quitting) '{type(e).__name__}': {str(e)}"
                 )
+                # TODO (cmcginley): can we remove this print? Can we comment on this commented out
+                #   code?
                 print("wow")
                 # self.pbar.write(
                 #     f"Unhandled exception getting connection to splunk server: {str(e)}"

@@ -1,14 +1,14 @@
 from __future__ import annotations
-from pydantic import Field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
+
+# TODO (cmcginley): what's the purpose of this conditional?
 if TYPE_CHECKING:
     from contentctl.objects.unit_test_attack_data import UnitTestAttackData
     from contentctl.objects.unit_test_result import UnitTestResult
 
-from typing import Union
-
 from pydantic import Field
 
+# TODO (cmcginley): can these be removed?
 # from contentctl.objects.security_content_object import SecurityContentObject
 # from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.unit_test_baseline import UnitTestBaseline
@@ -44,7 +44,7 @@ class UnitTest(BaseTest):
         Skip the test by setting its result status
         :param message: the reason for skipping
         """
-        self.result = UnitTestResult(
+        self.result = UnitTestResult(                                                               # type: ignore
             message=message,
             status=TestResultStatus.SKIP
         )

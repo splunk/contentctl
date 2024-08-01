@@ -23,6 +23,7 @@ LOOKUPS_TO_IGNORE.add("other_lookups")
 class Lookup(SecurityContentObject):
     
     collection: Optional[str] = None
+    # TODO (cmcginley): should fields_list be a CSV string? or a list of strings?
     fields_list: Optional[str] = None
     filename: Optional[FilePath] = None
     default_match: Optional[bool] = None

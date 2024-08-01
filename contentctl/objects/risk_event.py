@@ -1,7 +1,7 @@
 import re
 from typing import Union, Optional
 
-from pydantic import BaseModel, Extra, Field, PrivateAttr, validator
+from pydantic import BaseModel, Field, PrivateAttr, field_validator
 
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
@@ -35,8 +35,8 @@ class RiskEvent(BaseModel):
     # The search name (e.g. "ESCU - Windows Modify Registry EnableLinkedConnections - Rule")
     search_name: str
 
-    # The subject of the risk event (e.g. a username, process name, or system name)
-    risk_object: str
+    # The subject of the risk event (e.g. a username, process name, system name, account ID, etc.)
+    risk_object: Union[int, str]
 
     # The type of the risk object (e.g. user, system, or other)
     risk_object_type: str
@@ -60,26 +60,24 @@ class RiskEvent(BaseModel):
     )
 
     # Private attribute caching the observable this RiskEvent is mapped to
-    _matched_observable: Observable = PrivateAttr(default=None)
+    _matched_observable: Optional[Observable] = PrivateAttr(default=None)
 
     class Config:
         # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
         # fields vary depending on the SPL which generated them
-        extra = Extra.allow
+        extra = "allow"
 
-    @validator("annotations_mitre_attack", "analyticstories", pre=True, always=True)
+    @field_validator("annotations_mitre_attack", "analyticstories", mode="before")
     @classmethod
-    def _convert_str_value_to_singleton(cls, v, values) -> str:
+    def _convert_str_value_to_singleton(cls, v: Union[str, list[str]]) -> list[str]:
         """
         Given a value, determine if its a list or a single str value; if a single value, return as a
         singleton. Do nothing if anything else.
         """
         if isinstance(v, list):
             return v
-        elif isinstance(v, str):
+        else:
             return [v]
-
-        return v
 
     def validate_against_detection(self, detection: Detection) -> None:
         """
@@ -115,22 +113,22 @@ class RiskEvent(BaseModel):
         # Check several conditions against the observables
         # self.validate_risk_against_observables(detection.tags.observable)
 
+    @staticmethod
+    def _optional_str_lists_equal(list_a: Optional[list[str]], list_b: Optional[list[str]]) -> bool:
+        # if either is None, compare directly
+        if list_a is None or list_b is None:
+            return list_a == list_b
+
+        # else, sort first
+        return sorted(list_a) == sorted(list_b)
+
     def validate_mitre_ids(self, detection: Detection) -> None:
         """
         Given the associated detection, validate the risk event's MITRE attack IDs
         :param detection: the detection associated w/ this risk event
         :raises: ValidationFailed
         """
-        # Convert to lists if needed so we can use the equality below
-        risk_mitre = self.annotations_mitre_attack
-        detection_mitre = detection.tags.mitre_attack_id
-        if risk_mitre is None:
-            risk_mitre = [risk_mitre]
-        if detection_mitre is None:
-            detection_mitre = [detection_mitre]
-
-        # Check annotations.mitre_attack
-        if sorted(risk_mitre) != sorted(detection_mitre):
+        if not RiskEvent._optional_str_lists_equal(self.annotations_mitre_attack, detection.tags.mitre_attack_id):
             raise ValidationFailed(
                 f"MITRE ATT&CK IDs in risk event ({self.annotations_mitre_attack}) do not match those"
                 f" in detection ({detection.tags.mitre_attack_id})."
@@ -142,16 +140,9 @@ class RiskEvent(BaseModel):
         :param detection: the detection associated w/ this risk event
         :raises: ValidationFailed
         """
-        # Convert to lists if needed so we can use the equality below
-        risk_analytic = self.analyticstories
-        detection_analytic = detection.tags.analytic_story
-        if risk_analytic is None:
-            risk_analytic = [risk_analytic]
-        if detection_analytic is None:
-            detection_analytic = [detection_analytic]
-
-        # Check analyticstories
-        if sorted(risk_analytic) != sorted(detection_analytic):
+        # Render the detection analytic_story to a list of strings before comparing
+        detection_analytic_story = [story.name for story in detection.tags.analytic_story]
+        if not RiskEvent._optional_str_lists_equal(self.analyticstories, detection_analytic_story):
             raise ValidationFailed(
                 f"Analytic stories in risk event ({self.analyticstories}) do not match those"
                 f" in detection ({detection.tags.analytic_story})."
@@ -174,7 +165,7 @@ class RiskEvent(BaseModel):
         # so we can escape the string, and then swap in the actual regex elements in place of the
         # placeholder
         tmp_placeholder = "PLACEHOLDERPATTERNFORESCAPING"
-        escaped_source_message_with_placeholder = re.escape(
+        escaped_source_message_with_placeholder: str = re.escape(
             field_replacement_pattern.sub(
                 tmp_placeholder,
                 detection.tags.message

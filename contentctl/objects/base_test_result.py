@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Any
 from enum import Enum
 
 from pydantic import BaseModel
@@ -96,7 +96,7 @@ class BaseTestResult(BaseModel):
             "success", "exception", "message", "sid_link", "status", "duration", "wait_duration"
         ],
         job_fields: list[str] = ["search", "resultCount", "runDuration"],
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Aggregates a dictionary summarizing the test result model
         :param model_fields: the fields of the test result to gather

@@ -572,6 +572,31 @@ class Detection_Abstract(SecurityContentObject):
             self.tags.nist = [NistCategory.DE_AE]
         return self
     
+
+    @model_validator(mode="after")
+    def ensureThrottlingFieldsExist(self):
+        '''
+        For throttling to work properly, the fields to throttle on MUST
+        exist in the search itself.  If not, then we cannot apply the throttling
+        '''
+        if self.tags.throttling is None:
+            # No throttling configured for this detection
+            return self
+        
+        if not isinstance(self.search, str):
+            # Search is sigma-formatted, so we cannot perform this validation.
+            return self
+
+        missing_fields:list[str] = [field for field in self.tags.throttling.fields if field not in self.search]
+        if len(missing_fields) > 0:
+            raise ValueError(f"The following throttle fields were missing from the search: {missing_fields}")
+
+        else:
+            # All throttling fields present in search
+            return self
+            
+
+
     @model_validator(mode="after")
     def ensureProperObservablesExist(self):
         """

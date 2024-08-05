@@ -6,6 +6,8 @@ from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.objects.atomic import AtomicTest
 from contentctl.helper.utils import Utils
+from contentctl.objects.data_source import DataSource
+from contentctl.helper.splunk_app import SplunkApp
 
 
 class Validate:
@@ -33,6 +35,11 @@ class Validate:
         director = Director(director_output_dto)
         director.execute(input_dto)
         self.ensure_no_orphaned_files_in_lookups(input_dto.path, director_output_dto)
+        if input_dto.data_source_TA_validation:
+            if self.validate_latest_TA_information(director_output_dto.data_sources) != 1:
+                print("All TA versions are up to date.")
+            else:
+                raise Exception("One or more TA versions are out of date. Please update the data source with the latest version.")
         return director_output_dto
 
     
@@ -73,3 +80,28 @@ class Validate:
             raise Exception(f"The following .csv or .mlmodel files exist in '{lookupsDirectory}', but are not referenced by a lookup file: {[str(path) for path in unusedLookupFiles]}")
         return
     
+
+    def validate_latest_TA_information(self, data_sources: list[DataSource]) -> int:
+        validated_TAs: list[tuple[str, str]] = []
+        error_occurred = False
+        print("----------------------")
+        print("Validating latest TA:")
+        print("----------------------")
+        for data_source in data_sources:
+            for supported_TA in data_source.supported_TA:
+                ta_identifier = (supported_TA["name"], supported_TA["version"])
+                if ta_identifier in validated_TAs:
+                    continue
+                if "url" in supported_TA:
+                    validated_TAs.append(ta_identifier)
+                    uid = int(supported_TA["url"].rstrip('/').split("/")[-1])
+                    try:
+                        splunk_app = SplunkApp(app_uid=uid)
+                        if splunk_app.latest_version != supported_TA["version"]:
+                            raise Exception(f"Version mismatch for TA {supported_TA['name']}: "
+                                            f"Latest version on Splunkbase is {splunk_app.latest_version}, "
+                                            f"but version {supported_TA['version']} is specified in the data source {data_source.name}.")
+                    except Exception as e:
+                        print(f"Error processing TA {supported_TA['name']}: {str(e)}")
+                        error_occurred = True
+        return 1 if error_occurred else 0

@@ -65,10 +65,7 @@ Testing is run using [GitHub Hosted Runners](https://docs.github.com/en/actions/
 
 | Requirement | Supported | Description |  Passing Integration Tests |
 | --------------------- | ----- | ---- | ------ |
-| Python <3.9 | No | No support planned.  contentctl tool uses modern language constructs not supported ion Python3.8 and below | N/A |
-| Python 3.9 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions) |
-| Python 3.10 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions) |
-| Python 3.11 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions)  |
+| Python 3.11+ | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions)  |
 | Docker (local) | Yes | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test. | (locally + GitHub Actions) |
 | Docker (remote) | Planned | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test. | No |
 
@@ -80,7 +77,7 @@ It is typically recommended to install poetry to the Global Python Environment.*
 
 #### Install via pip (recommended): 
 ```
-python3.9 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 pip install contentctl
 ```
@@ -89,7 +86,7 @@ pip install contentctl
 ```
 git clone https://github.com/splunk/contentctl
 cd contentctl
-python3.9 -m pip install poetry
+python3.11 -m pip install poetry
 poetry install
 poetry shell
 contentctl --help

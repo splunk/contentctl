@@ -75,7 +75,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         mounts = [
             docker.types.Mount(
                 source=str(self.global_config.getLocalAppDir()),
-                target=str(self.global_config.getContainerAppDir()),
+                target=(self.global_config.getContainerAppDir()).as_posix(),
                 type="bind",
                 read_only=True,
             )

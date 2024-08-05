@@ -38,10 +38,8 @@ class Validate:
         director.execute(input_dto)
         self.ensure_no_orphaned_files_in_lookups(input_dto.path, director_output_dto)
         if input_dto.data_source_TA_validation:
-            if self.validate_latest_TA_information(director_output_dto.data_sources) != 1:
-                print("All TA versions are up to date.")
-            else:
-                raise Exception("One or more TA versions are out of date. Please update the data source with the latest version.")
+            self.validate_latest_TA_information(director_output_dto.data_sources)
+            
         return director_output_dto
 
     
@@ -83,9 +81,9 @@ class Validate:
         return
     
 
-    def validate_latest_TA_information(self, data_sources: list[DataSource]) -> int:
+    def validate_latest_TA_information(self, data_sources: list[DataSource]) -> None:
         validated_TAs: list[tuple[str, str]] = []
-        error_occurred = False
+        errors:list[str] = []
         print("----------------------")
         print("Validating latest TA:")
         print("----------------------")
@@ -100,10 +98,18 @@ class Validate:
                     try:
                         splunk_app = SplunkApp(app_uid=uid)
                         if splunk_app.latest_version != supported_TA.version:
-                            raise Exception(f"Version mismatch for TA {supported_TA.name}: "
-                                            f"Latest version on Splunkbase is {splunk_app.latest_version}, "
-                                            f"but version {supported_TA.version} is specified in the data source {data_source.name}.")
+                            errors.append(f"Version mismatch in '{data_source.file_path}' supported TA '{supported_TA.name}'"
+                                          f"\n  Latest version on Splunkbase    : {splunk_app.latest_version}"
+                                          f"\n  Version specified in data source: {supported_TA.version}")
                     except Exception as e:
-                        print(f"Error processing TA {supported_TA.version}: {str(e)}")
-                        error_occurred = True
-        return 1 if error_occurred else 0
+                        errors.append(f"Error processing checking version of TA {supported_TA.name}: {str(e)}")
+                            
+        if len(errors) > 0:
+            errorString = '\n\n'.join(errors)
+            raise Exception(f"[{len(errors)}] or more TA versions are out of date or have other errors."
+                            f"Please update the following data sources with the latest versions of "
+                            f"their supported tas:\n\n{errorString}")
+        print("All TA versions are up to date.")
+        
+
+

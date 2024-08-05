@@ -1,5 +1,7 @@
 
 import pathlib
+
+import urllib3.util
 from contentctl.input.director import Director, DirectorOutputDto
 from contentctl.objects.config import validate
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
@@ -89,19 +91,19 @@ class Validate:
         print("----------------------")
         for data_source in data_sources:
             for supported_TA in data_source.supported_TA:
-                ta_identifier = (supported_TA["name"], supported_TA["version"])
+                ta_identifier = (supported_TA.name, supported_TA.version)
                 if ta_identifier in validated_TAs:
                     continue
-                if "url" in supported_TA:
+                if supported_TA.url is not None:
                     validated_TAs.append(ta_identifier)
-                    uid = int(supported_TA["url"].rstrip('/').split("/")[-1])
+                    uid = int(str(supported_TA.url).rstrip('/').split("/")[-1])
                     try:
                         splunk_app = SplunkApp(app_uid=uid)
-                        if splunk_app.latest_version != supported_TA["version"]:
-                            raise Exception(f"Version mismatch for TA {supported_TA['name']}: "
+                        if splunk_app.latest_version != supported_TA.version:
+                            raise Exception(f"Version mismatch for TA {supported_TA.name}: "
                                             f"Latest version on Splunkbase is {splunk_app.latest_version}, "
-                                            f"but version {supported_TA['version']} is specified in the data source {data_source.name}.")
+                                            f"but version {supported_TA.version} is specified in the data source {data_source.name}.")
                     except Exception as e:
-                        print(f"Error processing TA {supported_TA['name']}: {str(e)}")
+                        print(f"Error processing TA {supported_TA.version}: {str(e)}")
                         error_occurred = True
         return 1 if error_occurred else 0

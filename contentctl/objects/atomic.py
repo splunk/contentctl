@@ -41,6 +41,7 @@ class InputArgumentType(StrEnum):
     Url = "Url"
 
 class AtomicExecutor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str
     elevation_required: Optional[bool] = False #Appears to be optional
     command: Optional[str] = None
@@ -48,7 +49,7 @@ class AtomicExecutor(BaseModel):
     cleanup_command: Optional[str] = None
 
     @model_validator(mode='after')
-    def ensure_mutually_exclusive_fields(self)->AtomicExecutor:
+    def ensure_mutually_exclusive_fields(self):
         if self.command is not None and self.steps is not None:
             raise ValueError("command and steps cannot both be defined in the executor section.  Exactly one must be defined.")
         elif self.command is None and self.steps is None:
@@ -88,7 +89,7 @@ class AtomicTest(BaseModel):
     dependency_executor_name: Optional[DependencyExecutorType] = None
 
     @staticmethod
-    def AtomicTestWhenEnrichmentIsDisabled(auto_generated_guid: UUID4)->Self:
+    def AtomicTestWhenEnrichmentIsDisabled(auto_generated_guid: UUID4)->AtomicTest:
         return AtomicTest(name="Placeholder Atomic Test (enrichment disabled)",
                           auto_generated_guid=auto_generated_guid,
                           description="This is a placeholder AtomicTest. Because enrichments were not enabled, it has not been validated against the real Atomic Red Team Repo.",
@@ -97,7 +98,7 @@ class AtomicTest(BaseModel):
                                                   command="Placeholder command (enrichment disabled)"))
     
     @staticmethod
-    def AtomicTestWhenTestIsMissing(auto_generated_guid: UUID4)->Self:
+    def AtomicTestWhenTestIsMissing(auto_generated_guid: UUID4)->AtomicTest:
         return AtomicTest(name="Missing Atomic",
                           auto_generated_guid=auto_generated_guid,
                           description="This is a placeholder AtomicTest. Either the auto_generated_guid is incorrect or it there was an exception while parsing its AtomicFile..",

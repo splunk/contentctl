@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, field_validator, ValidationInfo, model_serializer
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, model_serializer, ConfigDict
 from typing import List, Any, Union
 
 from contentctl.objects.story import Story
@@ -12,6 +12,7 @@ from contentctl.objects.enums import SecurityDomain
 
 
 class BaselineTags(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     analytic_story: List[Story] = Field(...)
     detections: List[Union[Detection,str]] = Field(...)
     product: List[SecurityContentProductName] = Field(...,min_length=1)

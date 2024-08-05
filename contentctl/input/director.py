@@ -22,7 +22,6 @@ from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.atomic import AtomicTest
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.data_source import DataSource
-from contentctl.objects.event_source import EventSource
 
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment

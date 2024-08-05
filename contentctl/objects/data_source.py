@@ -1,14 +1,13 @@
 from __future__ import annotations
 from typing import Optional, Any
-from pydantic import Field, FilePath, model_serializer
+from pydantic import Field, model_serializer
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.event_source import EventSource
 
 class DataSource(SecurityContentObject):
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None
-    configuration: Optional[str] = None
+    configuration: Optional[str] = None 
     supported_TA: Optional[list] = None
     fields: Optional[list] = None
     field_mappings: Optional[list] = None

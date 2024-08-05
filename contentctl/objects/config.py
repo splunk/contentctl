@@ -28,7 +28,7 @@ COMMON_INFORMATION_MODEL_UID = 1621
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/download"
 
 class App_Base(BaseModel,ABC):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True, extra='forbid')
     uid: Optional[int] = Field(default=None)
     title: str = Field(description="Human-readable name used by the app. This can have special characters.")
     appid: Optional[Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]]= Field(default=None,description="Internal name used by your app. "

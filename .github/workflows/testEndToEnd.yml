@@ -70,11 +70,12 @@ jobs:
 
       #Do not pause on a failed detection
       - name: Run contentctl test
-        if: startsWith(matrix.operating_system, 'ubuntu')
+        if: startsWith(matrix.operating_system, 'macos') != true
         run: |
           cd my_splunk_content_pack
           poetry run contentctl test --disable-tqdm --post-test-behavior never_pause
-      
+          #show the contents of the dist folder
+          ls -lah dist/
       - uses: actions/upload-artifact@v4
         with:
           name: content_pack_${{ matrix.python_version }}_${{ matrix.operating_system }}

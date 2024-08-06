@@ -1,7 +1,6 @@
 
 import pathlib
 
-import urllib3.util
 from contentctl.input.director import Director, DirectorOutputDto
 from contentctl.objects.config import validate
 from contentctl.enrichments.attack_enrichment import AttackEnrichment

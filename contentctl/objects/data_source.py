@@ -1,15 +1,20 @@
 from __future__ import annotations
 from typing import Optional, Any
-from pydantic import Field, FilePath, model_serializer
+from pydantic import Field, HttpUrl, model_serializer, BaseModel
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.event_source import EventSource
 
+
+class TA(BaseModel):
+    name: str
+    url: HttpUrl | None = None
+    version: str
 class DataSource(SecurityContentObject):
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None
     configuration: Optional[str] = None
-    supported_TA: Optional[list] = None
+    supported_TA: list[TA] = []
     fields: Optional[list] = None
     field_mappings: Optional[list] = None
     convert_to_log_source: Optional[list] = None

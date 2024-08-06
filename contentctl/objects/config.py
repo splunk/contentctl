@@ -176,6 +176,7 @@ class validate(Config_Base):
     build_app: bool = Field(default=True, description="Should an app be built and output in the build_path?")
     build_api: bool = Field(default=False, description="Should api objects be built and output in the build_path?")
     build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the build_path?")
+    data_source_TA_validation: bool = Field(default=False, description="Validate latest TA information from Splunkbase")
 
     def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
         return self.path/atomic_red_team_repo_name

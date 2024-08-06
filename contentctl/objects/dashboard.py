@@ -9,7 +9,7 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.config import build
 
 DEFAULT_DASHBAORD_JINJA2_TEMPLATE = '''<dashboard version="2" theme="light">
-    <label>{{ dashboard.name }}</label>
+    <label>{{ dashboard.label(config) }}</label>
     <description></description>
     <definition><![CDATA[
 {{ dashboard.pretty_print_json_obj() }}
@@ -25,10 +25,15 @@ DEFAULT_DASHBAORD_JINJA2_TEMPLATE = '''<dashboard version="2" theme="light">
 
 class Dashboard(SecurityContentObject):
     j2_template: str = Field(default=DEFAULT_DASHBAORD_JINJA2_TEMPLATE, description="Jinja2 Template used to construct the dashboard")
-    json_obj: Json[dict[str,Any]] = Field(..., description="Valid JSON object that describes the dashboard")
-    description: str = Field(...,max_length=10000)
-    
+    description: str = Field(...,description="A description of the dashboard. This does not have to match "
+                             "the description of the dashboard in the JSON file.", max_length=10000)
 
+    json_obj: Json[dict[str,Any]] = Field(..., description="Valid JSON object that describes the dashboard")
+    
+    
+    
+    def label(self, config:build)->str:
+        return f"{config.app.label} - {self.name}"
     
     @model_validator(mode="before")
     @classmethod
@@ -55,23 +60,19 @@ class Dashboard(SecurityContentObject):
         if name_from_json is None:
             errors.append(f"'title' field is missing from {json_file_path}")
         elif name_from_json != name_from_file:
-            errors.append(f"title 'json_object' is '{name_from_json}', but the name defined in the YML is '{name_from_file}'. These two must match.")
-        
-        
-        if data.get("description",None) is not None:
-            raise ValueError(f"The description field should not be defined in {yml_file_path}, is is read from {json_file_path}")
+            errors.append(f"The 'title' field in the JSON file [{json_file_path}] does not match the 'name' field in the YML object [{yml_file_path}]. These two MUST match:\n    "
+                          f"title in JSON : {name_from_json}\n    "
+                          f"title in YML  : {name_from_file}\n    ")
         
         description_from_json = json_obj.get("description",None)
-
         if description_from_json is None:
             errors.append("'description' field is missing from field 'json_object'")
         
         if len(errors) > 0 :
-            err_string = "\n".join(errors)
-            raise ValueError(f"Error(s) validating dashboard:\n{err_string}")
+            err_string = "\n  - ".join(errors)
+            raise ValueError(f"Error(s) validating dashboard:\n  - {err_string}")
         
         data['name'] = name_from_file
-        data['description'] = description_from_json        
         data['json_obj'] = json.dumps(json_obj)
         return data
 

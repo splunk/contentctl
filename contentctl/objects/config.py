@@ -602,13 +602,13 @@ class test_common(build):
 
 
     def getLocalAppDir(self)->pathlib.Path:
-        #docker really wants abolsute paths
+        # docker really wants absolute paths
         path = self.path / "apps"
         return path.absolute()
     
     def getContainerAppDir(self)->pathlib.Path:
-        #docker really wants abolsute paths
-        return pathlib.Path("/tmp/apps").absolute()
+        # docker really wants absolute paths
+        return pathlib.Path("/tmp/apps")
 
     def enterpriseSecurityInApps(self)->bool:
         
@@ -740,7 +740,7 @@ class test(test_common):
             if path.startswith(SPLUNKBASE_URL):
                 container_paths.append(path)
             else:
-                container_paths.append(str(self.getContainerAppDir()/pathlib.Path(path).name))
+                container_paths.append((self.getContainerAppDir()/pathlib.Path(path).name).as_posix())
         
         return ','.join(container_paths)
 

@@ -51,12 +51,12 @@ class RiskEvent(BaseModel):
     risk_message: str
 
     # The analytic stories applicable to this risk event
-    analyticstories: Optional[list[str]] = Field(default=None)
+    analyticstories: list[str] = Field(default=[])
 
     # The MITRE ATT&CK IDs
-    annotations_mitre_attack: Optional[list[str]] = Field(
+    annotations_mitre_attack: list[str] = Field(
         alias="annotations.mitre_attack",
-        default=None
+        default=[]
     )
 
     # Private attribute caching the observable this RiskEvent is mapped to
@@ -113,22 +113,13 @@ class RiskEvent(BaseModel):
         # Check several conditions against the observables
         # self.validate_risk_against_observables(detection.tags.observable)
 
-    @staticmethod
-    def _optional_str_lists_equal(list_a: Optional[list[str]], list_b: Optional[list[str]]) -> bool:
-        # if either is None, compare directly
-        if list_a is None or list_b is None:
-            return list_a == list_b
-
-        # else, sort first
-        return sorted(list_a) == sorted(list_b)
-
     def validate_mitre_ids(self, detection: Detection) -> None:
         """
         Given the associated detection, validate the risk event's MITRE attack IDs
         :param detection: the detection associated w/ this risk event
         :raises: ValidationFailed
         """
-        if not RiskEvent._optional_str_lists_equal(self.annotations_mitre_attack, detection.tags.mitre_attack_id):
+        if sorted(self.annotations_mitre_attack) != sorted(detection.tags.mitre_attack_id):
             raise ValidationFailed(
                 f"MITRE ATT&CK IDs in risk event ({self.annotations_mitre_attack}) do not match those"
                 f" in detection ({detection.tags.mitre_attack_id})."
@@ -142,7 +133,7 @@ class RiskEvent(BaseModel):
         """
         # Render the detection analytic_story to a list of strings before comparing
         detection_analytic_story = [story.name for story in detection.tags.analytic_story]
-        if not RiskEvent._optional_str_lists_equal(self.analyticstories, detection_analytic_story):
+        if sorted(self.analyticstories) != sorted(detection_analytic_story):
             raise ValidationFailed(
                 f"Analytic stories in risk event ({self.analyticstories}) do not match those"
                 f" in detection ({detection.tags.analytic_story})."
@@ -154,12 +145,17 @@ class RiskEvent(BaseModel):
         :param detection: the detection associated w/ this risk event
         :raises: ValidationFailed
         """
-        # Check for string literals of the form "$...$" in the observed risk message
+        # Extract the field replacement tokens ("$...$")
         field_replacement_pattern = re.compile(r"\$\S+\$")
-        if field_replacement_pattern.search(self.risk_message) is not None:
-            raise ValidationFailed(
-                f"Unreplaced field replacement string found in risk message: {self.risk_message}"
-            )
+        tokens = field_replacement_pattern.findall(detection.tags.message)
+
+        # Check for the presence of each token in the message from the risk event
+        for token in tokens:
+            if token in self.risk_message:
+                raise ValidationFailed(
+                    f"Unreplaced field replacement string ('{token}') found in risk message:"
+                    f" {self.risk_message}"
+                )
 
         # Convert detection source message to regex pattern; we need to first sub in a placeholder
         # so we can escape the string, and then swap in the actual regex elements in place of the
@@ -173,7 +169,10 @@ class RiskEvent(BaseModel):
         )
         placeholder_replacement_pattern = re.compile(tmp_placeholder)
         final_risk_message_pattern = re.compile(
-            placeholder_replacement_pattern.sub(r"[\\s\\S]+", escaped_source_message_with_placeholder)
+            placeholder_replacement_pattern.sub(
+                r"[\\s\\S]*\\S[\\s\\S]*",
+                escaped_source_message_with_placeholder
+            )
         )
 
         # Check created regex pattern againt the observed risk message

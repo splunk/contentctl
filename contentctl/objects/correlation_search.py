@@ -427,7 +427,7 @@ class CorrelationSearch(BaseModel):
                 relevant.append(observable)
         return relevant
 
-    # TODO (cmcginley): ideally, we could handle this and the following init w/ a call to
+    # TODO (PEX-484): ideally, we could handle this and the following init w/ a call to
     #   model_post_init, so that all the logic is encapsulated w/in _parse_risk_and_notable_actions
     #   but that is a pydantic v2 feature (see the init validators for risk/notable actions):
     #   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
@@ -435,7 +435,7 @@ class CorrelationSearch(BaseModel):
         """Parses the risk/notable metadata we care about from self.saved_search.content
 
         :raises KeyError: if self.saved_search.content does not contain a required key
-        :raises json.JSONDecodeError: if the value at self.saved_search.content['action.risk.param._risk'] can't be
+        :raises json.JSONDecodeError: if the value at self.saved_search.content['action3.risk.param._risk'] can't be
             decoded from JSON into a dict
         :raises IntegrationTestingError: if the value at self.saved_search.content['action.risk.param._risk'] is
             unpacked to be anything other than a singleton

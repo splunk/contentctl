@@ -241,7 +241,6 @@ class Detection_Abstract(SecurityContentObject):
         self.cve_enrichment = enriched_cves
         return self
 
-    # TODO (cmcginley): can we tighten this typing? is this field even being used?
     splunk_app_enrichment: Optional[List[dict]] = None
 
     @computed_field
@@ -393,7 +392,6 @@ class Detection_Abstract(SecurityContentObject):
 
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
-        # TODO (cmcginley): can we remove this null/type check back?
         # director: Optional[DirectorOutputDto] = __context.get("output_dto",None)
         # if not isinstance(director,DirectorOutputDto):
         #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")
@@ -449,12 +447,8 @@ class Detection_Abstract(SecurityContentObject):
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
-            # TODO (cmcginley): I think this instance of typing weirdness highlights some of the
-            #   issues I see with maintaining Detection and Detection_Abstract
             story.detections.append(self)
 
-        # TODO (cmcginley): I'd still like to understand why the requested attr was nil when called
-        #   as part of CorrelationSearch, as well as when the "after" validators are called
         self.cve_enrichment_func(__context)
 
     @field_validator('lookups', mode="before")
@@ -711,11 +705,6 @@ class Detection_Abstract(SecurityContentObject):
 
     @model_validator(mode='after')
     def ensurePresenceOfRequiredTests(self):
-        # TODO (cmcginley): Fix detection_abstract.tests_validate so that it surfaces validation errors
-        #   (e.g. a lack of tests) to the final results, instead of just showing a failed detection w/
-        #   no tests (maybe have a message propagated at the detection level? do a separate coverage
-        #   check as part of validation?):
-
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
@@ -746,11 +735,6 @@ class Detection_Abstract(SecurityContentObject):
         v: list[UnitTest | IntegrationTest],
         info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest]:
-        # TODO (cmcginley): Fix detection_abstract.tests_validate so that it surfaces validation errors
-        #   (e.g. a lack of tests) to the final results, instead of just showing a failed detection w/
-        #   no tests (maybe have a message propagated at the detection level? do a separate coverage
-        #   check as part of validation?):
-
         # Only production analytics require tests
         if info.data.get("status", "") != DetectionStatus.production.value:
             return v

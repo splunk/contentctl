@@ -85,9 +85,6 @@ class DetectionTags(BaseModel):
     @computed_field
     @property
     def kill_chain_phases(self) -> list[KillChainPhase]:
-        # TODO (cmcginley): wait for feedback from Eric
-        if self.mitre_attack_enrichments is None:
-            return []
         phases: set[KillChainPhase] = set()
         for enrichment in self.mitre_attack_enrichments:
             for tactic in enrichment.mitre_attack_tactics:
@@ -190,7 +187,7 @@ class DetectionTags(BaseModel):
         if len(missing_tactics) > 0:
             raise ValueError(f"Missing Mitre Attack IDs. {missing_tactics} not found.")
         else:
-            # TODO (cmcginley): we have uncompatible typing here; see comment in attack_enrichment
+            # TODO (cmcginley): we have incompatible typing here; see comment in attack_enrichment
             self.mitre_attack_enrichments = mitre_enrichments
 
         return self

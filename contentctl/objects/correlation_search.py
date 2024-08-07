@@ -32,7 +32,7 @@ from contentctl.objects.observable import Observable
 
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = True
+ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 

@@ -454,7 +454,7 @@ class Detection_Abstract(SecurityContentObject):
 
         director: DirectorOutputDto = info.context.get("output_dto", None)
 
-        search: Union[str, dict[str,Any],None] = info.data.get("search", None)                                    # type: ignore
+        search: Union[str, dict[str, Any], None] = info.data.get("search", None)
         if not isinstance(search, str):
             # The search was sigma formatted (or failed other validation and was None), so we will
             # not validate macros in it
@@ -471,10 +471,7 @@ class Detection_Abstract(SecurityContentObject):
                 "Error, baselines are constructed automatically at runtime.  Please do not include this field."
             )
 
-        # TODO (cmcginley): if it's possible in practice for this to return None, we should adjust
-        #   the declared type
-        name: Union[str, None] = info.data.get("name", None)                                        # type: ignore
-        #print(f"\n\n{name}\n\n")
+        name: Union[str, None] = info.data.get("name", None)
         if name is None:
             raise ValueError("Error, cannot get Baselines because the Detection does not have a 'name' defined.")
 
@@ -499,7 +496,7 @@ class Detection_Abstract(SecurityContentObject):
 
         director: DirectorOutputDto = info.context.get("output_dto", None)
 
-        # TODO (cmcginley): what's the typing on this dict?
+        
         search: Union[str, dict[str,Any], None] = info.data.get("search", None)
         if not isinstance(search, str):
             # The search was sigma formatted (or failed other validation and was None), so we will

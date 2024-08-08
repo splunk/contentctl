@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Self, Any
 if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment
     from contentctl.objects.security_content_object import SecurityContentObject
-    from contentctl.objects.config import Config
     from contentctl.input.director import DirectorOutputDto
 
 from contentctl.objects.enums import AnalyticsType

@@ -2,14 +2,12 @@
 from __future__ import annotations
 import csv
 import os
-from posixpath import split
-from typing import Optional
 import sys
 from attackcti import attack_client
 import logging
 from pydantic import BaseModel, Field
 from dataclasses import field
-from typing import Union,Annotated
+from typing import Annotated
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.config import validate
 logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
@@ -44,7 +42,7 @@ class AttackEnrichment(BaseModel):
         groups.sort()
 
         if technique_id in self.data:
-            raise ValueError(f"Error, trying to redefine MITRE ID '{technique_id}'")
+            raise Exception(f"Error, trying to redefine MITRE ID '{technique_id}'")
         
         self.data[technique_id] = MitreAttackEnrichment(mitre_attack_id=technique_id, 
                                                         mitre_attack_technique=technique_obj, 
@@ -53,7 +51,7 @@ class AttackEnrichment(BaseModel):
 
     
     def get_attack_lookup(self, input_path: str, store_csv: bool = False, force_cached_or_offline: bool = False, skip_enrichment:bool = False) -> dict:
-        if self.use_enrichment is False:
+        if not self.use_enrichment:
             return {}
         print("Getting MITRE Attack Enrichment Data. This may take some time...")
         attack_lookup = dict()

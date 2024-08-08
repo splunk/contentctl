@@ -165,10 +165,8 @@ class Detection_Abstract(SecurityContentObject):
     def source(self) -> str:
         # TODO (cmcginley): if filepath cannot be None for a detection, we should be enforcing that
         #   with a validator and a default value/factory
-        if self.file_path is not None:
-            return self.file_path.absolute().parent.name
-        else:
-            raise ValueError(f"Cannot get 'source' for detection {self.name} - 'file_path' was None.")
+        return self.file_path.absolute().parent.name
+        
 
     deployment: Deployment = Field({})
 
@@ -392,9 +390,6 @@ class Detection_Abstract(SecurityContentObject):
 
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
-        # director: Optional[DirectorOutputDto] = __context.get("output_dto",None)
-        # if not isinstance(director,DirectorOutputDto):
-        #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")
         director: Optional[DirectorOutputDto] = __context.get("output_dto", None)
 
         # Ensure that all baselines link to this detection
@@ -459,7 +454,7 @@ class Detection_Abstract(SecurityContentObject):
 
         director: DirectorOutputDto = info.context.get("output_dto", None)
 
-        search: Union[str, dict] = info.data.get("search", None)                                    # type: ignore
+        search: Union[str, dict[str, Any], None] = info.data.get("search", None)
         if not isinstance(search, str):
             # The search was sigma formatted (or failed other validation and was None), so we will
             # not validate macros in it
@@ -476,9 +471,7 @@ class Detection_Abstract(SecurityContentObject):
                 "Error, baselines are constructed automatically at runtime.  Please do not include this field."
             )
 
-        # TODO (cmcginley): if it's possible in practice for this to return None, we should adjust
-        #   the declared type
-        name: Union[str, dict] = info.data.get("name", None)                                        # type: ignore
+        name: Union[str, None] = info.data.get("name", None)
         if name is None:
             raise ValueError("Error, cannot get Baselines because the Detection does not have a 'name' defined.")
 
@@ -503,8 +496,8 @@ class Detection_Abstract(SecurityContentObject):
 
         director: DirectorOutputDto = info.context.get("output_dto", None)
 
-        # TODO (cmcginley): what's the typing on this dict?
-        search: Union[str, dict] = info.data.get("search", None)
+        
+        search: Union[str, dict[str,Any], None] = info.data.get("search", None)
         if not isinstance(search, str):
             # The search was sigma formatted (or failed other validation and was None), so we will
             # not validate macros in it
@@ -547,44 +540,6 @@ class Detection_Abstract(SecurityContentObject):
     @field_validator("deployment", mode="before")
     def getDeployment(cls, v: Any, info: ValidationInfo) -> Deployment:
         return Deployment.getDeployment(v, info)
-        return SecurityContentObject.getDeploymentFromType(info.data.get("type", None), info)
-        # director: Optional[DirectorOutputDto] = info.context.get("output_dto",None)
-        # if not director:
-        #     raise ValueError(
-        #         "Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context"
-        #     )
-
-        # typeField = info.data.get("type",None)
-
-        # deps = [deployment for deployment in director.deployments if deployment.type == typeField]
-        # if len(deps) == 1:
-        #     return deps[0]
-        # elif len(deps) == 0:
-        #     raise ValueError(f"Failed to find Deployment for type '{typeField}' "\
-        #                      f"from  possible {[deployment.type for deployment in director.deployments]}")
-        # else:
-        #     raise ValueError(f"Found more than 1 ({len(deps)}) Deployment for type '{typeField}' "\
-        #                      f"from  possible {[deployment.type for deployment in director.deployments]}")
-
-    @staticmethod
-    def get_detections_from_filenames(
-        detection_filenames: set[str],
-        all_detections: list[Detection_Abstract]
-    ) -> list[Detection_Abstract]:
-        detection_filenames = set(str(pathlib.Path(filename).absolute()) for filename in detection_filenames)
-        detection_dict = SecurityContentObject.create_filename_to_content_dict(all_detections)      # type: ignore
-
-        try:
-            # TODO (cmcginley): incompatible return type
-            return [detection_dict[detection_filename] for detection_filename in detection_filenames]
-        except Exception as e:
-            raise Exception(f"Failed to find detection object for modified detection: {str(e)}")
-
-    # @validator("type")
-    # def type_valid(cls, v, values):
-    #     if v.lower() not in [el.name.lower() for el in AnalyticsType]:
-    #         raise ValueError("not valid analytics type: " + values["name"])
-    #     return v
 
     @field_validator("enabled_by_default", mode="before")
     def only_enabled_if_production_status(cls, v: Any, info: ValidationInfo) -> bool:

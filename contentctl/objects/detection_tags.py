@@ -49,7 +49,7 @@ class DetectionTags(BaseModel):
     def risk_score(self) -> int:
         return round((self.confidence * self.impact)/100)
 
-    mitre_attack_id: List[Annotated[str, Field(pattern="^T[0-9]{4}(.[0-9]{3})?$")]] = []
+    mitre_attack_id: List[Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")]] = []
     nist: list[NistCategory] = []
     observable: List[Observable] = []
     message: str = Field(...)
@@ -68,7 +68,7 @@ class DetectionTags(BaseModel):
         else:
             return RiskSeverity('low')
 
-    cve: List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]] = []
+    cve: List[Annotated[str, r"^CVE-[1|2]\d{3}-\d+$"]] = []
     atomic_guid: List[AtomicTest] = []
     drilldown_search: Optional[str] = None
 
@@ -236,8 +236,8 @@ class DetectionTags(BaseModel):
         if output_dto is None:
             raise ValueError("Context not provided to detection.detection_tags.atomic_guid validator")
 
-        # TODO (cmcginley): typing issue; what to do if atomic_tests is None?
-        all_tests: List[AtomicTest] = output_dto.atomic_tests
+        all_tests: None | List[AtomicTest] = output_dto.atomic_tests
+        
 
         matched_tests: List[AtomicTest] = []
         missing_tests: List[UUID4] = []
@@ -268,12 +268,11 @@ class DetectionTags(BaseModel):
             missing_tests_string = ""
 
         if len(badly_formatted_guids) > 0:
-            if len(badly_formatted_guids) > 0:
-                bad_guids_string = (
-                    f"The following [{len(badly_formatted_guids)}] value(s) are not properly "
-                    f"formatted UUIDs: {badly_formatted_guids}\n"
-                )
-                raise ValueError(f"{bad_guids_string}{missing_tests_string}")
+            bad_guids_string = (
+                f"The following [{len(badly_formatted_guids)}] value(s) are not properly "
+                f"formatted UUIDs: {badly_formatted_guids}\n"
+            )
+            raise ValueError(f"{bad_guids_string}{missing_tests_string}")
 
         elif len(missing_tests) > 0:
             print(missing_tests_string)

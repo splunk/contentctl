@@ -25,7 +25,6 @@ from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.enums import NistCategory
 
 from contentctl.objects.detection_tags import DetectionTags
-from contentctl.objects.detection import Detection
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
@@ -392,7 +391,7 @@ class Detection_Abstract(SecurityContentObject):
 
         # Ensure that all baselines link to this detection
         for baseline in self.baselines:
-            new_detections: list[Detection | str] = []
+            new_detections: list[Detection_Abstract | str] = []
             replaced = False
             for d in baseline.tags.detections:
                 if isinstance(d, str) and self.name == d:

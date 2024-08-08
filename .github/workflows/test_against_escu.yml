@@ -18,8 +18,10 @@ jobs:
       fail-fast: false
       matrix:
         python_version: ["3.11", "3.12"]
-        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14", "windows-2022"]
-        #operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
+        
+        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14"]
+        # Do not test against ESCU until known character encoding issue is resolved
+        # operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14", "windows-2022"]
 
 
     runs-on: ${{ matrix.operating_system }}

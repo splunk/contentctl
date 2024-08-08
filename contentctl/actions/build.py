@@ -8,7 +8,6 @@ from contentctl.objects.enums import SecurityContentProduct, SecurityContentType
 from contentctl.input.director import Director, DirectorOutputDto
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.conf_writer import ConfWriter
-from contentctl.output.ba_yml_output import BAYmlOutput
 from contentctl.output.api_json_output import ApiJsonOutput
 from contentctl.output.data_source_writer import DataSourceWriter
 from contentctl.objects.lookup import Lookup
@@ -85,18 +84,3 @@ class Build:
                 json.dump(version_dict,version_f)
             
             print(f"Build of '{input_dto.config.app.title}' API successful to {input_dto.config.getAPIPath()}")
-
-        if input_dto.config.build_ssa:
-            
-            srs_path = input_dto.config.getSSAPath() / 'srs'
-            complex_path = input_dto.config.getSSAPath() / 'complex'
-            shutil.rmtree(srs_path, ignore_errors=True)
-            shutil.rmtree(complex_path, ignore_errors=True)
-            srs_path.mkdir(parents=True)
-            complex_path.mkdir(parents=True)
-            ba_yml_output = BAYmlOutput()
-            ba_yml_output.writeObjects(input_dto.director_output_dto.ssa_detections, str(input_dto.config.getSSAPath()))
-
-            print(f"Build of 'SSA' successful to {input_dto.config.getSSAPath()}")
-                
-        return input_dto.director_output_dto

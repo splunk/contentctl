@@ -1,10 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Union
-
-# TODO (cmcginley): what's the purpose of this conditional?
-if TYPE_CHECKING:
-    from contentctl.objects.unit_test_attack_data import UnitTestAttackData
-    from contentctl.objects.unit_test_result import UnitTestResult
+from typing import Union
 
 from pydantic import Field
 

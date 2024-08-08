@@ -84,3 +84,5 @@ class Build:
                 json.dump(version_dict,version_f)
             
             print(f"Build of '{input_dto.config.app.title}' API successful to {input_dto.config.getAPIPath()}")
+
+        return input_dto.director_output_dto

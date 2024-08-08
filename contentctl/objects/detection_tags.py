@@ -236,8 +236,8 @@ class DetectionTags(BaseModel):
         if output_dto is None:
             raise ValueError("Context not provided to detection.detection_tags.atomic_guid validator")
 
-        # TODO (cmcginley): typing issue; what to do if atomic_tests is None?
-        all_tests: List[AtomicTest] = output_dto.atomic_tests
+        all_tests: None | List[AtomicTest] = output_dto.atomic_tests
+        
 
         matched_tests: List[AtomicTest] = []
         missing_tests: List[UUID4] = []
@@ -268,12 +268,11 @@ class DetectionTags(BaseModel):
             missing_tests_string = ""
 
         if len(badly_formatted_guids) > 0:
-            if len(badly_formatted_guids) > 0:
-                bad_guids_string = (
-                    f"The following [{len(badly_formatted_guids)}] value(s) are not properly "
-                    f"formatted UUIDs: {badly_formatted_guids}\n"
-                )
-                raise ValueError(f"{bad_guids_string}{missing_tests_string}")
+            bad_guids_string = (
+                f"The following [{len(badly_formatted_guids)}] value(s) are not properly "
+                f"formatted UUIDs: {badly_formatted_guids}\n"
+            )
+            raise ValueError(f"{bad_guids_string}{missing_tests_string}")
 
         elif len(missing_tests) > 0:
             print(missing_tests_string)

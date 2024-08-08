@@ -25,19 +25,15 @@ class AttackEnrichment(BaseModel):
         _ = enrichment.get_attack_lookup(str(config.path))
         return enrichment
     
-    def getEnrichmentByMitreID(self, mitre_id:Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")])->Union[MitreAttackEnrichment,None]:
-        # TODO (cmcginley): do we want to return None when use_enrichment is false? This seems
-        #   confusing, and it seems that we intentionally do not call this function when that
-        #   setting is enabled; I'd vote to have this raise if this flag is set and this function
-        #   is called
+    def getEnrichmentByMitreID(self, mitre_id:Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")])->MitreAttackEnrichment:
         if not self.use_enrichment:
-            return None
+            raise Exception(f"Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
         
         enrichment = self.data.get(mitre_id, None)
         if enrichment is not None:
             return enrichment
         else:
-            raise ValueError(f"Error, Unable to find Mitre Enrichment for MitreID {mitre_id}")
+            raise Exception(f"Error, Unable to find Mitre Enrichment for MitreID {mitre_id}")
         
 
     def addMitreID(self, technique:dict, tactics:list[str], groups:list[str])->None:

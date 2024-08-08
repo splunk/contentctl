@@ -34,16 +34,8 @@ NO_FILE_NAME = "NO_FILE_NAME"
 
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     model_config = ConfigDict(use_enum_values=True, validate_default=True)
-    # name: str = ...
-    # author: str = Field(...,max_length=255)
-    # date: datetime.date = Field(...)
-    # version: NonNegativeInt = ...
-    # id: uuid.UUID = Field(default_factory=uuid.uuid4) #we set a default here until all content has a uuid
-    # description: str = Field(...,max_length=1000)
-    # file_path: FilePath = Field(...)
-    # references: Optional[List[HttpUrl]] = None
 
-    name: str = Field("NO_NAME")
+    name: str = Field(...)
     author: str = Field("Content Author", max_length=255)
     date: datetime.date = Field(datetime.date.today())
     version: NonNegativeInt = 1
@@ -68,12 +60,12 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         }
 
     @staticmethod
-    def objectListToNameList(objects: list[SecurityContentObject], config: Optional[Config] = None) -> list[str]:
-        return [object.getName(config) for object in objects]
+    def objectListToNameList(objects: list[SecurityContentObject]) -> list[str]:
+        return [object.getName() for object in objects]
 
     # This function is overloadable by specific types if they want to redefine names, for example
     # to have the format ESCU - NAME - Rule (config.tag - self.name - Rule)
-    def getName(self, config: Optional[Config]) -> str:
+    def getName(self) -> str:
         return self.name
 
     @classmethod

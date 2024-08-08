@@ -8,9 +8,6 @@ if TYPE_CHECKING:
 
 from pydantic import Field
 
-# TODO (cmcginley): can these be removed?
-# from contentctl.objects.security_content_object import SecurityContentObject
-# from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.unit_test_baseline import UnitTestBaseline
 from contentctl.objects.unit_test_attack_data import UnitTestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult

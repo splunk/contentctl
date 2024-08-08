@@ -234,7 +234,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.pbar.write(
                     f"Error getting API connection (not quitting) '{type(e).__name__}': {str(e)}"
                 )
-                print("wow")
                 # self.pbar.write(
                 #     f"Unhandled exception getting connection to splunk server: {str(e)}"
                 # )

@@ -18,7 +18,7 @@ CVESSEARCH_API_URL = 'https://cve.circl.lu'
 
 
 class CveEnrichmentObj(BaseModel):
-    id:Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]
+    id:Annotated[str, r"^CVE-[1|2]\d{3}-\d+$"]
     cvss:Annotated[Decimal, Field(ge=.1, le=10, decimal_places=1)]
     summary:str
     

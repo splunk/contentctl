@@ -25,7 +25,7 @@ class AttackEnrichment(BaseModel):
         _ = enrichment.get_attack_lookup(str(config.path))
         return enrichment
     
-    def getEnrichmentByMitreID(self, mitre_id:Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")])->MitreAttackEnrichment:
+    def getEnrichmentByMitreID(self, mitre_id:Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")])->MitreAttackEnrichment:
         if not self.use_enrichment:
             raise Exception(f"Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
         

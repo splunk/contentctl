@@ -49,7 +49,7 @@ class DetectionTags(BaseModel):
     def risk_score(self) -> int:
         return round((self.confidence * self.impact)/100)
 
-    mitre_attack_id: List[Annotated[str, Field(pattern="^T[0-9]{4}(.[0-9]{3})?$")]] = []
+    mitre_attack_id: List[Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")]] = []
     nist: list[NistCategory] = []
     observable: List[Observable] = []
     message: str = Field(...)
@@ -68,7 +68,7 @@ class DetectionTags(BaseModel):
         else:
             return RiskSeverity('low')
 
-    cve: List[Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]] = []
+    cve: List[Annotated[str, r"^CVE-[1|2]\d{3}-\d+$"]] = []
     atomic_guid: List[AtomicTest] = []
     drilldown_search: Optional[str] = None
 

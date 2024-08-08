@@ -10,7 +10,6 @@ from contentctl.helper.utils import Utils
 
 class Validate:
     def execute(self, input_dto: validate) -> DirectorOutputDto:
-
         director_output_dto = DirectorOutputDto(
             AtomicTest.getAtomicTestsFromArtRepo(
                 repo_path=input_dto.getAtomicRedTeamRepoPath(),
@@ -28,6 +27,7 @@ class Validate:
             [],
             [],
             [],
+            []
         )
 
         director = Director(director_output_dto)

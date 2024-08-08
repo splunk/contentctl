@@ -4,7 +4,7 @@ import json
 from typing import Union, Optional, Any
 from enum import Enum
 
-from pydantic import BaseModel, validator, Field, PrivateAttr, Extra
+from pydantic import BaseModel, validator, Field, PrivateAttr
 from splunklib.results import JSONResultsReader, Message                                            # type: ignore
 from splunklib.binding import HTTPError, ResponseReader                                             # type: ignore
 import splunklib.client as splunklib                                                                # type: ignore
@@ -108,15 +108,15 @@ class TimeoutConfig(int, Enum):
     MAX_SLEEP = 210
 
 
-# TODO (cmcginley): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good
+# TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good
 #   now, but maybe not always...); maybe set latest/earliest to None?
 class ScheduleConfig(str, Enum):
     """
     Configuraton values for the saved search schedule
     """
-    EARLIEST_TIME: str = "-5y@y"
-    LATEST_TIME: str = "-1m@m"
-    CRON_SCHEDULE: str = "*/1 * * * *"
+    EARLIEST_TIME = "-5y@y"
+    LATEST_TIME = "-1m@m"
+    CRON_SCHEDULE = "*/1 * * * *"
 
 
 class ResultIterator:
@@ -246,7 +246,7 @@ class CorrelationSearch(BaseModel):
         # needed to allow fields w/ types like SavedSearch
         arbitrary_types_allowed = True
         # We want to have more ridgid typing
-        extra = Extra.forbid
+        extra = 'forbid'
 
     @validator("name", always=True)
     @classmethod

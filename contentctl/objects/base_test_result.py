@@ -28,7 +28,7 @@ class TestResultStatus(str, Enum):
         return self.value
 
 
-# TODO (cmcginley): add validator to BaseTestResult which makes a lack of exception incompatible
+# TODO (#225): add validator to BaseTestResult which makes a lack of exception incompatible
 #   with status ERROR
 class BaseTestResult(BaseModel):
     """
@@ -104,7 +104,7 @@ class BaseTestResult(BaseModel):
         :returns: a dict summary
         """
         # Init the summary dict
-        summary_dict = {}
+        summary_dict: dict[str, Any] = {}
 
         # Grab the fields required
         for field in model_fields:
@@ -124,7 +124,7 @@ class BaseTestResult(BaseModel):
         # Grab the job content fields required
         for field in job_fields:
             if self.job_content is not None:
-                value = self.job_content.get(field, None)
+                value: Any = self.job_content.get(field, None)                                      # type: ignore
 
                 # convert runDuration to a fixed width string representation of a float
                 if field == "runDuration":

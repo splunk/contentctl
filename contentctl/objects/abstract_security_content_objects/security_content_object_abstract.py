@@ -1,8 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Self, Any
 
-# TODO (cmcginley): this config object does not seem to exist and is not used anywhere in this
-#   file; can we remove?
 if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment
     from contentctl.objects.security_content_object import SecurityContentObject

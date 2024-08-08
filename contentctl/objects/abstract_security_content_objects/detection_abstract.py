@@ -25,6 +25,7 @@ from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.enums import NistCategory
 
 from contentctl.objects.detection_tags import DetectionTags
+from contentctl.objects.detection import Detection
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
@@ -163,10 +164,7 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def source(self) -> str:
-        # TODO (cmcginley): if filepath cannot be None for a detection, we should be enforcing that
-        #   with a validator and a default value/factory
         return self.file_path.absolute().parent.name
-        
 
     deployment: Deployment = Field({})
 
@@ -394,7 +392,7 @@ class Detection_Abstract(SecurityContentObject):
 
         # Ensure that all baselines link to this detection
         for baseline in self.baselines:
-            new_detections: list[Detection_Abstract] = []
+            new_detections: list[Detection | str] = []
             replaced = False
             for d in baseline.tags.detections:
                 if isinstance(d, str) and self.name == d:
@@ -483,7 +481,10 @@ class Detection_Abstract(SecurityContentObject):
         for baseline in director.baselines:
             # This matching is a bit strange, because baseline.tags.detections starts as a list of strings, but
             # is eventually updated to a list of Detections as we construct all of the detection objects.
-            if name in [detection_name for detection_name in baseline.tags.detections if isinstance(detection_name, str)]:
+            detection_names = [
+                detection_name for detection_name in baseline.tags.detections if isinstance(detection_name, str)
+            ]
+            if name in detection_names:
                 baselines.append(baseline)
 
         return baselines
@@ -496,8 +497,7 @@ class Detection_Abstract(SecurityContentObject):
 
         director: DirectorOutputDto = info.context.get("output_dto", None)
 
-        
-        search: Union[str, dict[str,Any], None] = info.data.get("search", None)
+        search: str | dict[str, Any] | None = info.data.get("search", None)
         if not isinstance(search, str):
             # The search was sigma formatted (or failed other validation and was None), so we will
             # not validate macros in it

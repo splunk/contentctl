@@ -766,7 +766,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         stdout.flush()
         test.result.duration = round(time.time() - test_start_time, 2)
 
-    # TODO (cmcginley): break up the execute routines for integration/unit tests some more to remove
+    # TODO (#227): break up the execute routines for integration/unit tests some more to remove
     #   code w/ similar structure
     def execute_integration_test(
         self,
@@ -870,12 +870,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 start_time=test_start_time
             )
 
-            # TODO (cmcginley): right now, we are creating one CorrelationSearch instance for each
-            #   test case; typically, there is only one unit test, and thus one integration test,
-            #   per detection, so this is not an issue. However, if we start having many test cases
-            #   per detection, we will be duplicating some effort & network calls that we don't need
-            #   to. Consider refactoring in order to re-use CorrelationSearch objects across tests
-            #   in such a case
+            # TODO (#228): consider reusing CorrelationSearch instances across test cases
             # Instantiate the CorrelationSearch
             correlation_search = CorrelationSearch(
                 detection=detection,
@@ -893,9 +888,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 status=TestResultStatus.ERROR
             )
 
-        # TODO (cmcginley): when in interactive mode, consider maybe making the cleanup routine in
-        #   correlation_search happen after the user breaks the interactivity; currently
-        #   risk/notable indexes are dumped before the user can inspect
+        # TODO (#229): when in interactive mode, cleanup should happen after user interaction
         # Pause here if the terminate flag has NOT been set AND either of the below are true:
         #   1. the behavior is always_pause
         #   2. the behavior is pause_on_failure and the test failed

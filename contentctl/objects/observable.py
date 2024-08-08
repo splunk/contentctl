@@ -2,20 +2,19 @@ from pydantic import BaseModel, field_validator
 from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, SES_OBSERVABLE_ROLE_MAPPING
 
 
-
 class Observable(BaseModel):
     name: str
     type: str
     role: list[str]
 
     @field_validator('name')
-    def check_name(cls, v:str):
+    def check_name(cls, v: str):
         if v == "":
             raise ValueError("No name provided for observable")
         return v
 
     @field_validator('type')
-    def check_type(cls, v:str):
+    def check_type(cls, v: str):
         if v not in SES_OBSERVABLE_TYPE_MAPPING.keys():
             raise ValueError(
                 f"Invalid type '{v}' provided for observable.  Valid observable types are "
@@ -24,7 +23,7 @@ class Observable(BaseModel):
         return v
 
     @field_validator('role')
-    def check_roles(cls, v:list[str]):
+    def check_roles(cls, v: list[str]):
         if len(v) == 0:
             raise ValueError("Error, at least 1 role must be listed for Observable.")
         for role in v:

@@ -103,7 +103,7 @@ class DetectionTags(BaseModel):
 
     research_site_url: Optional[HttpUrl] = None
     event_schema: str = "ocsf"
-    # TODO (cmcginley): mappings should be fleshed out into a proper class
+    # TODO (#221): mappings should be fleshed out into a proper class
     mappings: Optional[List] = None
     # annotations: Optional[dict] = None
     manual_test: Optional[str] = None
@@ -176,7 +176,7 @@ class DetectionTags(BaseModel):
         if output_dto.attack_enrichment.use_enrichment is False:
             return self
 
-        mitre_enrichments: list[None | MitreAttackEnrichment] = []
+        mitre_enrichments: list[MitreAttackEnrichment] = []
         missing_tactics: list[str] = []
         for mitre_attack_id in self.mitre_attack_id:
             try:
@@ -187,7 +187,6 @@ class DetectionTags(BaseModel):
         if len(missing_tactics) > 0:
             raise ValueError(f"Missing Mitre Attack IDs. {missing_tactics} not found.")
         else:
-            # TODO (cmcginley): we have incompatible typing here; see comment in attack_enrichment
             self.mitre_attack_enrichments = mitre_enrichments
 
         return self
@@ -237,7 +236,6 @@ class DetectionTags(BaseModel):
             raise ValueError("Context not provided to detection.detection_tags.atomic_guid validator")
 
         all_tests: None | List[AtomicTest] = output_dto.atomic_tests
-        
 
         matched_tests: List[AtomicTest] = []
         missing_tests: List[UUID4] = []

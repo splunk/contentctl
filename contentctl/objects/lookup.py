@@ -22,10 +22,10 @@ LOOKUPS_TO_IGNORE.add("=")
 LOOKUPS_TO_IGNORE.add("other_lookups") 
 
 
+# TODO (#220): Split Lookup into 2 classes
 class Lookup(SecurityContentObject):
     
     collection: Optional[str] = None
-    # TODO (cmcginley): should fields_list be a CSV string? or a list of strings?
     fields_list: Optional[str] = None
     filename: Optional[FilePath] = None
     default_match: Optional[bool] = None

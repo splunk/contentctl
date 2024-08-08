@@ -7,7 +7,7 @@
 type = detection
 asset_type = {{ detection.tags.asset_type.value }}
 confidence = medium
-explanation = {{ detection.description | escapeNewlines() }}
+explanation = {{ detection.explanation if detection.explanation else detection.description | escapeNewlines() }}
 {% if detection.how_to_implement is defined %}
 how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}

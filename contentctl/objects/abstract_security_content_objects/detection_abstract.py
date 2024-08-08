@@ -60,6 +60,7 @@ class Detection_Abstract(SecurityContentObject):
     search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
+    explanation: Optional[str] = None
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)

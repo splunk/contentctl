@@ -1071,7 +1071,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                 # Initialize the collection of fields that are empty that shouldn't be
                 empty_fields: set[str] = set()
-                full_result_non_null_set: set[str] = set()
+                full_result_null_set: set[str] = set()
+                full_null_threat_set: set[str] = set()
 
                 result_count: int = 0
                 # Filter out any messages in the results
@@ -1105,15 +1106,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     current_empty_fields: set[str] = set()
                     for field in risk_object_fields_set:
                         if result.get(field, 'null') == 'null':
-                            # current_empty_fields.add(field)
+                            current_empty_fields.add(field)
                             if result_count == 1:
-                                full_result_non_null_set.add(field)
+                                full_result_null_set.add(field)
                             else:
-                                if field in full_result_non_null_set:
+                                if field in full_result_null_set:
                                     continue
                         else:
-                            if field in full_result_non_null_set:
-                                full_result_non_null_set.remove(field)
+                            if field in full_result_null_set:
+                                full_result_null_set.remove(field)
 
 
                     # If everything succeeded up until now, and no empty fields are found in the
@@ -1130,8 +1131,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     else:
                         empty_fields = empty_fields.union(current_empty_fields)
                         
+                        
                 
-                # Report a failure if there were empty fields in all results
+                # Report a failure if there were empty fields in some results
+
                 e = Exception(
                     f"One or more required observable fields {empty_fields} contained 'null' values.  Is the "
                     "data being parsed correctly or is there an error in the naming of a field?"

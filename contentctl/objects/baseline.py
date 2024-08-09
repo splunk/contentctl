@@ -14,6 +14,7 @@ from contentctl.objects.baseline_tags import BaselineTags
 
 
 class Baseline(SecurityContentObject):
+    name:str = Field(...,max_length=67)
     type: Annotated[str,Field(pattern="^Baseline$")] = Field(...)
     datamodel: Optional[List[DataModel]] = None
     search: str = Field(..., min_length=4)

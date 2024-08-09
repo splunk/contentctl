@@ -10,6 +10,7 @@ from contentctl.objects.lookup import Lookup
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.baseline import Baseline
+    from contentctl.objects.config import CustomApp
     
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
@@ -25,6 +26,7 @@ from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.event_source import EventSource
 from contentctl.objects.data_source import DataSource
 
+
 #from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
@@ -33,7 +35,7 @@ MISSING_SOURCES:set[str] = set()
 
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
-    
+    name:str = Field(...,max_length=67)
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
@@ -52,10 +54,30 @@ class Detection_Abstract(SecurityContentObject):
     # https://github.com/pydantic/pydantic/issues/9101#issuecomment-2019032541
     tests: List[Annotated[Union[UnitTest, IntegrationTest], Field(union_mode='left_to_right')]] = []
     # A list of groups of tests, relying on the same data
-    test_groups: Union[list[TestGroup], None] = Field(None,validate_default=True)
+    test_groups: list[TestGroup] = []
 
     data_source_objects: list[DataSource] = []
 
+    def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=99)->str:
+        label = self.get_conf_stanza_name(app)
+        label_after_saving_in_product = f"{self.tags.security_domain.value} - {label} - Rule"
+    
+        if len(label_after_saving_in_product) > max_stanza_length:
+            raise ValueError(f"label may only be {max_stanza_length} characters to allow updating in-product, "
+                             f"but stanza was actually {len(label_after_saving_in_product)} characters: '{label_after_saving_in_product}' ")
+        
+        return label
+    
+    def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=81)->str:
+        stanza_name = f"{app.label} - {self.name} - Rule"
+        if len(stanza_name) > max_stanza_length:
+            raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
+                             f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
+        #print(f"Stanza            Length[{len(stanza_name)}]")
+        return stanza_name
+    
+        
+    
 
     @field_validator("search", mode="before")
     @classmethod
@@ -108,32 +130,26 @@ class Detection_Abstract(SecurityContentObject):
 
 
 
-    @field_validator("test_groups")
-    @classmethod
-    def validate_test_groups(cls, value:Union[None, List[TestGroup]], info:ValidationInfo) -> Union[List[TestGroup], None]:
+    def add_test_groups(self)->None:
         """
         Validates the `test_groups` field and constructs the model from the list of unit tests
         if no explicit construct was provided
         :param value: the value of the field `test_groups`
         :param values: a dict of the other fields in the Detection model
         """
-        # if the value was not the None default, do nothing
-        if value is not None:
-            return value
-
-        # iterate over the unit tests and create a TestGroup (and as a result, an IntegrationTest) for each
-        test_groups: list[TestGroup] = []
-
-        tests = info.data.get("tests", [])
-        for unit_test in tests:
-            test_group = TestGroup.derive_from_unit_test(unit_test, info.data["name"])
+        
+        test_groups:list[TestGroup] = []
+        for unit_test in self.tests:
+            if not isinstance(unit_test, UnitTest):
+                raise ValueError(f"Expected type of UnitTest, but found {type(unit_test)} instead.")
+            test_group = TestGroup.derive_from_unit_test(unit_test, self.name)
             test_groups.append(test_group)
 
         # now add each integration test to the list of tests
         for test_group in test_groups:
-            tests.append(test_group.integration_test)
-        info.data['tests'] = tests
-        return test_groups
+            self.tests.append(test_group.integration_test)
+        self.test_groups = test_groups
+        
 
 
     @computed_field
@@ -423,7 +439,11 @@ class Detection_Abstract(SecurityContentObject):
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
-            story.detections.append(self)            
+            story.detections.append(self)     
+
+
+        self.add_test_groups()
+
         return self
 
     
@@ -681,6 +701,8 @@ class Detection_Abstract(SecurityContentObject):
         if self.tags.manual_test is not None:
             for test in self.tests:
                 test.skip(f"TEST SKIPPED: Detection marked as 'manual_test' with explanation: '{self.tags.manual_test}'")
+            print("MANUAL TEST with no tests - are we supposed to create a placeholder here?")
+            return self
 
         if len(self.tests) == 0:
             raise ValueError(f"At least one test is REQUIRED for production detection: {self.name}")

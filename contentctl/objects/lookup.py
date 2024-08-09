@@ -22,6 +22,7 @@ LOOKUPS_TO_IGNORE.add("=")
 LOOKUPS_TO_IGNORE.add("other_lookups") 
 
 
+# TODO (#220): Split Lookup into 2 classes
 class Lookup(SecurityContentObject):
     
     collection: Optional[str] = None

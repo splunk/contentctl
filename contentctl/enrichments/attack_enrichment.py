@@ -2,14 +2,12 @@
 from __future__ import annotations
 import csv
 import os
-from posixpath import split
-from typing import Optional
 import sys
 from attackcti import attack_client
 import logging
 from pydantic import BaseModel, Field
 from dataclasses import field
-from typing import Union,Annotated
+from typing import Annotated
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.config import validate
 logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
@@ -25,15 +23,15 @@ class AttackEnrichment(BaseModel):
         _ = enrichment.get_attack_lookup(str(config.path))
         return enrichment
     
-    def getEnrichmentByMitreID(self, mitre_id:Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")])->Union[MitreAttackEnrichment,None]:
+    def getEnrichmentByMitreID(self, mitre_id:Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")])->MitreAttackEnrichment:
         if not self.use_enrichment:
-            return None
+            raise Exception(f"Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
         
         enrichment = self.data.get(mitre_id, None)
         if enrichment is not None:
             return enrichment
         else:
-            raise ValueError(f"Error, Unable to find Mitre Enrichment for MitreID {mitre_id}")
+            raise Exception(f"Error, Unable to find Mitre Enrichment for MitreID {mitre_id}")
         
 
     def addMitreID(self, technique:dict, tactics:list[str], groups:list[str])->None:
@@ -44,7 +42,7 @@ class AttackEnrichment(BaseModel):
         groups.sort()
 
         if technique_id in self.data:
-            raise ValueError(f"Error, trying to redefine MITRE ID '{technique_id}'")
+            raise Exception(f"Error, trying to redefine MITRE ID '{technique_id}'")
         
         self.data[technique_id] = MitreAttackEnrichment(mitre_attack_id=technique_id, 
                                                         mitre_attack_technique=technique_obj, 
@@ -53,7 +51,7 @@ class AttackEnrichment(BaseModel):
 
     
     def get_attack_lookup(self, input_path: str, store_csv: bool = False, force_cached_or_offline: bool = False, skip_enrichment:bool = False) -> dict:
-        if self.use_enrichment is False:
+        if not self.use_enrichment:
             return {}
         print("Getting MITRE Attack Enrichment Data. This may take some time...")
         attack_lookup = dict()

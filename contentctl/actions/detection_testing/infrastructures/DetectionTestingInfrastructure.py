@@ -1060,7 +1060,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             results = JSONResultsReader(job.results(output_mode="json"))
 
             # Consolidate a set of the distinct observable field names
-            observable_fields_set = set([o.name for o in detection.tags.observable])
+            observable_fields_set = set([o.name for o in detection.tags.observable]) # keeping this around for later
+            risk_object_fields_set = set([o.name for o in detection.tags.observable if "Victim" in o.role ]) # just the "Risk Objects"
+            threat_object_fields_set = set([o.name for o in detection.tags.observable if "Attacker" in o.role]) # saving this for later
 
             # Ensure the search had at least one result
             if int(job.content.get("resultCount", "0")) > 0:
@@ -1069,6 +1071,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                 # Initialize the collection of fields that are empty that shouldn't be
                 empty_fields: set[str] = set()
+                full_result_fields_set: set[str] = set()
 
                 # Filter out any messages in the results
                 for result in results:
@@ -1077,12 +1080,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     # If not a message, it is a dict and we will process it
                     results_fields_set = set(result.keys())
+                    # Add the fields to our total list of fields
+                    full_result_fields_set.update(results_fields_set)
 
                     # Identify any observable fields that are not available in the results
-                    missing_fields = observable_fields_set - results_fields_set
-                    if len(missing_fields) > 0:
+                    missing_risk_objects = risk_object_fields_set - results_fields_set
+                    if len(missing_risk_objects) > 0:
                         # Report a failure in such cases
-                        e = Exception(f"The observable field(s) {missing_fields} are missing in the detection results")
+                        e = Exception(f"The observable field(s) {missing_risk_objects} are missing in the detection results")
                         test.result.set_job_content(
                             job.content,
                             self.infrastructure,
@@ -1093,11 +1098,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                         return
 
-                    # If we find one or more fields that contain the string "null" then they were
+                    # If we find one or more risk object fields that contain the string "null" then they were
                     # not populated and we should throw an error.  This can happen if there is a typo
                     # on a field.  In this case, the field will appear but will not contain any values
-                    current_empty_fields = set()
-                    for field in observable_fields_set:
+                    current_empty_fields: set[str] = set()
+                    for field in risk_object_fields_set:
                         if result.get(field, 'null') == 'null':
                             current_empty_fields.add(field)
 
@@ -1114,7 +1119,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     else:
                         empty_fields = empty_fields.union(current_empty_fields)
-
+                
                 # Report a failure if there were empty fields in all results
                 e = Exception(
                     f"One or more required observable fields {empty_fields} contained 'null' values.  Is the "

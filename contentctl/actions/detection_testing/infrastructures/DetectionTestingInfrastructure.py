@@ -1071,8 +1071,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                 # Initialize the collection of fields that are empty that shouldn't be
                 empty_fields: set[str] = set()
-                full_result_fields_set: set[str] = set()
+                full_result_non_null_set: set[str] = set()
 
+                result_count: int = 0
                 # Filter out any messages in the results
                 for result in results:
                     if isinstance(result, Message):
@@ -1080,8 +1081,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     # If not a message, it is a dict and we will process it
                     results_fields_set = set(result.keys())
-                    # Add the fields to our total list of fields
-                    full_result_fields_set.update(results_fields_set)
+                    # Guard against first events (relevant later)
+                    result_count += 1
 
                     # Identify any observable fields that are not available in the results
                     missing_risk_objects = risk_object_fields_set - results_fields_set
@@ -1104,7 +1105,16 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     current_empty_fields: set[str] = set()
                     for field in risk_object_fields_set:
                         if result.get(field, 'null') == 'null':
-                            current_empty_fields.add(field)
+                            # current_empty_fields.add(field)
+                            if result_count == 1:
+                                full_result_non_null_set.add(field)
+                            else:
+                                if field in full_result_non_null_set:
+                                    continue
+                        else:
+                            if field in full_result_non_null_set:
+                                full_result_non_null_set.remove(field)
+
 
                     # If everything succeeded up until now, and no empty fields are found in the
                     # current result, then the search was a success
@@ -1119,6 +1129,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     else:
                         empty_fields = empty_fields.union(current_empty_fields)
+                        
                 
                 # Report a failure if there were empty fields in all results
                 e = Exception(

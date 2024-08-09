@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Any
 from enum import Enum
 
 from pydantic import BaseModel
@@ -7,6 +7,8 @@ from splunklib.data import Record
 from contentctl.helper.utils import Utils
 
 
+# TODO (PEX-432): add status "UNSET" so that we can make sure the result is always of this enum
+#   type; remove mypy ignores associated w/ these typing issues once we do
 class TestResultStatus(str, Enum):
     """Enum for test status (e.g. pass/fail)"""
     # Test failed (detection did NOT fire appropriately)
@@ -26,7 +28,7 @@ class TestResultStatus(str, Enum):
         return self.value
 
 
-# TODO (cmcginley): add validator to BaseTestResult which makes a lack of exception incompatible
+# TODO (#225): add validator to BaseTestResult which makes a lack of exception incompatible
 #   with status ERROR
 class BaseTestResult(BaseModel):
     """
@@ -94,7 +96,7 @@ class BaseTestResult(BaseModel):
             "success", "exception", "message", "sid_link", "status", "duration", "wait_duration"
         ],
         job_fields: list[str] = ["search", "resultCount", "runDuration"],
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Aggregates a dictionary summarizing the test result model
         :param model_fields: the fields of the test result to gather
@@ -102,7 +104,7 @@ class BaseTestResult(BaseModel):
         :returns: a dict summary
         """
         # Init the summary dict
-        summary_dict = {}
+        summary_dict: dict[str, Any] = {}
 
         # Grab the fields required
         for field in model_fields:
@@ -122,7 +124,7 @@ class BaseTestResult(BaseModel):
         # Grab the job content fields required
         for field in job_fields:
             if self.job_content is not None:
-                value = self.job_content.get(field, None)
+                value: Any = self.job_content.get(field, None)                                      # type: ignore
 
                 # convert runDuration to a fixed width string representation of a float
                 if field == "runDuration":

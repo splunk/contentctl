@@ -18,10 +18,10 @@ class DataSourceWriter:
             ])
             # Write the data
             for data_source in data_source_objects:
-                if data_source.supported_TA and isinstance(data_source.supported_TA, list) and len(data_source.supported_TA) > 0:
-                    supported_TA_name = data_source.supported_TA[0].get('name', '')
-                    supported_TA_version = data_source.supported_TA[0].get('version', '')
-                    supported_TA_url = data_source.supported_TA[0].get('url', '')
+                if  len(data_source.supported_TA) > 0:
+                    supported_TA_name = data_source.supported_TA[0].name
+                    supported_TA_version = data_source.supported_TA[0].version
+                    supported_TA_url = data_source.supported_TA[0].url or ''
                 else:
                     supported_TA_name = ''
                     supported_TA_version = ''

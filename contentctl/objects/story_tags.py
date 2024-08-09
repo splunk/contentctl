@@ -25,10 +25,10 @@ class StoryTags(BaseModel):
 
    # enrichment
    mitre_attack_enrichments: Optional[List[MitreAttackEnrichment]] = None
-   mitre_attack_tactics: Optional[Set[Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")]]] = None
+   mitre_attack_tactics: Optional[Set[Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")]]] = None
    datamodels: Optional[Set[DataModel]] = None
    kill_chain_phases: Optional[Set[KillChainPhase]] = None
-   cve: List[Annotated[str, Field(pattern="^CVE-[1|2][0-9]{3}-[0-9]+$")]] = []
+   cve: List[Annotated[str, r"^CVE-[1|2]\d{3}-\d+$"]] = []
    group: List[str] = Field([], description="A list of groups who leverage the techniques list in this Analytic Story.")
 
    def getCategory_conf(self) -> str:

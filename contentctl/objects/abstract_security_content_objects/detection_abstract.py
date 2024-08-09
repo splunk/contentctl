@@ -299,6 +299,11 @@ class Detection_Abstract(SecurityContentObject):
                 risk_object['threat_object_field'] = entity.name
                 risk_object['threat_object_type'] = "url"
                 risk_objects.append(risk_object)
+            
+            elif 'Attacker' in entity.role:
+                risk_object['threat_object_field'] = entity.name
+                risk_object['threat_object_field'] = entity.type.lower()
+                risk_objects.append(risk_object)
 
             else:
                 risk_object['risk_object_type'] = 'other'

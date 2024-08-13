@@ -302,7 +302,7 @@ class Detection_Abstract(SecurityContentObject):
             
             elif 'Attacker' in entity.role:
                 risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_field'] = entity.type.lower()
+                risk_object['threat_object_type'] = entity.type.lower()
                 risk_objects.append(risk_object)
 
             else:

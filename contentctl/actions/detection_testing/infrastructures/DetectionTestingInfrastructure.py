@@ -1075,7 +1075,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 
                 
 
-                result_count: int = 0
                 # Filter out any messages in the results
                 for result in results:
                     if isinstance(result, Message):
@@ -1093,7 +1092,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         test.result.set_job_content(
                             job.content,
                             self.infrastructure,
-                            TestResultStatus.ERROR,
+                            TestResultStatus.FAIL,
                             exception=e,
                             duration=time.time() - search_start_time,
                         )

@@ -1,7 +1,7 @@
 import re
 from typing import Union, Optional
 
-from pydantic import BaseModel, Field, PrivateAttr, field_validator
+from pydantic import ConfigDict, BaseModel, Field, PrivateAttr, field_validator
 
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
@@ -61,11 +61,10 @@ class RiskEvent(BaseModel):
 
     # Private attribute caching the observable this RiskEvent is mapped to
     _matched_observable: Optional[Observable] = PrivateAttr(default=None)
-
-    class Config:
-        # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
-        # fields vary depending on the SPL which generated them
-        extra = "allow"
+    
+    # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
+    # fields vary depending on the SPL which generated them
+    model_config = ConfigDict(extra="allow")
 
     @field_validator("annotations_mitre_attack", "analyticstories", mode="before")
     @classmethod

@@ -4,7 +4,7 @@ import json
 from typing import Union, Optional, Any
 from enum import Enum
 
-from pydantic import BaseModel, validator, Field, PrivateAttr
+from pydantic import ConfigDict, BaseModel, computed_field, Field, PrivateAttr
 from splunklib.results import JSONResultsReader, Message                                            # type: ignore
 from splunklib.binding import HTTPError, ResponseReader                                             # type: ignore
 import splunklib.client as splunklib                                                                # type: ignore
@@ -177,10 +177,9 @@ class PbarData(BaseModel):
     pbar: tqdm
     fq_test_name: str
     start_time: float
-
-    class Config:
-        # needed to support the tqdm type
-        arbitrary_types_allowed = True
+    
+    # needed to support the tqdm type
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class CorrelationSearch(BaseModel):

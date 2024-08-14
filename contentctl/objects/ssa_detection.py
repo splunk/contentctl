@@ -3,7 +3,7 @@ import uuid
 import string
 import requests
 import time
-from pydantic import BaseModel, validator, root_validator
+from pydantic import ConfigDict, BaseModel, validator, root_validator
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Union
@@ -59,8 +59,7 @@ class SSADetection(BaseModel):
     #         raise ValueError('name is longer then 67 chars: ' + v)
     #     return v
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     '''
     @validator("name")

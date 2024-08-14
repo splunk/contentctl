@@ -1,7 +1,7 @@
 from typing import Any
 import json
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 from contentctl.objects.risk_object import RiskObject
 from contentctl.objects.threat_object import ThreatObject
@@ -21,32 +21,32 @@ class RiskAnalysisAction(BaseModel):
     risk_objects: list[RiskObject]
     message: str
 
-    @validator("message", always=True, pre=True)
+    @field_validator("message", mode="before")
     @classmethod
-    def _validate_message(cls, v, values) -> str:
+    def _validate_message(cls, message) -> str:
         """
         Validate splunk_path and derive if None
         """
-        if v is None:
+        if message is None:
             raise ValueError(
                 "RiskAnalysisAction.message is a required field, cannot be None. Check the "
                 "detection YAML definition to ensure a message is defined"
             )
 
-        if not isinstance(v, str):
+        if not isinstance(message, str):
             raise ValueError(
                 "RiskAnalysisAction.message must be a string. Check the detection YAML definition "
                 "to ensure message is defined as a string"
             )
 
-        if len(v.strip()) < 1:
+        if len(message.strip()) < 1:
             raise ValueError(
                 "RiskAnalysisAction.message must be a meaningful string, with a length greater than"
                 "or equal to 1 (once stripped of trailing/leading whitespace). Check the detection "
                 "YAML definition to ensure message is defined as a meanigful string"
             )
 
-        return v
+        return message
 
     @classmethod
     def parse_from_dict(cls, dict_: dict[str, Any]) -> "RiskAnalysisAction":

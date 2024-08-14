@@ -218,117 +218,52 @@ class CorrelationSearch(BaseModel):
     logger: logging.Logger = Field(default_factory=get_logger)
 
     # The search name (e.g. "ESCU - Windows Modify Registry EnableLinkedConnections - Rule")
-    name: Optional[str] = None
+    @computed_field
+    @property
+    def name(self) -> str:
+        return f"ESCU - {self.detection.name} - Rule"
 
     # The path to the saved search on the Splunk instance
-    splunk_path: Optional[str] = None
+    @computed_field
+    @property
+    def splunk_path(self) -> str:
+        return f"/saved/searches/{self.name}"
 
     # A model of the saved search as provided by splunklib
-    saved_search: Optional[splunklib.SavedSearch] = None
+    @computed_field
+    @property
+    def saved_search(self) -> splunklib.SavedSearch | None:
+        return splunklib.SavedSearch(
+            self.service,
+            self.splunk_path,
+        )
 
     # The set of indexes to clear on cleanup
     indexes_to_purge: set[str] = set()
 
     # The risk analysis adaptive response action (if defined)
-    risk_analysis_action: Union[RiskAnalysisAction, None] = None
+    @computed_field
+    @property
+    def risk_analysis_action(self) -> RiskAnalysisAction | None:
+        if not self.saved_search.content:
+            return None
+        return CorrelationSearch._get_risk_analysis_action(self.saved_search.content)
 
     # The notable adaptive response action (if defined)
-    notable_action: Union[NotableAction, None] = None
+    @computed_field
+    @property
+    def notable_action(self) -> NotableAction | None:
+        if not self.saved_search.content:
+            return None
+        return CorrelationSearch._get_notable_action(self.saved_search.content)
 
     # The list of risk events found
     _risk_events: Optional[list[RiskEvent]] = PrivateAttr(default=None)
 
     # The list of notable events found
     _notable_events: Optional[list[NotableEvent]] = PrivateAttr(default=None)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra='forbid')
 
-    class Config:
-        # needed to allow fields w/ types like SavedSearch
-        arbitrary_types_allowed = True
-        # We want to have more ridgid typing
-        extra = 'forbid'
-
-    @validator("name", always=True)
-    @classmethod
-    def _convert_detection_to_search_name(cls, v, values) -> str:
-        """
-        Validate name and derive if None
-        """
-        if "detection" not in values:
-            raise ValueError("detection missing; name is dependent on detection")
-
-        expected_name = f"ESCU - {values['detection'].name} - Rule"
-        if v is not None and v != expected_name:
-            raise ValueError(
-                "name must be derived from detection; leave as None and it will be derived automatically"
-            )
-        return expected_name
-
-    @validator("splunk_path", always=True)
-    @classmethod
-    def _derive_splunk_path(cls, v, values) -> str:
-        """
-        Validate splunk_path and derive if None
-        """
-        if "name" not in values:
-            raise ValueError("name missing; splunk_path is dependent on name")
-
-        expected_path = f"saved/searches/{values['name']}"
-        if v is not None and v != expected_path:
-            raise ValueError(
-                "splunk_path must be derived from name; leave as None and it will be derived automatically"
-            )
-        return f"saved/searches/{values['name']}"
-
-    @validator("saved_search", always=True)
-    @classmethod
-    def _instantiate_saved_search(cls, v, values) -> str:
-        """
-        Ensure saved_search was initialized as None and derive
-        """
-        if "splunk_path" not in values or "service" not in values:
-            raise ValueError("splunk_path or service missing; saved_search is dependent on both")
-
-        if v is not None:
-            raise ValueError(
-                "saved_search must be derived from the service and splunk_path; leave as None and it will be derived "
-                "automatically"
-            )
-        return splunklib.SavedSearch(
-            values['service'],
-            values['splunk_path'],
-        )
-
-    @validator("risk_analysis_action", always=True)
-    @classmethod
-    def _init_risk_analysis_action(cls, v, values) -> Optional[RiskAnalysisAction]:
-        """
-        Initialize risk_analysis_action
-        """
-        if "saved_search" not in values:
-            raise ValueError("saved_search missing; risk_analysis_action is dependent on saved_search")
-
-        if v is not None:
-            raise ValueError(
-                "risk_analysis_action must be derived from the saved_search; leave as None and it will be derived "
-                "automatically"
-            )
-        return CorrelationSearch._get_risk_analysis_action(values['saved_search'].content)
-
-    @validator("notable_action", always=True)
-    @classmethod
-    def _init_notable_action(cls, v, values) -> Optional[NotableAction]:
-        """
-        Initialize notable_action
-        """
-        if "saved_search" not in values:
-            raise ValueError("saved_search missing; notable_action is dependent on saved_search")
-
-        if v is not None:
-            raise ValueError(
-                "notable_action must be derived from the saved_search; leave as None and it will be derived "
-                "automatically"
-            )
-        return CorrelationSearch._get_notable_action(values['saved_search'].content)
 
     @property
     def earliest_time(self) -> str:

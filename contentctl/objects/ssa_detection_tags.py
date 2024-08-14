@@ -1,7 +1,6 @@
 from __future__ import annotations
-import re
 from typing import List
-from pydantic import BaseModel, validator, ValidationError, model_validator, Field
+from pydantic import BaseModel, computed_field, constr, field_validator, model_validator, Field
 
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import *
@@ -13,17 +12,19 @@ class SSADetectionTags(BaseModel):
     analytic_story: list
     asset_type: str
     automated_detection_testing: str = None
-    cis20: list = None
-    confidence: int
-    impact: int
+    cis20: list[constr(pattern=r"^CIS (\d|1\d|20)$")] = None #DO NOT match leading zeroes and ensure no extra characters before or after the string
+    confidence: int = Field(..., ge=1, le=100)
+    impact: int = Field(..., ge=1, le=100)
     kill_chain_phases: list = None
     message: str
-    mitre_attack_id: list = None
+    mitre_attack_id: list[constr(pattern=r"^T[0-9]{4}$")] = None
     nist: list = None
     observable: list
     product: List[SecurityContentProductName] = Field(...,min_length=1)
     required_fields: list
-    risk_score: int
+    @computed_field
+    def risk_score(self) -> int:
+        return round((self.confidence * self.impact)/100)
     security_domain: str
     risk_severity: str = None
     cve: list = None
@@ -51,16 +52,9 @@ class SSADetectionTags(BaseModel):
     annotations: dict = None
 
 
-    @validator('cis20')
-    def tags_cis20(cls, v, values):
-        pattern = r'^CIS ([\d|1\d|20)$' #DO NOT match leading zeroes and ensure no extra characters before or after the string
-        for value in v:
-            if not re.match(pattern, value):
-                raise ValueError(f"CIS control '{value}' is not a valid Control ('CIS 1' -> 'CIS 20'):  {values['name']}")
-        return v
     
-    @validator('nist')
-    def tags_nist(cls, v, values):
+    @field_validator('nist', mode='before')
+    def tags_nist(cls, nist):
         # Sourced Courtest of NIST: https://www.nist.gov/system/files/documents/cyberframework/cybersecurity-framework-021214.pdf (Page 19)
         IDENTIFY = [f'ID.{category}' for category in ["AM", "BE", "GV", "RA", "RM"]      ]
         PROTECT  = [f'PR.{category}' for category in ["AC", "AT", "DS", "IP", "MA", "PT"]]
@@ -70,53 +64,18 @@ class SSADetectionTags(BaseModel):
         ALL_NIST_CATEGORIES = IDENTIFY + PROTECT + DETECT + RESPOND + RECOVER
 
         
-        for value in v:
-            if not value in ALL_NIST_CATEGORIES:
+        for value in nist:
+            if value not in ALL_NIST_CATEGORIES:
                 raise ValueError(f"NIST Category '{value}' is not a valid category")
-        return v
+        return nist
 
-    @validator('confidence')
-    def tags_confidence(cls, v, values):
-        v = int(v)
-        if not (v > 0 and v <= 100):
-             raise ValueError('confidence score is out of range 1-100.' )
-        else:
-            return v
-
-
-    @validator('impact')
-    def tags_impact(cls, v, values):
-        if not (v > 0 and v <= 100):
-             raise ValueError('impact score is out of range 1-100.')
-        else:
-            return v
-
-    @validator('kill_chain_phases')
-    def tags_kill_chain_phases(cls, v, values):
+    @field_validator('kill_chain_phases')
+    def tags_kill_chain_phases(cls, kill_chain_phases):
         valid_kill_chain_phases = SES_KILL_CHAIN_MAPPINGS.keys()
-        for value in v:
+        for value in kill_chain_phases:
             if value not in valid_kill_chain_phases:
                 raise ValueError('kill chain phase not valid. Valid options are ' + str(valid_kill_chain_phases))
-        return v
-
-    @validator('mitre_attack_id')
-    def tags_mitre_attack_id(cls, v, values):
-        pattern = 'T[0-9]{4}'
-        for value in v:
-            if not re.match(pattern, value):
-                raise ValueError('Mitre Attack ID are not following the pattern Txxxx:' )
-        return v
-
-
-
-    @validator('risk_score')
-    def tags_calculate_risk_score(cls, v, values):
-        calculated_risk_score = round(values['impact'] * values['confidence'] / 100)
-        if calculated_risk_score != int(v):
-            raise ValueError(f"Risk Score must be calculated as round(confidence * impact / 100)"
-                             f"\n  Expected risk_score={calculated_risk_score}, found risk_score={int(v)}: {values['name']}")
-        return v
-
+        return kill_chain_phases
 
     @model_validator(mode="after")
     def tags_observable(self):

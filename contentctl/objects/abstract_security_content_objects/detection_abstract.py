@@ -320,7 +320,7 @@ class Detection_Abstract(SecurityContentObject):
             'detection_id': str(self.id),
             'deprecated': '1' if self.status == DetectionStatus.deprecated.value else '0',          # type: ignore
             'detection_version': str(self.version),
-            'publish_time': int(datetime.datetime(self.date.year,self.date.month,self.date.day,0,0,0,0,tzinfo=datetime.timezone.utc).timestamp())
+            'publish_time': datetime.datetime(self.date.year,self.date.month,self.date.day,0,0,0,0,tzinfo=datetime.timezone.utc).timestamp()
         }
 
     @model_serializer

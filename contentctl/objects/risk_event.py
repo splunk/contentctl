@@ -111,7 +111,7 @@ class RiskEvent(BaseModel):
         # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
         #   positive rate in risk/obseravble matching
         # Check several conditions against the observables
-        # self.validate_risk_against_observables(detection.tags.observable)
+        self.validate_risk_against_observables(detection.tags.observable)
 
     def validate_mitre_ids(self, detection: Detection) -> None:
         """

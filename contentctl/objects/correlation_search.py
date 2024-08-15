@@ -104,8 +104,12 @@ class TimeoutConfig(int, Enum):
     # base amount to sleep for before beginning exponential backoff during testing
     BASE_SLEEP = 60
 
-    # max amount to wait before timing out during exponential backoff
-    MAX_SLEEP = 270
+    # NOTE: Some detections take longer to generate their risk/notables than other; testing has
+    #   shown 270s to likely be sufficient for all detections in 99% of runs; however we have
+    #   encountered a handful of transient failures in the last few months. Since our success rate
+    #   is at 100% now, we will round this to a flat 300s to accomodate these outliers.
+    # Max amount to wait before timing out during exponential backoff
+    MAX_SLEEP = 300
 
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good

@@ -105,7 +105,7 @@ class TimeoutConfig(int, Enum):
     BASE_SLEEP = 60
 
     # max amount to wait before timing out during exponential backoff
-    MAX_SLEEP = 210
+    MAX_SLEEP = 270
 
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good

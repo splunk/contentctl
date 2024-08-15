@@ -15,6 +15,7 @@ LOOKUPS_TO_IGNORE.add("identity_lookup_expanded") #Shipped with the Asset and Id
 LOOKUPS_TO_IGNORE.add("cim_corporate_web_domain_lookup") #Shipped with the Asset and Identity Framework
 LOOKUPS_TO_IGNORE.add("alexa_lookup_by_str") #Shipped with the Asset and Identity Framework
 LOOKUPS_TO_IGNORE.add("interesting_ports_lookup") #Shipped with the Asset and Identity Framework
+LOOKUPS_TO_IGNORE.add("asset_lookup_by_str") #Shipped with the Asset and Identity Framework
 LOOKUPS_TO_IGNORE.add("admon_groups_def") #Shipped with the SA-admon addon
 
 #Special case for the Detection "Exploit Public Facing Application via Apache Commons Text"
@@ -139,8 +140,23 @@ class Lookup(SecurityContentObject):
     
     @staticmethod
     def get_lookups(text_field: str, director:DirectorOutputDto, ignore_lookups:set[str]=LOOKUPS_TO_IGNORE)->list[Lookup]:
-        lookups_to_get = set(re.findall(r'[^output]lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', text_field))
+        inputLookupsToGet = set(re.findall(r'inputlookup(?:\s*(?:(?:append|strict|start|max)\s*=\s*(?:true|t|false|f))){0,4}\s+([^\s]+)', text_field))
+        #outputLookupsToGet = set(re.findall(r'outputlookup(?:\s*(?:(?:append|create_empty|override_if_empty|max|key_field|allow_updates|createinapp|create_context|output_format)\s*=\s*[^\s]*))*\s+([^\s]+)',text_field))
+        # Don't match inputlookup or outputlookup. Allow local=true or update=true or local=t or update=t 
+        lookups_to_get = set(re.findall(r'(?:(?<!output)(?<!input))lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t|false|f))){0,2}\s+([^\s]+)', text_field))
+        #lookups_to_get = set(re.findall(r'[^output]lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', text_field))
+        #lookups_to_get = set(re.findall(r'(?!output)lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t))){0,2}\s+([^\s]+)', text_field))
         lookups_to_ignore = set([lookup for lookup in lookups_to_get if any(to_ignore in lookups_to_get for to_ignore in ignore_lookups)])
         lookups_to_get -= lookups_to_ignore
-        return Lookup.mapNamesToSecurityContentObjects(list(lookups_to_get), director)
+        
+        input_lookups = Lookup.mapNamesToSecurityContentObjects(list(inputLookupsToGet-lookups_to_ignore), director)
+        #output_lookups = Lookup.mapNamesToSecurityContentObjects(list(outputLookupsToGet-lookups_to_ignore), director)
+
+        my_lookups = Lookup.mapNamesToSecurityContentObjects(list(lookups_to_get), director)
+
+        if len(my_lookups) > 0:
+            for l in my_lookups:
+                print(f"\n\nABCDEF {l.name}\n\n")
+            
+        return my_lookups
     

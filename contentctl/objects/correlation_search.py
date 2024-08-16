@@ -32,7 +32,7 @@ from contentctl.objects.observable import Observable
 
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
@@ -686,6 +686,12 @@ class CorrelationSearch(BaseModel):
             check the risks/notables
         :returns: an IntegrationTestResult on failure; None on success
         """
+        # TODO (cmcginley): we should have static validation which enforces that we don't have
+        #   identical observables (fully identical? or just same name?) -> this check should fully
+        #   be moved to static validation
+        # TODO (cmcginley): what is the str representation of an observable? perhaps this logic
+        #   should be a little more direct to look for duplicates (e.g. iterate and check for name
+        #   collisions, or make the keys the observable names explicitly)
         # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
         #   positive rate in risk/obseravble matching
         # Create a mapping of the relevant observables to counters
@@ -693,7 +699,8 @@ class CorrelationSearch(BaseModel):
         observable_counts: dict[str, int] = {str(x): 0 for x in observables}
         if len(observables) != len(observable_counts):
             raise ClientError(
-                f"At least two observables in '{self.detection.name}' have the same name."
+                f"At least two observables in '{self.detection.name}' have the same name; "
+                "each observable for a detection should be unique."
             )
 
         # Get the risk events; note that we use the cached risk events, expecting they were

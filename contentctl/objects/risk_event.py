@@ -7,11 +7,48 @@ from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
 from contentctl.objects.observable import Observable
 
+# TODO (cmcginley): validation of threat objects
+# TODO (cmcginley): 'Email' -> other is where it goes in practice, but I feel like it SHOULD go to
+#   user?
+# TODO (cmcginley): Should we map some of these others more specifically? E.g. 'Process' to
+#   'host_artifacts' and 'File Hash' to 'hash_values'
+# TODO (cmcginley): centralize this mapping w/ usage of SES_OBSERVABLE_TYPE_MAPPING (see
+#   observable.py) and the ad hoc mapping made in detection_abstract.py (see the risk property func)
+
 # TODO (PEX-433): use SES_OBSERVABLE_TYPE_MAPPING
 TYPE_MAP: dict[str, list[str]] = {
-    "user": ["User"],
-    "system": ["Hostname", "IP Address", "Endpoint"],
-    "other": ["Process", "URL String", "Unknown", "Process Name"],
+    "system": [
+        "Hostname",
+        "IP Address",
+        "Endpoint"
+    ],
+    "user": [
+        "User",
+        "User Name",
+        "Email Address",
+        "Email"
+    ],
+    "hash_values": [],
+    "network_artifacts": [],
+    "host_artifacts": [],
+    "tools": [],
+    "other": [
+        "Process",
+        "URL String",
+        "Unknown",
+        "Process Name",
+        "MAC Address",
+        "File Name",
+        "File Hash",
+        "Resource UID",
+        "Uniform Resource Locator",
+        "File",
+        "Geo Location",
+        "Container",
+        "Registry Key",
+        "Registry Value",
+        "Other"
+    ]
 }
 # TODO (PEX-433): 'Email Address', 'File Name', 'File Hash', 'Other', 'User Name', 'File',
 #   'Process Name'
@@ -199,7 +236,7 @@ class RiskEvent(BaseModel):
         if self.risk_object_type != expected_type:
             raise ValidationFailed(
                 f"The risk object type ({self.risk_object_type}) does not match the expected type "
-                f"based on the matched observable ({matched_observable.type}=={expected_type})."
+                f"based on the matched observable ({matched_observable.type}->{expected_type})."
             )
 
     @staticmethod
@@ -256,7 +293,9 @@ class RiskEvent(BaseModel):
 
         # Retrieve the value of this attribute and see if it matches the risk_object
         value: Union[str, list[str]] = getattr(self, attribute_name)
-        if isinstance(value, str):
+
+        # Value may be a list of values, or a single int or str; make a singleton if a single value
+        if not isinstance(value, list):
             value = [value]
 
         # The value of the attribute may be a list of values, so check for any matches
@@ -307,7 +346,8 @@ class RiskEvent(BaseModel):
         if matched_observable is None:
             raise ValidationFailed(
                 f"Unable to match risk event ({self.risk_object}, {self.risk_object_type}) to an "
-                "appropriate observable"
+                "appropriate observable; please check for errors in the observable roles/types for "
+                "this detection, as well as the risk event build process in contentctl."
             )
 
         # Cache and return the matched observable

@@ -259,6 +259,9 @@ class Detection_Abstract(SecurityContentObject):
     @property
     def risk(self) -> list[dict[str, Any]]:
         risk_objects: list[dict[str, str | int]] = []
+        # TODO (cmcginley): 'device' and 'username' do not seem to be legitimate observable types
+        #   (validation rules them out)
+        # TODO (cmcginley): is user a valid possible threat/attacker?
         risk_object_user_types = {'user', 'username', 'email address'}
         risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
         process_threat_object_types = {'process name', 'process'}

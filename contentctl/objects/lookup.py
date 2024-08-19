@@ -1,8 +1,10 @@
 from __future__ import annotations
-from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer
-from typing import TYPE_CHECKING, Optional, Any, Union
+from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer, Field
+from typing import TYPE_CHECKING, Optional, Any, Union, Literal
 import re
 import csv
+from enum import StrEnum
+import abc
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import validate
@@ -17,6 +19,7 @@ LOOKUPS_TO_IGNORE.add("alexa_lookup_by_str") #Shipped with the Asset and Identit
 LOOKUPS_TO_IGNORE.add("interesting_ports_lookup") #Shipped with the Asset and Identity Framework
 LOOKUPS_TO_IGNORE.add("asset_lookup_by_str") #Shipped with the Asset and Identity Framework
 LOOKUPS_TO_IGNORE.add("admon_groups_def") #Shipped with the SA-admon addon
+LOOKUPS_TO_IGNORE.add("identity_lookup_expanded") #Shipped with the Enterprise Security
 
 #Special case for the Detection "Exploit Public Facing Application via Apache Commons Text"
 LOOKUPS_TO_IGNORE.add("=") 
@@ -24,7 +27,7 @@ LOOKUPS_TO_IGNORE.add("other_lookups")
 
 
 # TODO (#220): Split Lookup into 2 classes
-class Lookup(SecurityContentObject):
+class Lookup(SecurityContentObject, abc.ABC):
     
     collection: Optional[str] = None
     fields_list: Optional[str] = None
@@ -141,22 +144,55 @@ class Lookup(SecurityContentObject):
     @staticmethod
     def get_lookups(text_field: str, director:DirectorOutputDto, ignore_lookups:set[str]=LOOKUPS_TO_IGNORE)->list[Lookup]:
         inputLookupsToGet = set(re.findall(r'inputlookup(?:\s*(?:(?:append|strict|start|max)\s*=\s*(?:true|t|false|f))){0,4}\s+([^\s]+)', text_field))
-        #outputLookupsToGet = set(re.findall(r'outputlookup(?:\s*(?:(?:append|create_empty|override_if_empty|max|key_field|allow_updates|createinapp|create_context|output_format)\s*=\s*[^\s]*))*\s+([^\s]+)',text_field))
+        outputLookupsToGet = set(re.findall(r'outputlookup(?:\s*(?:(?:append|create_empty|override_if_empty|max|key_field|allow_updates|createinapp|create_context|output_format)\s*=\s*[^\s]*))*\s+([^\s]+)',text_field))
         # Don't match inputlookup or outputlookup. Allow local=true or update=true or local=t or update=t 
         lookups_to_get = set(re.findall(r'(?:(?<!output)(?<!input))lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t|false|f))){0,2}\s+([^\s]+)', text_field))
         #lookups_to_get = set(re.findall(r'[^output]lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', text_field))
         #lookups_to_get = set(re.findall(r'(?!output)lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t))){0,2}\s+([^\s]+)', text_field))
-        lookups_to_ignore = set([lookup for lookup in lookups_to_get if any(to_ignore in lookups_to_get for to_ignore in ignore_lookups)])
-        lookups_to_get -= lookups_to_ignore
         
-        input_lookups = Lookup.mapNamesToSecurityContentObjects(list(inputLookupsToGet-lookups_to_ignore), director)
-        #output_lookups = Lookup.mapNamesToSecurityContentObjects(list(outputLookupsToGet-lookups_to_ignore), director)
+        
+        
+        
+        input_lookups = Lookup.mapNamesToSecurityContentObjects(list(inputLookupsToGet-LOOKUPS_TO_IGNORE), director)
+        output_lookups = Lookup.mapNamesToSecurityContentObjects(list(outputLookupsToGet-LOOKUPS_TO_IGNORE), director)
+    
+        
 
-        my_lookups = Lookup.mapNamesToSecurityContentObjects(list(lookups_to_get), director)
+        my_lookups = Lookup.mapNamesToSecurityContentObjects(list(lookups_to_get-LOOKUPS_TO_IGNORE), director)
 
-        if len(my_lookups) > 0:
-            for l in my_lookups:
-                print(f"\n\nABCDEF {l.name}\n\n")
+
             
         return my_lookups
+
+class Lookup_external_type(StrEnum):
+    PYTHON = "python"
+    EXECUTABLE = "executable" 
+    KVSTORE = "kvstore"
+    GEO = "geo"
+    GEO_HEX = "geo_hex"
+
+class ExternalLookup(Lookup, abc.ABC):
+    fields_list: list[str] = Field(...,min_length=1)
+    external_type: Lookup_external_type = Field(...)
     
+    
+class PythonLookup(ExternalLookup):
+    external_type = Lookup_external_type.PYTHON
+    
+class ExecutableLookup(ExternalLookup):
+    external_type = Lookup_external_type.EXECUTABLE
+
+class KVStoreLookup(ExternalLookup):
+    external_type = Lookup_external_type.KVSTORE
+
+class GeoLookup(ExternalLookup):
+    external_type = Lookup_external_type.GEO
+
+class GeoHexLookup(ExternalLookup):
+    external_type = Lookup_external_type.GEO_HEX
+
+
+
+    
+class CSVLookup(Lookup):
+    pass

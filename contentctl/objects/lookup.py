@@ -28,8 +28,8 @@ LOOKUPS_TO_IGNORE.add("other_lookups")
 
 # TODO (#220): Split Lookup into 2 classes
 class Lookup(SecurityContentObject, abc.ABC):
-    
-    collection: Optional[str] = None
+    #collection will always be the name of the lookup
+
     fields_list: Optional[str] = None
     filename: Optional[FilePath] = None
     default_match: Optional[bool] = None
@@ -175,7 +175,6 @@ class ExternalLookup(Lookup, abc.ABC):
     fields_list: list[str] = Field(...,min_length=1)
     external_type: Lookup_external_type = Field(...)
     
-    
 class PythonLookup(ExternalLookup):
     external_type = Lookup_external_type.PYTHON
     
@@ -195,4 +194,4 @@ class GeoHexLookup(ExternalLookup):
 
     
 class CSVLookup(Lookup):
-    pass
+    filename: FilePath = Field(...)

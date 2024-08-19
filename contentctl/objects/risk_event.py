@@ -128,7 +128,9 @@ class RiskEvent(BaseModel):
         A cached derivation of the source field name the risk event corresponds to in the relevant
         event(s). Useful for mapping back to an observable in the detection.
         """
-        pattern = re.compile(r"\| savedsearch \"" + self.search_name + r"\" \| search (?P<field>.+)=.+")
+        pattern = re.compile(
+            r"\| savedsearch \"" + self.search_name + r"\" \| search (?P<field>[^=]+)=.+"
+        )
         match = pattern.search(self.contributing_events_search)
         if match is None:
             raise ValueError(
@@ -258,7 +260,11 @@ class RiskEvent(BaseModel):
         if self.risk_object_type != expected_type:
             raise ValidationFailed(
                 f"The risk object type ({self.risk_object_type}) does not match the expected type "
-                f"based on the matched observable ({matched_observable.type}->{expected_type})."
+                f"based on the matched observable ({matched_observable.type}->{expected_type}): "
+                f"risk=(object={self.risk_object}, type={self.risk_object_type}, "
+                f"source_field_name={self.source_field_name}), "
+                f"observable=(name={matched_observable.name}, type={matched_observable.type}, "
+                f"role={matched_observable.role})"
             )
 
     @staticmethod
@@ -344,15 +350,25 @@ class RiskEvent(BaseModel):
 
         # Iterate over the obervables and check for a match
         for observable in observables:
+            # TODO (cmcginley): seems like certain computed fields (e.g. when user is computed) may
+            #   not be vailable in the risk event; see "Windows Unusual Count Of Disabled Users
+            #   Failed Auth Using Kerbero" for an example. Until then, we will remove this level of
+            #   validation as it is not reliable; unclear if these missing fields would be available
+            #   in risk_message or not? Unsure how this plays into Lou's proposed changes
+            #   (see #234); see the 'dest' field in 'Windows Steal Authentication Certificates -
+            #   ESC1 Abuse' for an alternate example, where the field is sparesely populated in the
+            #   source events and thus only present in some observables but not all (unlike the
+            #   earlier example, where a field that is available in all source events is weirdly
+            #   unavailable in the risk fields)
             # Each the field name used in each observable shoud be present in the risk event
             # TODO (PEX-433): this check is redundant I think; earlier in the unit test, observable
             #   field
             #   names are compared against the search result set, ensuring all are present; if all
             #   are present in the result set, all are present in the risk event
-            if not hasattr(self, observable.name):
-                raise ValidationFailed(
-                    f"Observable field \"{observable.name}\" not found in risk event."
-                )
+            # if not hasattr(self, observable.name):
+            #     raise ValidationFailed(
+            #         f"Observable field \"{observable.name}\" not found in risk event."
+            #     )
 
             # Try to match the risk_object against a specific observable for the obervables with
             # a valid role (some, like Attacker, don't get converted to risk events)
@@ -380,9 +396,10 @@ class RiskEvent(BaseModel):
         # Ensure we were able to match the risk event to a specific observable
         if matched_observable is None:
             raise ValidationFailed(
-                f"Unable to match risk event ({self.risk_object}, {self.risk_object_type}) to an "
-                "appropriate observable; please check for errors in the observable roles/types for "
-                "this detection, as well as the risk event build process in contentctl."
+                f"Unable to match risk event (object={self.risk_object}, type="
+                f"{self.risk_object_type}, source_field_name={self.source_field_name}) to an "
+                "observable; please check for errors in the observable roles/types for this "
+                "detection, as well as the risk event build process in contentctl."
             )
 
         # Cache and return the matched observable

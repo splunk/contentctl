@@ -676,6 +676,11 @@ class CorrelationSearch(BaseModel):
 
         return events
 
+    # TODO (cmcginley): run through a final check list/test of all possible failure conditions:
+    #   observable w/ no risk, risk w/ no observable, expected typing on the risk relative to
+    #   observable, risk event matched to more than one observable, risk event matched to an
+    #   observable w/ an invalid role, all observable fields found in all risk events (possibly
+    #   faulty assumption, esp w/ Lou's work; future), improper risk/observable count (future)
     def validate_risk_events(self) -> None:
         """Validates the existence of any expected risk events
 
@@ -729,6 +734,28 @@ class CorrelationSearch(BaseModel):
             )
             observable_counts[str(matched_observable)] += 1
 
+        # TODO (cmcginley): test this artificially if I can't reproduce in the wild
+        # Report any observables which did not have at least one match to a risk event
+        for observable in observables:
+            self.logger.debug(
+                f"Matched observable (name={observable.name}, type={observable.type}, "
+                f"role={observable.role}) to {observable_counts[str(observable)]} risk events."
+            )
+            if observable_counts[str(observable)] == 0:
+                raise ValidationFailed(
+                    f"Observable (name={observable.name}, type={observable.type}, "
+                    f"role={observable.role}) was not matched to any risk events."
+                )
+
+        # TODO (cmcginley): rework the block below and create a function which uses the detection
+        #   search results to determine what the expected count of each individual risk/observable
+        #   matching is; we can do this by counting the number of values in the corresponding field
+        #   of each event returned by the search query (e.g. if we have multiple values in
+        #   the target field of one of the returned events, we would expect one risk event
+        #   for each value in that field). See 'Excessive Usage Of Cacls App' for an example
+        #   of this (we'd expect more occurences of the process_name observable than the
+        #   dest observable); the assertion seen below, that the count of each risk/observable match
+        #   should be the same is faulty
         # TODO (PEX-433): test my new contentctl logic against an old ESCU build; my logic should
         #   detect the faulty attacker events -> this was the issue from the 4.28/4.27 release;
         #   recreate by testing against one of those old builds w/ the bad config
@@ -740,34 +767,34 @@ class CorrelationSearch(BaseModel):
         #   `Windows Steal Authentication Certificates Export Certificate`
         # Validate risk events in aggregate; we should have an equal amount of risk events for each
         # relevant observable, and the total count should match the total number of events
-        individual_count: Optional[int] = None
-        total_count = 0
-        for observable_str in observable_counts:
-            self.logger.debug(
-                f"Observable <{observable_str}> match count: {observable_counts[observable_str]}"
-            )
+        # individual_count: Optional[int] = None
+        # total_count = 0
+        # for observable_str in observable_counts:
+        #     self.logger.debug(
+        #         f"Observable <{observable_str}> match count: {observable_counts[observable_str]}"
+        #     )
 
-            # Grab the first value encountered if not set yet
-            if individual_count is None:
-                individual_count = observable_counts[observable_str]
-            else:
-                # Confirm that the count for the current observable matches the count of the others
-                if observable_counts[observable_str] != individual_count:
-                    raise ValidationFailed(
-                        f"Count of risk events matching observable <\"{observable_str}\"> "
-                        f"({observable_counts[observable_str]}) does not match the count of those "
-                        f"matching other observables ({individual_count})."
-                    )
+        #     # Grab the first value encountered if not set yet
+        #     if individual_count is None:
+        #         individual_count = observable_counts[observable_str]
+        #     else:
+        #         # Confirm that the count for the current observable matches the count of the others
+        #         if observable_counts[observable_str] != individual_count:
+        #             raise ValidationFailed(
+        #                 f"Count of risk events matching observable <\"{observable_str}\"> "
+        #                 f"({observable_counts[observable_str]}) does not match the count of those "
+        #                 f"matching other observables ({individual_count})."
+        #             )
 
-            # Aggregate total count of events matched to observables
-            total_count += observable_counts[observable_str]
+        #     # Aggregate total count of events matched to observables
+        #     total_count += observable_counts[observable_str]
 
-        # Raise if the the number of events doesn't match the number of those matched to observables
-        if len(events) != total_count:
-            raise ValidationFailed(
-                f"The total number of risk events {len(events)} does not match the number of "
-                f"risk events we were able to match against observables ({total_count})."
-            )
+        # # Raise if the the number of events doesn't match the number of those matched to observables
+        # if len(events) != total_count:
+        #     raise ValidationFailed(
+        #         f"The total number of risk events {len(events)} does not match the number of "
+        #         f"risk events we were able to match against observables ({total_count})."
+        #     )
 
     # TODO (PEX-434): implement deeper notable validation
     def validate_notable_events(self) -> None:

@@ -269,6 +269,7 @@ class Detection_Abstract(SecurityContentObject):
         url_threat_object_types = {'url string', 'url'}
         ip_threat_object_types = {'ip address'}
 
+        # TODO cmcginley: this should be overhauled to be based on role and type in more explicit terms
         for entity in self.tags.observable:
             risk_object: dict[str, str | int] = dict()
             if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:

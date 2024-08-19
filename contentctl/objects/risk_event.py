@@ -386,6 +386,11 @@ class RiskEvent(BaseModel):
                         "Unexpected conditon: we don't expect the source event field "
                         "corresponding to an observables field name to be repeated"
                     )
+
+                # TODO (cmcginley): this is seemingly being hit transiently by offending detections;
+                #   my theory is that we are prematurely passing integration testing, when we
+                #   occassionally get a partial set of risk events that include the legitimate
+                #   (Victims) and not yet the illegitimate (Attacker)
                 if RiskEvent.ignore_observable(observable):
                     raise ValidationFailed(
                         "Risk event matched an observable with an invalid role: "

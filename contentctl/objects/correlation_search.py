@@ -109,7 +109,7 @@ class TimeoutConfig(int, Enum):
     #   encountered a handful of transient failures in the last few months. Since our success rate
     #   is at 100% now, we will round this to a flat 300s to accomodate these outliers.
     # Max amount to wait before timing out during exponential backoff
-    MAX_SLEEP = 360
+    MAX_SLEEP = 300
 
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good
@@ -575,10 +575,22 @@ class CorrelationSearch(BaseModel):
             self.logger.debug(f"Using cached risk events ({len(self._risk_events)} total).")
             return self._risk_events
 
+        # TODO (cmcginley): We should be querying a single SID each time; cache SID the first
+        #   time... Or... what if I just did a tail instead of a head? so we were always dealing w/
+        #   the oldest orig_sid (the one that's been cooking the longest), instead of the newest?
+        #   would it be more performant to use tail? or to reverse ordering (earliest first) and
+        #   still use head? This should largely resolve our issues, but w/ the invalid role ones,
+        #   we still run the risk of a false test pass, if we early on only get a partial risk
+        #   result set, excluding the bad one that correspopnds to an Attacker role. Could
+        #   potentially be improved by blind querying, finding the first SID, and then honing in on
+        #   that -> check it's status before we call it quits and use that SID specifically for any
+        #   repeated queries; in the short term I think we can accept a small degree of false
+        #   successes as we are essentially detecting something extra as opposed to looking for
+        #   something missing
         # Search for all risk events from a single scheduled search (indicated by orig_sid)
         query = (
             f'search index=risk search_name="{self.name}" [search index=risk search '
-            f'search_name="{self.name}" | head 1 | fields orig_sid] | tojson'
+            f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
         )
         result_iterator = self._search(query)
 
@@ -643,7 +655,7 @@ class CorrelationSearch(BaseModel):
         # Search for all notable events from a single scheduled search (indicated by orig_sid)
         query = (
             f'search index=notable search_name="{self.name}" [search index=notable search '
-            f'search_name="{self.name}" | head 1 | fields orig_sid] | tojson'
+            f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
         )
         result_iterator = self._search(query)
 

@@ -722,8 +722,10 @@ class CorrelationSearch(BaseModel):
             # Update observable count based on match
             matched_observable = event.get_matched_observable(self.detection.tags.observable)
             self.logger.debug(
-                f"Matched risk event ({event.risk_object}, {event.risk_object_type}) to observable "
-                f"({matched_observable.name}, {matched_observable.type}, {matched_observable.role})"
+                f"Matched risk event (object={event.risk_object}, type={event.risk_object_type}) "
+                f"to observable (name={matched_observable.name}, type={matched_observable.type}, "
+                f"role={matched_observable.role}) using the source field "
+                f"'{event.source_field_name}'"
             )
             observable_counts[str(matched_observable)] += 1
 

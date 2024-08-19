@@ -1,7 +1,8 @@
 import re
 from typing import Union, Optional
+from functools import cached_property
 
-from pydantic import BaseModel, Field, PrivateAttr, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, field_validator, computed_field
 
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
@@ -96,6 +97,10 @@ class RiskEvent(BaseModel):
         default=[]
     )
 
+    # Contributing events search query (we use this to derive the corresponding field from the
+    # observables)
+    contributing_events_search: str
+
     # Private attribute caching the observable this RiskEvent is mapped to
     _matched_observable: Optional[Observable] = PrivateAttr(default=None)
 
@@ -115,6 +120,23 @@ class RiskEvent(BaseModel):
             return v
         else:
             return [v]
+
+    @computed_field
+    @cached_property
+    def source_field_name(self) -> str:
+        """
+        A cached derivation of the source field name the risk event corresponds to in the relevant
+        event(s). Useful for mapping back to an observable in the detection.
+        """
+        pattern = re.compile(r"\| savedsearch \"" + self.search_name + r"\" \| search (?P<field>.+)=.+")
+        match = pattern.search(self.contributing_events_search)
+        if match is None:
+            raise ValueError(
+                "Unable to parse source field name from risk event using "
+                f"'contributing_events_search' ('{self.contributing_events_search}') using "
+                f"pattern: {pattern}"
+            )
+        return match.group("field")
 
     def validate_against_detection(self, detection: Detection) -> None:
         """
@@ -287,20 +309,25 @@ class RiskEvent(BaseModel):
         """
         # When field names collide w/ reserved fields in Splunk events (e.g. sourcetype or host)
         # they get prefixed w/ "orig_"
-        attribute_name = observable.name
-        if attribute_name in RESERVED_FIELDS:
-            attribute_name = f"orig_{attribute_name}"
+        # attribute_name = observable.name
+        # if attribute_name in RESERVED_FIELDS:
+        #     attribute_name = f"orig_{attribute_name}"
 
-        # Retrieve the value of this attribute and see if it matches the risk_object
-        value: Union[str, list[str]] = getattr(self, attribute_name)
+        # # Retrieve the value of this attribute and see if it matches the risk_object
+        # value: Union[str, list[str]] = getattr(self, attribute_name)
 
-        # Value may be a list of values, or a single int or str; make a singleton if a single value
-        if not isinstance(value, list):
-            value = [value]
+        # # Value may be a list of values, or a single int or str; make a singleton if a single value
+        # if not isinstance(value, list):
+        #     value = [value]
 
-        # The value of the attribute may be a list of values, so check for any matches
-        return self.risk_object in value
+        # # The value of the attribute may be a list of values, so check for any matches
+        # return self.risk_object in value
 
+        # TODO (cmcginley): confirm using the non 'orig_' field works for something like 'host'
+        return self.source_field_name == observable.name
+
+    # TODO: pull field to match against from `contributing_events_search` -> the field they are
+    #   keying off of is the field related to the observable
     def get_matched_observable(self, observables: list[Observable]) -> Observable:
         """
         Given a list of observables, return the one this risk event matches
@@ -329,18 +356,26 @@ class RiskEvent(BaseModel):
 
             # Try to match the risk_object against a specific observable for the obervables with
             # a valid role (some, like Attacker, don't get converted to risk events)
-            if not RiskEvent.ignore_observable(observable):
-                if self.matches_observable(observable):
-                    # TODO (PEX-433): This check fails as there are some instances where this is
-                    #   true (e.g. we have an observable for process and parent_process and both
-                    #   have the same name like "cmd.exe")
-                    if matched_observable is not None:
-                        raise ValueError(
-                            "Unexpected conditon: we don't expect the value corresponding to an "
-                            "observables field name to be repeated"
-                        )
-                    # NOTE: we explicitly do not break early as we want to check each observable
-                    matched_observable = observable
+            # if not RiskEvent.ignore_observable(observable):
+            if self.matches_observable(observable):
+                # TODO (PEX-433): This check fails as there are some instances where this is
+                #   true (e.g. we have an observable for process and parent_process and both
+                #   have the same name like "cmd.exe")
+                if matched_observable is not None:
+                    # raise ValueError(
+                    #     "Unexpected conditon: we don't expect the value corresponding to an "
+                    #     "observables field name to be repeated"
+                    # )
+                    raise ValueError(
+                        "Unexpected conditon: we don't expect the source event field "
+                        "corresponding to an observables field name to be repeated"
+                    )
+                if RiskEvent.ignore_observable(observable):
+                    raise ValidationFailed(
+                        "Risk event matched an observable with an invalid role: "
+                        f"(name={observable.name}, type={observable.type}, role={observable.role})")
+                # NOTE: we explicitly do not break early as we want to check each observable
+                matched_observable = observable
 
         # Ensure we were able to match the risk event to a specific observable
         if matched_observable is None:

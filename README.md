@@ -3,8 +3,20 @@
 <p align="center">
 <img src="docs/contentctl_logo_white.png" title="In case you're wondering, it's a capybara" alt="contentctl logo" width="250" height="250"></p>
 
+# contentctl Quick Start Guide
+If you are already familiar with contentctl, the following common commands may be very useful for basic operations
 
-
+| Operation | Command |
+|-----------|---------|
+| Create a repository | `contentctl init` |
+| Validate Your Content | `contentctl validate` |
+| Validate Your Content, performing MITRE Enrichments | `contentctl validate –-enrichments`|
+| Build Your App | `contentctl build` |
+| Test All the content in your app, pausing so that you can debug a search if it fails | `contentctl test –-post-test-behavior pause_on_failure mode:all` |
+| Test All the content in your app, pausing after every detection to allow debugging | `contentctl test –-post-test-behavior always_pause mode:all` |
+| Test 1 or more specified detections. If you are testing more than one detection, the paths are space-separated. You may also use shell-expanded regexes | `contentctl test –-post-test-behavior always_pause mode:selected --mode.files detections/endpoint/7zip_commandline_to_smb_share_path.yml detections/cloud/aws_multi_factor_authentication_disabled.yml detections/application/okta*` |
+| Diff your current branch with a target_branch and test detections that have been updated. Your current branch **must be DIFFERENT** than the target_branch | `contentctl test –-post-test-behavior always_pause mode:changes –-mode.target_branch develop` |
+| Perform Integration Testing of all content. Note that Enterprise Security MUST be listed as an app in your contentctl.yml folder, otherwise all tests will subsequently fail | `contentctl test –-enable-integration-testing --post-test-behavior never_pause mode:all` |
 
 # Introduction
 #### Security Is Hard 

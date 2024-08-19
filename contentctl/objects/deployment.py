@@ -21,7 +21,7 @@ class Deployment(SecurityContentObject):
     scheduling: DeploymentScheduling = Field(...)
     alert_action: AlertAction = AlertAction()
     type: DeploymentType = Field(...)
-    author: str = Field("NO AUTHOR DEFINED",max_length=255)
+    author: str = Field(...,max_length=255)
     version: NonNegativeInt = 1
 
     #Type was the only tag exposed and should likely be removed/refactored.
@@ -30,7 +30,8 @@ class Deployment(SecurityContentObject):
     @property
     def tags(self)->dict[str,DeploymentType]:
         return {"type": self.type}
-    
+
+        
     @staticmethod
     def getDeployment(v:dict[str,Any], info:ValidationInfo)->Deployment:
         if v != {}:
@@ -41,12 +42,16 @@ class Deployment(SecurityContentObject):
             detection_name = info.data.get("name", None)
             if detection_name is None:
                 raise ValueError("Could not create inline deployment - Baseline or Detection lacking 'name' field,")
-            
-            v['name'] = f"{detection_name} - Inline Deployment"
-            #inline deployment also gets its own, ephemeral id
-            v['id'] = uuid.uuid4()
-            v['date'] = datetime.date.today()
-            v['description'] = "Inline deployment created at runtime"
+
+            # Add a number of static values            
+            v.update({
+              'name': f"{detection_name} - Inline Deployment",
+              'id':uuid.uuid4(),
+              'date': datetime.date.today(),
+              'description': "Inline deployment created at runtime.",
+              'author': "contentctl tool"
+            })
+
             
             # This constructs a temporary in-memory deployment,
             # allowing the deployment to be easily defined in the 

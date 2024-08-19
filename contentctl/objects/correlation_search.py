@@ -109,7 +109,7 @@ class TimeoutConfig(int, Enum):
     #   encountered a handful of transient failures in the last few months. Since our success rate
     #   is at 100% now, we will round this to a flat 300s to accomodate these outliers.
     # Max amount to wait before timing out during exponential backoff
-    MAX_SLEEP = 300
+    MAX_SLEEP = 360
 
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good

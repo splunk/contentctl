@@ -20,6 +20,7 @@ from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.atomic import AtomicTest
+from contentctl.objects.dashboard import Dashboard
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.event_source import EventSource
@@ -45,7 +46,7 @@ from contentctl.helper.utils import Utils
 class DirectorOutputDto:
     # Atomic Tests are first because parsing them 
     # is far quicker than attack_enrichment
-    atomic_tests: Union[list[AtomicTest],None]
+    atomic_tests: None | list[AtomicTest]
     attack_enrichment: AttackEnrichment
     cve_enrichment: CveEnrichment
     detections: list[Detection]
@@ -56,6 +57,7 @@ class DirectorOutputDto:
     macros: list[Macro]
     lookups: list[Lookup]
     deployments: list[Deployment]
+    dashboards: list[Dashboard]
     ssa_detections: list[SSADetection]
     data_sources: list[DataSource]
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
@@ -100,6 +102,8 @@ class DirectorOutputDto:
             self.detections.append(content)
         elif isinstance(content, SSADetection):
             self.ssa_detections.append(content)
+        elif isinstance(content, Dashboard):
+            self.dashboards.append(content)            
         elif isinstance(content, DataSource):
             self.data_sources.append(content)
         else:
@@ -129,6 +133,7 @@ class Director():
         self.createSecurityContent(SecurityContentType.data_sources)
         self.createSecurityContent(SecurityContentType.playbooks)
         self.createSecurityContent(SecurityContentType.detections)
+        self.createSecurityContent(SecurityContentType.dashboards)
         self.createSecurityContent(SecurityContentType.ssa_detections)
 
         
@@ -143,6 +148,7 @@ class Director():
 
     def createSecurityContent(self, contentType: SecurityContentType) -> None:
         if contentType == SecurityContentType.ssa_detections:
+
             files = Utils.get_all_yml_files_from_directory(
                 os.path.join(self.input_dto.path, "ssa_detections")
             )
@@ -157,6 +163,7 @@ class Director():
             SecurityContentType.playbooks,
             SecurityContentType.detections,
             SecurityContentType.data_sources,
+            SecurityContentType.dashboards
         ]:
             files = Utils.get_all_yml_files_from_directory(
                 os.path.join(self.input_dto.path, str(contentType.name))
@@ -207,8 +214,13 @@ class Director():
                     self.output_dto.addContentToDictMappings(story)
             
                 elif contentType == SecurityContentType.detections:
+
                     detection = Detection.model_validate(modelDict,context={"output_dto":self.output_dto, "app":self.input_dto.app})
                     self.output_dto.addContentToDictMappings(detection)
+                
+                elif contentType == SecurityContentType.dashboards:
+                        dashboard = Dashboard.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.addContentToDictMappings(dashboard)
 
                 elif contentType == SecurityContentType.ssa_detections:
                     self.constructSSADetection(self.ssa_detection_builder, self.output_dto,str(file))

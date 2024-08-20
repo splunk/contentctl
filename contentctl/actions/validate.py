@@ -1,16 +1,18 @@
 
 import pathlib
+
 from contentctl.input.director import Director, DirectorOutputDto
 from contentctl.objects.config import validate
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.objects.atomic import AtomicTest
 from contentctl.helper.utils import Utils
+from contentctl.objects.data_source import DataSource
+from contentctl.helper.splunk_app import SplunkApp
 
 
 class Validate:
     def execute(self, input_dto: validate) -> DirectorOutputDto:
-
         director_output_dto = DirectorOutputDto(
             AtomicTest.getAtomicTestsFromArtRepo(
                 repo_path=input_dto.getAtomicRedTeamRepoPath(),
@@ -28,11 +30,15 @@ class Validate:
             [],
             [],
             [],
+            []
         )
 
         director = Director(director_output_dto)
         director.execute(input_dto)
         self.ensure_no_orphaned_files_in_lookups(input_dto.path, director_output_dto)
+        if input_dto.data_source_TA_validation:
+            self.validate_latest_TA_information(director_output_dto.data_sources)
+            
         return director_output_dto
 
     
@@ -73,3 +79,36 @@ class Validate:
             raise Exception(f"The following .csv or .mlmodel files exist in '{lookupsDirectory}', but are not referenced by a lookup file: {[str(path) for path in unusedLookupFiles]}")
         return
     
+
+    def validate_latest_TA_information(self, data_sources: list[DataSource]) -> None:
+        validated_TAs: list[tuple[str, str]] = []
+        errors:list[str] = []
+        print("----------------------")
+        print("Validating latest TA:")
+        print("----------------------")
+        for data_source in data_sources:
+            for supported_TA in data_source.supported_TA:
+                ta_identifier = (supported_TA.name, supported_TA.version)
+                if ta_identifier in validated_TAs:
+                    continue
+                if supported_TA.url is not None:
+                    validated_TAs.append(ta_identifier)
+                    uid = int(str(supported_TA.url).rstrip('/').split("/")[-1])
+                    try:
+                        splunk_app = SplunkApp(app_uid=uid)
+                        if splunk_app.latest_version != supported_TA.version:
+                            errors.append(f"Version mismatch in '{data_source.file_path}' supported TA '{supported_TA.name}'"
+                                          f"\n  Latest version on Splunkbase    : {splunk_app.latest_version}"
+                                          f"\n  Version specified in data source: {supported_TA.version}")
+                    except Exception as e:
+                        errors.append(f"Error processing checking version of TA {supported_TA.name}: {str(e)}")
+                            
+        if len(errors) > 0:
+            errorString = '\n\n'.join(errors)
+            raise Exception(f"[{len(errors)}] or more TA versions are out of date or have other errors."
+                            f"Please update the following data sources with the latest versions of "
+                            f"their supported tas:\n\n{errorString}")
+        print("All TA versions are up to date.")
+        
+
+

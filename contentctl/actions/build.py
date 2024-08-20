@@ -51,6 +51,7 @@ class Build:
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.investigations, SecurityContentType.investigations))
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.lookups, SecurityContentType.lookups))
             updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.macros, SecurityContentType.macros))
+            updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.dashboards, SecurityContentType.dashboards))
             updated_conf_files.update(conf_output.writeAppConf())
             
             #Ensure that the conf file we just generated/update is syntactically valid

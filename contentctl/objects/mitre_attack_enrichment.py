@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Set,List,Annotated
+from typing import List, Annotated
 from enum import StrEnum
 
 
@@ -23,7 +23,7 @@ class MitreTactics(StrEnum):
 
 class MitreAttackEnrichment(BaseModel):
     ConfigDict(use_enum_values=True)
-    mitre_attack_id: Annotated[str, Field(pattern="^T\d{4}(.\d{3})?$")] = Field(...)
+    mitre_attack_id: Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")] = Field(...)
     mitre_attack_technique: str = Field(...)
     mitre_attack_tactics: List[MitreTactics] = Field(...)
     mitre_attack_groups: List[str] = Field(...)

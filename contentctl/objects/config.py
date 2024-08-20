@@ -147,6 +147,7 @@ class CustomApp(App_Base):
                                 str(destination), 
                                 verbose_print=True)
         return str(destination)
+    
 
 
 class Config_Base(BaseModel):
@@ -176,6 +177,7 @@ class validate(Config_Base):
     build_app: bool = Field(default=True, description="Should an app be built and output in the build_path?")
     build_api: bool = Field(default=False, description="Should api objects be built and output in the build_path?")
     build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the build_path?")
+    data_source_TA_validation: bool = Field(default=False, description="Validate latest TA information from Splunkbase")
 
     def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
         return self.path/atomic_red_team_repo_name
@@ -601,13 +603,13 @@ class test_common(build):
 
 
     def getLocalAppDir(self)->pathlib.Path:
-        #docker really wants abolsute paths
+        # docker really wants absolute paths
         path = self.path / "apps"
         return path.absolute()
     
     def getContainerAppDir(self)->pathlib.Path:
-        #docker really wants abolsute paths
-        return pathlib.Path("/tmp/apps").absolute()
+        # docker really wants absolute paths
+        return pathlib.Path("/tmp/apps")
 
     def enterpriseSecurityInApps(self)->bool:
         
@@ -739,7 +741,7 @@ class test(test_common):
             if path.startswith(SPLUNKBASE_URL):
                 container_paths.append(path)
             else:
-                container_paths.append(str(self.getContainerAppDir()/pathlib.Path(path).name))
+                container_paths.append((self.getContainerAppDir()/pathlib.Path(path).name).as_posix())
         
         return ','.join(container_paths)
 

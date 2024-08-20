@@ -53,7 +53,7 @@ class SSADetectionTags(BaseModel):
 
     @validator('cis20')
     def tags_cis20(cls, v, values):
-        pattern = '^CIS ([0-9]|1[0-9]|20)$' #DO NOT match leading zeroes and ensure no extra characters before or after the string
+        pattern = r'^CIS ([\d|1\d|20)$' #DO NOT match leading zeroes and ensure no extra characters before or after the string
         for value in v:
             if not re.match(pattern, value):
                 raise ValueError(f"CIS control '{value}' is not a valid Control ('CIS 1' -> 'CIS 20'):  {values['name']}")

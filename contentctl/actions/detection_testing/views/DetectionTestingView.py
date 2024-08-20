@@ -152,10 +152,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
             total_pass, total_detections-total_skipped, 1
         )
 
-        # TODO (cmcginley): add stats around total test cases and unit/integration test
-        #   sucess/failure? maybe configurable reporting? add section to summary called
-        #   "testwise_summary" listing per test metrics (e.g. total test, total tests passed, ...);
-        #   also list num skipped at both detection and test level
+        # TODO (#230): expand testing metrics reported
         # Construct and return the larger results dict
         result_dict = {
             "summary": {

@@ -111,11 +111,19 @@ class GitService(BaseModel):
                                 raise Exception(f"More than 1 Lookup reference the modified CSV file '{decoded_path}': {[l.file_path for l in matched ]}")
                             else:
                                 updatedLookup = matched[0]
+                        elif decoded_path.suffix == ".mlmodel":
+                            # Detected a changed .mlmodel file. However, since we do not have testing for these detections at 
+                            # this time, we will ignore this change.
+                            updatedLookup = None
+                            
+
                         else:
-                            raise Exception(f"Error getting lookup object for file {str(decoded_path)}")
+                            raise Exception(f"Detected a changed file in the lookups/ directory '{str(decoded_path)}'.\n"
+                                            "Only files ending in .csv, .yml, or .mlmodel are supported in this "
+                                            "directory. This file must be removed from the lookups/ directory.")
                         
-                        if updatedLookup not in updated_lookups:
-                            # It is possible that both th CSV and YML have been modified for the same lookup,
+                        if updatedLookup is not None and updatedLookup not in updated_lookups:
+                            # It is possible that both the CSV and YML have been modified for the same lookup,
                             # and we do not want to add it twice. 
                             updated_lookups.append(updatedLookup)
 
@@ -147,21 +155,22 @@ class GitService(BaseModel):
         print(f"[{len(updated_detections)}] Pieces of modifed and new content (this may include experimental/deprecated/manual_test content):\n - {modifiedAndNewContentString}")
         return updated_detections
 
-    def getSelected(self, detectionFilenames:List[FilePath])->List[Detection]:
-        filepath_to_content_map:dict[FilePath, SecurityContentObject] = { obj.file_path:obj for (_,obj) in self.director.name_to_content_map.items() if obj.file_path is not None} 
+    def getSelected(self, detectionFilenames: List[FilePath]) -> List[Detection]:
+        filepath_to_content_map: dict[FilePath, SecurityContentObject] = {
+        obj.file_path: obj for (_, obj) in self.director.name_to_content_map.items() if obj.file_path is not None
+    }
         errors = []
-        detections:List[Detection] = []
+        detections: List[Detection] = []
         for name in detectionFilenames:
-            obj = filepath_to_content_map.get(name,None)
-            if obj == None:
+            obj = filepath_to_content_map.get(name, None)
+            if obj is None:
                 errors.append(f"There is no detection file or security_content_object at '{name}'")
             elif not isinstance(obj, Detection):
                 errors.append(f"The security_content_object at '{name}' is of type '{type(obj).__name__}', NOT '{Detection.__name__}'")
             else:
                 detections.append(obj)
 
-        if len(errors) > 0:
+        if errors:
             errorsString = "\n - ".join(errors)
-            raise Exception(f"There following errors were encountered while getting selected detections to test:\n - {errorsString}")
+            raise Exception(f"The following errors were encountered while getting selected detections to test:\n - {errorsString}")
         return detections
-

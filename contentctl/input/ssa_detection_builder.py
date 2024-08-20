@@ -89,12 +89,14 @@ class SSADetectionBuilder():
                             #print("mitre_attack_id " + mitre_attack_id + " doesn't exist for detecction " + self.security_content_obj.name)
                             raise ValueError("mitre_attack_id " + mitre_attack_id + " doesn't exist for detection " + self.security_content_obj.name)
     def addMitreAttackEnrichmentNew(self, attack_enrichment: AttackEnrichment) -> None:
-        if self.security_content_obj and self.security_content_obj.tags.mitre_attack_id:
-            self.security_content_obj.tags.mitre_attack_enrichments = []
-            for mitre_attack_id in self.security_content_obj.tags.mitre_attack_id:
-                enrichment_obj = attack_enrichment.getEnrichmentByMitreID(mitre_attack_id)
-                if enrichment_obj is not None:
-                    self.security_content_obj.tags.mitre_attack_enrichments.append(enrichment_obj)
+        # We skip enriching if configured to do so
+        if attack_enrichment.use_enrichment:
+            if self.security_content_obj and self.security_content_obj.tags.mitre_attack_id:
+                self.security_content_obj.tags.mitre_attack_enrichments = []
+                for mitre_attack_id in self.security_content_obj.tags.mitre_attack_id:
+                    enrichment_obj = attack_enrichment.getEnrichmentByMitreID(mitre_attack_id)
+                    if enrichment_obj is not None:
+                        self.security_content_obj.tags.mitre_attack_enrichments.append(enrichment_obj)
 
 
 

@@ -49,13 +49,17 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
     def check_for_teardown(self):
 
         try:
-            self.get_docker_client().containers.get(self.get_name())
+            container: docker.models.containers.Container = self.get_docker_client().containers.get(self.get_name())
         except Exception as e:
             if self.sync_obj.terminate is not True:
                 self.pbar.write(
                     f"Error: could not get container [{self.get_name()}]: {str(e)}"
                 )
                 self.sync_obj.terminate = True
+        else:
+            if container.status != 'running':
+                self.sync_obj.terminate = True
+                self.container = None
 
         if self.sync_obj.terminate:
             self.finish()
@@ -75,7 +79,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         mounts = [
             docker.types.Mount(
                 source=str(self.global_config.getLocalAppDir()),
-                target=str(self.global_config.getContainerAppDir()),
+                target=(self.global_config.getContainerAppDir()).as_posix(),
                 type="bind",
                 read_only=True,
             )

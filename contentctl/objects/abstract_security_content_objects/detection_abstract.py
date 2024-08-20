@@ -255,13 +255,12 @@ class Detection_Abstract(SecurityContentObject):
             # Dict-formatted searches (sigma) will not have providing technologies
             return []
 
+    # TODO (#247): Refactor the risk property of detection_abstract
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
         risk_objects: list[dict[str, str | int]] = []
-        # TODO (cmcginley): 'device' and 'username' do not seem to be legitimate observable types
-        #   (validation rules them out)
-        # TODO (cmcginley): is user a valid possible threat/attacker?
+        # TODO (#246): "User Name" type should map to a "user" risk object and not "other"
         risk_object_user_types = {'user', 'username', 'email address'}
         risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
         process_threat_object_types = {'process name', 'process'}
@@ -269,7 +268,6 @@ class Detection_Abstract(SecurityContentObject):
         url_threat_object_types = {'url string', 'url'}
         ip_threat_object_types = {'ip address'}
 
-        # TODO cmcginley: this should be overhauled to be based on role and type in more explicit terms
         for entity in self.tags.observable:
             risk_object: dict[str, str | int] = dict()
             if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:

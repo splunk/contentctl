@@ -1,6 +1,5 @@
 import re
 from typing import Union, Optional
-from functools import cached_property
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, computed_field
 
@@ -8,15 +7,8 @@ from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
 from contentctl.objects.observable import Observable
 
-# TODO (cmcginley): validation of threat objects
-# TODO (cmcginley): 'Email' -> other is where it goes in practice, but I feel like it SHOULD go to
-#   user?
-# TODO (cmcginley): Should we map some of these others more specifically? E.g. 'Process' to
-#   'host_artifacts' and 'File Hash' to 'hash_values'
-# TODO (cmcginley): centralize this mapping w/ usage of SES_OBSERVABLE_TYPE_MAPPING (see
+# TODO (#247): centralize this mapping w/ usage of SES_OBSERVABLE_TYPE_MAPPING (see
 #   observable.py) and the ad hoc mapping made in detection_abstract.py (see the risk property func)
-
-# TODO (PEX-433): use SES_OBSERVABLE_TYPE_MAPPING
 TYPE_MAP: dict[str, list[str]] = {
     "system": [
         "Hostname",
@@ -51,20 +43,9 @@ TYPE_MAP: dict[str, list[str]] = {
         "Other"
     ]
 }
-# TODO (PEX-433): 'Email Address', 'File Name', 'File Hash', 'Other', 'User Name', 'File',
-#   'Process Name'
 
-# TODO (PEX-433): use SES_OBSERVABLE_ROLE_MAPPING
+# Roles that should not generate risks
 IGNORE_ROLES: list[str] = ["Attacker"]
-# Known valid roles: Victim, Parent Process, Child Process
-# TODO (PEX-433): 'Other', 'Target', 'Unknown'
-# TODO (PEX-433): is Other a valid role
-
-# TODO (PEX-433): do we need User Name in conjunction w/ User? User Name doesn't get mapped to
-#   "user" in risk events
-# TODO (PEX-433): similarly, do we need Process and Process Name?
-
-RESERVED_FIELDS = ["host"]
 
 
 class RiskEvent(BaseModel):
@@ -122,7 +103,7 @@ class RiskEvent(BaseModel):
             return [v]
 
     @computed_field
-    @cached_property
+    @property
     def source_field_name(self) -> str:
         """
         A cached derivation of the source field name the risk event corresponds to in the relevant
@@ -169,8 +150,6 @@ class RiskEvent(BaseModel):
         # Check risk_message
         self.validate_risk_message(detection)
 
-        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
-        #   positive rate in risk/obseravble matching
         # Check several conditions against the observables
         self.validate_risk_against_observables(detection.tags.observable)
 
@@ -285,8 +264,6 @@ class RiskEvent(BaseModel):
             f"Observable type {observable_type} does not have a mapping to a risk type in TYPE_MAP"
         )
 
-    # TODO (PEX-433): should this be an observable instance method? It feels less relevant to
-    #   observables themselves, as it's really only relevant to the handling of risk events
     @staticmethod
     def ignore_observable(observable: Observable) -> bool:
         """
@@ -295,42 +272,14 @@ class RiskEvent(BaseModel):
         :param observable: the Observable object we are checking the roles of
         :returns: a bool indicating whether this observable should be ignored or not
         """
-        # TODO (PEX-433): could there be a case where an observable has both an Attacker and Victim
-        #   (or equivalent) role? If so, how should we handle ignoring it?
+        # TODO (cmcginley): could there be a case where an observable has both an Attacker and
+        #   Victim (or equivalent) role? If so, how should we handle ignoring it?
         ignore = False
         for role in observable.role:
             if role in IGNORE_ROLES:
                 ignore = True
                 break
         return ignore
-
-    # TODO (PEX-433): two possibilities: alway check for the field itself and the field prefixed
-    #   w/ "orig_" OR more explicitly maintain a list of known "reserved fields", like "host". I
-    #   think I like option 2 better as it can have fewer unknown side effects
-    def matches_observable(self, observable: Observable) -> bool:
-        """
-        Given an observable, check if the risk event matches is
-        :param observable: the Observable object we are comparing the risk event against
-        :returns: bool indicating a match or not
-        """
-        # When field names collide w/ reserved fields in Splunk events (e.g. sourcetype or host)
-        # they get prefixed w/ "orig_"
-        # attribute_name = observable.name
-        # if attribute_name in RESERVED_FIELDS:
-        #     attribute_name = f"orig_{attribute_name}"
-
-        # # Retrieve the value of this attribute and see if it matches the risk_object
-        # value: Union[str, list[str]] = getattr(self, attribute_name)
-
-        # # Value may be a list of values, or a single int or str; make a singleton if a single value
-        # if not isinstance(value, list):
-        #     value = [value]
-
-        # # The value of the attribute may be a list of values, so check for any matches
-        # return self.risk_object in value
-
-        # TODO (cmcginley): confirm using the non 'orig_' field works for something like 'host'
-        return self.source_field_name == observable.name
 
     # TODO: pull field to match against from `contributing_events_search` -> the field they are
     #   keying off of is the field related to the observable
@@ -350,47 +299,23 @@ class RiskEvent(BaseModel):
 
         # Iterate over the obervables and check for a match
         for observable in observables:
-            # TODO (cmcginley): seems like certain computed fields (e.g. when user is computed) may
-            #   not be vailable in the risk event; see "Windows Unusual Count Of Disabled Users
-            #   Failed Auth Using Kerbero" for an example. Until then, we will remove this level of
-            #   validation as it is not reliable; unclear if these missing fields would be available
-            #   in risk_message or not? Unsure how this plays into Lou's proposed changes
-            #   (see #234); see the 'dest' field in 'Windows Steal Authentication Certificates -
-            #   ESC1 Abuse' for an alternate example, where the field is sparesely populated in the
-            #   source events and thus only present in some observables but not all (unlike the
-            #   earlier example, where a field that is available in all source events is weirdly
-            #   unavailable in the risk fields)
+            # TODO (#252): Refactor and re-enable per-field validation of risk events
             # Each the field name used in each observable shoud be present in the risk event
-            # TODO (PEX-433): this check is redundant I think; earlier in the unit test, observable
-            #   field
-            #   names are compared against the search result set, ensuring all are present; if all
-            #   are present in the result set, all are present in the risk event
             # if not hasattr(self, observable.name):
             #     raise ValidationFailed(
             #         f"Observable field \"{observable.name}\" not found in risk event."
             #     )
 
             # Try to match the risk_object against a specific observable for the obervables with
-            # a valid role (some, like Attacker, don't get converted to risk events)
-            # if not RiskEvent.ignore_observable(observable):
-            if self.matches_observable(observable):
-                # TODO (PEX-433): This check fails as there are some instances where this is
-                #   true (e.g. we have an observable for process and parent_process and both
-                #   have the same name like "cmd.exe")
+            # a valid role (some, like Attacker, shouldn't get converted to risk events)
+            if self.source_field_name == observable.name:
                 if matched_observable is not None:
-                    # raise ValueError(
-                    #     "Unexpected conditon: we don't expect the value corresponding to an "
-                    #     "observables field name to be repeated"
-                    # )
                     raise ValueError(
                         "Unexpected conditon: we don't expect the source event field "
-                        "corresponding to an observables field name to be repeated"
+                        "corresponding to an observables field name to be repeated."
                     )
 
-                # TODO (cmcginley): this is seemingly being hit transiently by offending detections;
-                #   my theory is that we are prematurely passing integration testing, when we
-                #   occassionally get a partial set of risk events that include the legitimate
-                #   (Victims) and not yet the illegitimate (Attacker)
+                # Report any risk events we find that shouldn't be there
                 if RiskEvent.ignore_observable(observable):
                     raise ValidationFailed(
                         "Risk event matched an observable with an invalid role: "

@@ -575,18 +575,7 @@ class CorrelationSearch(BaseModel):
             self.logger.debug(f"Using cached risk events ({len(self._risk_events)} total).")
             return self._risk_events
 
-        # TODO (cmcginley): We should be querying a single SID each time; cache SID the first
-        #   time... Or... what if I just did a tail instead of a head? so we were always dealing w/
-        #   the oldest orig_sid (the one that's been cooking the longest), instead of the newest?
-        #   would it be more performant to use tail? or to reverse ordering (earliest first) and
-        #   still use head? This should largely resolve our issues, but w/ the invalid role ones,
-        #   we still run the risk of a false test pass, if we early on only get a partial risk
-        #   result set, excluding the bad one that correspopnds to an Attacker role. Could
-        #   potentially be improved by blind querying, finding the first SID, and then honing in on
-        #   that -> check it's status before we call it quits and use that SID specifically for any
-        #   repeated queries; in the short term I think we can accept a small degree of false
-        #   successes as we are essentially detecting something extra as opposed to looking for
-        #   something missing
+        # TODO (#248): Refactor risk/notable querying to pin to a single savedsearch ID
         # Search for all risk events from a single scheduled search (indicated by orig_sid)
         query = (
             f'search index=risk search_name="{self.name}" [search index=risk search '
@@ -688,11 +677,6 @@ class CorrelationSearch(BaseModel):
 
         return events
 
-    # TODO (cmcginley): run through a final check list/test of all possible failure conditions:
-    #   observable w/ no risk, risk w/ no observable, expected typing on the risk relative to
-    #   observable, risk event matched to more than one observable, risk event matched to an
-    #   observable w/ an invalid role, all observable fields found in all risk events (possibly
-    #   faulty assumption, esp w/ Lou's work; future), improper risk/observable count (future)
     def validate_risk_events(self) -> None:
         """Validates the existence of any expected risk events
 
@@ -703,17 +687,12 @@ class CorrelationSearch(BaseModel):
             check the risks/notables
         :returns: an IntegrationTestResult on failure; None on success
         """
-        # TODO (cmcginley): we should have static validation which enforces that we don't have
-        #   identical observables (fully identical? or just same name?) -> this check should fully
-        #   be moved to static validation
-        # TODO (cmcginley): what is the str representation of an observable? perhaps this logic
-        #   should be a little more direct to look for duplicates (e.g. iterate and check for name
-        #   collisions, or make the keys the observable names explicitly)
-        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
-        #   positive rate in risk/obseravble matching
         # Create a mapping of the relevant observables to counters
         observables = CorrelationSearch._get_relevant_observables(self.detection.tags.observable)
         observable_counts: dict[str, int] = {str(x): 0 for x in observables}
+
+        # NOTE: we intentionally want this to be an error state and not a failure state, as
+        #   ultimately this validation should be handled during the build process
         if len(observables) != len(observable_counts):
             raise ClientError(
                 f"At least two observables in '{self.detection.name}' have the same name; "
@@ -734,8 +713,6 @@ class CorrelationSearch(BaseModel):
             )
             event.validate_against_detection(self.detection)
 
-            # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the
-            #   false positive rate in risk/obseravble matching
             # Update observable count based on match
             matched_observable = event.get_matched_observable(self.detection.tags.observable)
             self.logger.debug(
@@ -746,7 +723,6 @@ class CorrelationSearch(BaseModel):
             )
             observable_counts[str(matched_observable)] += 1
 
-        # TODO (cmcginley): test this artificially if I can't reproduce in the wild
         # Report any observables which did not have at least one match to a risk event
         for observable in observables:
             self.logger.debug(
@@ -759,24 +735,7 @@ class CorrelationSearch(BaseModel):
                     f"role={observable.role}) was not matched to any risk events."
                 )
 
-        # TODO (cmcginley): rework the block below and create a function which uses the detection
-        #   search results to determine what the expected count of each individual risk/observable
-        #   matching is; we can do this by counting the number of values in the corresponding field
-        #   of each event returned by the search query (e.g. if we have multiple values in
-        #   the target field of one of the returned events, we would expect one risk event
-        #   for each value in that field). See 'Excessive Usage Of Cacls App' for an example
-        #   of this (we'd expect more occurences of the process_name observable than the
-        #   dest observable); the assertion seen below, that the count of each risk/observable match
-        #   should be the same is faulty
-        # TODO (PEX-433): test my new contentctl logic against an old ESCU build; my logic should
-        #   detect the faulty attacker events -> this was the issue from the 4.28/4.27 release;
-        #   recreate by testing against one of those old builds w/ the bad config
-        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
-        #   positive
-        #   rate in risk/obseravble matching
-        # TODO (PEX-433): I foresee issues here if for example a parent and child process share a
-        #   name (matched observable could be either) -> these issues are confirmed to exist, e.g.
-        #   `Windows Steal Authentication Certificates Export Certificate`
+        # TODO (#250): Re-enable and refactor code that validates the specific risk counts
         # Validate risk events in aggregate; we should have an equal amount of risk events for each
         # relevant observable, and the total count should match the total number of events
         # individual_count: Optional[int] = None

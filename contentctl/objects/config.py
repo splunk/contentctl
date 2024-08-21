@@ -175,7 +175,6 @@ class validate(Config_Base):
                                                          "be avoided for performance reasons.")
     build_app: bool = Field(default=True, description="Should an app be built and output in the build_path?")
     build_api: bool = Field(default=False, description="Should api objects be built and output in the build_path?")
-    build_ssa: bool = Field(default=False, description="Should ssa objects be built and output in the build_path?")
     data_source_TA_validation: bool = Field(default=False, description="Validate latest TA information from Splunkbase")
 
     def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
@@ -577,7 +576,6 @@ class test_common(build):
         # output to dist. We have already built it!
         self.build_app = False
         self.build_api = False
-        self.build_ssa = False
         self.enrichments = False
         
         self.enable_integration_testing = True

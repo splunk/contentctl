@@ -30,7 +30,6 @@ class Validate:
             [],
             [],
             [],
-            [],
         )
 
         director = Director(director_output_dto)

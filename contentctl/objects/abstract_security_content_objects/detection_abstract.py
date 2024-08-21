@@ -22,7 +22,6 @@ from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.event_source import EventSource
 from contentctl.objects.data_source import DataSource
 
 #from contentctl.objects.playbook import Playbook
@@ -39,7 +38,7 @@ class Detection_Abstract(SecurityContentObject):
     status: DetectionStatus = Field(...)
     data_source: list[str] = []
     tags: DetectionTags = Field(...)
-    search: Union[str, dict[str,Any]] = Field(...)
+    search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
 
@@ -136,10 +135,9 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def datamodel(self)->List[DataModel]:
-        if isinstance(self.search, str):
-            return [dm for dm in DataModel if dm.value in self.search]
-        else:
-            return []
+        return [dm for dm in DataModel if dm.value in self.search]
+        
+            
     
 
     @computed_field
@@ -238,11 +236,8 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def providing_technologies(self)->List[ProvidingTechnology]:
-        if isinstance(self.search, str):
-            return ProvidingTechnology.getProvidingTechFromSearch(self.search)
-        else:
-            #Dict-formatted searches (sigma) will not have providing technologies
-            return []
+        return ProvidingTechnology.getProvidingTechFromSearch(self.search)
+        
     
     @computed_field
     @property
@@ -599,35 +594,32 @@ class Detection_Abstract(SecurityContentObject):
 
     @model_validator(mode="after")
     def search_observables_exist_validate(self):
+        observable_fields = [ob.name.lower() for ob in self.tags.observable]
         
-        if isinstance(self.search, str):
-            
-            observable_fields = [ob.name.lower() for ob in self.tags.observable]
-            
-            #All $field$ fields from the message must appear in the search
-            field_match_regex = r"\$([^\s.]*)\$"
-            
-            
-            if self.tags.message:
-                message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, self.tags.message.lower())]
-                missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
-            else:
-                message_fields = []
-                missing_fields = set()
-            
+        #All $field$ fields from the message must appear in the search
+        field_match_regex = r"\$([^\s.]*)\$"
+        
+        
+        if self.tags.message:
+            message_fields = [match.replace("$", "").lower() for match in re.findall(field_match_regex, self.tags.message.lower())]
+            missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
+        else:
+            message_fields = []
+            missing_fields = set()
+        
 
-            error_messages = []
-            if len(missing_fields) > 0:
-                error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
+        error_messages = []
+        if len(missing_fields) > 0:
+            error_messages.append(f"The following fields are declared as observables, but do not exist in the search: {missing_fields}")
 
-            
-            missing_fields = set([field for field in message_fields if field not in self.search.lower()])
-            if len(missing_fields) > 0:
-                error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
-            
-            if len(error_messages) > 0 and self.status == DetectionStatus.production.value:
-                msg = "Use of fields in observables/messages that do not appear in search:\n\t- "+ "\n\t- ".join(error_messages)
-                raise(ValueError(msg))
+        
+        missing_fields = set([field for field in message_fields if field not in self.search.lower()])
+        if len(missing_fields) > 0:
+            error_messages.append(f"The following fields are used as fields in the message, but do not exist in the search: {missing_fields}")
+        
+        if len(error_messages) > 0 and self.status == DetectionStatus.production.value:
+            msg = "Use of fields in observables/messages that do not appear in search:\n\t- "+ "\n\t- ".join(error_messages)
+            raise(ValueError(msg))
         
         # Found everything
         return self

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator
-from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, SES_OBSERVABLE_ROLE_MAPPING
+from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, RBA_OBSERVABLE_ROLE_MAPPING
 
 
 class Observable(BaseModel):
@@ -26,10 +26,12 @@ class Observable(BaseModel):
     def check_roles(cls, v: list[str]):
         if len(v) == 0:
             raise ValueError("Error, at least 1 role must be listed for Observable.")
+        if len(v) > 1:
+            raise ValueError("Error, each Observable can only have one role.")
         for role in v:
-            if role not in SES_OBSERVABLE_ROLE_MAPPING.keys():
+            if role not in RBA_OBSERVABLE_ROLE_MAPPING.keys():
                 raise ValueError(
                     f"Invalid role '{role}' provided for observable.  Valid observable types are "
-                    f"{SES_OBSERVABLE_ROLE_MAPPING.keys()}"
+                    f"{RBA_OBSERVABLE_ROLE_MAPPING.keys()}"
                 )
         return v

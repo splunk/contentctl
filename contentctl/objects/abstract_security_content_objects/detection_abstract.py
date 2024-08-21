@@ -46,7 +46,7 @@ class Detection_Abstract(SecurityContentObject):
     status: DetectionStatus = Field(...)
     data_source: list[str] = []
     tags: DetectionTags = Field(...)
-    search: Union[str, dict[str, Any]] = Field(...)
+    search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
 
@@ -65,11 +65,7 @@ class Detection_Abstract(SecurityContentObject):
 
     @field_validator("search", mode="before")
     @classmethod
-    def validate_presence_of_filter_macro(
-        cls,
-        value: Union[str, dict[str, Any]],
-        info: ValidationInfo
-    ) -> Union[str, dict[str, Any]]:
+    def validate_presence_of_filter_macro(cls, value:str, info:ValidationInfo)->str:
         """
         Validates that, if required to be present, the filter macro is present with the proper name.
         The filter macro MUST be derived from the name of the detection
@@ -83,12 +79,9 @@ class Detection_Abstract(SecurityContentObject):
 
         Returns:
             Union[str, dict[str,Any]]: The search, either in sigma or SPL format.
-        """
-
-        if isinstance(value, dict):
-            # If the search is a dict, then it is in Sigma format so return it
-            return value
-
+        """        
+        
+        
         # Otherwise, the search is SPL.
 
         # In the future, we will may add support that makes the inclusion of the
@@ -155,15 +148,16 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def datamodel(self) -> List[DataModel]:
-        if isinstance(self.search, str):
-            return [dm for dm in DataModel if dm.value in self.search]
-        else:
-            return []
+        return [dm for dm in DataModel if dm.value in self.search]
+        
+            
+    
 
     @computed_field
     @property
     def source(self) -> str:
         return self.file_path.absolute().parent.name
+        
 
     deployment: Deployment = Field({})
 
@@ -249,12 +243,9 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def providing_technologies(self) -> List[ProvidingTechnology]:
-        if isinstance(self.search, str):
-            return ProvidingTechnology.getProvidingTechFromSearch(self.search)
-        else:
-            # Dict-formatted searches (sigma) will not have providing technologies
-            return []
-
+        return ProvidingTechnology.getProvidingTechFromSearch(self.search)
+        
+    
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
@@ -445,18 +436,13 @@ class Detection_Abstract(SecurityContentObject):
 
     @field_validator('lookups', mode="before")
     @classmethod
-    def getDetectionLookups(cls, v: list[str], info: ValidationInfo) -> list[Lookup]:
-        if info.context is None:
-            raise ValueError("ValidationInfo.context unexpectedly null")
-
-        director: DirectorOutputDto = info.context.get("output_dto", None)
-
-        search: Union[str, dict[str, Any], None] = info.data.get("search", None)
-        if not isinstance(search, str):
-            # The search was sigma formatted (or failed other validation and was None), so we will
-            # not validate macros in it
-            return []
-
+    def getDetectionLookups(cls, v:list[str], info:ValidationInfo) -> list[Lookup]:
+        director:DirectorOutputDto = info.context.get("output_dto",None)
+        
+        search:Union[str,None] = info.data.get("search",None)
+        if search is None:
+            raise ValueError("Search was None - is this file missing the search field?")
+        
         lookups = Lookup.get_lookups(search, director)
         return lookups
 
@@ -496,11 +482,9 @@ class Detection_Abstract(SecurityContentObject):
 
         director: DirectorOutputDto = info.context.get("output_dto", None)
 
-        search: str | dict[str, Any] | None = info.data.get("search", None)
-        if not isinstance(search, str):
-            # The search was sigma formatted (or failed other validation and was None), so we will
-            # not validate macros in it
-            return []
+        search: str | None = info.data.get("search", None)
+        if search is None:
+            raise ValueError("Search was None - is this file missing the search field?")
 
         search_name: Union[str, Any] = info.data.get("name", None)
         message = f"Expected 'search_name' to be a string, instead it was [{type(search_name)}]"
@@ -614,45 +598,43 @@ class Detection_Abstract(SecurityContentObject):
 
     @model_validator(mode="after")
     def search_observables_exist_validate(self):
-        if isinstance(self.search, str):
+        observable_fields = [ob.name.lower() for ob in self.tags.observable]
 
-            observable_fields = [ob.name.lower() for ob in self.tags.observable]
+        # All $field$ fields from the message must appear in the search
+        field_match_regex = r"\$([^\s.]*)\$"
 
-            # All $field$ fields from the message must appear in the search
-            field_match_regex = r"\$([^\s.]*)\$"
+        missing_fields: set[str]
+        if self.tags.message:
+            matches = re.findall(field_match_regex, self.tags.message.lower())
+            message_fields = [match.replace("$", "").lower() for match in matches]
+            missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
+        else:
+            message_fields = []
+            missing_fields = set()
 
-            missing_fields: set[str]
-            if self.tags.message:
-                matches = re.findall(field_match_regex, self.tags.message.lower())
-                message_fields = [match.replace("$", "").lower() for match in matches]
-                missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
-            else:
-                message_fields = []
-                missing_fields = set()
+        error_messages: list[str] = []
+        if len(missing_fields) > 0:
+            error_messages.append(
+                "The following fields are declared as observables, but do not exist in the "
+                f"search: {missing_fields}"
+            )
 
-            error_messages: list[str] = []
-            if len(missing_fields) > 0:
-                error_messages.append(
-                    "The following fields are declared as observables, but do not exist in the "
-                    f"search: {missing_fields}"
-                )
+        missing_fields = set([field for field in message_fields if field not in self.search.lower()])
+        if len(missing_fields) > 0:
+            error_messages.append(
+                "The following fields are used as fields in the message, but do not exist in "
+                f"the search: {missing_fields}"
+            )
 
-            missing_fields = set([field for field in message_fields if field not in self.search.lower()])
-            if len(missing_fields) > 0:
-                error_messages.append(
-                    "The following fields are used as fields in the message, but do not exist in "
-                    f"the search: {missing_fields}"
-                )
-
-            # NOTE: we ignore the type error around self.status because we are using Pydantic's
-            # use_enum_values configuration
-            # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-            if len(error_messages) > 0 and self.status == DetectionStatus.production.value:         # type: ignore
-                msg = (
-                    "Use of fields in observables/messages that do not appear in search:\n\t- "
-                    "\n\t- ".join(error_messages)
-                )
-                raise ValueError(msg)
+        # NOTE: we ignore the type error around self.status because we are using Pydantic's
+        # use_enum_values configuration
+        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
+        if len(error_messages) > 0 and self.status == DetectionStatus.production.value:         # type: ignore
+            msg = (
+                "Use of fields in observables/messages that do not appear in search:\n\t- "
+                "\n\t- ".join(error_messages)
+            )
+            raise ValueError(msg)
 
         # Found everything
         return self

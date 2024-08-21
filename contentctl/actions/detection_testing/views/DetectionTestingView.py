@@ -155,7 +155,9 @@ class DetectionTestingView(BaseModel, abc.ABC):
         # TODO (#230): expand testing metrics reported
         # Construct and return the larger results dict
         result_dict = {
+            # TODO (cmcginley): differentiate total detections vs total tested
             "summary": {
+                "mode": self.config.getModeName().lower(),
                 "success": overall_success,
                 "total_detections": total_detections,
                 "total_pass": total_pass,

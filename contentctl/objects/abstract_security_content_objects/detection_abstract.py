@@ -701,10 +701,13 @@ class Detection_Abstract(SecurityContentObject):
         # Ensure that there is at least 1 test
         if len(v) == 0:
             if info.data.get("tags", None) and info.data.get("tags").manual_test is not None:       # type: ignore
-                # Detections that are manual_test MAY have detections, but it is not required.  If they
+                # Detections that are manual_test MAY have tests, but it is not required.  If they
                 # do not have one, then create one which will be a placeholder.
                 # Note that this fake UnitTest (and by extension, Integration Test) will NOT be generated
                 # if there ARE test(s) defined for a Detection.
+
+                # TODO (cmcginley): make this ManualTest; ultimately this test case should be
+                #   explicit and not implicit
                 placeholder_test = UnitTest(                                                        # type: ignore
                     name="PLACEHOLDER FOR DETECTION TAGGED MANUAL_TEST WITH NO TESTS SPECIFIED IN YML FILE",
                     attack_data=[]
@@ -753,7 +756,7 @@ class Detection_Abstract(SecurityContentObject):
 
     def get_summary(
         self,
-        detection_fields: list[str] = ["name", "search"],
+        detection_fields: list[str] = ["name", "type", "status", "source", "search"],
         test_result_fields: list[str] = ["success", "message", "exception", "status", "duration", "wait_duration"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict[str, Any]:

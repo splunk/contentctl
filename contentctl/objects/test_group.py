@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.unit_test_attack_data import UnitTestAttackData
+from contentctl.objects.test_attack_data import TestAttackData
 from contentctl.objects.base_test_result import TestResultStatus
 
 
@@ -18,7 +18,7 @@ class TestGroup(BaseModel):
     name: str
     unit_test: UnitTest
     integration_test: IntegrationTest
-    attack_data: list[UnitTestAttackData]
+    attack_data: list[TestAttackData]
 
     @classmethod
     def derive_from_unit_test(cls, unit_test: UnitTest, name_prefix: str) -> "TestGroup":

@@ -1,10 +1,9 @@
 from __future__ import annotations
-from typing import Union
 
 from pydantic import Field
 
 from contentctl.objects.unit_test_baseline import UnitTestBaseline
-from contentctl.objects.unit_test_attack_data import UnitTestAttackData
+from contentctl.objects.test_attack_data import TestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.base_test import BaseTest, TestType
 from contentctl.objects.base_test_result import TestResultStatus
@@ -17,19 +16,21 @@ class UnitTest(BaseTest):
     # contentType: SecurityContentType = SecurityContentType.unit_tests
 
     # The test type (unit)
-    test_type: TestType = Field(TestType.UNIT)
+    test_type: TestType = Field(default=TestType.UNIT)
 
+    # TODO (cmcginley): looks like pass_condition has gone the way of the dodo; can I remove?
     # The condition to check if the search was successful
-    pass_condition: Union[str, None] = None
+    pass_condition: str | None = None
 
+    # TODO (cmcginley): looks like baselines has gone the way of the dodo; can I remove?
     # Baselines to be run before a unit test
     baselines: list[UnitTestBaseline] = []
 
     # The attack data to be ingested for the unit test
-    attack_data: list[UnitTestAttackData]
+    attack_data: list[TestAttackData]
 
     # The result of the unit test
-    result: Union[None, UnitTestResult] = None
+    result: UnitTestResult | None = None
 
     def skip(self, message: str) -> None:
         """

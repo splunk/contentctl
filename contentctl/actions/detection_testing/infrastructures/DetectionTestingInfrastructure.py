@@ -29,7 +29,7 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.base_test import BaseTest
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.unit_test_attack_data import UnitTestAttackData
+from contentctl.objects.test_attack_data import TestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.objects.test_group import TestGroup
@@ -1143,7 +1143,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         return
 
-    def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
+    def delete_attack_data(self, attack_data_files: list[TestAttackData]):
         for attack_data_file in attack_data_files:
             index = attack_data_file.custom_index or self.sync_obj.replay_index
             host = attack_data_file.host or self.sync_obj.replay_host
@@ -1176,7 +1176,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def replay_attack_data_file(
         self,
-        attack_data_file: UnitTestAttackData,
+        attack_data_file: TestAttackData,
         tmp_dir: str,
         test_group: TestGroup,
         test_group_start_time: float,
@@ -1244,7 +1244,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def hec_raw_replay(
         self,
         tempfile: str,
-        attack_data_file: UnitTestAttackData,
+        attack_data_file: TestAttackData,
         verify_ssl: bool = False,
     ):
         if verify_ssl is False:

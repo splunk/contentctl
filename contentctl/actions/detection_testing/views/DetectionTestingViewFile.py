@@ -13,7 +13,6 @@ class DetectionTestingViewFile(DetectionTestingView):
     output_filename: str = OUTPUT_FILENAME
 
     def getOutputFilePath(self) -> pathlib.Path:
-        
         folder_path = pathlib.Path('.') / self.output_folder
         output_file = folder_path / self.output_filename
 
@@ -27,10 +26,9 @@ class DetectionTestingViewFile(DetectionTestingView):
         output_file = self.getOutputFilePath()
 
         folder_path.mkdir(parents=True, exist_ok=True)
-        
-        
+
         result_dict = self.getSummaryObject()
-        
+
         # use the yaml writer class
         with open(output_file, "w") as res:
             res.write(yaml.safe_dump(result_dict,sort_keys=False))

@@ -1,6 +1,14 @@
 {
 "configurations": [
     {
+        "name":"contentctl (pick args)",
+        "type":"debugpy",
+        "request":"launch",
+        "program":"${workspaceFolder}/.venv/bin/contentctl",
+        "console":"integratedTerminal",
+        "cwd":"${env:SECURITY_CONTENT_PATH}",
+        "args":"${command:pickArgs}"},
+    {
         "name": "contentctl init",
         "type": "debugpy",
         "request": "launch",

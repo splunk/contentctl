@@ -43,7 +43,7 @@ from contentctl.helper.utils import Utils
 class DirectorOutputDto:
     # Atomic Tests are first because parsing them 
     # is far quicker than attack_enrichment
-    atomic_tests: Union[list[AtomicTest],None]
+    atomic_tests: None | list[AtomicTest]
     attack_enrichment: AttackEnrichment
     cve_enrichment: CveEnrichment
     detections: list[Detection]

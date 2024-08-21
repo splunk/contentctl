@@ -20,7 +20,7 @@ class MitreTactics(StrEnum):
     EXFILTRATION = "Exfiltration"
     IMPACT = "Impact"
 
-from enum import StrEnum
+
 class AttackGroupMatrix(StrEnum):
     mitre_attack = "mitre-attack"
 

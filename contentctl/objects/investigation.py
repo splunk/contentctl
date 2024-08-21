@@ -5,13 +5,13 @@ from pydantic import computed_field, Field, ConfigDict,model_serializer
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
 from contentctl.objects.investigation_tags import InvestigationTags
-
+from contentctl.objects.config import CustomApp
 
 class Investigation(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True,validate_default=False)
     type: str = Field(...,pattern="^Investigation$")
     datamodel: list[DataModel] = Field(...)
-    
+    name:str = Field(...,max_length=67)
     search: str = Field(...)
     how_to_implement: str = Field(...)
     known_false_positives: str = Field(...)
@@ -67,6 +67,14 @@ class Investigation(SecurityContentObject):
         # back to itself
         for story in self.tags.analytic_story:
             story.investigations.append(self)
+    
+    def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=81)->str:
+        stanza_name = f"{app.label} - {self.name} - Response Task"
+        if len(stanza_name) > max_stanza_length:
+            raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
+                             f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
+        #print(f"Stanza            Length[{len(stanza_name)}]")
+        return stanza_name
     
 
     

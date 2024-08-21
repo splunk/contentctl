@@ -28,7 +28,6 @@ action.escu.known_false_positives = None
 action.escu.creation_date = {{ detection.date }}
 action.escu.modification_date = {{ detection.date }}
 action.escu.confidence = high
-action.escu.full_search_name = {{app.label}} - {{ detection.name }} - Rule
 action.escu.search_type = detection
 {% if detection.tags.product is defined %}
 action.escu.product = {{ detection.tags.product | tojson }}

@@ -58,7 +58,7 @@ class Detection_Abstract(SecurityContentObject):
 
     @field_validator("search", mode="before")
     @classmethod
-    def validate_presence_of_filter_macro(cls, value:Union[str, dict[str,Any]], info:ValidationInfo)->Union[str, dict[str,Any]]:
+    def validate_presence_of_filter_macro(cls, value:str, info:ValidationInfo)->str:
         """
         Validates that, if required to be present, the filter macro is present with the proper name.
         The filter macro MUST be derived from the name of the detection
@@ -73,9 +73,6 @@ class Detection_Abstract(SecurityContentObject):
             Union[str, dict[str,Any]]: The search, either in sigma or SPL format.
         """        
         
-        if isinstance(value,dict):
-            #If the search is a dict, then it is in Sigma format so return it
-            return value
         
         # Otherwise, the search is SPL.
         
@@ -143,10 +140,8 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def source(self)->str:
-        if self.file_path is not None:
-            return self.file_path.absolute().parent.name
-        else:
-            raise ValueError(f"Cannot get 'source' for detection {self.name} - 'file_path' was None.")
+        return self.file_path.absolute().parent.name
+        
 
     deployment: Deployment = Field({})
     
@@ -424,12 +419,11 @@ class Detection_Abstract(SecurityContentObject):
     def getDetectionLookups(cls, v:list[str], info:ValidationInfo)->list[Lookup]:
         director:DirectorOutputDto = info.context.get("output_dto",None)
         
-        search:Union[str,dict] = info.data.get("search",None)
-        if not isinstance(search,str):
-            #The search was sigma formatted (or failed other validation and was None), so we will not validate macros in it
-            return []
+        search:Union[str,None] = info.data.get("search",None)
+        if search is None:
+            raise ValueError("Search was None - is this file missing the search field?")
         
-        lookups= Lookup.get_lookups(search, director)
+        lookups = Lookup.get_lookups(search, director)
         return lookups
 
     @field_validator('baselines',mode="before")
@@ -458,10 +452,9 @@ class Detection_Abstract(SecurityContentObject):
     def getDetectionMacros(cls, v:list[str], info:ValidationInfo)->list[Macro]:
         director:DirectorOutputDto = info.context.get("output_dto",None)
         
-        search:Union[str,dict] = info.data.get("search",None)
-        if not isinstance(search,str):
-            #The search was sigma formatted (or failed other validation and was None), so we will not validate macros in it
-            return []
+        search:Union[str,None] = info.data.get("search",None)
+        if search is None:
+            raise ValueError("Search was None - is this file missing the search field?")
         
         search_name:Union[str,Any] = info.data.get("name",None)
         assert isinstance(search_name,str), f"Expected 'search_name' to be a string, instead it was [{type(search_name)}]"

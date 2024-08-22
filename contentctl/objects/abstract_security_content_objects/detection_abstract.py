@@ -39,6 +39,11 @@ from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 
 MISSING_SOURCES: set[str] = set()
 
+# Those AnalyticsTypes that we do not test via contentctl
+UNTESTED_ANALYTICS_TYPES: set[str] = {
+    AnalyticsType.Correlation.value
+}
+
 
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
@@ -470,6 +475,21 @@ class Detection_Abstract(SecurityContentObject):
 
         self.skip_manual_tests()
 
+        # NOTE: we ignore the type error around self.status because we are using Pydantic's
+        # use_enum_values configuration
+        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
+
+        # Skip tests for non-production detections
+        if self.status != DetectionStatus.production.value:                                         # type: ignore
+            self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status}).")
+
+        # TODO (cmcginley): should we just mark all Correlation type detections as manual_test?
+        # Skip tests for detecton types like Correlation which are not supported via contentctl
+        if self.type in UNTESTED_ANALYTICS_TYPES:
+            self.skip_all_tests(
+                f"TEST SKIPPED: Detection type {self.type} cannot be tested by contentctl."
+            )
+
     @field_validator('lookups', mode="before")
     @classmethod
     def getDetectionLookups(cls, v: list[str], info: ValidationInfo) -> list[Lookup]:
@@ -696,7 +716,7 @@ class Detection_Abstract(SecurityContentObject):
 
         # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
         # Accordingly, we do not need to do additional checks if the type is Correlation
-        if self.type in set([AnalyticsType.Correlation.value]):
+        if self.type in UNTESTED_ANALYTICS_TYPES:
             return self
 
         if len(self.tests) == 0:
@@ -764,6 +784,10 @@ class Detection_Abstract(SecurityContentObject):
 
         # No issues - at least one test provided for production type requiring testing
         return v
+
+    def skip_all_tests(self, message: str = "TEST SKIPPED") -> None:
+        for test in self.tests:
+            test.skip(message=message)
 
     def skip_manual_tests(self) -> None:
         """

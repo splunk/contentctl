@@ -85,7 +85,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     hec_channel: str = ""
     _conn: client.Service = PrivateAttr()
     pbar: tqdm.tqdm = None
-    start_time: float = None
+    start_time: Optional[float] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -136,7 +136,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     TestReportingType.SETUP,
                     self.get_name(),
                     msg,
-                    self.start_time,
                     update_sync_status=True,
                 )
                 func()
@@ -147,7 +146,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.finish()
             return
 
-        self.format_pbar_string(TestReportingType.SETUP, self.get_name(), "Finished Setup!", self.start_time)
+        self.format_pbar_string(TestReportingType.SETUP, self.get_name(), "Finished Setup!")
 
     def wait_for_ui_ready(self):
         self.get_conn()
@@ -216,7 +215,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         TestReportingType.SETUP,
                         self.get_name(),
                         "Waiting for reboot",
-                        self.start_time,
                         update_sync_status=True,
                     )
                 else:
@@ -236,18 +234,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.pbar.write(
                     f"Error getting API connection (not quitting) '{type(e).__name__}': {str(e)}"
                 )
-                print("wow")
-                # self.pbar.write(
-                #     f"Unhandled exception getting connection to splunk server: {str(e)}"
-                # )
-                # self.sync_obj.terminate = True
 
             for _ in range(sleep_seconds):
                 self.format_pbar_string(
                     TestReportingType.SETUP,
                     self.get_name(),
                     "Getting API Connection",
-                    self.start_time,
                     update_sync_status=True,
                 )
                 time.sleep(1)
@@ -318,7 +310,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     TestReportingType.SETUP,
                     self.get_name(),
                     "Configuring Datamodels",
-                    self.start_time,
                 )
 
     def configure_conf_file_datamodels(self, APP_NAME: str = "Splunk_SA_CIM"):
@@ -424,7 +415,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         TestReportingType.GROUP,
                         test_group.name,
                         FinalTestingStates.SKIP.value,
-                        time.time(),
+                        start_time=time.time(),
                         set_pbar=False,
                     )
                 )
@@ -465,7 +456,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     TestReportingType.GROUP,
                     test_group.name,
                     TestingStates.DONE_GROUP.value,
-                    setup_results.start_time,
+                    start_time=setup_results.start_time,
                     set_pbar=False,
                 )
             )
@@ -486,7 +477,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             TestReportingType.GROUP,
             test_group.name,
             TestingStates.BEGINNING_GROUP.value,
-            setup_start_time
+            start_time=setup_start_time
         )
         # https://github.com/WoLpH/python-progressbar/issues/164
         # Use NullBar if there is more than 1 container or we are running
@@ -526,7 +517,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             TestReportingType.GROUP,
             test_group.name,
             TestingStates.DELETING.value,
-            test_group_start_time,
+            start_time=test_group_start_time,
         )
 
         # TODO: do we want to clean up even if replay failed? Could have been partial failure?
@@ -544,7 +535,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         test_reporting_type: TestReportingType,
         test_name: str,
         state: str,
-        start_time: Union[float, None],
+        start_time: Optional[float] = None,
         set_pbar: bool = True,
         update_sync_status: bool = False,
     ) -> str:
@@ -559,8 +550,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         :param update_sync_status: bool indicating whether a sync status update should be queued
         :returns: a formatted string for use w/ pbar
         """
-        # set start time id not provided
+        # set start time if not provided
         if start_time is None:
+            # if self.start_time is still None, something went wrong
+            if self.start_time is None:
+                raise ValueError(
+                    "self.start_time is still None; a function may have been called before self.setup()"
+                )
             start_time = self.start_time
 
         # invoke the helper method
@@ -575,7 +571,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # update sync status if needed
         if update_sync_status:
-            self.sync_obj.currentTestingQueue[self.get_name()] = {
+            self.sync_obj.currentTestingQueue[self.get_name()] = {                                  # type: ignore
                 "name": state,
                 "search": "N/A",
             }
@@ -621,7 +617,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             TestReportingType.UNIT,
             f"{detection.name}:{test.name}",
             TestingStates.BEGINNING_TEST,
-            test_start_time,
+            start_time=test_start_time,
         )
 
         # if the replay failed, record the test failure and return
@@ -690,14 +686,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 res = "ERROR"
                 link = detection.search
             else:
-                res = test.result.status.value.upper()
+                res = test.result.status.value.upper()                                              # type: ignore
                 link = test.result.get_summary_dict()["sid_link"]
 
             self.format_pbar_string(
                 TestReportingType.UNIT,
                 f"{detection.name}:{test.name}",
                 f"{res} - {link} (CTRL+D to continue)",
-                test_start_time,
+                start_time=test_start_time,
             )
 
             # Wait for user input
@@ -722,7 +718,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
                     FinalTestingStates.PASS.value,
-                    test_start_time,
+                    start_time=test_start_time,
                     set_pbar=False,
                 )
             )
@@ -744,7 +740,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
                     FinalTestingStates.FAIL.value,
-                    test_start_time,
+                    start_time=test_start_time,
                     set_pbar=False,
                 )
             )
@@ -755,7 +751,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
                     FinalTestingStates.ERROR.value,
-                    test_start_time,
+                    start_time=test_start_time,
                     set_pbar=False,
                 )
             )
@@ -770,7 +766,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         stdout.flush()
         test.result.duration = round(time.time() - test_start_time, 2)
 
-    # TODO (cmcginley): break up the execute routines for integration/unit tests some more to remove
+    # TODO (#227): break up the execute routines for integration/unit tests some more to remove
     #   code w/ similar structure
     def execute_integration_test(
         self,
@@ -837,7 +833,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             TestReportingType.INTEGRATION,
             f"{detection.name}:{test.name}",
             TestingStates.BEGINNING_TEST,
-            test_start_time,
+            start_time=test_start_time,
         )
 
         # if the replay failed, record the test failure and return
@@ -874,15 +870,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 start_time=test_start_time
             )
 
-            # TODO (cmcginley): right now, we are creating one CorrelationSearch instance for each
-            #   test case; typically, there is only one unit test, and thus one integration test,
-            #   per detection, so this is not an issue. However, if we start having many test cases
-            #   per detection, we will be duplicating some effort & network calls that we don't need
-            #   to. Consider refactoring in order to re-use CorrelationSearch objects across tests
-            #   in such a case
+            # TODO (#228): consider reusing CorrelationSearch instances across test cases
             # Instantiate the CorrelationSearch
             correlation_search = CorrelationSearch(
-                detection_name=detection.name,
+                detection=detection,
                 service=self.get_conn(),
                 pbar_data=pbar_data,
             )
@@ -892,14 +883,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except Exception as e:
             # Catch and report and unhandled exceptions in integration testing
             test.result = IntegrationTestResult(
-                message="TEST FAILED: unhandled exception in CorrelationSearch",
+                message="TEST ERROR: unhandled exception in CorrelationSearch",
                 exception=e,
                 status=TestResultStatus.ERROR
             )
 
-        # TODO (cmcginley): when in interactive mode, consider maybe making the cleanup routine in
-        #   correlation_search happen after the user breaks the interactivity; currently
-        #   risk/notable indexes are dumped before the user can inspect
+        # TODO (#229): when in interactive mode, cleanup should happen after user interaction
         # Pause here if the terminate flag has NOT been set AND either of the below are true:
         #   1. the behavior is always_pause
         #   2. the behavior is pause_on_failure and the test failed
@@ -908,7 +897,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             if test.result is None:
                 res = "ERROR"
             else:
-                res = test.result.status.value.upper()
+                res = test.result.status.value.upper()                                              # type: ignore
 
             # Get the link to the saved search in this specific instance
             link = f"https://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
@@ -917,7 +906,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 TestReportingType.INTEGRATION,
                 f"{detection.name}:{test.name}",
                 f"{res} - {link} (CTRL+D to continue)",
-                test_start_time,
+                start_time=test_start_time,
             )
 
             # Wait for user input
@@ -1036,8 +1025,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             search = f"{detection.search} {test.pass_condition}"
 
         # Ensure searches that do not begin with '|' must begin with 'search '
-        if not search.strip().startswith("|"):
-            if not search.strip().startswith("search "):
+        if not search.strip().startswith("|"):                                                      # type: ignore
+            if not search.strip().startswith("search "):                                            # type: ignore
                 search = f"search {search}"
 
         # exponential backoff for wait time
@@ -1054,7 +1043,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
                     TestingStates.PROCESSING.value,
-                    start_time
+                    start_time=start_time
                 )
 
                 time.sleep(1)
@@ -1063,7 +1052,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 TestReportingType.UNIT,
                 f"{detection.name}:{test.name}",
                 TestingStates.SEARCHING.value,
-                start_time,
+                start_time=start_time,
             )
 
             # Execute the search and read the results
@@ -1071,7 +1060,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             results = JSONResultsReader(job.results(output_mode="json"))
 
             # Consolidate a set of the distinct observable field names
-            observable_fields_set = set([o.name for o in detection.tags.observable])
+            observable_fields_set = set([o.name for o in detection.tags.observable]) # keeping this around for later
+            risk_object_fields_set = set([o.name for o in detection.tags.observable if "Victim" in o.role ]) # just the "Risk Objects"
+            threat_object_fields_set = set([o.name for o in detection.tags.observable if "Attacker" in o.role]) # just the "threat objects"
 
             # Ensure the search had at least one result
             if int(job.content.get("resultCount", "0")) > 0:
@@ -1079,7 +1070,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 test.result = UnitTestResult()
 
                 # Initialize the collection of fields that are empty that shouldn't be
-                empty_fields = set()
+                present_threat_objects: set[str] = set()
+                empty_fields: set[str] = set()
+                
+                
 
                 # Filter out any messages in the results
                 for result in results:
@@ -1088,30 +1082,50 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     # If not a message, it is a dict and we will process it
                     results_fields_set = set(result.keys())
+                    # Guard against first events (relevant later)
 
-                    # Identify any observable fields that are not available in the results
-                    missing_fields = observable_fields_set - results_fields_set
-                    if len(missing_fields) > 0:
+                    # Identify any risk object fields that are not available in the results
+                    missing_risk_objects = risk_object_fields_set - results_fields_set
+                    if len(missing_risk_objects) > 0:
                         # Report a failure in such cases
-                        e = Exception(f"The observable field(s) {missing_fields} are missing in the detection results")
+                        e = Exception(f"The observable field(s) {missing_risk_objects} are missing in the detection results")
                         test.result.set_job_content(
                             job.content,
                             self.infrastructure,
-                            TestResultStatus.ERROR,
+                            TestResultStatus.FAIL,
                             exception=e,
                             duration=time.time() - search_start_time,
                         )
 
-                        return
+                        return                    
 
-                    # If we find one or more fields that contain the string "null" then they were
+                    # If we find one or more risk object fields that contain the string "null" then they were
                     # not populated and we should throw an error.  This can happen if there is a typo
                     # on a field.  In this case, the field will appear but will not contain any values
-                    current_empty_fields = set()
+                    current_empty_fields: set[str] = set()
+                    
                     for field in observable_fields_set:
                         if result.get(field, 'null') == 'null':
-                            current_empty_fields.add(field)
+                            if field in risk_object_fields_set:
+                                e = Exception(f"The risk object field {field} is missing in at least one result.")
+                                test.result.set_job_content(
+                                    job.content,
+                                    self.infrastructure,
+                                    TestResultStatus.FAIL,
+                                    exception=e,
+                                    duration=time.time() - search_start_time,
+                                )
+                                return
+                            else:
+                                if field in threat_object_fields_set:
+                                    current_empty_fields.add(field)
+                        else:
+                            if field in threat_object_fields_set:
+                                present_threat_objects.add(field)
+                                continue
+                                
 
+                    
                     # If everything succeeded up until now, and no empty fields are found in the
                     # current result, then the search was a success
                     if len(current_empty_fields) == 0:
@@ -1125,21 +1139,32 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     else:
                         empty_fields = empty_fields.union(current_empty_fields)
-
-                # Report a failure if there were empty fields in all results
-                e = Exception(
-                    f"One or more required observable fields {empty_fields} contained 'null' values.  Is the "
-                    "data being parsed correctly or is there an error in the naming of a field?"
+                        
+                        
+                missing_threat_objects = threat_object_fields_set - present_threat_objects
+                # Report a failure if there were empty fields in a threat object in all results
+                if len(missing_threat_objects) > 0:
+                    e = Exception(
+                        f"One or more required threat object fields {missing_threat_objects} contained 'null' values in all events. "
+                        "Is the data being parsed correctly or is there an error in the naming of a field?"
                     )
-                test.result.set_job_content(
-                    job.content,
-                    self.infrastructure,
-                    TestResultStatus.ERROR,
-                    exception=e,
-                    duration=time.time() - search_start_time,
-                )
+                    test.result.set_job_content(
+                        job.content,
+                        self.infrastructure,
+                        TestResultStatus.FAIL,
+                        exception=e,
+                        duration=time.time() - search_start_time,
+                    )
+                    return
+                
 
-                return
+                test.result.set_job_content(
+                            job.content,
+                            self.infrastructure,
+                            TestResultStatus.PASS,
+                            duration=time.time() - search_start_time,
+                        )
+                return               
 
             else:
                 # Report a failure if there were no results at all
@@ -1194,10 +1219,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     ):
         tempfile = mktemp(dir=tmp_dir)
 
+
         if not (str(attack_data_file.data).startswith("http://") or 
                 str(attack_data_file.data).startswith("https://")) :
             if pathlib.Path(str(attack_data_file.data)).is_file():
-                self.format_pbar_string(TestReportingType.GROUP, test_group.name, "Copying Data", test_group_start_time)
+                self.format_pbar_string(TestReportingType.GROUP, 
+                                        test_group.name, 
+                                        "Copying Data", 
+                                        test_group_start_time)
+
                 try:
                     copyfile(str(attack_data_file.data), tempfile)
                 except Exception as e:
@@ -1221,7 +1251,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     TestReportingType.GROUP,
                     test_group.name,
                     TestingStates.DOWNLOADING.value,
-                    test_group_start_time
+                    start_time=test_group_start_time
                 )
 
                 Utils.download_file_from_http(
@@ -1240,7 +1270,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             TestReportingType.GROUP,
             test_group.name,
             TestingStates.REPLAYING.value,
-            test_group_start_time
+            start_time=test_group_start_time
         )
 
         self.hec_raw_replay(tempfile, attack_data_file)

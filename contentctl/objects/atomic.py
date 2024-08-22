@@ -3,10 +3,7 @@ from contentctl.input.yml_reader import YmlReader
 from pydantic import BaseModel, model_validator, ConfigDict, FilePath, UUID4
 from typing import List, Optional, Dict, Union, Self
 import pathlib
-# We should determine if we want to use StrEnum, which is only present in Python3.11+
-# Alternatively, we can use
-# class SupportedPlatform(str, enum.Enum):        
-# or install the StrEnum library from pip
+
 
 from enum import StrEnum, auto
 
@@ -48,7 +45,7 @@ class AtomicExecutor(BaseModel):
     cleanup_command: Optional[str] = None
 
     @model_validator(mode='after')
-    def ensure_mutually_exclusive_fields(self)->AtomicExecutor:
+    def ensure_mutually_exclusive_fields(self)->Self:
         if self.command is not None and self.steps is not None:
             raise ValueError("command and steps cannot both be defined in the executor section.  Exactly one must be defined.")
         elif self.command is None and self.steps is None:
@@ -88,7 +85,7 @@ class AtomicTest(BaseModel):
     dependency_executor_name: Optional[DependencyExecutorType] = None
 
     @staticmethod
-    def AtomicTestWhenEnrichmentIsDisabled(auto_generated_guid: UUID4)->Self:
+    def AtomicTestWhenEnrichmentIsDisabled(auto_generated_guid: UUID4) -> AtomicTest:
         return AtomicTest(name="Placeholder Atomic Test (enrichment disabled)",
                           auto_generated_guid=auto_generated_guid,
                           description="This is a placeholder AtomicTest. Because enrichments were not enabled, it has not been validated against the real Atomic Red Team Repo.",
@@ -97,17 +94,17 @@ class AtomicTest(BaseModel):
                                                   command="Placeholder command (enrichment disabled)"))
     
     @staticmethod
-    def AtomicTestWhenTestIsMissing(auto_generated_guid: UUID4)->Self:
+    def AtomicTestWhenTestIsMissing(auto_generated_guid: UUID4) -> AtomicTest:
         return AtomicTest(name="Missing Atomic",
                           auto_generated_guid=auto_generated_guid,
-                          description="This is a placeholder AtomicTest. Either the auto_generated_guid is incorrect or it there was an exception while parsing its AtomicFile..",
+                          description="This is a placeholder AtomicTest. Either the auto_generated_guid is incorrect or it there was an exception while parsing its AtomicFile.",
                           supported_platforms=[],
                           executor=AtomicExecutor(name="Placeholder Executor (failed to find auto_generated_guid)", 
                                                   command="Placeholder command (failed to find auto_generated_guid)"))
 
 
     @classmethod
-    def getAtomicByAtomicGuid(cls, guid: UUID4, all_atomics:Union[List[AtomicTest],None])->AtomicTest:
+    def getAtomicByAtomicGuid(cls, guid: UUID4, all_atomics:list[AtomicTest] | None)->AtomicTest:
         if all_atomics is None:
             return AtomicTest.AtomicTestWhenEnrichmentIsDisabled(guid)
         matching_atomics = [atomic for atomic in all_atomics if atomic.auto_generated_guid == guid]
@@ -152,7 +149,7 @@ class AtomicTest(BaseModel):
         return atomic_file
     
     @classmethod
-    def getAtomicTestsFromArtRepo(cls, repo_path:pathlib.Path, enabled:bool=True)->Union[List[AtomicTest],None]:
+    def getAtomicTestsFromArtRepo(cls, repo_path:pathlib.Path, enabled:bool=True)->list[AtomicTest] | None:
         # Get all the atomic files.  Note that if the ART repo is not found, we will not throw an error,
         # but will not have any atomics. This means that if atomic_guids are referenced during validation,
         # validation for those detections will fail

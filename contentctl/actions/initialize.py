@@ -28,6 +28,7 @@ class Initialize:
             ('../templates/app_template/', 'app_template'),
             ('../templates/deployments/', 'deployments'),
             ('../templates/detections/', 'detections'),
+            ('../templates/data_sources/', 'data_sources'),
             ('../templates/macros/','macros'),
             ('../templates/stories/', 'stories'),
         ]:
@@ -36,8 +37,9 @@ class Initialize:
             #Throw an exception if the target exists
             shutil.copytree(source_directory, target_directory, dirs_exist_ok=False)
         
-        #Create the config file as well
-        shutil.copyfile(pathlib.Path(os.path.dirname(__file__))/'../templates/README','README')
+        # Create a README.md file.  Note that this is the README.md for the repository, not the
+        # one which will actually be packaged into the app. That is located in the app_template folder.
+        shutil.copyfile(pathlib.Path(os.path.dirname(__file__))/'../templates/README.md','README.md')
 
 
         print(f"The app '{config.app.title}' has been initialized. "

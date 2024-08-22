@@ -40,6 +40,8 @@ class YmlReader():
         if add_fields == False:
             return yml_obj
         
+        
         yml_obj['file_path'] = str(file_path)
+    
 
         return yml_obj

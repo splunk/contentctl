@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated, Self
 import re
 import pathlib
+from enum import Enum
+
 from pydantic import (
     field_validator,
     model_validator,
@@ -12,6 +14,7 @@ from pydantic import (
     ConfigDict,
     FilePath
 )
+
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 if TYPE_CHECKING:
@@ -164,23 +167,38 @@ class Detection_Abstract(SecurityContentObject):
         None is returned.If any test failed or errored, FAIL is returned. If all tests were skipped,
         SKIP is returned. If at least one test passed and the rest passed or skipped, PASS is returned.
         """
+        # If the detection has no tests, we consider it to have been skipped (only non-production,
+        # non-manual, non-correlation detections are allowed to have no tests defined)
+        if len(self.tests) == 0:
+            return TestResultStatus.SKIP
+
         passed = 0
         skipped = 0
         for test in self.tests:
+            # If the result/status of any test has not yet been set, return None
             if test.result is None or test.result.status is None:
                 return None
             elif test.result.status == TestResultStatus.ERROR or test.result.status == TestResultStatus.FAIL:
+                # If any test failed or errored, return fail (we don't return the error state at
+                # the aggregate detection level)
                 return TestResultStatus.FAIL
             elif test.result.status == TestResultStatus.SKIP:
                 skipped += 1
             elif test.result.status == TestResultStatus.PASS:
                 passed += 1
-        if passed > 0:
+            else:
+                raise ValueError(
+                    f"Undefined test status for test ({test.name}) in detection ({self.name})"
+                )
+
+        # If at least one of the tests passed and the rest passed or skipped, report pass
+        if passed > 0 and (passed + skipped) == len(self.tests):
             return TestResultStatus.PASS
         elif skipped == len(self.tests):
+            # If all tests skipped, return skip
             return TestResultStatus.SKIP
 
-        raise ValueError(f"Undefined test status for detection: {self.name}")
+        raise ValueError(f"Undefined overall test status for detection: {self.name}")
 
     @computed_field
     @property
@@ -481,13 +499,13 @@ class Detection_Abstract(SecurityContentObject):
 
         # Skip tests for non-production detections
         if self.status != DetectionStatus.production.value:                                         # type: ignore
-            self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status}).")
+            self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
 
         # TODO (cmcginley): should we just mark all Correlation type detections as manual_test?
         # Skip tests for detecton types like Correlation which are not supported via contentctl
         if self.type in UNTESTED_ANALYTICS_TYPES:
             self.skip_all_tests(
-                f"TEST SKIPPED: Detection type {self.type} cannot be tested by contentctl."
+                f"TEST SKIPPED: Detection type {self.type} cannot be tested by contentctl"
             )
 
     @field_validator('lookups', mode="before")
@@ -819,9 +837,11 @@ class Detection_Abstract(SecurityContentObject):
         :returns: bool where True indicates all tests succeeded (they existed, complete and were
             PASS/SKIP)
         """
-        # If no tests are defined, we consider it a failure for the detection
+        # If no tests are defined, we consider it a success for the detection (this detection was
+        # skipped for testing). Note that the existence of at least one test is enforced by Pydantic
+        # validation already, with a few specific exceptions
         if len(self.tests) == 0:
-            return False
+            return True
 
         # Iterate over tests
         for test in self.tests:
@@ -864,6 +884,12 @@ class Detection_Abstract(SecurityContentObject):
         # Grab the top level detection fields
         for field in detection_fields:
             value = getattr(self, field)
+
+            # Enums cannot be serialized directly, so we convert it to a string
+            if isinstance(getattr(self, field), Enum):
+                value = str(value)
+
+            # Alias any fields as needed
             if field in detection_field_aliases:
                 summary_dict[detection_field_aliases[field]] = value
             else:

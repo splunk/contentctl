@@ -16,7 +16,7 @@ import pathlib
 from contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
-from contentctl.objects.enums import PostTestBehavior
+from contentctl.objects.enums import PostTestBehavior, DetectionTestingMode
 from contentctl.objects.detection import Detection
 
 import tqdm
@@ -674,11 +674,11 @@ class test_common(build):
 
     def getModeName(self)->str:
         if isinstance(self.mode, All):
-            return "All"
+            return DetectionTestingMode.all.value
         elif isinstance(self.mode, Changes):
-            return "Changes"
+            return DetectionTestingMode.changes.value
         else:
-            return "Selected"
+            return DetectionTestingMode.selected.value
 
 
     

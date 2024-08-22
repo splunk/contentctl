@@ -69,6 +69,8 @@ class MitreAttackEnrichment(BaseModel):
     mitre_attack_technique: str = Field(...)
     mitre_attack_tactics: List[MitreTactics] = Field(...)
     mitre_attack_groups: List[str] = Field(...)
-    mitre_attack_group_objects: list[MitreAttackGroup] = Field(...)
+    #Exclude this field from serialization - it is very large and not useful in JSON objects
+    mitre_attack_group_objects: list[MitreAttackGroup] = Field(..., exclude=True)
     def __hash__(self) -> int:
         return id(self)
+

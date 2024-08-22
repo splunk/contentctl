@@ -85,6 +85,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
         """
         # Init the list of tested detections, and some metrics aggregate counters
         tested_detections: list[dict[str, Any]] = []
+        skipped_detections: list[dict[str, Any]] = []
         total_pass = 0
         total_fail = 0
         total_skipped = 0
@@ -121,15 +122,23 @@ class DetectionTestingView(BaseModel, abc.ABC):
             if detection.tags.manual_test is not None:
                 total_manual += 1
 
-            # Append to our list
-            tested_detections.append(summary)
+            # Append to our list (skipped or tested)
+            if detection.test_status == TestResultStatus.SKIP:
+                skipped_detections.append(summary)
+            else:
+                tested_detections.append(summary)
 
-        # Sort s.t. all failures appear first, then passed before skipped detections, then
-        # detections w/ tests before those w/o, then by name
+        # Sort tested detections s.t. all failures appear first, then by name
         tested_detections.sort(
             key=lambda x: (
                 x["success"],
-                0 if x["status"] == TestResultStatus.PASS.value else 1,
+                x["name"]
+            )
+        )
+
+        # Sort skipped detections s.t. detections w/ tests appear before those w/o, then by name
+        skipped_detections.sort(
+            key=lambda x: (
                 0 if len(x["tests"]) > 0 else 1,
                 x["name"]
             )
@@ -179,6 +188,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
             # TODO (cmcginley): differentiate total detections vs total tested
             "summary": {
                 "mode": self.config.getModeName(),
+                "enable_integration_testing": self.config.enable_integration_testing,
                 "success": overall_success,
                 "total_detections": total_detections,
                 "total_tested_detections": total_tested_detections,
@@ -194,6 +204,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 "success_rate": success_rate,
             },
             "tested_detections": tested_detections,
+            "skipped_detections": skipped_detections,
             "untested_detections": untested_detections,
             "percent_complete": percent_complete,
         }

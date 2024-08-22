@@ -132,17 +132,30 @@ class Detection_Abstract(SecurityContentObject):
 
         return value
 
-    @model_validator(mode="after")
-    def build_test_groups(self) -> Self:
+    def adjust_tests_and_groups(self) -> None:
         """
-        Builds the `test_groups` field, constructing the model from the list of unit tests
-        if no explicit construct was provided
-        :param value: the value of the field `test_groups`
-        :param values: a dict of the other fields in the Detection model
+        Converts UnitTest to ManualTest as needed, B=builds the `test_groups` field, constructing
+        the model from the list of unit tests. Also, preemptively skips all manual tests, as well as
+        tests for experimental/deprecated detections and Correlation type detections.
         """
-        # if the value was not the None default, do nothing
-        if self.test_groups is not None:
-            return self
+        # Since ManualTest and UnitTest are not differentiable without looking at the manual_test
+        # tag, Pydantic builds all tests as UnitTest objects. If we see the manual_test flag, we
+        # convert these to ManualTest
+        tmp: list[UnitTest | IntegrationTest | ManualTest] = []
+        if self.tags.manual_test is not None:
+            for test in self.tests:
+                if not isinstance(test, UnitTest):
+                    raise ValueError(
+                        "At this point of intialization, tests should only be UnitTest objects, "
+                        f"but encountered a {type(test)}."
+                    )
+                # Create the manual test and skip it upon creation (cannot test via contentctl)
+                manual_test = ManualTest(
+                    name=test.name,
+                    attack_data=test.attack_data
+                )
+                tmp.append(manual_test)
+            self.tests = tmp
 
         # iterate over the tests and create a TestGroup (and as a result, an IntegrationTest) for
         # each unit test
@@ -158,7 +171,23 @@ class Detection_Abstract(SecurityContentObject):
         for test_group in self.test_groups:
             self.tests.append(test_group.integration_test)
 
-        return self
+        # Skip all manual tests
+        self.skip_manual_tests()
+
+        # NOTE: we ignore the type error around self.status because we are using Pydantic's
+        # use_enum_values configuration
+        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
+
+        # Skip tests for non-production detections
+        if self.status != DetectionStatus.production.value:                                         # type: ignore
+            self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
+
+        # TODO (cmcginley): should we just mark all Correlation type detections as manual_test?
+        # Skip tests for detecton types like Correlation which are not supported via contentctl
+        if self.type in UNTESTED_ANALYTICS_TYPES:
+            self.skip_all_tests(
+                f"TEST SKIPPED: Detection type {self.type} cannot be tested by contentctl"
+            )
 
     @property
     def test_status(self) -> TestResultStatus | None:
@@ -491,22 +520,8 @@ class Detection_Abstract(SecurityContentObject):
 
         self.cve_enrichment_func(__context)
 
-        self.skip_manual_tests()
-
-        # NOTE: we ignore the type error around self.status because we are using Pydantic's
-        # use_enum_values configuration
-        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-
-        # Skip tests for non-production detections
-        if self.status != DetectionStatus.production.value:                                         # type: ignore
-            self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
-
-        # TODO (cmcginley): should we just mark all Correlation type detections as manual_test?
-        # Skip tests for detecton types like Correlation which are not supported via contentctl
-        if self.type in UNTESTED_ANALYTICS_TYPES:
-            self.skip_all_tests(
-                f"TEST SKIPPED: Detection type {self.type} cannot be tested by contentctl"
-            )
+        # Derive TestGroups and IntegrationTests, adjust for ManualTests, skip as needed
+        self.adjust_tests_and_groups()
 
     @field_validator('lookups', mode="before")
     @classmethod
@@ -722,25 +737,27 @@ class Detection_Abstract(SecurityContentObject):
         # Found everything
         return self
 
-    @model_validator(mode='after')
-    def ensurePresenceOfRequiredTests(self):
-        # NOTE: we ignore the type error around self.status because we are using Pydantic's
-        # use_enum_values configuration
-        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
+    # TODO (cmcginley): the check here is identical to what is being performed in the
+    #   tests_validate func, can we remove?
+    # @model_validator(mode='after')
+    # def ensurePresenceOfRequiredTests(self):
+    #     # NOTE: we ignore the type error around self.status because we are using Pydantic's
+    #     # use_enum_values configuration
+    #     # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
 
-        # Only production analytics require tests
-        if self.status != DetectionStatus.production.value:                                         # type: ignore
-            return self
+    #     # Only production analytics require tests
+    #     if self.status != DetectionStatus.production.value:                                         # type: ignore
+    #         return self
 
-        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
-        # Accordingly, we do not need to do additional checks if the type is Correlation
-        if self.type in UNTESTED_ANALYTICS_TYPES:
-            return self
+    #     # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
+    #     # Accordingly, we do not need to do additional checks if the type is Correlation
+    #     if self.type in UNTESTED_ANALYTICS_TYPES:
+    #         return self
 
-        if len(self.tests) == 0:
-            raise ValueError(f"At least one test is REQUIRED for production detection: {self.name}")
+    #     if len(self.tests) == 0:
+    #         raise ValueError(f"At least one test is REQUIRED for production detection: {self.name}")
 
-        return self
+    #     return self
 
     @field_validator("tests")
     def tests_validate(
@@ -748,57 +765,25 @@ class Detection_Abstract(SecurityContentObject):
         v: list[UnitTest | IntegrationTest | ManualTest],
         info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest | ManualTest]:
-        # Pull the tags and a flag indicating if this is a manual_test detection or not
-        tags: DetectionTags | None = info.data.get("tags", None)
-
-        # Since we ManualTest and UnitTest are not differentiable without looking at the manual_test
-        # tag, Pydantic builds all tests as UnitTest objects. If we see the manual_test flag, we
-        # convert these to ManualTest
-        tmp: list[UnitTest | IntegrationTest | ManualTest] = []
-        if tags is not None and tags.manual_test is not None:
-            for test in v:
-                if not isinstance(test, UnitTest):
-                    raise ValueError(
-                        "At this point of intialization, tests should only be UnitTest objects, "
-                        f"but encountered a {type(test)}."
-                    )
-                # Create the manual test and skip it upon creation (cannot test via contentctl)
-                manual_test = ManualTest(
-                    name=test.name,
-                    attack_data=test.attack_data
-                )
-                tmp.append(manual_test)
-            v = tmp
-
         # Only production analytics require tests
         if info.data.get("status", "") != DetectionStatus.production.value:
             return v
 
         # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
         # Accordingly, we do not need to do additional checks if the type is Correlation
-        if info.data.get("type", "") in set([AnalyticsType.Correlation.value]):
+        if info.data.get("type", "") in UNTESTED_ANALYTICS_TYPES:
+            return v
+
+        # Manually tested detections are not required to have tests defined
+        tags: DetectionTags | None = info.data.get("tags", None)
+        if tags is not None and tags.manual_test is not None:
             return v
 
         # Ensure that there is at least 1 test
         if len(v) == 0:
-            if tags is not None and tags.manual_test is not None:
-                # Detections that are manual_test MAY have tests, but it is not required.  If they
-                # do not have one, then create one which will be a placeholder.
-                # Note that this fake ManualTest will NOT be generated if there ARE test(s) defined
-                # for a Detection.
-
-                # TODO (cmcginley): make this ManualTest; ultimately this test case should be
-                #   explicit and not implicit
-                placeholder_test = ManualTest(                                                      # type: ignore
-                    name="PLACEHOLDER FOR DETECTION TAGGED MANUAL_TEST WITH NO TESTS SPECIFIED IN YML FILE",
-                    attack_data=[]
-                )
-                return [placeholder_test]
-
-            else:
-                raise ValueError(
-                    "At least one test is REQUIRED for production detection: " + info.data.get("name", "NO NAME FOUND")
-                )
+            raise ValueError(
+                "At least one test is REQUIRED for production detection: " + info.data.get("name", "NO NAME FOUND")
+            )
 
         # No issues - at least one test provided for production type requiring testing
         return v
@@ -868,6 +853,7 @@ class Detection_Abstract(SecurityContentObject):
         detection_field_aliases: dict[str, str] = {
             "status": "production_status", "test_status": "status", "source": "source_category"
         },
+        tags_fields: list[str] = ["manual_test"],
         test_result_fields: list[str] = ["success", "message", "exception", "status", "duration", "wait_duration"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict[str, Any]:
@@ -894,6 +880,10 @@ class Detection_Abstract(SecurityContentObject):
                 summary_dict[detection_field_aliases[field]] = value
             else:
                 summary_dict[field] = value
+
+        # Grab fields from the tags
+        for field in tags_fields:
+            summary_dict[field] = getattr(self.tags, field)
 
         # Set success based on whether all tests passed
         summary_dict["success"] = self.all_tests_successful()

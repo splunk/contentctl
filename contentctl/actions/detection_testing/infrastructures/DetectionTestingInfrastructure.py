@@ -878,6 +878,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 service=self.get_conn(),
                 pbar_data=pbar_data,
             )
+            assert detection == correlation_search.detection
 
             # Run the test
             test.result = correlation_search.test()

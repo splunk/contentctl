@@ -33,27 +33,33 @@ class AttackEnrichment(BaseModel):
         else:
             raise Exception(f"Error, Unable to find Mitre Enrichment for MitreID {mitre_id}")
         
-
-    def addMitreID(self, technique:dict, tactics:list[str], groups:list[dict[str,Any]])->None:
-        
+    def addMitreIDViaGroupNames(self, technique:dict, tactics:list[str], groupNames:list[str])->None:
         technique_id = technique['technique_id']
         technique_obj = technique['technique']
         tactics.sort()
-        group_names_only:list[str] = sorted([group['group'] for group in groups])
         
-        import pprint
-        print(technique_id)
-        print(technique_obj)
-        print(tactics)
-        print(group_names_only)
-        pprint.pprint(groups)
         if technique_id in self.data:
             raise Exception(f"Error, trying to redefine MITRE ID '{technique_id}'")
         self.data[technique_id] = MitreAttackEnrichment(mitre_attack_id=technique_id, 
                                                         mitre_attack_technique=technique_obj, 
                                                         mitre_attack_tactics=tactics, 
-                                                        mitre_attack_groups=group_names_only,
-                                                        mitre_attack_group_objects=groups)
+                                                        mitre_attack_groups=groupNames,
+                                                        mitre_attack_group_objects=[]) 
+
+    def addMitreIDViaGroupObjects(self, technique:dict, tactics:list[str],  groupObjects:list[dict[str,Any]])->None:
+        technique_id = technique['technique_id']
+        technique_obj = technique['technique']
+        tactics.sort()
+        
+        groupNames:list[str] = sorted([group['group'] for group in groupObjects])
+        
+        if technique_id in self.data:
+            raise Exception(f"Error, trying to redefine MITRE ID '{technique_id}'")
+        self.data[technique_id] = MitreAttackEnrichment(mitre_attack_id=technique_id, 
+                                                        mitre_attack_technique=technique_obj, 
+                                                        mitre_attack_tactics=tactics, 
+                                                        mitre_attack_groups=groupNames,
+                                                        mitre_attack_group_objects=groupObjects)
 
     
     def get_attack_lookup(self, input_path: str, store_csv: bool = False, force_cached_or_offline: bool = False, skip_enrichment:bool = False) -> dict:
@@ -105,7 +111,7 @@ class AttackEnrichment(BaseModel):
                     for tactic in technique['tactic']:
                         tactics.append(tactic.replace('-',' ').title())
 
-                self.addMitreID(technique, tactics, apt_groups)
+                self.addMitreIDViaGroupObjects(technique, tactics, apt_groups)
                 attack_lookup[technique['technique_id']] = {'technique': technique['technique'], 'tactics': tactics, 'groups': apt_groups}
 
             if store_csv:
@@ -138,7 +144,7 @@ class AttackEnrichment(BaseModel):
                 technique_input = {'technique_id': key , 'technique': attack_lookup[key]['technique'] }
                 tactics_input = attack_lookup[key]['tactics']
                 groups_input = attack_lookup[key]['groups']
-                self.addMitreID(technique=technique_input, tactics=tactics_input, groups=groups_input)
+                self.addMitreIDViaGroupNames(technique=technique_input, tactics=tactics_input, groups=groups_input)
             
                 
 

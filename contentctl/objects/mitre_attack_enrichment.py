@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, ConfigDict, HttpUrl
+from pydantic import BaseModel, Field, ConfigDict, HttpUrl, field_validator
 from typing import List, Annotated
 from enum import StrEnum
 import datetime
@@ -22,16 +22,13 @@ class MitreTactics(StrEnum):
 
 
 class AttackGroupMatrix(StrEnum):
-    mitre_attack = "mitre-attack"
+    enterprise_attack = "enterprise-attack"
+    ics_attack = "ics-attack"
+    mobile_attack = "mobile-attack"
 
 
 class AttackGroupType(StrEnum):
     intrusion_set = "intrusion-set"
-
-class MitreDomain(StrEnum):
-    intrusion_set = "enterprise-attack"
-    mobile_attack = "mobile-attack"
-    ics_attack = "ics-attack"
 
 class MitreExternalReference(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -43,25 +40,47 @@ class MitreExternalReference(BaseModel):
 
 class MitreAttackGroup(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    contributors: list[str] = []
     created: datetime.datetime
     created_by_ref: str
     external_references: list[MitreExternalReference]
     group: str
     group_aliases: list[str]
     group_description: str
+    group_id: str
     id: str
-    matrix: AttackGroupMatrix
+    matrix: list[AttackGroupMatrix]
+    mitre_attack_spec_version: None | str
+    mitre_version: str
+    #assume that if the deprecated field is not present, then the group is not deprecated
+    mitre_deprecated: bool
     modified: datetime.datetime
+    modified_by_ref: str
     object_marking_refs: list[str]
     type: AttackGroupType
     url: HttpUrl
-    x_mitre_attack_spec_version: None | str = None
-    x_mitre_deprecated: None | bool = None
-    x_mitre_domains: list[MitreDomain]
-    x_mitre_modified_by_ref: str
-    x_mitre_version: str
-    contributors: list[str] = []
+    
 
+    @field_validator("mitre_deprecated", mode="before")
+    def standardize_mitre_deprecated(cls, mitre_deprecated:bool | None) -> bool:
+        '''
+        For some reason, the API will return either a bool for mitre_deprecated OR
+        None. We simplify our typing by converting None to False, and assuming that
+        if deprecated is None, then the group is not deprecated.
+        '''
+        if mitre_deprecated is None:
+            return False
+        return mitre_deprecated
+
+    @field_validator("contributors", mode="before")
+    def standardize_contributors(cls, contributors:list[str] | None) -> list[str]:
+        '''
+        For some reason, the API will return either a list of strings for contributors OR
+        None. We simplify our typing by converting None to an empty list.
+        '''
+        if contributors is None:
+            return []
+        return contributors
 
 class MitreAttackEnrichment(BaseModel):
     ConfigDict(use_enum_values=True)

@@ -126,7 +126,7 @@ def update_config(config:Union[test,test_servers], **key_value_updates:dict[str,
 def content_to_dict(director:DirectorOutputDto)->dict[str,list[dict[str,Any]]]:
     output_dict:dict[str,list[dict[str,Any]]] = {}
     for contentType in ['detections','stories','baselines','investigations',
-                        'playbooks','macros','lookups','deployments','ssa_detections']:
+                        'playbooks','macros','lookups','deployments',]:
         
         output_dict[contentType] = []
         t:list[SecurityContentObject] = getattr(director,contentType)

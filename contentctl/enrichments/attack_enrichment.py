@@ -41,7 +41,12 @@ class AttackEnrichment(BaseModel):
         tactics.sort()
         group_names_only:list[str] = sorted([group['group'] for group in groups])
         
-
+        import pprint
+        print(technique_id)
+        print(technique_obj)
+        print(tactics)
+        print(group_names_only)
+        pprint.pprint(groups)
         if technique_id in self.data:
             raise Exception(f"Error, trying to redefine MITRE ID '{technique_id}'")
         self.data[technique_id] = MitreAttackEnrichment(mitre_attack_id=technique_id, 

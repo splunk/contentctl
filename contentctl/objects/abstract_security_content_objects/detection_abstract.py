@@ -710,15 +710,6 @@ class Detection_Abstract(SecurityContentObject):
         v: list[UnitTest | IntegrationTest | ManualTest],
         info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest | ManualTest]:
-        # Only production analytics require tests
-        if info.data.get("status", "") != DetectionStatus.production.value:
-            return v
-
-        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
-        # Accordingly, we do not need to do additional checks if the type is Correlation
-        if info.data.get("type", "") in set([AnalyticsType.Correlation.value]):
-            return v
-
         # Pull the tags and a flag indicating if this is a manual_test detection or not
         tags: DetectionTags | None = info.data.get("tags", None)
 
@@ -740,6 +731,15 @@ class Detection_Abstract(SecurityContentObject):
                 )
                 tmp.append(manual_test)
             v = tmp
+
+        # Only production analytics require tests
+        if info.data.get("status", "") != DetectionStatus.production.value:
+            return v
+
+        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
+        # Accordingly, we do not need to do additional checks if the type is Correlation
+        if info.data.get("type", "") in set([AnalyticsType.Correlation.value]):
+            return v
 
         # Ensure that there is at least 1 test
         if len(v) == 0:

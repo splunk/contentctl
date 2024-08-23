@@ -9,7 +9,7 @@ from contentctl.objects.base_test_result import TestResultStatus
 class TestGroup(BaseModel):
     """
     Groups of different types of tests relying on the same attack data
-    :param name: Name of the TestGroup (typically derived from a unit test as 
+    :param name: Name of the TestGroup (typically derived from a unit test as
         "{detection.name}:{test.name}")
     :param unit_test: a UnitTest
     :param integration_test: an IntegrationTest

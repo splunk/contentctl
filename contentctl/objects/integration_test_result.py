@@ -1,8 +1,5 @@
 from contentctl.objects.base_test_result import BaseTestResult
 
-# TODO (cmcginley): this seems unused, can I delete?
-SAVED_SEARCH_TEMPLATE = "{server}:{web_port}/en-US/{path}"
-
 
 class IntegrationTestResult(BaseTestResult):
     """

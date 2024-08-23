@@ -114,10 +114,9 @@ def test_common_func(config:test_common):
     
     t = Test()
     
-    # TODO (cmcginley): what language do we want here?
-    # Remove detections that we do not want to test because they are
-    # not production, the correct type, or manual_test only
-    filted_test_input_dto = t.filter_detections(test_input_dto)
+    # Remove detections or disable tests that we do not want to test (e.g. integration testing is
+    # disabled)
+    filted_test_input_dto = t.filter_tests(test_input_dto)
     
     if config.plan_only:
         #Emit the test plan and quit. Do not actually run the test

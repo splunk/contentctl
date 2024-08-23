@@ -31,7 +31,7 @@ class DetectionTestingViewFile(DetectionTestingView):
 
         # use the yaml writer class
         with open(output_file, "w") as res:
-            res.write(yaml.safe_dump(result_dict,sort_keys=False))
+            res.write(yaml.safe_dump(result_dict, sort_keys=False))
 
     def showStatus(self, interval: int = 60):
         pass

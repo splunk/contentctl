@@ -76,14 +76,14 @@ class DetectionTestingView(BaseModel, abc.ABC):
         self,
         test_result_fields: list[str] = ["success", "message", "exception", "status", "duration", "wait_duration"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
-    ) -> dict:
+    ) -> dict[str, dict[str, Any] | list[dict[str, Any]] | str]:
         """
         Iterates over detections, consolidating results into a single dict and aggregating metrics
         :param test_result_fields: fields to pull from the test result
         :param test_job_fields: fields to pull from the job content of the test result
         :returns: summary dict
         """
-        # Init the list of tested detections, and some metrics aggregate counters
+        # Init the list of tested and skipped detections, and some metrics aggregate counters
         tested_detections: list[dict[str, Any]] = []
         skipped_detections: list[dict[str, Any]] = []
         total_pass = 0
@@ -101,7 +101,6 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 test_job_fields=test_job_fields, test_result_fields=test_result_fields
             )
 
-            # TODO (cmcginley): I find the enum to string conversion we use to be v confusing
             # Aggregate detection pass/fail metrics
             if detection.test_status == TestResultStatus.FAIL:
                 total_fail += 1
@@ -153,15 +152,6 @@ class DetectionTestingView(BaseModel, abc.ABC):
         # Sort by detection name
         untested_detections.sort(key=lambda x: x["name"])
 
-        # TODO (cmcginley): I think skippedQueue is no longer used?
-        # Get lists of detections (name only) that were skipped due to their status (experimental or deprecated)
-        # experimental_detections = sorted([
-        #     detection.name for detection in self.sync_obj.skippedQueue if detection.status == DetectionStatus.experimental.value
-        # ])
-        # deprecated_detections = sorted([
-        #     detection.name for detection in self.sync_obj.skippedQueue if detection.status == DetectionStatus.deprecated.value
-        # ])
-
         # If any detection failed, or if there are untested detections, the overall success is False
         if (total_fail + len(untested_detections)) == 0:
             overall_success = True
@@ -182,12 +172,9 @@ class DetectionTestingView(BaseModel, abc.ABC):
             total_pass, total_tested_detections, 1
         )
 
-        # TODO (cmcginley): the dual language of skipped_detections and untested_detections is a
-        #   bit confusing; consider renaming
         # TODO (#230): expand testing metrics reported (and make nested)
         # Construct and return the larger results dict
         result_dict = {
-            # TODO (cmcginley): differentiate total detections vs total tested
             "summary": {
                 "mode": self.config.getModeName(),
                 "enable_integration_testing": self.config.enable_integration_testing,

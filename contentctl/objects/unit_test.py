@@ -18,11 +18,9 @@ class UnitTest(BaseTest):
     # The test type (unit)
     test_type: TestType = Field(default=TestType.UNIT)
 
-    # TODO (cmcginley): looks like pass_condition has gone the way of the dodo; can I remove?
     # The condition to check if the search was successful
     pass_condition: str | None = None
 
-    # TODO (cmcginley): looks like baselines has gone the way of the dodo; can I remove?
     # Baselines to be run before a unit test
     baselines: list[UnitTestBaseline] = []
 

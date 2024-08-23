@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated, Self
+from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated
 import re
 import pathlib
 from enum import Enum
@@ -182,7 +182,6 @@ class Detection_Abstract(SecurityContentObject):
         if self.status != DetectionStatus.production.value:                                         # type: ignore
             self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
 
-        # TODO (cmcginley): should we just mark all Correlation type detections as manual_test?
         # Skip tests for detecton types like Correlation which are not supported via contentctl
         if self.type in UNTESTED_ANALYTICS_TYPES:
             self.skip_all_tests(
@@ -194,7 +193,8 @@ class Detection_Abstract(SecurityContentObject):
         """
         Returns the collective status of the detections tests. If any test status has yet to be set,
         None is returned.If any test failed or errored, FAIL is returned. If all tests were skipped,
-        SKIP is returned. If at least one test passed and the rest passed or skipped, PASS is returned.
+        SKIP is returned. If at least one test passed and the rest passed or skipped, PASS is
+        returned.
         """
         # If the detection has no tests, we consider it to have been skipped (only non-production,
         # non-manual, non-correlation detections are allowed to have no tests defined)
@@ -737,28 +737,6 @@ class Detection_Abstract(SecurityContentObject):
         # Found everything
         return self
 
-    # TODO (cmcginley): the check here is identical to what is being performed in the
-    #   tests_validate func, can we remove?
-    # @model_validator(mode='after')
-    # def ensurePresenceOfRequiredTests(self):
-    #     # NOTE: we ignore the type error around self.status because we are using Pydantic's
-    #     # use_enum_values configuration
-    #     # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-
-    #     # Only production analytics require tests
-    #     if self.status != DetectionStatus.production.value:                                         # type: ignore
-    #         return self
-
-    #     # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
-    #     # Accordingly, we do not need to do additional checks if the type is Correlation
-    #     if self.type in UNTESTED_ANALYTICS_TYPES:
-    #         return self
-
-    #     if len(self.tests) == 0:
-    #         raise ValueError(f"At least one test is REQUIRED for production detection: {self.name}")
-
-    #     return self
-
     @field_validator("tests")
     def tests_validate(
         cls,
@@ -769,8 +747,9 @@ class Detection_Abstract(SecurityContentObject):
         if info.data.get("status", "") != DetectionStatus.production.value:
             return v
 
-        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
-        # Accordingly, we do not need to do additional checks if the type is Correlation
+        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined
+        # types, requires them. Accordingly, we do not need to do additional checks if the type is
+        # Correlation
         if info.data.get("type", "") in UNTESTED_ANALYTICS_TYPES:
             return v
 
@@ -789,6 +768,10 @@ class Detection_Abstract(SecurityContentObject):
         return v
 
     def skip_all_tests(self, message: str = "TEST SKIPPED") -> None:
+        """
+        Given a message, skip all tests for this detection.
+        :param message: the message to set in the test result
+        """
         for test in self.tests:
             test.skip(message=message)
 

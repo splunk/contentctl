@@ -10,7 +10,6 @@ import pathlib
 from tempfile import TemporaryDirectory, mktemp
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
-#from dataclasses import dataclass
 from shutil import copyfile
 from typing import Union, Optional
 
@@ -396,7 +395,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.sync_obj.outputQueue.append(detection)
                 self.sync_obj.currentTestingQueue[self.get_name()] = None
 
-    # TODO (cmgcginley): 2024-08-22 02:08:23,726 - INFO - security-content-automation [MainThread] - Error stopping view: ('cannot represent an object', <TestResultStatus.SKIP: 'skip'>)
     def test_detection(self, detection: Detection) -> None:
         """
         Tests a single detection; iterates over the TestGroups for the detection (one TestGroup per
@@ -878,7 +876,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 service=self.get_conn(),
                 pbar_data=pbar_data,
             )
-            assert detection == correlation_search.detection
 
             # Run the test
             test.result = correlation_search.test()

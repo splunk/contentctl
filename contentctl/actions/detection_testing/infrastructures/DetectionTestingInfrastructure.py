@@ -1054,7 +1054,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             results = JSONResultsReader(job.results(output_mode="json"))
 
             # Consolidate a set of the distinct observable field names
-            observable_fields_set = set([o.name for o in detection.tags.observable])
+            observable_fields_set = set([o.name for o in detection.tags.observable]) # keeping this around for later
+            risk_object_fields_set = set([o.name for o in detection.tags.observable if "Victim" in o.role ]) # just the "Risk Objects"
+            threat_object_fields_set = set([o.name for o in detection.tags.observable if "Attacker" in o.role]) # just the "threat objects"
 
             # Ensure the search had at least one result
             if int(job.content.get("resultCount", "0")) > 0:
@@ -1062,7 +1064,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 test.result = UnitTestResult()
 
                 # Initialize the collection of fields that are empty that shouldn't be
+                present_threat_objects: set[str] = set()
                 empty_fields: set[str] = set()
+                
+                
 
                 # Filter out any messages in the results
                 for result in results:
@@ -1071,30 +1076,50 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     # If not a message, it is a dict and we will process it
                     results_fields_set = set(result.keys())
+                    # Guard against first events (relevant later)
 
-                    # Identify any observable fields that are not available in the results
-                    missing_fields = observable_fields_set - results_fields_set
-                    if len(missing_fields) > 0:
+                    # Identify any risk object fields that are not available in the results
+                    missing_risk_objects = risk_object_fields_set - results_fields_set
+                    if len(missing_risk_objects) > 0:
                         # Report a failure in such cases
-                        e = Exception(f"The observable field(s) {missing_fields} are missing in the detection results")
+                        e = Exception(f"The observable field(s) {missing_risk_objects} are missing in the detection results")
                         test.result.set_job_content(
                             job.content,
                             self.infrastructure,
-                            TestResultStatus.ERROR,
+                            TestResultStatus.FAIL,
                             exception=e,
                             duration=time.time() - search_start_time,
                         )
 
-                        return
+                        return                    
 
-                    # If we find one or more fields that contain the string "null" then they were
+                    # If we find one or more risk object fields that contain the string "null" then they were
                     # not populated and we should throw an error.  This can happen if there is a typo
                     # on a field.  In this case, the field will appear but will not contain any values
-                    current_empty_fields = set()
+                    current_empty_fields: set[str] = set()
+                    
                     for field in observable_fields_set:
                         if result.get(field, 'null') == 'null':
-                            current_empty_fields.add(field)
+                            if field in risk_object_fields_set:
+                                e = Exception(f"The risk object field {field} is missing in at least one result.")
+                                test.result.set_job_content(
+                                    job.content,
+                                    self.infrastructure,
+                                    TestResultStatus.FAIL,
+                                    exception=e,
+                                    duration=time.time() - search_start_time,
+                                )
+                                return
+                            else:
+                                if field in threat_object_fields_set:
+                                    current_empty_fields.add(field)
+                        else:
+                            if field in threat_object_fields_set:
+                                present_threat_objects.add(field)
+                                continue
+                                
 
+                    
                     # If everything succeeded up until now, and no empty fields are found in the
                     # current result, then the search was a success
                     if len(current_empty_fields) == 0:
@@ -1108,21 +1133,32 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     else:
                         empty_fields = empty_fields.union(current_empty_fields)
-
-                # Report a failure if there were empty fields in all results
-                e = Exception(
-                    f"One or more required observable fields {empty_fields} contained 'null' values.  Is the "
-                    "data being parsed correctly or is there an error in the naming of a field?"
+                        
+                        
+                missing_threat_objects = threat_object_fields_set - present_threat_objects
+                # Report a failure if there were empty fields in a threat object in all results
+                if len(missing_threat_objects) > 0:
+                    e = Exception(
+                        f"One or more required threat object fields {missing_threat_objects} contained 'null' values in all events. "
+                        "Is the data being parsed correctly or is there an error in the naming of a field?"
                     )
-                test.result.set_job_content(
-                    job.content,
-                    self.infrastructure,
-                    TestResultStatus.ERROR,
-                    exception=e,
-                    duration=time.time() - search_start_time,
-                )
+                    test.result.set_job_content(
+                        job.content,
+                        self.infrastructure,
+                        TestResultStatus.FAIL,
+                        exception=e,
+                        duration=time.time() - search_start_time,
+                    )
+                    return
+                
 
-                return
+                test.result.set_job_content(
+                            job.content,
+                            self.infrastructure,
+                            TestResultStatus.PASS,
+                            duration=time.time() - search_start_time,
+                        )
+                return               
 
             else:
                 # Report a failure if there were no results at all

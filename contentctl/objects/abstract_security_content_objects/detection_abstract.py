@@ -873,8 +873,8 @@ class Detection_Abstract(SecurityContentObject):
         for field in detection_fields:
             value = getattr(self, field)
 
-            # Enums cannot be serialized directly, so we convert it to a string
-            if isinstance(getattr(self, field), Enum):
+            # Enums and Path objects cannot be serialized directly, so we convert it to a string
+            if isinstance(value, Enum) or isinstance(value, pathlib.Path):
                 value = str(value)
 
             # Alias any fields as needed

@@ -307,7 +307,7 @@ class Detection_Abstract(SecurityContentObject):
 
     @computed_field
     @property
-    def metadata(self) -> dict[str, str|int]:
+    def metadata(self) -> dict[str, str|float]:
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name

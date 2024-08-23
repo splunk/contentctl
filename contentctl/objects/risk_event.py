@@ -1,5 +1,4 @@
 import re
-from typing import Union, Optional
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, computed_field
 
@@ -7,6 +6,7 @@ from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
 from contentctl.objects.observable import Observable
 
+# TODO (#259): Map our observable types to more than user/system
 # TODO (#247): centralize this mapping w/ usage of SES_OBSERVABLE_TYPE_MAPPING (see
 #   observable.py) and the ad hoc mapping made in detection_abstract.py (see the risk property func)
 TYPE_MAP: dict[str, list[str]] = {
@@ -55,7 +55,7 @@ class RiskEvent(BaseModel):
     search_name: str
 
     # The subject of the risk event (e.g. a username, process name, system name, account ID, etc.)
-    risk_object: Union[int, str]
+    risk_object: int | str
 
     # The type of the risk object (e.g. user, system, or other)
     risk_object_type: str
@@ -83,7 +83,7 @@ class RiskEvent(BaseModel):
     contributing_events_search: str
 
     # Private attribute caching the observable this RiskEvent is mapped to
-    _matched_observable: Optional[Observable] = PrivateAttr(default=None)
+    _matched_observable: Observable | None = PrivateAttr(default=None)
 
     class Config:
         # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
@@ -92,7 +92,7 @@ class RiskEvent(BaseModel):
 
     @field_validator("annotations_mitre_attack", "analyticstories", mode="before")
     @classmethod
-    def _convert_str_value_to_singleton(cls, v: Union[str, list[str]]) -> list[str]:
+    def _convert_str_value_to_singleton(cls, v: str | list[str]) -> list[str]:
         """
         Given a value, determine if its a list or a single str value; if a single value, return as a
         singleton. Do nothing if anything else.
@@ -272,8 +272,6 @@ class RiskEvent(BaseModel):
         :param observable: the Observable object we are checking the roles of
         :returns: a bool indicating whether this observable should be ignored or not
         """
-        # TODO (cmcginley): could there be a case where an observable has both an Attacker and
-        #   Victim (or equivalent) role? If so, how should we handle ignoring it?
         ignore = False
         for role in observable.role:
             if role in IGNORE_ROLES:
@@ -281,8 +279,6 @@ class RiskEvent(BaseModel):
                 break
         return ignore
 
-    # TODO: pull field to match against from `contributing_events_search` -> the field they are
-    #   keying off of is the field related to the observable
     def get_matched_observable(self, observables: list[Observable]) -> Observable:
         """
         Given a list of observables, return the one this risk event matches
@@ -295,7 +291,7 @@ class RiskEvent(BaseModel):
         if self._matched_observable is not None:
             return self._matched_observable
 
-        matched_observable: Optional[Observable] = None
+        matched_observable: Observable | None = None
 
         # Iterate over the obervables and check for a match
         for observable in observables:

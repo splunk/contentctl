@@ -182,7 +182,9 @@ class DetectionTestingView(BaseModel, abc.ABC):
             total_pass, total_tested_detections, 1
         )
 
-        # TODO (#230): expand testing metrics reported
+        # TODO (cmcginley): the dual language of skipped_detections and untested_detections is a
+        #   bit confusing; consider renaming
+        # TODO (#230): expand testing metrics reported (and make nested)
         # Construct and return the larger results dict
         result_dict = {
             # TODO (cmcginley): differentiate total detections vs total tested

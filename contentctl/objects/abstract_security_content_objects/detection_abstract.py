@@ -849,7 +849,9 @@ class Detection_Abstract(SecurityContentObject):
 
     def get_summary(
         self,
-        detection_fields: list[str] = ["name", "type", "status", "test_status", "source", "data_source", "search"],
+        detection_fields: list[str] = [
+            "name", "type", "status", "test_status", "source", "data_source", "search", "file_path"
+        ],
         detection_field_aliases: dict[str, str] = {
             "status": "production_status", "test_status": "status", "source": "source_category"
         },

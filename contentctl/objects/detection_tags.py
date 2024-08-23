@@ -33,7 +33,7 @@ from contentctl.objects.enums import (
     SecurityContentProductName
 )
 from contentctl.objects.atomic import AtomicTest
-
+from contentctl.objects.drilldown import Drilldown
 
 class DetectionTags(BaseModel):
     # detection spec
@@ -70,7 +70,7 @@ class DetectionTags(BaseModel):
 
     cve: List[Annotated[str, r"^CVE-[1|2]\d{3}-\d+$"]] = []
     atomic_guid: List[AtomicTest] = []
-    drilldown_search: Optional[str] = None
+    
 
     # enrichment
     mitre_attack_enrichments: List[MitreAttackEnrichment] = Field([], validate_default=True)
@@ -107,7 +107,8 @@ class DetectionTags(BaseModel):
     mappings: Optional[List] = None
     # annotations: Optional[dict] = None
     manual_test: Optional[str] = None
-
+    drilldown: Drilldown | None = None
+    
     # The following validator is temporarily disabled pending further discussions
     # @validator('message')
     # def validate_message(cls,v,values):

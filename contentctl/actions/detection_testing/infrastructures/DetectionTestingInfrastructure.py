@@ -60,13 +60,14 @@ class CleanupTestGroupResults(BaseModel):
 
 class ContainerStoppedException(Exception):
     pass
+class CannotRunBaselineException(Exception):
+    pass
 
 
 @dataclasses.dataclass(frozen=False)
 class DetectionTestingManagerOutputDto():
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
-    skippedQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
@@ -1014,18 +1015,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         """
         # Get the start time and compute the timeout
         search_start_time = time.time()
-        search_stop_time = time.time() + self.sync_obj.timeout_seconds
-
-        # We will default to ensuring at least one result exists
-        if test.pass_condition is None:
-            search = detection.search
-        else:
-            # Else, use the explicit pass condition
-            search = f"{detection.search} {test.pass_condition}"
+        search_stop_time = time.time() + self.sync_obj.timeout_seconds        
+        
+        # Make a copy of the search string since we may 
+        # need to make some small changes to it below
+        search = detection.search
 
         # Ensure searches that do not begin with '|' must begin with 'search '
-        if not search.strip().startswith("|"):                                                      # type: ignore
-            if not search.strip().startswith("search "):                                            # type: ignore
+        if not search.strip().startswith("|"):                                                      
+            if not search.strip().startswith("search "):                                            
                 search = f"search {search}"
 
         # exponential backoff for wait time

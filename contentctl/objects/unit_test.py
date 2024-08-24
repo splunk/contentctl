@@ -18,9 +18,6 @@ class UnitTest(BaseTest):
     # The test type (unit)
     test_type: TestType = Field(default=TestType.UNIT)
 
-    # The condition to check if the search was successful
-    pass_condition: str | None = None
-
     # Baselines to be run before a unit test
     baselines: list[UnitTestBaseline] = []
 

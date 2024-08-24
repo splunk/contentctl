@@ -45,16 +45,6 @@ class TestInputDto:
 
 class Test:
 
-    def filter_tests(self, input_dto: TestInputDto) -> TestInputDto:
-        if not input_dto.config.enable_integration_testing:
-            # Skip all integraiton tests if integration testing is not enabled:
-            for detection in input_dto.detections:
-                for test in detection.tests:
-                    if isinstance(test, IntegrationTest):
-                        test.skip("TEST SKIPPED: Skipping all integration tests")
-
-        return input_dto
-
     def execute(self, input_dto: TestInputDto) -> bool:
         output_dto = DetectionTestingManagerOutputDto()
 

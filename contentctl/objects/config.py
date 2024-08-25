@@ -164,7 +164,8 @@ class Config_Base(BaseModel):
         return str(path)
 
 class init(Config_Base):
-    pass
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    bare: bool = Field(default=False, description="Initialize with empty directory structure")
 
 
 class validate(Config_Base):

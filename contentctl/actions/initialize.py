@@ -22,13 +22,13 @@ class Initialize:
             for emptyDir in ['lookups', 'baselines', 'docs', 'reporting', 'investigations', 'app_template', 
                              'deployments', 'detections/application', 'detections/cloud', 'detections/endpoint', 
                              'detections/network', 'detections/web', 'data_sources', 'macros', 'stories']:
-            #Throw an error if this directory already exists
+                #Throw an error if this directory already exists
                 (config.path/emptyDir).mkdir(exist_ok=False, parents=True)
         
         else:
             #Create the following empty directories:
             for emptyDir in ['lookups', 'baselines', 'docs', 'reporting', 'investigations']:
-            #Throw an error if this directory already exists
+                #Throw an error if this directory already exists
                 (config.path/emptyDir).mkdir(exist_ok=False)
 
             #copy the contents of all template directories

@@ -18,9 +18,6 @@ class UnitTest(BaseTest):
     # The test type (unit)
     test_type: TestType = Field(default=TestType.UNIT)
 
-    # Baselines to be run before a unit test
-    baselines: list[UnitTestBaseline] = []
-
     # The attack data to be ingested for the unit test
     attack_data: list[TestAttackData]
 

@@ -664,8 +664,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Run the detection's search query
         try:
             # Iterate over baselines (if any)
-            for baseline in test.baselines:
-                raise CannotRunBaselineException("Baseline execution is not currently supported in contentctl")
+            for baseline in detection.baselines:
+                raise CannotRunBaselineException("Detection requires Execution of a Baseline, "
+                                                 "however Baseline execution is not "
+                                                 "currently supported in contentctl. Mark "
+                                                 "this as manual_test.")
             self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
         except CannotRunBaselineException as e:
             # Init the test result and record a failure if there was an issue during the search

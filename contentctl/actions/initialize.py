@@ -20,9 +20,10 @@ class Initialize:
         if config.bare:
             #Create the following empty directories:
             for emptyDir in ['lookups', 'baselines', 'docs', 'reporting', 'investigations', 'app_template', 
-                             'deployments', 'detections', 'data_sources', 'macros', 'stories']:
+                             'deployments', 'detections/application', 'detections/cloud', 'detections/endpoint', 
+                             'detections/network', 'detections/web', 'data_sources', 'macros', 'stories']:
             #Throw an error if this directory already exists
-                (config.path/emptyDir).mkdir(exist_ok=False)
+                (config.path/emptyDir).mkdir(exist_ok=False, parents=True)
         
         else:
             #Create the following empty directories:

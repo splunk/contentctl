@@ -44,7 +44,24 @@ class TestInputDto:
     
 
 class Test:
+    def filter_tests(self, input_dto: TestInputDto) -> None:
+        """
+        If integration testing has NOT been enabled, then skip
+        all of the integration tests. Otherwise, do nothing
 
+        Args:
+            input_dto (TestInputDto): A configuration of the test and all of the
+            tests to be run.
+        """        
+
+        if not input_dto.config.enable_integration_testing:
+            # Skip all integraiton tests if integration testing is not enabled:
+            for detection in input_dto.detections:
+                for test in detection.tests:
+                    if isinstance(test, IntegrationTest):
+                        test.skip("TEST SKIPPED: Skipping all integration tests")
+
+        
     def execute(self, input_dto: TestInputDto) -> bool:
         output_dto = DetectionTestingManagerOutputDto()
 

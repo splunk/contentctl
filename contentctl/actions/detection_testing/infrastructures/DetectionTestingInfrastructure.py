@@ -61,6 +61,11 @@ class CleanupTestGroupResults(BaseModel):
 class ContainerStoppedException(Exception):
     pass
 class CannotRunBaselineException(Exception):
+    # Support for testing detections with baselines 
+    # does not currently exist in contentctl.
+    # As such, whenever we encounter a detection 
+    # with baselines we should generate a descriptive
+    # exception
     pass
 
 
@@ -647,11 +652,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
 
-        # Iterate over baselines (if any)
-        for baseline in test.baselines:
-            # TODO: this is executing the test, not the baseline...
-            # TODO: should this be in a try/except if the later call is?
-            self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
+        
 
         # Set earliest_time and latest_time appropriately if FORCE_ALL_TIME is False
         if not FORCE_ALL_TIME:
@@ -662,7 +663,20 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Run the detection's search query
         try:
+            # Iterate over baselines (if any)
+            for baseline in test.baselines:
+                raise CannotRunBaselineException("Baseline execution is not currently supported in contentctl")
             self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
+        except CannotRunBaselineException as e:
+            # Init the test result and record a failure if there was an issue during the search
+            test.result = UnitTestResult()
+            test.result.set_job_content(
+                None,
+                self.infrastructure,
+                TestResultStatus.ERROR,
+                exception=e,
+                duration=time.time() - test_start_time
+            )
         except ContainerStoppedException as e:
             raise e
         except Exception as e:

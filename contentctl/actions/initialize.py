@@ -19,11 +19,16 @@ class Initialize:
 
         if config.bare:
             #Create the following empty directories:
-            for emptyDir in ['lookups', 'baselines', 'docs', 'reporting', 'investigations', 'app_template', 
-                             'deployments', 'detections/application', 'detections/cloud', 'detections/endpoint', 
+            for emptyDir in ['lookups', 'baselines', 'docs', 'reporting', 'investigations', 'deployments', 
+                             'detections/application', 'detections/cloud', 'detections/endpoint', 
                              'detections/network', 'detections/web', 'data_sources', 'macros', 'stories']:
                 #Throw an error if this directory already exists
                 (config.path/emptyDir).mkdir(exist_ok=False, parents=True)
+            
+            # Copy the contents of the app_template directory
+            source_directory = pathlib.Path(os.path.dirname(__file__))/'../templates/app_template/'
+            target_directory = config.path/'app_template'
+            shutil.copytree(source_directory, target_directory, dirs_exist_ok=False)
         
         else:
             #Create the following empty directories:

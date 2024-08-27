@@ -107,6 +107,8 @@ class DetectionTags(BaseModel):
     # TODO (#221): mappings should be fleshed out into a proper class
     mappings: Optional[List] = None
     # annotations: Optional[dict] = None
+
+    # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
 
     # The following validator is temporarily disabled pending further discussions

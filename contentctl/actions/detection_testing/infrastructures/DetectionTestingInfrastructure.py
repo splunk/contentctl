@@ -60,13 +60,19 @@ class CleanupTestGroupResults(BaseModel):
 
 class ContainerStoppedException(Exception):
     pass
+class CannotRunBaselineException(Exception):
+    # Support for testing detections with baselines 
+    # does not currently exist in contentctl.
+    # As such, whenever we encounter a detection 
+    # with baselines we should generate a descriptive
+    # exception
+    pass
 
 
 @dataclasses.dataclass(frozen=False)
 class DetectionTestingManagerOutputDto():
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
-    skippedQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
@@ -646,11 +652,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
 
-        # Iterate over baselines (if any)
-        for baseline in test.baselines:
-            # TODO: this is executing the test, not the baseline...
-            # TODO: should this be in a try/except if the later call is?
-            self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
+        
 
         # Set earliest_time and latest_time appropriately if FORCE_ALL_TIME is False
         if not FORCE_ALL_TIME:
@@ -661,7 +663,23 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Run the detection's search query
         try:
+            # Iterate over baselines (if any)
+            for baseline in detection.baselines:
+                raise CannotRunBaselineException("Detection requires Execution of a Baseline, "
+                                                 "however Baseline execution is not "
+                                                 "currently supported in contentctl. Mark "
+                                                 "this as manual_test.")
             self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
+        except CannotRunBaselineException as e:
+            # Init the test result and record a failure if there was an issue during the search
+            test.result = UnitTestResult()
+            test.result.set_job_content(
+                None,
+                self.infrastructure,
+                TestResultStatus.ERROR,
+                exception=e,
+                duration=time.time() - test_start_time
+            )
         except ContainerStoppedException as e:
             raise e
         except Exception as e:
@@ -1014,18 +1032,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         """
         # Get the start time and compute the timeout
         search_start_time = time.time()
-        search_stop_time = time.time() + self.sync_obj.timeout_seconds
-
-        # We will default to ensuring at least one result exists
-        if test.pass_condition is None:
-            search = detection.search
-        else:
-            # Else, use the explicit pass condition
-            search = f"{detection.search} {test.pass_condition}"
+        search_stop_time = time.time() + self.sync_obj.timeout_seconds        
+        
+        # Make a copy of the search string since we may 
+        # need to make some small changes to it below
+        search = detection.search
 
         # Ensure searches that do not begin with '|' must begin with 'search '
-        if not search.strip().startswith("|"):                                                      # type: ignore
-            if not search.strip().startswith("search "):                                            # type: ignore
+        if not search.strip().startswith("|"):                                                      
+            if not search.strip().startswith("search "):                                            
                 search = f"search {search}"
 
         # exponential backoff for wait time

@@ -113,17 +113,14 @@ def test_common_func(config:test_common):
     test_input_dto = TestInputDto(detections_to_test, config)
     
     t = Test()
-    
-    # Remove detections or disable tests that we do not want to test (e.g. integration testing is
-    # disabled)
-    filted_test_input_dto = t.filter_tests(test_input_dto)
+    t.filter_tests(test_input_dto)
     
     if config.plan_only:
         #Emit the test plan and quit. Do not actually run the test
-        config.dumpCICDPlanAndQuit(gitServer.getHash(),filted_test_input_dto.detections)
+        config.dumpCICDPlanAndQuit(gitServer.getHash(),test_input_dto.detections)
         return 
     
-    success = t.execute(filted_test_input_dto)
+    success = t.execute(test_input_dto)
     
     if success:
         #Everything passed!

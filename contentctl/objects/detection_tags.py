@@ -35,7 +35,7 @@ from contentctl.objects.enums import (
 from contentctl.objects.atomic import AtomicTest
 
 
-# TODO (#257): disable the use_enum_values configuration
+# TODO (#266): disable the use_enum_values configuration
 class DetectionTags(BaseModel):
     # detection spec
     model_config = ConfigDict(use_enum_values=True, validate_default=False)

@@ -9,7 +9,7 @@ from contentctl.objects.enums import DataModel
 from contentctl.objects.investigation_tags import InvestigationTags
 
 
-# TODO (#257): disable the use_enum_values configuration
+# TODO (#266): disable the use_enum_values configuration
 class Investigation(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True,validate_default=False)
     type: str = Field(...,pattern="^Investigation$")

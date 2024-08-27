@@ -48,6 +48,7 @@ UNTESTED_ANALYTICS_TYPES: set[str] = {
 }
 
 
+# TODO (#257): disable the use_enum_values configuration
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
 

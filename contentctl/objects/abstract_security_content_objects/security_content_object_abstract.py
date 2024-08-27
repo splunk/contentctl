@@ -29,6 +29,7 @@ import pathlib
 NO_FILE_NAME = "NO_FILE_NAME"
 
 
+# TODO (#257): disable the use_enum_values configuration
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     model_config = ConfigDict(use_enum_values=True, validate_default=True)
 

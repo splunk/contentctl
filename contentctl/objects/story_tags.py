@@ -17,6 +17,8 @@ class StoryUseCase(str,Enum):
    INSIDER_THREAT = "Insider Threat"
    OTHER = "Other"
 
+
+# TODO (#257): disable the use_enum_values configuration
 class StoryTags(BaseModel):
    model_config = ConfigDict(extra='forbid', use_enum_values=True)
    category: List[StoryCategory] = Field(...,min_length=1)

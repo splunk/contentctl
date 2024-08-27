@@ -117,21 +117,29 @@ class Test:
                 f"\tSkipped Detections           : {summary.get('total_skipped','ERROR')}"
             )
             print(
+                "\tProduction Status            :"
+            )
+            print(
+                f"\t  Production Detections      : {summary.get('total_production','ERROR')}"
+            )
+            print(
                 f"\t  Experimental Detections    : {summary.get('total_experimental','ERROR')}"
             )
             print(
                 f"\t  Deprecated Detections      : {summary.get('total_deprecated','ERROR')}"
             )
             print(
-                f"\t  Manually Tested Detections : {summary.get('total_manual','ERROR')}"
-            )
-            print(
-                f"\t  Other Skipped Detections   : {summary.get('total_other_skips','ERROR')}"
+                f"\tManually Tested Detections : {summary.get('total_manual','ERROR')}"
             )
             print(
                 f"\tUntested Detections          : {summary.get('total_untested','ERROR')}"
             )
             print(f"\tTest Results File            : {file.getOutputFilePath()}")
+            print(
+                "\nNOTE: skipped detections include non-production, manually tested, and certain\n"
+                "detection types (e.g. Correlation), but there may be overlap between these\n"
+                "categories."
+            )
             return summary_results.get("summary", {}).get("success", False)
 
         except Exception as e:

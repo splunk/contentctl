@@ -189,7 +189,6 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 "total_experimental": total_experimental,
                 "total_deprecated": total_deprecated,
                 "total_manual": total_manual,
-                "total_other_skips": total_skipped - total_deprecated - total_experimental - total_manual,
                 "success_rate": success_rate,
             },
             "tested_detections": tested_detections,

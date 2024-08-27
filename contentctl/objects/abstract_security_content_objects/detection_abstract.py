@@ -43,7 +43,7 @@ from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 MISSING_SOURCES: set[str] = set()
 
 # Those AnalyticsTypes that we do not test via contentctl
-UNTESTED_ANALYTICS_TYPES: set[str] = {
+SKIPPED_ANALYTICS_TYPES: set[str] = {
     AnalyticsType.Correlation.value
 }
 
@@ -177,7 +177,7 @@ class Detection_Abstract(SecurityContentObject):
             self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
 
         # Skip tests for detecton types like Correlation which are not supported via contentctl
-        if self.type in UNTESTED_ANALYTICS_TYPES:
+        if self.type in SKIPPED_ANALYTICS_TYPES:
             self.skip_all_tests(
                 f"TEST SKIPPED: Detection type {self.type} cannot be tested by contentctl"
             )
@@ -738,7 +738,7 @@ class Detection_Abstract(SecurityContentObject):
         # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined
         # types, requires them. Accordingly, we do not need to do additional checks if the type is
         # Correlation
-        if info.data.get("type", "") in UNTESTED_ANALYTICS_TYPES:
+        if info.data.get("type", "") in SKIPPED_ANALYTICS_TYPES:
             return v
 
         # Manually tested detections are not required to have tests defined

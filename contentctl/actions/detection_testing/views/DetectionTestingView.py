@@ -143,6 +143,8 @@ class DetectionTestingView(BaseModel, abc.ABC):
             )
         )
 
+        # TODO (#267): Align test reporting more closely w/ status enums (as it relates to
+        #   "untested")
         # Aggregate summaries for the untested detections (anything still in the input queue was untested)
         total_untested = len(self.sync_obj.inputQueue)
         untested_detections: list[dict[str, Any]] = []

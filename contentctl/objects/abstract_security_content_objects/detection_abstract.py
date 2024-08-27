@@ -34,7 +34,7 @@ from contentctl.objects.data_source import DataSource
 # from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
-
+import datetime
 MISSING_SOURCES: set[str] = set()
 
 
@@ -307,14 +307,16 @@ class Detection_Abstract(SecurityContentObject):
 
     @computed_field
     @property
-    def metadata(self) -> dict[str, str]:
+    def metadata(self) -> dict[str, str|float]:
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
+        
         return {
             'detection_id': str(self.id),
             'deprecated': '1' if self.status == DetectionStatus.deprecated.value else '0',          # type: ignore
-            'detection_version': str(self.version)
+            'detection_version': str(self.version),
+            'publish_time': datetime.datetime(self.date.year,self.date.month,self.date.day,0,0,0,0,tzinfo=datetime.timezone.utc).timestamp()
         }
 
     @model_serializer
@@ -789,13 +791,3 @@ class Detection_Abstract(SecurityContentObject):
         # Return the summary
 
         return summary_dict
-
-    def getMetadata(self) -> dict[str, str]:
-        # NOTE: we ignore the type error around self.status because we are using Pydantic's
-        # use_enum_values configuration
-        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        return {
-            'detection_id': str(self.id),
-            'deprecated': '1' if self.status == DetectionStatus.deprecated.value else '0',          # type: ignore
-            'detection_version': str(self.version)
-        }

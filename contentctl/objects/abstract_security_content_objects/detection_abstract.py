@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated
 import re
 import pathlib
+from enum import Enum
+
 from pydantic import (
     field_validator,
     model_validator,
@@ -12,6 +14,7 @@ from pydantic import (
     ConfigDict,
     FilePath
 )
+
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 if TYPE_CHECKING:
@@ -27,9 +30,11 @@ from contentctl.objects.enums import NistCategory
 from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.unit_test import UnitTest
+from contentctl.objects.manual_test import ManualTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.data_source import DataSource
+from contentctl.objects.base_test_result import TestResultStatus
 
 # from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
@@ -37,7 +42,13 @@ from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 import datetime
 MISSING_SOURCES: set[str] = set()
 
+# Those AnalyticsTypes that we do not test via contentctl
+SKIPPED_ANALYTICS_TYPES: set[str] = {
+    AnalyticsType.Correlation.value
+}
 
+
+# TODO (#266): disable the use_enum_values configuration
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
 
@@ -57,7 +68,7 @@ class Detection_Abstract(SecurityContentObject):
     # default mode, 'smart'
     # https://docs.pydantic.dev/latest/concepts/unions/#left-to-right-mode
     # https://github.com/pydantic/pydantic/issues/9101#issuecomment-2019032541
-    tests: List[Annotated[Union[UnitTest, IntegrationTest], Field(union_mode='left_to_right')]] = []
+    tests: List[Annotated[Union[UnitTest, IntegrationTest, ManualTest], Field(union_mode='left_to_right')]] = []
     # A list of groups of tests, relying on the same data
     test_groups: Union[list[TestGroup], None] = Field(None, validate_default=True)
 
@@ -115,35 +126,102 @@ class Detection_Abstract(SecurityContentObject):
 
         return value
 
-    @field_validator("test_groups")
-    @classmethod
-    def validate_test_groups(
-        cls,
-        value: Union[None, List[TestGroup]],
-        info: ValidationInfo
-    ) -> Union[List[TestGroup], None]:
+    def adjust_tests_and_groups(self) -> None:
         """
-        Validates the `test_groups` field and constructs the model from the list of unit tests
-        if no explicit construct was provided
-        :param value: the value of the field `test_groups`
-        :param values: a dict of the other fields in the Detection model
+        Converts UnitTest to ManualTest as needed, B=builds the `test_groups` field, constructing
+        the model from the list of unit tests. Also, preemptively skips all manual tests, as well as
+        tests for experimental/deprecated detections and Correlation type detections.
         """
-        # if the value was not the None default, do nothing
-        if value is not None:
-            return value
+        # Since ManualTest and UnitTest are not differentiable without looking at the manual_test
+        # tag, Pydantic builds all tests as UnitTest objects. If we see the manual_test flag, we
+        # convert these to ManualTest
+        tmp: list[UnitTest | IntegrationTest | ManualTest] = []
+        if self.tags.manual_test is not None:
+            for test in self.tests:
+                if not isinstance(test, UnitTest):
+                    raise ValueError(
+                        "At this point of intialization, tests should only be UnitTest objects, "
+                        f"but encountered a {type(test)}."
+                    )
+                # Create the manual test and skip it upon creation (cannot test via contentctl)
+                manual_test = ManualTest(
+                    name=test.name,
+                    attack_data=test.attack_data
+                )
+                tmp.append(manual_test)
+            self.tests = tmp
 
-        # iterate over the unit tests and create a TestGroup (and as a result, an IntegrationTest) for each
-        test_groups: list[TestGroup] = []
-        tests: list[UnitTest | IntegrationTest] = info.data.get("tests")                            # type: ignore
-        unit_test: UnitTest
-        for unit_test in tests:                                                                     # type: ignore
-            test_group = TestGroup.derive_from_unit_test(unit_test, info.data.get("name"))          # type: ignore
-            test_groups.append(test_group)
+        # iterate over the tests and create a TestGroup (and as a result, an IntegrationTest) for
+        # each unit test
+        self.test_groups = []
+        for test in self.tests:
+            # We only derive TestGroups from UnitTests (ManualTest is ignored and IntegrationTests
+            # have not been created yet)
+            if isinstance(test, UnitTest):
+                test_group = TestGroup.derive_from_unit_test(test, self.name)
+                self.test_groups.append(test_group)
 
         # now add each integration test to the list of tests
-        for test_group in test_groups:
-            tests.append(test_group.integration_test)
-        return test_groups
+        for test_group in self.test_groups:
+            self.tests.append(test_group.integration_test)
+
+        # Skip all manual tests
+        self.skip_manual_tests()
+
+        # NOTE: we ignore the type error around self.status because we are using Pydantic's
+        # use_enum_values configuration
+        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
+
+        # Skip tests for non-production detections
+        if self.status != DetectionStatus.production.value:                                         # type: ignore
+            self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
+
+        # Skip tests for detecton types like Correlation which are not supported via contentctl
+        if self.type in SKIPPED_ANALYTICS_TYPES:
+            self.skip_all_tests(
+                f"TEST SKIPPED: Detection type {self.type} cannot be tested by contentctl"
+            )
+
+    @property
+    def test_status(self) -> TestResultStatus | None:
+        """
+        Returns the collective status of the detections tests. If any test status has yet to be set,
+        None is returned.If any test failed or errored, FAIL is returned. If all tests were skipped,
+        SKIP is returned. If at least one test passed and the rest passed or skipped, PASS is
+        returned.
+        """
+        # If the detection has no tests, we consider it to have been skipped (only non-production,
+        # non-manual, non-correlation detections are allowed to have no tests defined)
+        if len(self.tests) == 0:
+            return TestResultStatus.SKIP
+
+        passed = 0
+        skipped = 0
+        for test in self.tests:
+            # If the result/status of any test has not yet been set, return None
+            if test.result is None or test.result.status is None:
+                return None
+            elif test.result.status == TestResultStatus.ERROR or test.result.status == TestResultStatus.FAIL:
+                # If any test failed or errored, return fail (we don't return the error state at
+                # the aggregate detection level)
+                return TestResultStatus.FAIL
+            elif test.result.status == TestResultStatus.SKIP:
+                skipped += 1
+            elif test.result.status == TestResultStatus.PASS:
+                passed += 1
+            else:
+                raise ValueError(
+                    f"Undefined test status for test ({test.name}) in detection ({self.name})"
+                )
+
+        # If at least one of the tests passed and the rest passed or skipped, report pass
+        if passed > 0 and (passed + skipped) == len(self.tests):
+            return TestResultStatus.PASS
+        elif skipped == len(self.tests):
+            # If all tests skipped, return skip
+            return TestResultStatus.SKIP
+
+        raise ValueError(f"Undefined overall test status for detection: {self.name}")
 
     @computed_field
     @property
@@ -441,6 +519,9 @@ class Detection_Abstract(SecurityContentObject):
 
         self.cve_enrichment_func(__context)
 
+        # Derive TestGroups and IntegrationTests, adjust for ManualTests, skip as needed
+        self.adjust_tests_and_groups()
+
     @field_validator('lookups', mode="before")
     @classmethod
     def getDetectionLookups(cls, v:list[str], info:ValidationInfo) -> list[Lookup]:
@@ -646,67 +727,64 @@ class Detection_Abstract(SecurityContentObject):
         # Found everything
         return self
 
-    @model_validator(mode='after')
-    def ensurePresenceOfRequiredTests(self):
-        # NOTE: we ignore the type error around self.status because we are using Pydantic's
-        # use_enum_values configuration
-        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-
-        # Only production analytics require tests
-        if self.status != DetectionStatus.production.value:                                         # type: ignore
-            return self
-
-        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
-        # Accordingly, we do not need to do additional checks if the type is Correlation
-        if self.type in set([AnalyticsType.Correlation.value]):
-            return self
-
-        if self.tags.manual_test is not None:
-            for test in self.tests:
-                test.skip(
-                    f"TEST SKIPPED: Detection marked as 'manual_test' with explanation: '{self.tags.manual_test}'"
-                )
-
-        if len(self.tests) == 0:
-            raise ValueError(f"At least one test is REQUIRED for production detection: {self.name}")
-
-        return self
-
     @field_validator("tests")
     def tests_validate(
         cls,
-        v: list[UnitTest | IntegrationTest],
+        v: list[UnitTest | IntegrationTest | ManualTest],
         info: ValidationInfo
-    ) -> list[UnitTest | IntegrationTest]:
+    ) -> list[UnitTest | IntegrationTest | ManualTest]:
         # Only production analytics require tests
         if info.data.get("status", "") != DetectionStatus.production.value:
             return v
 
-        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined types, requires them.
-        # Accordingly, we do not need to do additional checks if the type is Correlation
-        if info.data.get("type", "") in set([AnalyticsType.Correlation.value]):
+        # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined
+        # types, requires them. Accordingly, we do not need to do additional checks if the type is
+        # Correlation
+        if info.data.get("type", "") in SKIPPED_ANALYTICS_TYPES:
+            return v
+
+        # Manually tested detections are not required to have tests defined
+        tags: DetectionTags | None = info.data.get("tags", None)
+        if tags is not None and tags.manual_test is not None:
             return v
 
         # Ensure that there is at least 1 test
         if len(v) == 0:
-            if info.data.get("tags", None) and info.data.get("tags").manual_test is not None:       # type: ignore
-                # Detections that are manual_test MAY have detections, but it is not required.  If they
-                # do not have one, then create one which will be a placeholder.
-                # Note that this fake UnitTest (and by extension, Integration Test) will NOT be generated
-                # if there ARE test(s) defined for a Detection.
-                placeholder_test = UnitTest(                                                        # type: ignore
-                    name="PLACEHOLDER FOR DETECTION TAGGED MANUAL_TEST WITH NO TESTS SPECIFIED IN YML FILE",
-                    attack_data=[]
-                )
-                return [placeholder_test]
-
-            else:
-                raise ValueError(
-                    "At least one test is REQUIRED for production detection: " + info.data.get("name", "NO NAME FOUND")
-                )
+            raise ValueError(
+                "At least one test is REQUIRED for production detection: " + info.data.get("name", "NO NAME FOUND")
+            )
 
         # No issues - at least one test provided for production type requiring testing
         return v
+
+    def skip_all_tests(self, message: str = "TEST SKIPPED") -> None:
+        """
+        Given a message, skip all tests for this detection.
+        :param message: the message to set in the test result
+        """
+        for test in self.tests:
+            test.skip(message=message)
+
+    def skip_manual_tests(self) -> None:
+        """
+        Skips all ManualTests, if the manual_test flag is set; also raises an error if any other
+        test types are found for a manual_test detection
+        """
+        # Skip all ManualTest
+        if self.tags.manual_test is not None:
+            for test in self.tests:
+                if isinstance(test, ManualTest):
+                    test.skip(
+                        message=(
+                            "TEST SKIPPED (MANUAL): Detection marked as 'manual_test' with "
+                            f"explanation: {self.tags.manual_test}"
+                        )
+                    )
+                else:
+                    raise ValueError(
+                        "A detection with the manual_test flag should only have tests of type "
+                        "ManualTest"
+                    )
 
     def all_tests_successful(self) -> bool:
         """
@@ -717,9 +795,11 @@ class Detection_Abstract(SecurityContentObject):
         :returns: bool where True indicates all tests succeeded (they existed, complete and were
             PASS/SKIP)
         """
-        # If no tests are defined, we consider it a failure for the detection
+        # If no tests are defined, we consider it a success for the detection (this detection was
+        # skipped for testing). Note that the existence of at least one test is enforced by Pydantic
+        # validation already, with a few specific exceptions
         if len(self.tests) == 0:
-            return False
+            return True
 
         # Iterate over tests
         for test in self.tests:
@@ -742,7 +822,13 @@ class Detection_Abstract(SecurityContentObject):
 
     def get_summary(
         self,
-        detection_fields: list[str] = ["name", "search"],
+        detection_fields: list[str] = [
+            "name", "type", "status", "test_status", "source", "data_source", "search", "file_path"
+        ],
+        detection_field_aliases: dict[str, str] = {
+            "status": "production_status", "test_status": "status", "source": "source_category"
+        },
+        tags_fields: list[str] = ["manual_test"],
         test_result_fields: list[str] = ["success", "message", "exception", "status", "duration", "wait_duration"],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict[str, Any]:
@@ -758,7 +844,21 @@ class Detection_Abstract(SecurityContentObject):
 
         # Grab the top level detection fields
         for field in detection_fields:
-            summary_dict[field] = getattr(self, field)
+            value = getattr(self, field)
+
+            # Enums and Path objects cannot be serialized directly, so we convert it to a string
+            if isinstance(value, Enum) or isinstance(value, pathlib.Path):
+                value = str(value)
+
+            # Alias any fields as needed
+            if field in detection_field_aliases:
+                summary_dict[detection_field_aliases[field]] = value
+            else:
+                summary_dict[field] = value
+
+        # Grab fields from the tags
+        for field in tags_fields:
+            summary_dict[field] = getattr(self.tags, field)
 
         # Set success based on whether all tests passed
         summary_dict["success"] = self.all_tests_successful()

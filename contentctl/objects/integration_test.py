@@ -1,5 +1,3 @@
-from typing import Union
-
 from pydantic import Field
 
 from contentctl.objects.base_test import BaseTest, TestType
@@ -13,10 +11,10 @@ class IntegrationTest(BaseTest):
     An integration test for a detection against ES
     """
     # The test type (integration)
-    test_type: TestType = Field(TestType.INTEGRATION)
+    test_type: TestType = Field(default=TestType.INTEGRATION)
 
     # The test result
-    result: Union[None, IntegrationTestResult] = None
+    result: IntegrationTestResult | None = None
 
     @classmethod
     def derive_from_unit_test(cls, unit_test: UnitTest) -> "IntegrationTest":
@@ -36,7 +34,7 @@ class IntegrationTest(BaseTest):
         Skip the test by setting its result status
         :param message: the reason for skipping
         """
-        self.result = IntegrationTestResult(
+        self.result = IntegrationTestResult(                                                        # type: ignore
             message=message,
             status=TestResultStatus.SKIP
         )

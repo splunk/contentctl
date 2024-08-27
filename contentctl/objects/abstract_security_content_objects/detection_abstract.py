@@ -30,6 +30,7 @@ from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.data_source import DataSource
+from contentctl.objects.rba import rba
 
 # from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
@@ -49,6 +50,7 @@ class Detection_Abstract(SecurityContentObject):
     search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
+    rba: rba = Field(...)
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)

@@ -82,6 +82,7 @@ class MitreAttackGroup(BaseModel):
             return []
         return contributors
 
+# TODO (#266): disable the use_enum_values configuration
 class MitreAttackEnrichment(BaseModel):
     ConfigDict(use_enum_values=True)
     mitre_attack_id: Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")] = Field(...)

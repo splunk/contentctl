@@ -16,7 +16,7 @@ import pathlib
 from contentctl.helper.utils import Utils
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
-from contentctl.objects.enums import PostTestBehavior
+from contentctl.objects.enums import PostTestBehavior, DetectionTestingMode
 from contentctl.objects.detection import Detection
 
 import tqdm
@@ -27,6 +27,8 @@ COMMON_INFORMATION_MODEL_UID = 1621
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/download"
 
+
+# TODO (#266): disable the use_enum_values configuration
 class App_Base(BaseModel,ABC):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     uid: Optional[int] = Field(default=None)
@@ -51,6 +53,8 @@ class App_Base(BaseModel,ABC):
             if not config.getLocalAppDir().exists():
                 config.getLocalAppDir().mkdir(parents=True)
 
+
+# TODO (#266): disable the use_enum_values configuration
 class TestApp(App_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(default=None, description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
@@ -89,6 +93,8 @@ class TestApp(App_Base):
         
         return str(destination)
 
+
+# TODO (#266): disable the use_enum_values configuration
 class CustomApp(App_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     # Fields required for app.conf based on
@@ -149,6 +155,7 @@ class CustomApp(App_Base):
         return str(destination)
 
 
+# TODO (#266): disable the use_enum_values configuration
 class Config_Base(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
 
@@ -167,6 +174,7 @@ class init(Config_Base):
     pass
 
 
+# TODO (#266): disable the use_enum_values configuration
 class validate(Config_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     enrichments: bool = Field(default=False, description="Enable MITRE, APP, and CVE Enrichments.  "\
@@ -186,7 +194,7 @@ class report(validate):
         return self.path/"reporting/"
 
 
-
+# TODO (#266): disable the use_enum_values configuration
 class build(validate):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     build_path: DirectoryPath = Field(default=DirectoryPath("dist/"), title="Target path for all build outputs")
@@ -255,6 +263,7 @@ class new(Config_Base):
     type: NewContentType = Field(default=NewContentType.detection, description="Specify the type of content you would like to create.")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class deploy_acs(inspect):
     model_config = ConfigDict(use_enum_values=True,validate_default=False, arbitrary_types_allowed=True)
     #ignore linter error
@@ -262,6 +271,7 @@ class deploy_acs(inspect):
     splunk_cloud_stack: str = Field(description="The name of your Splunk Cloud Stack")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class Infrastructure(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     splunk_app_username:str = Field(default="admin", description="Username for logging in to your Splunk Server")
@@ -273,11 +283,13 @@ class Infrastructure(BaseModel):
     instance_name: str = Field(...)
 
 
+# TODO (#266): disable the use_enum_values configuration
 class Container(Infrastructure):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     instance_address:str = Field(default="localhost", description="Address of your splunk server.")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class ContainerSettings(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     leave_running: bool = Field(default=True, description="Leave container running after it is first "
@@ -302,11 +314,14 @@ class All(BaseModel):
     #Doesn't need any extra logic
     pass
 
+
+# TODO (#266): disable the use_enum_values configuration
 class Changes(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     target_branch:str = Field(...,description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class Selected(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     files:List[FilePath] = Field(...,description="List of detection files to test, separated by spaces.")
@@ -672,17 +687,14 @@ class test_common(build):
 
     def getModeName(self)->str:
         if isinstance(self.mode, All):
-            return "All"
+            return DetectionTestingMode.all.value
         elif isinstance(self.mode, Changes):
-            return "Changes"
+            return DetectionTestingMode.changes.value
         else:
-            return "Selected"
+            return DetectionTestingMode.selected.value
 
 
-    
-
-
-
+# TODO (#266): disable the use_enum_values configuration
 class test(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     container_settings:ContainerSettings = ContainerSettings()
@@ -747,6 +759,9 @@ class test(test_common):
 
 
 TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
+
+
+# TODO (#266): disable the use_enum_values configuration
 class test_servers(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     test_instances:List[Infrastructure] = Field([],description="Test against one or more preconfigured servers.", validate_default=True)

@@ -35,6 +35,7 @@ from contentctl.objects.enums import (
 from contentctl.objects.atomic import AtomicTest
 
 
+# TODO (#266): disable the use_enum_values configuration
 class DetectionTags(BaseModel):
     # detection spec
     model_config = ConfigDict(use_enum_values=True, validate_default=False)
@@ -106,6 +107,8 @@ class DetectionTags(BaseModel):
     # TODO (#221): mappings should be fleshed out into a proper class
     mappings: Optional[List] = None
     # annotations: Optional[dict] = None
+
+    # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
 
     # The following validator is temporarily disabled pending further discussions

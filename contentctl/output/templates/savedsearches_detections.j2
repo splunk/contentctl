@@ -108,7 +108,13 @@ quantity = 0
 realtime_schedule = 0
 is_visible = false
 search = {{ detection.search | escapeNewlines() }}
-
+{% if detection.tags.drilldown%}
+action.notable.param.drilldown_name = {{ detection.tags.drilldown.name }}
+action.notable.param.drilldown_search = {{ detection.tags.drilldown.search | escapeNewlines()}}
+action.notable.param.drilldown_earliest_offset = {{ detection.tags.drilldown.earliest_offset }}
+action.notable.param.drilldown_latest_offset = {{ detection.tags.drilldown.latest_offset }}
 {% endif %}
+{% endif %}
+
 {% endfor %}
 ### END {{ APP_NAME }} DETECTIONS ###

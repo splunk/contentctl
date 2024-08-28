@@ -1180,6 +1180,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         return
 
     def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
+        return
         for attack_data_file in attack_data_files:
             index = attack_data_file.custom_index or self.sync_obj.replay_index
             host = attack_data_file.host or self.sync_obj.replay_host

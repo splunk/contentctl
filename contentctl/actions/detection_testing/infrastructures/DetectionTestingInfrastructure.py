@@ -10,7 +10,6 @@ import pathlib
 from tempfile import TemporaryDirectory, mktemp
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
-#from dataclasses import dataclass
 from shutil import copyfile
 from typing import Union, Optional
 
@@ -29,7 +28,7 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.base_test import BaseTest
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.unit_test_attack_data import UnitTestAttackData
+from contentctl.objects.test_attack_data import TestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.objects.test_group import TestGroup
@@ -61,13 +60,19 @@ class CleanupTestGroupResults(BaseModel):
 
 class ContainerStoppedException(Exception):
     pass
+class CannotRunBaselineException(Exception):
+    # Support for testing detections with baselines 
+    # does not currently exist in contentctl.
+    # As such, whenever we encounter a detection 
+    # with baselines we should generate a descriptive
+    # exception
+    pass
 
 
 @dataclasses.dataclass(frozen=False)
 class DetectionTestingManagerOutputDto():
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
-    skippedQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
@@ -655,11 +660,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
 
-        # Iterate over baselines (if any)
-        for baseline in test.baselines:
-            # TODO: this is executing the test, not the baseline...
-            # TODO: should this be in a try/except if the later call is?
-            self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
+        
 
         # Set earliest_time and latest_time appropriately if FORCE_ALL_TIME is False
         if not FORCE_ALL_TIME:
@@ -670,7 +671,23 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Run the detection's search query
         try:
+            # Iterate over baselines (if any)
+            for baseline in detection.baselines:
+                raise CannotRunBaselineException("Detection requires Execution of a Baseline, "
+                                                 "however Baseline execution is not "
+                                                 "currently supported in contentctl. Mark "
+                                                 "this as manual_test.")
             self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
+        except CannotRunBaselineException as e:
+            # Init the test result and record a failure if there was an issue during the search
+            test.result = UnitTestResult()
+            test.result.set_job_content(
+                None,
+                self.infrastructure,
+                TestResultStatus.ERROR,
+                exception=e,
+                duration=time.time() - test_start_time
+            )
         except ContainerStoppedException as e:
             raise e
         except Exception as e:
@@ -1023,18 +1040,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         """
         # Get the start time and compute the timeout
         search_start_time = time.time()
-        search_stop_time = time.time() + self.sync_obj.timeout_seconds
-
-        # We will default to ensuring at least one result exists
-        if test.pass_condition is None:
-            search = detection.search
-        else:
-            # Else, use the explicit pass condition
-            search = f"{detection.search} {test.pass_condition}"
+        search_stop_time = time.time() + self.sync_obj.timeout_seconds        
+        
+        # Make a copy of the search string since we may 
+        # need to make some small changes to it below
+        search = detection.search
 
         # Ensure searches that do not begin with '|' must begin with 'search '
-        if not search.strip().startswith("|"):                                                      # type: ignore
-            if not search.strip().startswith("search "):                                            # type: ignore
+        if not search.strip().startswith("|"):                                                      
+            if not search.strip().startswith("search "):                                            
                 search = f"search {search}"
 
         # exponential backoff for wait time
@@ -1068,7 +1082,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             results = JSONResultsReader(job.results(output_mode="json"))
 
             # Consolidate a set of the distinct observable field names
-            observable_fields_set = set([o.name for o in detection.tags.observable])
+            observable_fields_set = set([o.name for o in detection.tags.observable]) # keeping this around for later
+            risk_object_fields_set = set([o.name for o in detection.tags.observable if "Victim" in o.role ]) # just the "Risk Objects"
+            threat_object_fields_set = set([o.name for o in detection.tags.observable if "Attacker" in o.role]) # just the "threat objects"
 
             # Ensure the search had at least one result
             if int(job.content.get("resultCount", "0")) > 0:
@@ -1076,7 +1092,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 test.result = UnitTestResult()
 
                 # Initialize the collection of fields that are empty that shouldn't be
+                present_threat_objects: set[str] = set()
                 empty_fields: set[str] = set()
+                
+                
 
                 # Filter out any messages in the results
                 for result in results:
@@ -1085,30 +1104,50 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     # If not a message, it is a dict and we will process it
                     results_fields_set = set(result.keys())
+                    # Guard against first events (relevant later)
 
-                    # Identify any observable fields that are not available in the results
-                    missing_fields = observable_fields_set - results_fields_set
-                    if len(missing_fields) > 0:
+                    # Identify any risk object fields that are not available in the results
+                    missing_risk_objects = risk_object_fields_set - results_fields_set
+                    if len(missing_risk_objects) > 0:
                         # Report a failure in such cases
-                        e = Exception(f"The observable field(s) {missing_fields} are missing in the detection results")
+                        e = Exception(f"The observable field(s) {missing_risk_objects} are missing in the detection results")
                         test.result.set_job_content(
                             job.content,
                             self.infrastructure,
-                            TestResultStatus.ERROR,
+                            TestResultStatus.FAIL,
                             exception=e,
                             duration=time.time() - search_start_time,
                         )
 
-                        return
+                        return                    
 
-                    # If we find one or more fields that contain the string "null" then they were
+                    # If we find one or more risk object fields that contain the string "null" then they were
                     # not populated and we should throw an error.  This can happen if there is a typo
                     # on a field.  In this case, the field will appear but will not contain any values
-                    current_empty_fields = set()
+                    current_empty_fields: set[str] = set()
+                    
                     for field in observable_fields_set:
                         if result.get(field, 'null') == 'null':
-                            current_empty_fields.add(field)
+                            if field in risk_object_fields_set:
+                                e = Exception(f"The risk object field {field} is missing in at least one result.")
+                                test.result.set_job_content(
+                                    job.content,
+                                    self.infrastructure,
+                                    TestResultStatus.FAIL,
+                                    exception=e,
+                                    duration=time.time() - search_start_time,
+                                )
+                                return
+                            else:
+                                if field in threat_object_fields_set:
+                                    current_empty_fields.add(field)
+                        else:
+                            if field in threat_object_fields_set:
+                                present_threat_objects.add(field)
+                                continue
+                                
 
+                    
                     # If everything succeeded up until now, and no empty fields are found in the
                     # current result, then the search was a success
                     if len(current_empty_fields) == 0:
@@ -1122,21 +1161,32 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     else:
                         empty_fields = empty_fields.union(current_empty_fields)
-
-                # Report a failure if there were empty fields in all results
-                e = Exception(
-                    f"One or more required observable fields {empty_fields} contained 'null' values.  Is the "
-                    "data being parsed correctly or is there an error in the naming of a field?"
+                        
+                        
+                missing_threat_objects = threat_object_fields_set - present_threat_objects
+                # Report a failure if there were empty fields in a threat object in all results
+                if len(missing_threat_objects) > 0:
+                    e = Exception(
+                        f"One or more required threat object fields {missing_threat_objects} contained 'null' values in all events. "
+                        "Is the data being parsed correctly or is there an error in the naming of a field?"
                     )
-                test.result.set_job_content(
-                    job.content,
-                    self.infrastructure,
-                    TestResultStatus.ERROR,
-                    exception=e,
-                    duration=time.time() - search_start_time,
-                )
+                    test.result.set_job_content(
+                        job.content,
+                        self.infrastructure,
+                        TestResultStatus.FAIL,
+                        exception=e,
+                        duration=time.time() - search_start_time,
+                    )
+                    return
+                
 
-                return
+                test.result.set_job_content(
+                            job.content,
+                            self.infrastructure,
+                            TestResultStatus.PASS,
+                            duration=time.time() - search_start_time,
+                        )
+                return               
 
             else:
                 # Report a failure if there were no results at all
@@ -1151,7 +1201,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         return
 
-    def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
+    def delete_attack_data(self, attack_data_files: list[TestAttackData]):
         for attack_data_file in attack_data_files:
             index = attack_data_file.custom_index or self.sync_obj.replay_index
             host = attack_data_file.host or self.sync_obj.replay_host
@@ -1184,7 +1234,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def replay_attack_data_file(
         self,
-        attack_data_file: UnitTestAttackData,
+        attack_data_file: TestAttackData,
         tmp_dir: str,
         test_group: TestGroup,
         test_group_start_time: float,
@@ -1252,7 +1302,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def hec_raw_replay(
         self,
         tempfile: str,
-        attack_data_file: UnitTestAttackData,
+        attack_data_file: TestAttackData,
         verify_ssl: bool = False,
     ):
         if verify_ssl is False:

@@ -58,7 +58,7 @@ dispatch.latest_time = {{ detection.deployment.scheduling.latest_time }}
 action.correlationsearch.enabled = 1
 action.correlationsearch.label = {{ detection.get_action_dot_correlationsearch_dot_label(app) }}
 action.correlationsearch.annotations = {{ detection.annotations | tojson }}
-action.correlationsearch.metadata = {{ detection.getMetadata() | tojson }}
+action.correlationsearch.metadata = {{ detection.metadata | tojson }}
 {% if detection.deployment.scheduling.schedule_window is defined %}
 schedule_window = {{ detection.deployment.scheduling.schedule_window }}
 {% endif %}

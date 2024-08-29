@@ -34,8 +34,9 @@ from contentctl.objects.enums import (
     SecurityContentProductName
 )
 from contentctl.objects.atomic import AtomicTest
+from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
-
+# TODO (#266): disable the use_enum_values configuration
 class DetectionTags(BaseModel):
     # detection spec
     model_config = ConfigDict(use_enum_values=True, validate_default=False)
@@ -50,7 +51,7 @@ class DetectionTags(BaseModel):
     def risk_score(self) -> int:
         return round((self.confidence * self.impact)/100)
 
-    mitre_attack_id: List[Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")]] = []
+    mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
     observable: List[Observable] = []
     message: str = Field(...)
@@ -69,7 +70,7 @@ class DetectionTags(BaseModel):
         else:
             return RiskSeverity('low')
 
-    cve: List[Annotated[str, r"^CVE-[1|2]\d{3}-\d+$"]] = []
+    cve: List[CVE_TYPE] = []
     atomic_guid: List[AtomicTest] = []
     drilldown_search: Optional[str] = None
 
@@ -107,6 +108,8 @@ class DetectionTags(BaseModel):
     # TODO (#221): mappings should be fleshed out into a proper class
     mappings: Optional[List] = None
     # annotations: Optional[dict] = None
+
+    # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
 
     # The following validator is temporarily disabled pending further discussions

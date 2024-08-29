@@ -8,7 +8,7 @@ from typing import Annotated, Any, Union, TYPE_CHECKING
 from pydantic import BaseModel,Field, computed_field
 from decimal import Decimal
 from requests.exceptions import ReadTimeout
-
+from contentctl.objects.annotated_types import CVE_TYPE
 if TYPE_CHECKING:
     from contentctl.objects.config import validate
 
@@ -18,7 +18,7 @@ CVESSEARCH_API_URL = 'https://cve.circl.lu'
 
 
 class CveEnrichmentObj(BaseModel):
-    id: Annotated[str, r"^CVE-[1|2]\d{3}-\d+$"]
+    id: CVE_TYPE
     cvss: Annotated[Decimal, Field(ge=.1, le=10, decimal_places=1)]
     summary: str
     

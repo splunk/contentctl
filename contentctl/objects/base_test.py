@@ -13,6 +13,7 @@ class TestType(str, Enum):
     """
     UNIT = "unit"
     INTEGRATION = "integration"
+    MANUAL = "manual"
 
     def __str__(self) -> str:
         return self.value

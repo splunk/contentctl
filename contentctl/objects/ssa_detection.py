@@ -59,6 +59,7 @@ class SSADetection(BaseModel):
     #         raise ValueError('name is longer then 67 chars: ' + v)
     #     return v
 
+    # TODO (#266): disable the use_enum_values configuration
     class Config:
         use_enum_values = True
 

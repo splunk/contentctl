@@ -10,6 +10,7 @@ from dataclasses import field
 from typing import Annotated,Any
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.config import validate
+from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE
 logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
 
 
@@ -23,7 +24,7 @@ class AttackEnrichment(BaseModel):
         _ = enrichment.get_attack_lookup(str(config.path))
         return enrichment
     
-    def getEnrichmentByMitreID(self, mitre_id:Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")])->MitreAttackEnrichment:
+    def getEnrichmentByMitreID(self, mitre_id:MITRE_ATTACK_ID_TYPE)->MitreAttackEnrichment:
         if not self.use_enrichment:
             raise Exception(f"Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
         

@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 from contentctl.objects.enums import PostTestBehavior, DetectionTestingMode
 from contentctl.objects.detection import Detection
-
+from contentctl.objects.annotated_types import APPID_TYPE
 import tqdm
 from functools import partialmethod
 
@@ -33,7 +33,7 @@ class App_Base(BaseModel,ABC):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     uid: Optional[int] = Field(default=None)
     title: str = Field(description="Human-readable name used by the app. This can have special characters.")
-    appid: Optional[Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]]= Field(default=None,description="Internal name used by your app. "
+    appid: Optional[APPID_TYPE]= Field(default=None,description="Internal name used by your app. "
                                                                     "It may ONLY have characters, numbers, and underscores. No other characters are allowed.")
     version: str = Field(description="The version of your Content Pack.  This must follow semantic versioning guidelines.")
     description: Optional[str] = Field(default="description of app",description="Free text description of the Content Pack.")
@@ -101,7 +101,7 @@ class CustomApp(App_Base):
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
     uid: int = Field(ge=2, lt=100000, default_factory=lambda:random.randint(20000,100000))
     title: str = Field(default="Content Pack",description="Human-readable name used by the app. This can have special characters.")
-    appid: Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]= Field(default="ContentPack",description="Internal name used by your app. "
+    appid: APPID_TYPE = Field(default="ContentPack",description="Internal name used by your app. "
                                                                     "It may ONLY have characters, numbers, and underscores. No other characters are allowed.")
     version: str = Field(default="0.0.1",description="The version of your Content Pack.  This must follow semantic versioning guidelines.", validate_default=True)
 

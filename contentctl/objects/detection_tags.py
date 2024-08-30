@@ -77,17 +77,6 @@ class DetectionTags(BaseModel):
     required_fields: list[str] = Field(min_length=1)
     throttling: Optional[Throttling] = None
     security_domain: SecurityDomain = Field(...)
-
-    @computed_field
-    @property
-    def risk_severity(self) -> RiskSeverity:
-        if self.risk_score >= 80:
-            return RiskSeverity('high')
-        elif (self.risk_score >= 50 and self.risk_score <= 79):
-            return RiskSeverity('medium')
-        else:
-            return RiskSeverity('low')
-
     cve: List[CVE_TYPE] = []
     atomic_guid: List[AtomicTest] = []
     drilldown_search: Optional[str] = None

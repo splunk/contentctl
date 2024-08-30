@@ -173,15 +173,8 @@ class ConfOutput:
     
     def packageAppSlim(self) -> None:
         
-
-        # input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
-        
-        # readme_file = pathlib.Path("README")
-        # if not readme_file.is_file():
-        #     raise Exception("The README file does not exist in this directory. Cannot build app.")
-        # shutil.copyfile(readme_file, input_app_path/readme_file.name)
-        
-        
+        raise Exception("Packaging with splunk-packaging-toolkit not currently supported as slim only supports Python 3.7. "
+                        "Please raise an issue in the contentctl GitHub if you encounter this exception.")
         try:
             import slim
             from slim.utils import SlimLogger

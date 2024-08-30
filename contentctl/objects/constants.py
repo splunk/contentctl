@@ -132,3 +132,8 @@ SES_ATTACK_TACTICS_ID_MAPPING = {
     "Exfiltration": "TA0010",
     "Impact": "TA0040"
 }
+
+RBA_OBSERVABLE_ROLE_MAPPING = {
+    "Attacker": 0,
+    "Victim": 1
+}

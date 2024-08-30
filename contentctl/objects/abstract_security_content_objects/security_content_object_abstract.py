@@ -29,15 +29,16 @@ import pathlib
 NO_FILE_NAME = "NO_FILE_NAME"
 
 
+# TODO (#266): disable the use_enum_values configuration
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    model_config = ConfigDict(use_enum_values=True, validate_default=True)
-
-    name: str = Field(...)
-    author: str = Field("Content Author", max_length=255)
-    date: datetime.date = Field(datetime.date.today())
-    version: NonNegativeInt = 1
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)  # we set a default here until all content has a uuid
-    description: str = Field("Enter Description Here", max_length=10000)
+    model_config = ConfigDict(use_enum_values=True,validate_default=True)
+    
+    name: str = Field(...,max_length=99)
+    author: str = Field(...,max_length=255)
+    date: datetime.date = Field(...)
+    version: NonNegativeInt = Field(...)
+    id: uuid.UUID = Field(...) #we set a default here until all content has a uuid
+    description: str = Field(...,max_length=10000)
     file_path: Optional[FilePath] = None
     references: Optional[List[HttpUrl]] = None
 

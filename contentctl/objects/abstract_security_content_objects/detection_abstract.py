@@ -20,7 +20,8 @@ from contentctl.objects.lookup import Lookup
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.baseline import Baseline
-
+    from contentctl.objects.config import CustomApp
+    
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
@@ -36,7 +37,6 @@ from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.base_test_result import TestResultStatus
 
-# from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 import datetime
@@ -51,8 +51,8 @@ SKIPPED_ANALYTICS_TYPES: set[str] = {
 # TODO (#266): disable the use_enum_values configuration
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
-
-    # contentType: SecurityContentType = SecurityContentType.detections
+    name:str = Field(...,max_length=67)
+    #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
     data_source: list[str] = []
@@ -70,9 +70,30 @@ class Detection_Abstract(SecurityContentObject):
     # https://github.com/pydantic/pydantic/issues/9101#issuecomment-2019032541
     tests: List[Annotated[Union[UnitTest, IntegrationTest, ManualTest], Field(union_mode='left_to_right')]] = []
     # A list of groups of tests, relying on the same data
-    test_groups: Union[list[TestGroup], None] = Field(None, validate_default=True)
+    test_groups: list[TestGroup] = []
 
     data_source_objects: list[DataSource] = []
+
+    def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=99)->str:
+        label = self.get_conf_stanza_name(app)
+        label_after_saving_in_product = f"{self.tags.security_domain.value} - {label} - Rule"
+    
+        if len(label_after_saving_in_product) > max_stanza_length:
+            raise ValueError(f"label may only be {max_stanza_length} characters to allow updating in-product, "
+                             f"but stanza was actually {len(label_after_saving_in_product)} characters: '{label_after_saving_in_product}' ")
+        
+        return label
+    
+    def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=81)->str:
+        stanza_name = f"{app.label} - {self.name} - Rule"
+        if len(stanza_name) > max_stanza_length:
+            raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
+                             f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
+        #print(f"Stanza            Length[{len(stanza_name)}]")
+        return stanza_name
+    
+        
+    
 
     @field_validator("search", mode="before")
     @classmethod
@@ -515,7 +536,7 @@ class Detection_Abstract(SecurityContentObject):
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
-            story.detections.append(self)
+            story.detections.append(self)     
 
         self.cve_enrichment_func(__context)
 

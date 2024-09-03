@@ -322,12 +322,13 @@ class Detection_Abstract(SecurityContentObject):
     @property
     def providing_technologies(self) -> List[ProvidingTechnology]:
         return ProvidingTechnology.getProvidingTechFromSearch(self.search)
-        
-    
+
+    # TODO (#247): Refactor the risk property of detection_abstract
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
         risk_objects: list[dict[str, str | int]] = []
+        # TODO (#246): "User Name" type should map to a "user" risk object and not "other"
         risk_object_user_types = {'user', 'username', 'email address'}
         risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
         process_threat_object_types = {'process name', 'process'}

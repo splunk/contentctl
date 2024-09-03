@@ -575,10 +575,11 @@ class CorrelationSearch(BaseModel):
             self.logger.debug(f"Using cached risk events ({len(self._risk_events)} total).")
             return self._risk_events
 
+        # TODO (#248): Refactor risk/notable querying to pin to a single savedsearch ID
         # Search for all risk events from a single scheduled search (indicated by orig_sid)
         query = (
             f'search index=risk search_name="{self.name}" [search index=risk search '
-            f'search_name="{self.name}" | head 1 | fields orig_sid] | tojson'
+            f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
         )
         result_iterator = self._search(query)
 
@@ -643,7 +644,7 @@ class CorrelationSearch(BaseModel):
         # Search for all notable events from a single scheduled search (indicated by orig_sid)
         query = (
             f'search index=notable search_name="{self.name}" [search index=notable search '
-            f'search_name="{self.name}" | head 1 | fields orig_sid] | tojson'
+            f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
         )
         result_iterator = self._search(query)
 
@@ -686,15 +687,17 @@ class CorrelationSearch(BaseModel):
             check the risks/notables
         :returns: an IntegrationTestResult on failure; None on success
         """
-        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
-        #   positive rate in risk/obseravble matching
         # Create a mapping of the relevant observables to counters
-        # observables = CorrelationSearch._get_relevant_observables(self.detection.tags.observable)
-        # observable_counts: dict[str, int] = {str(x): 0 for x in observables}
-        # if len(observables) != len(observable_counts):
-        #     raise ClientError(
-        #         f"At least two observables in '{self.detection.name}' have the same name."
-        #     )
+        observables = CorrelationSearch._get_relevant_observables(self.detection.tags.observable)
+        observable_counts: dict[str, int] = {str(x): 0 for x in observables}
+
+        # NOTE: we intentionally want this to be an error state and not a failure state, as
+        #   ultimately this validation should be handled during the build process
+        if len(observables) != len(observable_counts):
+            raise ClientError(
+                f"At least two observables in '{self.detection.name}' have the same name; "
+                "each observable for a detection should be unique."
+            )
 
         # Get the risk events; note that we use the cached risk events, expecting they were
         # saved by a prior call to risk_event_exists
@@ -710,25 +713,29 @@ class CorrelationSearch(BaseModel):
             )
             event.validate_against_detection(self.detection)
 
-            # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the
-            #   false positive rate in risk/obseravble matching
             # Update observable count based on match
-            # matched_observable = event.get_matched_observable(self.detection.tags.observable)
-            # self.logger.debug(
-            #     f"Matched risk event ({event.risk_object}, {event.risk_object_type}) to observable "
-            #     f"({matched_observable.name}, {matched_observable.type}, {matched_observable.role})"
-            # )
-            # observable_counts[str(matched_observable)] += 1
+            matched_observable = event.get_matched_observable(self.detection.tags.observable)
+            self.logger.debug(
+                f"Matched risk event (object={event.risk_object}, type={event.risk_object_type}) "
+                f"to observable (name={matched_observable.name}, type={matched_observable.type}, "
+                f"role={matched_observable.role}) using the source field "
+                f"'{event.source_field_name}'"
+            )
+            observable_counts[str(matched_observable)] += 1
 
-        # TODO (PEX-433): test my new contentctl logic against an old ESCU build; my logic should
-        #   detect the faulty attacker events -> this was the issue from the 4.28/4.27 release;
-        #   recreate by testing against one of those old builds w/ the bad config
-        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
-        #   positive
-        #   rate in risk/obseravble matching
-        # TODO (PEX-433): I foresee issues here if for example a parent and child process share a
-        #   name (matched observable could be either) -> these issues are confirmed to exist, e.g.
-        #   `Windows Steal Authentication Certificates Export Certificate`
+        # Report any observables which did not have at least one match to a risk event
+        for observable in observables:
+            self.logger.debug(
+                f"Matched observable (name={observable.name}, type={observable.type}, "
+                f"role={observable.role}) to {observable_counts[str(observable)]} risk events."
+            )
+            if observable_counts[str(observable)] == 0:
+                raise ValidationFailed(
+                    f"Observable (name={observable.name}, type={observable.type}, "
+                    f"role={observable.role}) was not matched to any risk events."
+                )
+
+        # TODO (#250): Re-enable and refactor code that validates the specific risk counts
         # Validate risk events in aggregate; we should have an equal amount of risk events for each
         # relevant observable, and the total count should match the total number of events
         # individual_count: Optional[int] = None

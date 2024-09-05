@@ -1,16 +1,16 @@
-import enum
+from enum import Enum
 from pydantic import BaseModel
 from abc import ABC
-from typing import Union, List
+from typing import Set
 
 
 
-class RiskObjectType(str,enum.Enum):
+class RiskObjectType(str, Enum):
     SYSTEM = "system"
     USER = "user"
     OTHER = "other"
 
-class ThreatObjectType(str,enum.Enum):
+class ThreatObjectType(str, Enum):
     CERTIFICATE_COMMON_NAME = "certificate_common_name"
     CERTIFICATE_ORGANIZATION = "certificate_organization"
     CERTIFICATE_SERIAL = "certificate_serial"
@@ -34,16 +34,16 @@ class ThreatObjectType(str,enum.Enum):
     SERVICE = "service"
     URL = "url"
 
-class risk_object(BaseModel, ABC):
+class risk_object(BaseModel):
     field: str
     type: RiskObjectType
     score: int
 
-class threat_object(BaseModel, ABC):
+class threat_object(BaseModel):
     field: str
     type: ThreatObjectType
 
-class rba(BaseModel, ABC):
+class rba_object(BaseModel, ABC):
     message: str
-    risk_objects: List[risk_object]
-    threat_object: Union[List[threat_object], None]
+    risk_objects: Set[risk_object]
+    threat_objects: Set[threat_object] = set()

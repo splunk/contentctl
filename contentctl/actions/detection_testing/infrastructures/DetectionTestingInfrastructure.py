@@ -10,7 +10,6 @@ import pathlib
 from tempfile import TemporaryDirectory, mktemp
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
-#from dataclasses import dataclass
 from shutil import copyfile
 from typing import Union, Optional
 
@@ -29,7 +28,7 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.base_test import BaseTest
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.unit_test_attack_data import UnitTestAttackData
+from contentctl.objects.test_attack_data import TestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.objects.test_group import TestGroup
@@ -61,13 +60,19 @@ class CleanupTestGroupResults(BaseModel):
 
 class ContainerStoppedException(Exception):
     pass
+class CannotRunBaselineException(Exception):
+    # Support for testing detections with baselines 
+    # does not currently exist in contentctl.
+    # As such, whenever we encounter a detection 
+    # with baselines we should generate a descriptive
+    # exception
+    pass
 
 
 @dataclasses.dataclass(frozen=False)
 class DetectionTestingManagerOutputDto():
     inputQueue: list[Detection] = Field(default_factory=list)
     outputQueue: list[Detection] = Field(default_factory=list)
-    skippedQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "CONTENTCTL_TESTING_INDEX"
@@ -369,12 +374,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 return
 
             try:
-                # NOTE: (THIS CODE HAS MOVED) we handle skipping entire detections differently than
-                #   we do skipping individual test cases; we skip entire detections by excluding
-                #   them to an entirely separate queue, while we skip individual test cases via the
-                #   BaseTest.skip() method, such as when we are skipping all integration tests (see
-                #   DetectionBuilder.skipIntegrationTests)
-                # TODO: are we skipping by production status elsewhere?
                 detection = self.sync_obj.inputQueue.pop()
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError:
@@ -647,11 +646,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
 
-        # Iterate over baselines (if any)
-        for baseline in test.baselines:
-            # TODO: this is executing the test, not the baseline...
-            # TODO: should this be in a try/except if the later call is?
-            self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
+        
 
         # Set earliest_time and latest_time appropriately if FORCE_ALL_TIME is False
         if not FORCE_ALL_TIME:
@@ -662,7 +657,23 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Run the detection's search query
         try:
+            # Iterate over baselines (if any)
+            for baseline in detection.baselines:
+                raise CannotRunBaselineException("Detection requires Execution of a Baseline, "
+                                                 "however Baseline execution is not "
+                                                 "currently supported in contentctl. Mark "
+                                                 "this as manual_test.")
             self.retry_search_until_timeout(detection, test, kwargs, test_start_time)
+        except CannotRunBaselineException as e:
+            # Init the test result and record a failure if there was an issue during the search
+            test.result = UnitTestResult()
+            test.result.set_job_content(
+                None,
+                self.infrastructure,
+                TestResultStatus.ERROR,
+                exception=e,
+                duration=time.time() - test_start_time
+            )
         except ContainerStoppedException as e:
             raise e
         except Exception as e:
@@ -1015,18 +1026,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         """
         # Get the start time and compute the timeout
         search_start_time = time.time()
-        search_stop_time = time.time() + self.sync_obj.timeout_seconds
-
-        # We will default to ensuring at least one result exists
-        if test.pass_condition is None:
-            search = detection.search
-        else:
-            # Else, use the explicit pass condition
-            search = f"{detection.search} {test.pass_condition}"
+        search_stop_time = time.time() + self.sync_obj.timeout_seconds        
+        
+        # Make a copy of the search string since we may 
+        # need to make some small changes to it below
+        search = detection.search
 
         # Ensure searches that do not begin with '|' must begin with 'search '
-        if not search.strip().startswith("|"):                                                      # type: ignore
-            if not search.strip().startswith("search "):                                            # type: ignore
+        if not search.strip().startswith("|"):                                                      
+            if not search.strip().startswith("search "):                                            
                 search = f"search {search}"
 
         # exponential backoff for wait time
@@ -1179,7 +1187,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         return
 
-    def delete_attack_data(self, attack_data_files: list[UnitTestAttackData]):
+    def delete_attack_data(self, attack_data_files: list[TestAttackData]):
         for attack_data_file in attack_data_files:
             index = attack_data_file.custom_index or self.sync_obj.replay_index
             host = attack_data_file.host or self.sync_obj.replay_host
@@ -1212,7 +1220,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def replay_attack_data_file(
         self,
-        attack_data_file: UnitTestAttackData,
+        attack_data_file: TestAttackData,
         tmp_dir: str,
         test_group: TestGroup,
         test_group_start_time: float,
@@ -1280,7 +1288,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def hec_raw_replay(
         self,
         tempfile: str,
-        attack_data_file: UnitTestAttackData,
+        attack_data_file: TestAttackData,
         verify_ssl: bool = False,
     ):
         if verify_ssl is False:

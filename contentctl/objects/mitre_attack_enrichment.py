@@ -225,56 +225,43 @@ class MitreDataSource(StrEnum):
     windows_registry__windows_registry_key_creation = "Windows Registry: Windows Registry Key Creation"
     windows_registry__windows_registry_key_deletion = "Windows Registry: Windows Registry Key Deletion"
     windows_registry__windows_registry_key_modification = "Windows Registry: Windows Registry Key Modification"
-'''
+
 class MitreDefenseBypassed(StrEnum):
     anti_virus = "Anti Virus"
-    anti_virus = "Anti-virus"
+    anti_virus2 = "Anti-virus"
     application_control = "Application Control"
-    application_control = "Application control"
+    application_control2 = "Application control"
     autoruns_analysis = "Autoruns Analysis"
     binary_analysis = "Binary Analysis"
     defensive_network_service_scanning = "Defensive network service scanning"
     digital_certificate_validation = "Digital Certificate Validation"
     encryption = "Encryption"
     file_monitoring = "File Monitoring"
-    file_monitoring = "File monitoring"
+    file_monitoring2 = "File monitoring"
     file_system_access_controls = "File system access controls"
     firewall = "Firewall"
     gatekeeper = "Gatekeeper"
     heuristic_detection = "Heuristic Detection"
-    heuristic_detection = "Heuristic detection"
+    heuristic_detection2 = "Heuristic detection"
     host_forensic_analysis = "Host Forensic Analysis"
     host_intrusion_prevention_systems = "Host Intrusion Prevention Systems"
-    host_forensic_analysis = "Host forensic analysis"
-    host_intrusion_prevention_systems = "Host intrusion prevention systems"
+    host_forensic_analysis2 = "Host forensic analysis"
+    host_intrusion_prevention_systems2 = "Host intrusion prevention systems"
     log_analysis = "Log Analysis"
-    log_analysis = "Log analysis"
+    log_analysis2 = "Log analysis"
     multi_factor_authentication = "Multi-Factor Authentication"
     network_intrusion_detection_system = "Network Intrusion Detection System"
     notarization = "Notarization"
     signature_based_detection = "Signature-based Detection"
-    signature_based_detection = "Signature-based detection"
+    signature_based_detection2 = "Signature-based detection"
     static_file_analysis = "Static File Analysis"
     system_access_controls = "System Access Controls"
-    system_access_controls = "System access controls"
+    system_access_controls2 = "System access controls"
     user_mode_signature_validation = "User Mode Signature Validation"
     web_content_filters = "Web Content Filters"
     windows_user_account_control = "Windows User Account Control"
-'''
-class MitreEffectivePermission(StrEnum):
-    administrator = "Administrator"
-    system = "SYSTEM"
-    user = "User"
-    root = "root"
-class MitreImpactType(StrEnum):
-    availability = "Availability"
-    integrity = "Integrity"
-class MitrePermissionRequired(StrEnum):
-    administrator = "Administrator"
-    system = "SYSTEM"
-    user = "User"
-    root = "root"
-'''
+
+
 class MitreSystemRequirements(StrEnum):
     _net_framework_version_4_or_higher = ".NET Framework version 4 or higher"
     ability_to_query_some_registry_locations_depends_on_the_adversary_s_level_of_access__user_permissions_are_usually_limited_to_access_of_user_related_registry_keys_ = "Ability to query some Registry locations depends on the adversary's level of access. User permissions are usually limited to access of user-related Registry keys."
@@ -309,7 +296,23 @@ class MitreSystemRequirements(StrEnum):
     vnc_server_installed_and_listening_for_connections_ = "VNC server installed and listening for connections."
     valid_domain_account = "Valid domain account"
     valid_domain_account_or_the_ability_to_sniff_traffic_within_a_domain = "Valid domain account or the ability to sniff traffic within a domain"
-'''
+
+
+
+class MitreEffectivePermission(StrEnum):
+    administrator = "Administrator"
+    system = "SYSTEM"
+    user = "User"
+    root = "root"
+class MitreImpactType(StrEnum):
+    availability = "Availability"
+    integrity = "Integrity"
+class MitrePermissionRequired(StrEnum):
+    administrator = "Administrator"
+    system = "SYSTEM"
+    user = "User"
+    root = "root"
+
 class MitreTactic(StrEnum):
     collection = "collection"
     command_and_control = "command-and-control"
@@ -329,7 +332,7 @@ class MitreTactic(StrEnum):
 class MitreEnterpriseTechnique(MitreTechniqueGroup):
     model_config = ConfigDict(extra='forbid')
     data_sources: list[MitreDataSource]
-    defense_bypassed: list[str]
+    defense_bypassed: list[MitreDefenseBypassed]
     effective_permissions: list[MitreEffectivePermission]
     impact_type: list[MitreImpactType]
     is_subtechnique: bool
@@ -337,7 +340,7 @@ class MitreEnterpriseTechnique(MitreTechniqueGroup):
     permissions_required: list[MitrePermissionRequired]
     platform: list[MitrePlatform]
     remote_support: bool
-    system_requirements: list[str]
+    system_requirements: list[MitreSystemRequirements]
     tactic: list[MitreTactic]
     tactic_type: None
     technique: str
@@ -455,3 +458,7 @@ class MitreAttackEnrichment(BaseModel):
     @computed_field
     def mitre_attack_tactics(self) -> list[str]:
         return [tactic.value.replace('-',' ').title() for tactic in self.mitre_attack_technique.tactic] 
+
+# The following Enums are complete, but likely to change. Do we want to include them as enums,
+# or just have this as a string field?
+

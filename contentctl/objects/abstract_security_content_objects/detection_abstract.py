@@ -74,6 +74,8 @@ class Detection_Abstract(SecurityContentObject):
 
     data_source_objects: list[DataSource] = []
 
+
+
     @field_validator("search", mode="before")
     @classmethod
     def validate_presence_of_filter_macro(cls, value:str, info:ValidationInfo)->str:
@@ -83,15 +85,13 @@ class Detection_Abstract(SecurityContentObject):
 
 
         Args:
-            value (Union[str, dict[str,Any]]): The search. It can either be a string (and should be
-                SPL or a dict, in which case it is Sigma-formatted.
+            value (str): The SPL search. It must be an SPL-formatted string.
             info (ValidationInfo): The validation info can contain a number of different objects.
                 Today it only contains the director.
 
         Returns:
-            Union[str, dict[str,Any]]: The search, either in sigma or SPL format.
-        """        
-        
+            str: The search, as an SPL formatted string.
+        """
         
         # Otherwise, the search is SPL.
 

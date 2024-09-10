@@ -137,3 +137,10 @@ RBA_OBSERVABLE_ROLE_MAPPING = {
     "Attacker": 0,
     "Victim": 1
 }
+
+# TODO (cmcginley): do these belong here? or in inspect.py?
+ESCU_APP_UID = 3449
+
+DOWNLOADS_DIRECTORY = "downloads"
+
+LATEST_ESCU_DOWNLOAD_PATH = f"{DOWNLOADS_DIRECTORY}/escu_latest.tgz"

@@ -1,19 +1,19 @@
-import os
-import time
 import json
+from typing import Optional, Collection
+from pathlib import Path
 import xml.etree.ElementTree as ET
-from typing import List, Tuple, Optional
 from urllib.parse import urlencode
 
 import requests
 import urllib3
 import xmltodict
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util.retry import Retry
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 MAX_RETRY = 3
+
 
 class APIEndPoint:
     """
@@ -26,6 +26,7 @@ class APIEndPoint:
     )
     SPLUNK_BASE_GET_UID_REDIRECT = "https://apps.splunk.com/apps/id/{app_name_id}"
     SPLUNK_BASE_APP_INFO = "https://splunkbase.splunk.com/api/v1/app/{app_uid}"
+
 
 class RetryConstant:
     """
@@ -53,11 +54,11 @@ class SplunkApp:
 
     @staticmethod
     def requests_retry_session(
-        retries=RetryConstant.RETRY_COUNT,
-        backoff_factor=1,
-        status_forcelist=(500, 502, 503, 504),
-        session=None,
-    ):
+        retries: int = RetryConstant.RETRY_COUNT,
+        backoff_factor: int = 1,
+        status_forcelist: Collection[int] = (500, 502, 503, 504),
+        session: requests.Session | None = None,
+    ) -> requests.Session:
         session = session or requests.Session()
         retry = Retry(
             total=retries,
@@ -261,3 +262,80 @@ class SplunkApp:
         # parse out the version number and fetch the download URL
         self.latest_version = info_url.split("/")[-1]
         self.latest_version_download_url = self.__fetch_url_latest_version_download(info_url)
+
+    def __get_splunk_base_session_token(self, username: str, password: str) -> str:
+        """
+        This method will generate Splunk base session token
+        :return: Splunk base session token
+        """
+        # Data payload for fetch splunk base session token
+        payload = urlencode(
+            {
+                "username": username,
+                "password": password,
+            }
+        )
+
+        headers = {
+            "content-type": "application/x-www-form-urlencoded",
+            "cache-control": "no-cache",
+        }
+
+        response = requests.request(
+            "POST",
+            APIEndPoint.SPLUNK_BASE_AUTH_URL,
+            data=payload,
+            headers=headers,
+        )
+
+        token_value = ""
+
+        if response.status_code != 200:
+            msg = (
+                f"Error occurred while executing the rest call for splunk base authentication api,"
+                f"{response.content}"
+            )
+            raise Exception(msg)
+        else:
+            root = ET.fromstring(response.content)
+            token_value = root.find("{http://www.w3.org/2005/Atom}id").text.strip()
+        return token_value
+
+    def download(self, out: Path, username: str, password: str, overwrite: bool = False) -> None:
+        """
+        Given an output path, download the app to the specified location
+        :param out: the Path to download the app to
+        :param username: Splunkbase username
+        :param password: Splunkbase password
+        """
+        # Ensure the output path is not already occupied
+        if out.exists() and not overwrite:
+            msg = (
+                f"File already exists at {out}, cannot download the app."
+            )
+            raise Exception(msg)
+
+        # Make any parent directories as needed
+        out.parent.mkdir(parents=True, exist_ok=True)
+
+        # Get the Splunkbase session token
+        token = self.__get_splunk_base_session_token(username, password)
+        response = requests.request(
+            "GET",
+            self.latest_version_download_url,
+            cookies={
+                "sessionid": token
+            }
+        )
+
+        # Check for HTTP errors
+        if response.status_code != 200:
+            msg = (
+                f"Error occurred while executing the rest call for splunk base authentication api,"
+                f"{response.content}"
+            )
+            raise Exception(msg)
+
+        # Write the app to disk
+        with open(out, "wb") as file:
+            file.write(response.content)

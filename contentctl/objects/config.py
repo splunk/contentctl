@@ -1,26 +1,31 @@
 from __future__ import annotations
+
+from os import environ
+from datetime import datetime, UTC
+from typing import Optional, Any, List, Union, Self
+import random
+from enum import StrEnum, auto
+import pathlib
+from urllib.parse import urlparse
+from abc import ABC, abstractmethod
+from functools import partialmethod
+
+import tqdm
+import semantic_version
 from pydantic import (
     BaseModel, Field, field_validator, 
     field_serializer, ConfigDict, DirectoryPath,
     PositiveInt, FilePath, HttpUrl, AnyUrl, model_validator,
     ValidationInfo
 )
+
+from contentctl.objects.constants import ESCU_APP_UID, LATEST_ESCU_DOWNLOAD_PATH
 from contentctl.output.yml_writer import YmlWriter
-from os import environ
-from datetime import datetime, UTC
-from typing import Optional,Any,Annotated,List,Union, Self
-import semantic_version
-import random
-from enum import StrEnum, auto
-import pathlib
 from contentctl.helper.utils import Utils
-from urllib.parse import urlparse
-from abc import ABC, abstractmethod
 from contentctl.objects.enums import PostTestBehavior, DetectionTestingMode
 from contentctl.objects.detection import Detection
 from contentctl.objects.annotated_types import APPID_TYPE
-import tqdm
-from functools import partialmethod
+from contentctl.helper.splunk_app import SplunkApp
 
 ENTERPRISE_SECURITY_UID = 263
 COMMON_INFORMATION_MODEL_UID = 1621
@@ -249,10 +254,51 @@ class StackType(StrEnum):
     classic = auto()
     victoria = auto()
 
+
 class inspect(build):
-    splunk_api_username: str = Field(description="Splunk API username used for running appinspect.")
-    splunk_api_password: str = Field(exclude=True, description="Splunk API password used for running appinspect.")
+    # TODO (cmcginley): can we enable enrichments by default for the inspect command?
+    splunk_api_username: str = Field(
+        description="Splunk API username used for appinspect and Splunkbase downloads."
+    )
+    splunk_api_password: str = Field(
+        exclude=True,
+        description="Splunk API password used for appinspect and Splunkbase downloads."
+    )
+    # TODO (cmcginley): instead of providing a path to the previous build, we will use the build
+    #   generated as part of inspect; unsure if this is ideal, we should be building once and then
+    #   validating, testing, publishing etc.
+    previous_build: str | None = Field(
+        default=None,
+        description=(
+            "Local path to the previous ESCU build for versioning enforcement (defaults to the "
+            "latest release published on Splunkbase)."
+        )
+    )
     stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
+
+    def get_previous_package_file_path(self) -> pathlib.Path:
+        """
+        Returns a Path object for the path to the prior package build. If no path was provided, the
+        latest version is downloaded from Splunkbase and it's filepath is returned, and saved to the
+        in-memory config (so download doesn't happen twice in the same run).
+        :returns: Path object to previous ESCU build
+        """
+        previous_build_path = self.previous_build
+        # Download the previous build as the latest release on Splunkbase if no path was provided
+        if previous_build_path is None:
+            print("Downloading latest ESCU build from Splunkbase to serve as previous build during validation...")
+            app = SplunkApp(app_uid=ESCU_APP_UID)
+            app.download(
+                out=pathlib.Path(LATEST_ESCU_DOWNLOAD_PATH),
+                username=self.splunk_api_username,
+                password=self.splunk_api_password,
+                overwrite=True
+            )
+            previous_build_path = LATEST_ESCU_DOWNLOAD_PATH
+            print(f"Latest release downloaded from Splunkbase to: {previous_build_path}")
+            self.previous_build = previous_build_path
+        return pathlib.Path(previous_build_path)
+
 
 class NewContentType(StrEnum):
     detection = auto()

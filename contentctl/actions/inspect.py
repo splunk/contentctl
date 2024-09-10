@@ -25,9 +25,6 @@ class InspectInputDto:
     config: inspect
 
 
-# TODO (cmcginley): how should detection version checking behave when it's run on just public, or
-#   just private content?
-# TODO (cmcginley): add `downloads/` to security_content .gitignore
 class Inspect:
 
     def execute(self, config: inspect) -> str:
@@ -38,8 +35,6 @@ class Inspect:
 
             self.check_detection_metadata(config)
 
-            # TODO (cmcginley): do we need to return the appinspect token? Nothing is being done
-            #   with it
             return appinspect_token
 
         else:

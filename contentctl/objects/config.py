@@ -256,7 +256,6 @@ class StackType(StrEnum):
 
 
 class inspect(build):
-    # TODO (cmcginley): can we enable enrichments by default for the inspect command?
     splunk_api_username: str = Field(
         description="Splunk API username used for appinspect and Splunkbase downloads."
     )
@@ -264,9 +263,6 @@ class inspect(build):
         exclude=True,
         description="Splunk API password used for appinspect and Splunkbase downloads."
     )
-    # TODO (cmcginley): instead of providing a path to the previous build, we will use the build
-    #   generated as part of inspect; unsure if this is ideal, we should be building once and then
-    #   validating, testing, publishing etc.
     previous_build: str | None = Field(
         default=None,
         description=(

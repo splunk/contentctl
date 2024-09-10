@@ -46,8 +46,6 @@ class SavedsearchesConf(BaseModel):
     # A format string for the path to the savedsearches.conf in the app package
     PACKAGE_CONF_PATH_FMT_STR: ClassVar[str] = "{appid}/default/savedsearches.conf"
 
-    # TODO (cmcginley): validators
-
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
         self._parse_detection_stanzas()

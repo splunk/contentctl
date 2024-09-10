@@ -263,11 +263,20 @@ class inspect(build):
         exclude=True,
         description="Splunk API password used for appinspect and Splunkbase downloads."
     )
+    enable_metadata_validation: bool = Field(
+        default=False,
+        description=(
+            "Flag indicating whether detection metadata validation and versioning enforcement "
+            "should be enabled."
+        )
+    )
+    # TODO (cmcginley): wording should change here if we want to be able to download any app from
+    #   Splunkbase
     previous_build: str | None = Field(
         default=None,
         description=(
-            "Local path to the previous ESCU build for versioning enforcement (defaults to the "
-            "latest release published on Splunkbase)."
+            "Local path to the previous app build for metatdata validation and versioning "
+            "enforcement (defaults to the latest release of ESCU published on Splunkbase)."
         )
     )
     stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")

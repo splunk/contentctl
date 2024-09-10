@@ -33,7 +33,10 @@ class Inspect:
             self.inspectAppCLI(config)
             appinspect_token = self.inspectAppAPI(config)
 
-            self.check_detection_metadata(config)
+            if config.enable_metadata_validation:
+                self.check_detection_metadata(config)
+            else:
+                print("🟡 Detection metadata validation disabled, skipping.")
 
             return appinspect_token
 
@@ -329,7 +332,7 @@ class Inspect:
         validation_error_list = [x for inner_list in validation_errors.values() for x in inner_list]
 
         # Report failure/success
-        print("\nDetection Metadata Enforcement:")
+        print("\nDetection Metadata Validation:")
         if len(validation_error_list) > 0:
             # Iterate over each rule and report the failures
             for rule_name in validation_errors:
@@ -342,7 +345,7 @@ class Inspect:
             print("\t✅ Detection metadata looks good and all versions were bumped appropriately :)")
 
         # Raise an ExceptionGroup for all validation issues
-        if len(validation_errors) > 0:
+        if len(validation_error_list) > 0:
             raise ExceptionGroup(
                 "Validation errors when comparing detection stanzas in current and previous build:",
                 validation_error_list

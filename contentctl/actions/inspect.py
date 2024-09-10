@@ -269,7 +269,7 @@ class Inspect:
         detection metadata.
         :param config: an inspect config
         """
-        # TODO (cmcginley): We should be inspect the same artifact we're passing around from the
+        # TODO (#282): We should be inspect the same artifact we're passing around from the
         #   build stage ideally
         # Unpack the savedsearch.conf of each ESCU package
         current_build_conf = SavedsearchesConf.init_from_package(

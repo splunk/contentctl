@@ -281,6 +281,21 @@ class inspect(build):
     )
     stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
 
+    @field_validator("enrichments", mode="after")
+    @classmethod
+    def validate_needed_flags_metadata_validation(cls, v: bool, info: ValidationInfo) -> bool:
+        """
+        Validates that `enrichments` is True for the inspect action
+        :param v: the field's value
+        :param info: the ValidationInfo to be used
+        :returns: bool, for v
+        """
+        # Enforce that `enrichments` is True for the inspect action
+        if v is False:
+            raise ValueError("Field `enrichments` must be True for the `inspect` action")
+
+        return v
+
     def get_previous_package_file_path(self) -> pathlib.Path:
         """
         Returns a Path object for the path to the prior package build. If no path was provided, the

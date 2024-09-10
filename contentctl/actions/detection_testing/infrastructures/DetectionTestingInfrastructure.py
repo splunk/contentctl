@@ -374,12 +374,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 return
 
             try:
-                # NOTE: (THIS CODE HAS MOVED) we handle skipping entire detections differently than
-                #   we do skipping individual test cases; we skip entire detections by excluding
-                #   them to an entirely separate queue, while we skip individual test cases via the
-                #   BaseTest.skip() method, such as when we are skipping all integration tests (see
-                #   DetectionBuilder.skipIntegrationTests)
-                # TODO: are we skipping by production status elsewhere?
                 detection = self.sync_obj.inputQueue.pop()
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError:

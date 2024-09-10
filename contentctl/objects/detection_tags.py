@@ -52,6 +52,8 @@ class DetectionTags(BaseModel):
 
     mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
+
+    # TODO (#249): Add pydantic validator to ensure observables are unique within a detection
     observable: List[Observable] = []
     message: str = Field(...)
     product: list[SecurityContentProductName] = Field(..., min_length=1)

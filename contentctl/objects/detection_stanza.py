@@ -47,7 +47,7 @@ class DetectionStanza(BaseModel):
         if meta_line is None:
             raise Exception(f"No metadata for detection '{self.name}' found in stanza.")
 
-        # Try to to load the metadat JSON into a dict
+        # Try to load the metadata JSON into a dict
         try:
             self._metadata: dict[str, Any] = json.loads(meta_line[len(DetectionStanza.METADATA_LINE_PREFIX):])
         except json.decoder.JSONDecodeError as e:

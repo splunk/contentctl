@@ -19,7 +19,7 @@ from pydantic import (
     ValidationInfo
 )
 
-from contentctl.objects.constants import ESCU_APP_UID, LATEST_ESCU_DOWNLOAD_PATH
+from contentctl.objects.constants import ESCU_APP_UID, DOWNLOADS_DIRECTORY
 from contentctl.output.yml_writer import YmlWriter
 from contentctl.helper.utils import Utils
 from contentctl.objects.enums import PostTestBehavior, DetectionTestingMode
@@ -308,15 +308,15 @@ class inspect(build):
         if previous_build_path is None:
             print("Downloading latest ESCU build from Splunkbase to serve as previous build during validation...")
             app = SplunkApp(app_uid=ESCU_APP_UID)
-            app.download(
-                out=pathlib.Path(LATEST_ESCU_DOWNLOAD_PATH),
+            previous_build_path = app.download(
+                out=pathlib.Path(DOWNLOADS_DIRECTORY),
                 username=self.splunk_api_username,
                 password=self.splunk_api_password,
+                is_dir=True,
                 overwrite=True
             )
-            previous_build_path = LATEST_ESCU_DOWNLOAD_PATH
             print(f"Latest release downloaded from Splunkbase to: {previous_build_path}")
-            self.previous_build = previous_build_path
+            self.previous_build = str(previous_build_path)
         return pathlib.Path(previous_build_path)
 
 

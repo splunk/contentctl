@@ -143,6 +143,3 @@ ESCU_APP_UID = 3449
 
 # The relative path to the directory where any apps/packages will be downloaded
 DOWNLOADS_DIRECTORY = "downloads"
-
-# The default download path for ESCU
-LATEST_ESCU_DOWNLOAD_PATH = f"{DOWNLOADS_DIRECTORY}/escu_latest.tgz"

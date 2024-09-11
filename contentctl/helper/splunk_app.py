@@ -301,23 +301,23 @@ class SplunkApp:
             token_value = root.find("{http://www.w3.org/2005/Atom}id").text.strip()
         return token_value
 
-    def download(self, out: Path, username: str, password: str, overwrite: bool = False) -> None:
+    def download(
+            self,
+            out: Path,
+            username: str,
+            password: str,
+            is_dir: bool = False,
+            overwrite: bool = False
+    ) -> Path:
         """
         Given an output path, download the app to the specified location
         :param out: the Path to download the app to
         :param username: Splunkbase username
         :param password: Splunkbase password
+        :param is_dir: a flag indicating whether out is directory, otherwise a file (default: False)
+        :param overwrite: a flag indicating whether we can overwrite the file at out or not
+        :returns path: the Path the download was written to (needed when is_dir is True)
         """
-        # Ensure the output path is not already occupied
-        if out.exists() and not overwrite:
-            msg = (
-                f"File already exists at {out}, cannot download the app."
-            )
-            raise Exception(msg)
-
-        # Make any parent directories as needed
-        out.parent.mkdir(parents=True, exist_ok=True)
-
         # Get the Splunkbase session token
         token = self.__get_splunk_base_session_token(username, password)
         response = requests.request(
@@ -327,6 +327,42 @@ class SplunkApp:
                 "sessionid": token
             }
         )
+
+        # If the provided output path was a directory we need to try and pull the filename from the
+        # response headers
+        if is_dir:
+            try:
+                # Pull 'Content-Disposition' from the headers
+                content_disposition: str = response.headers['Content-Disposition']
+
+                # Attempt to parse the filename as a KV
+                key, value = content_disposition.strip().split("=")
+                if key != "attachment;filename":
+                    raise ValueError(f"Unexpected key in 'Content-Disposition' KV pair: {key}")
+
+                # Validate the filename is the expected .tgz file
+                filename = Path(value.strip().strip('"'))
+                if filename.suffixes != [".tgz"]:
+                    raise ValueError(f"Filename has unexpected extension(s): {filename.suffixes}")
+                out = Path(out, filename)
+            except KeyError as e:
+                raise KeyError(
+                    f"Unable to properly extract 'Content-Disposition' from response headers: {e}"
+                ) from e
+            except ValueError as e:
+                raise ValueError(
+                    f"Unable to parse filename from 'Content-Disposition' header: {e}"
+                ) from e
+
+        # Ensure the output path is not already occupied
+        if out.exists() and not overwrite:
+            msg = (
+                f"File already exists at {out}, cannot download the app."
+            )
+            raise Exception(msg)
+
+        # Make any parent directories as needed
+        out.parent.mkdir(parents=True, exist_ok=True)
 
         # Check for HTTP errors
         if response.status_code != 200:
@@ -339,3 +375,5 @@ class SplunkApp:
         # Write the app to disk
         with open(out, "wb") as file:
             file.write(response.content)
+
+        return out

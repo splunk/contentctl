@@ -286,9 +286,14 @@ class inspect(build):
     def validate_needed_flags_metadata_validation(cls, v: bool, info: ValidationInfo) -> bool:
         """
         Validates that `enrichments` is True for the inspect action
+
         :param v: the field's value
+        :type v: bool
         :param info: the ValidationInfo to be used
+        :type info: :class:`pydantic.ValidationInfo`
+
         :returns: bool, for v
+        :rtype: bool
         """
         # Enforce that `enrichments` is True for the inspect action
         if v is False:
@@ -301,7 +306,9 @@ class inspect(build):
         Returns a Path object for the path to the prior package build. If no path was provided, the
         latest version is downloaded from Splunkbase and it's filepath is returned, and saved to the
         in-memory config (so download doesn't happen twice in the same run).
+
         :returns: Path object to previous ESCU build
+        :rtype: :class:`pathlib.Path`
         """
         previous_build_path = self.previous_build
         # Download the previous build as the latest release on Splunkbase if no path was provided

@@ -54,8 +54,12 @@ class SavedsearchesConf(BaseModel):
         """
         Given a line, determine if the line is a section header, indicating the start of a new
         section
+
         :param line: a line from the conf file
+        :type line: str
+
         :returns: a bool indicating whether the current line is a section header or not
+        :rtype: bool
         """
         # Compile the pattern based on the app name
         pattern = re.compile(r"\[" + self.app_label + r" - .+ - Rule\]")
@@ -66,7 +70,9 @@ class SavedsearchesConf(BaseModel):
     def section_start(self, line: str) -> None:
         """
         Given a line, adjust the state to track a new section
+
         :param line: a line from the conf file
+        :type line: str
         """
         # Determine the new section name:
         new_section_name = line.strip().strip("[").strip("]")
@@ -168,9 +174,14 @@ class SavedsearchesConf(BaseModel):
         """
         Alternate constructor which can take an app package, and extract the savedsearches.conf from
         a temporary file.
+
         :param package_path: Path to the app package
+        :type package_path: :class:`pathlib.Path`
         :param app_name: the name of the app (e.g. ESCU)
+        :type app_name: str
+
         :returns: a SavedsearchesConf object
+        :rtype: :class:`contentctl.objects.savedsearches_conf.SavedsearchesConf`
         """
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as tmpdir:

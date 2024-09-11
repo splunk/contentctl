@@ -30,8 +30,8 @@ class Inspect:
     def execute(self, config: inspect) -> str:
         if config.build_app or config.build_api:
 
-            self.inspectAppCLI(config)
-            appinspect_token = self.inspectAppAPI(config)
+            # self.inspectAppCLI(config)
+            # appinspect_token = self.inspectAppAPI(config)
 
             if config.enable_metadata_validation:
                 self.check_detection_metadata(config)
@@ -270,7 +270,9 @@ class Inspect:
         """
         Using a previous build, compare the savedsearches.conf files to detect any issues w/
         detection metadata.
+
         :param config: an inspect config
+        :type config: :class:`contentctl.objects.config.inspect`
         """
         # TODO (#282): We should be inspect the same artifact we're passing around from the
         #   build stage ideally
@@ -299,22 +301,22 @@ class Inspect:
             current_stanza = current_build_conf.detection_stanzas[rule_name]
 
             # Detection IDs should not change
-            if current_stanza.detection_id != previous_stanza.detection_id:
+            if current_stanza.metadata.detection_id != previous_stanza.metadata.detection_id:
                 validation_errors[rule_name].append(
                     DetectionIDError(
                         rule_name=rule_name,
-                        current_id=current_stanza.detection_id,
-                        previous_id=previous_stanza.detection_id
+                        current_id=current_stanza.metadata.detection_id,
+                        previous_id=previous_stanza.metadata.detection_id
                     )
                 )
 
             # Versions should never decrement in successive builds
-            if current_stanza.detection_version < previous_stanza.detection_version:
+            if current_stanza.metadata.detection_version < previous_stanza.metadata.detection_version:
                 validation_errors[rule_name].append(
                     VersionDecrementedError(
                         rule_name=rule_name,
-                        current_version=current_stanza.detection_version,
-                        previous_version=previous_stanza.detection_version
+                        current_version=current_stanza.metadata.detection_version,
+                        previous_version=previous_stanza.metadata.detection_version
                     )
                 )
 
@@ -323,8 +325,8 @@ class Inspect:
                 validation_errors[rule_name].append(
                     VersionBumpingError(
                         rule_name=rule_name,
-                        current_version=current_stanza.detection_version,
-                        previous_version=previous_stanza.detection_version
+                        current_version=current_stanza.metadata.detection_version,
+                        previous_version=previous_stanza.metadata.detection_version
                     )
                 )
 

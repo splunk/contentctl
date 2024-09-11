@@ -266,7 +266,14 @@ class SplunkApp:
     def __get_splunk_base_session_token(self, username: str, password: str) -> str:
         """
         This method will generate Splunk base session token
+
+        :param username: Splunkbase username
+        :type username: str
+        :param password: Splunkbase password
+        :type password: str
+
         :return: Splunk base session token
+        :rtype: str
         """
         # Data payload for fetch splunk base session token
         payload = urlencode(
@@ -311,12 +318,20 @@ class SplunkApp:
     ) -> Path:
         """
         Given an output path, download the app to the specified location
+
         :param out: the Path to download the app to
+        :type out: :class:`pathlib.Path`
         :param username: Splunkbase username
+        :type username: str
         :param password: Splunkbase password
+        :type password: str
         :param is_dir: a flag indicating whether out is directory, otherwise a file (default: False)
+        :type is_dir: bool
         :param overwrite: a flag indicating whether we can overwrite the file at out or not
+        :type overwrite: bool
+
         :returns path: the Path the download was written to (needed when is_dir is True)
+        :rtype: :class:`pathlib.Path`
         """
         # Get the Splunkbase session token
         token = self.__get_splunk_base_session_token(username, password)

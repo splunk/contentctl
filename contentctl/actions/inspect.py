@@ -30,8 +30,8 @@ class Inspect:
     def execute(self, config: inspect) -> str:
         if config.build_app or config.build_api:
 
-            # self.inspectAppCLI(config)
-            # appinspect_token = self.inspectAppAPI(config)
+            self.inspectAppCLI(config)
+            appinspect_token = self.inspectAppAPI(config)
 
             if config.enable_metadata_validation:
                 self.check_detection_metadata(config)

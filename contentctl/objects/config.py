@@ -270,6 +270,15 @@ class inspect(build):
             "should be enabled."
         )
     )
+    enrichments: bool = Field(
+        default=True,
+        description=(
+            "[NOTE: enrichments must be ENABLED for inspect to run. Please adjust your config "
+            "or CLI invocation appropriately] Enable MITRE, APP, and CVE Enrichments. This is "
+            "useful when outputting a release build and validating these values, but should "
+            "otherwise be avoided for performance reasons."
+            )
+        )
     # TODO (cmcginley): wording should change here if we want to be able to download any app from
     #   Splunkbase
     previous_build: str | None = Field(

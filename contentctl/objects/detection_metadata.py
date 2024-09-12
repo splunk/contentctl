@@ -17,8 +17,8 @@ class DetectionMetadata(BaseModel):
     # The version of the detection
     detection_version: int = Field(...)
 
-    # TODO (cmcginley): this was a recently added field; make note of the ESCU/contentctl version
-    # The time the detection was published
+    # The time the detection was published. **NOTE** This field was added to the metadata in ESCU
+    # as of v4.39.0
     publish_time: float = Field(...)
 
     class Config:

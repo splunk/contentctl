@@ -269,7 +269,10 @@ class Inspect:
     def check_detection_metadata(self, config: inspect) -> None:
         """
         Using a previous build, compare the savedsearches.conf files to detect any issues w/
-        detection metadata.
+        detection metadata. **NOTE**: Detection metadata validation can only be performed between
+        two builds with theappropriate metadata structure. In ESCU, this was added as of release
+        v4.39.0, so all current and previous builds for use with this feature must be this version
+        or greater.
 
         :param config: an inspect config
         :type config: :class:`contentctl.objects.config.inspect`

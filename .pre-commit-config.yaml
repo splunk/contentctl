@@ -1,0 +1,16 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0 # Use the ref you want to point at
+    hooks:
+      - id: check-json
+      - id: check-symlinks
+      - id: check-yaml
+      - id: detect-aws-credentials
+      - id: detect-private-key
+      - id: forbid-submodules
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.4
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format

@@ -1,0 +1,23 @@
+name: lint & format
+on: 
+    push:
+    pull_request:
+        types: [opened, reopened, synchronize]
+
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: "3.11"
+            - name: Install ruff
+              run: |
+                python -m pip install --upgrade pip
+                pip install ruff
+            - name: Run lint
+              run: ruff check --output-format=github contentctl/
+            - name: Run Formatter
+              run: ruff format --check contentctl/

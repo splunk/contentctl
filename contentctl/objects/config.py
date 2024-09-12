@@ -274,9 +274,7 @@ class inspect(build):
         default=True,
         description=(
             "[NOTE: enrichments must be ENABLED for inspect to run. Please adjust your config "
-            "or CLI invocation appropriately] Enable MITRE, APP, and CVE Enrichments. This is "
-            "useful when outputting a release build and validating these values, but should "
-            "otherwise be avoided for performance reasons."
+            f"or CLI invocation appropriately] {validate.model_fields['enrichments'].description}"
             )
         )
     # TODO (cmcginley): wording should change here if we want to be able to download any app from

@@ -68,7 +68,6 @@ class SecurityContentType(enum.Enum):
 
 class SecurityContentProduct(enum.Enum):
     SPLUNK_APP = 1
-    SSA = 2
     API = 3
     CUSTOM = 4
 

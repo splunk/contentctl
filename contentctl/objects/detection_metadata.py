@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class DetectionMetadata(BaseModel):
+    """
+    A model of the metadata line in a detection stanza in savedsearches.conf
+    """
     # A bool indicating whether the detection is deprecated (serialized as an int, 1 or 0)
     deprecated: bool = Field(...)
 
@@ -17,6 +20,10 @@ class DetectionMetadata(BaseModel):
     # TODO (cmcginley): this was a recently added field; make note of the ESCU/contentctl version
     # The time the detection was published
     publish_time: float = Field(...)
+
+    class Config:
+        # Allowing for future fields that may be added to the metadata JSON
+        extra = "allow"
 
     @field_validator("deprecated", mode="before")
     @classmethod

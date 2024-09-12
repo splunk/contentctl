@@ -287,6 +287,7 @@ class Inspect:
             app_name=config.app.label,
             appid=config.app.appid
         )
+
         # Compare the conf files
         validation_errors: dict[str, list[MetadataValidationError]] = {}
         for rule_name in previous_build_conf.detection_stanzas:

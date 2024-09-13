@@ -75,7 +75,6 @@ class Detection_Abstract(SecurityContentObject):
     data_source_objects: list[DataSource] = []
 
 
-
     @field_validator("search", mode="before")
     @classmethod
     def validate_presence_of_filter_macro(cls, value:str, info:ValidationInfo)->str:

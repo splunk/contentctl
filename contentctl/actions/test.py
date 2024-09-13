@@ -1,38 +1,29 @@
 from dataclasses import dataclass
 from typing import List
+import pathlib
 
-from contentctl.objects.config import test_common
-from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
+from contentctl.objects.config import test_servers
+from contentctl.objects.config import test as test_
+from contentctl.objects.enums import DetectionTestingMode
 from contentctl.objects.detection import Detection
-
-from contentctl.input.director import DirectorOutputDto
-
 from contentctl.actions.detection_testing.DetectionTestingManager import (
     DetectionTestingManager,
     DetectionTestingManagerInputDto,
 )
-
-
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
-
-
 from contentctl.actions.detection_testing.views.DetectionTestingViewWeb import (
     DetectionTestingViewWeb,
 )
-
 from contentctl.actions.detection_testing.views.DetectionTestingViewCLI import (
     DetectionTestingViewCLI,
 )
-
 from contentctl.actions.detection_testing.views.DetectionTestingViewFile import (
     DetectionTestingViewFile,
 )
-
 from contentctl.objects.integration_test import IntegrationTest
 
-import pathlib
 
 MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
@@ -40,8 +31,8 @@ MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 @dataclass(frozen=True)
 class TestInputDto:
     detections: List[Detection]
-    config: test_common
-    
+    config: test_ | test_servers
+
 
 class Test:
     def filter_tests(self, input_dto: TestInputDto) -> None:
@@ -52,7 +43,7 @@ class Test:
         Args:
             input_dto (TestInputDto): A configuration of the test and all of the
             tests to be run.
-        """        
+        """
 
         if not input_dto.config.enable_integration_testing:
             # Skip all integraiton tests if integration testing is not enabled:
@@ -61,7 +52,6 @@ class Test:
                     if isinstance(test, IntegrationTest):
                         test.skip("TEST SKIPPED: Skipping all integration tests")
 
-        
     def execute(self, input_dto: TestInputDto) -> bool:
         output_dto = DetectionTestingManagerOutputDto()
 
@@ -92,7 +82,11 @@ class Test:
             print(f"MODE: [{mode}] - Test [{len(input_dto.detections)}] detections")
             if mode in [DetectionTestingMode.changes.value, DetectionTestingMode.selected.value]:
                 files_string = '\n- '.join(
-                    [str(pathlib.Path(detection.file_path).relative_to(input_dto.config.path)) for detection in input_dto.detections]
+                    [
+                        str(
+                            pathlib.Path(detection.file_path).relative_to(input_dto.config.path)
+                        ) for detection in input_dto.detections
+                    ]
                 )
                 print(f"Detections:\n- {files_string}")
 
@@ -102,44 +96,48 @@ class Test:
         try:
             summary_results = file.getSummaryObject()
             summary = summary_results.get("summary", {})
+            if not isinstance(summary, dict):
+                raise ValueError(
+                    f"Summary in results was an unexpected type ({type(summary)}): {summary}"
+                )
 
-            print(f"Test Summary (mode: {summary.get('mode','Error')})")
-            print(f"\tSuccess                      : {summary.get('success',False)}")
+            print(f"Test Summary (mode: {summary.get('mode', 'Error')})")
+            print(f"\tSuccess                      : {summary.get('success', False)}")
             print(
-                f"\tSuccess Rate                 : {summary.get('success_rate','ERROR')}"
+                f"\tSuccess Rate                 : {summary.get('success_rate', 'ERROR')}"
             )
             print(
-                f"\tTotal Detections             : {summary.get('total_detections','ERROR')}"
+                f"\tTotal Detections             : {summary.get('total_detections', 'ERROR')}"
             )
             print(
-                f"\tTotal Tested Detections      : {summary.get('total_tested_detections','ERROR')}"
+                f"\tTotal Tested Detections      : {summary.get('total_tested_detections', 'ERROR')}"
             )
             print(
-                f"\t  Passed Detections          : {summary.get('total_pass','ERROR')}"
+                f"\t  Passed Detections          : {summary.get('total_pass', 'ERROR')}"
             )
             print(
-                f"\t  Failed Detections          : {summary.get('total_fail','ERROR')}"
+                f"\t  Failed Detections          : {summary.get('total_fail', 'ERROR')}"
             )
             print(
-                f"\tSkipped Detections           : {summary.get('total_skipped','ERROR')}"
+                f"\tSkipped Detections           : {summary.get('total_skipped', 'ERROR')}"
             )
             print(
                 "\tProduction Status            :"
             )
             print(
-                f"\t  Production Detections      : {summary.get('total_production','ERROR')}"
+                f"\t  Production Detections      : {summary.get('total_production', 'ERROR')}"
             )
             print(
-                f"\t  Experimental Detections    : {summary.get('total_experimental','ERROR')}"
+                f"\t  Experimental Detections    : {summary.get('total_experimental', 'ERROR')}"
             )
             print(
-                f"\t  Deprecated Detections      : {summary.get('total_deprecated','ERROR')}"
+                f"\t  Deprecated Detections      : {summary.get('total_deprecated', 'ERROR')}"
             )
             print(
-                f"\tManually Tested Detections : {summary.get('total_manual','ERROR')}"
+                f"\tManually Tested Detections : {summary.get('total_manual', 'ERROR')}"
             )
             print(
-                f"\tUntested Detections          : {summary.get('total_untested','ERROR')}"
+                f"\tUntested Detections          : {summary.get('total_untested', 'ERROR')}"
             )
             print(f"\tTest Results File            : {file.getOutputFilePath()}")
             print(
@@ -147,7 +145,7 @@ class Test:
                 "detection types (e.g. Correlation), but there may be overlap between these\n"
                 "categories."
             )
-            return summary_results.get("summary", {}).get("success", False)
+            return summary.get("success", False)
 
         except Exception as e:
             print(f"Error determining if whole test was successful: {str(e)}")

@@ -28,7 +28,7 @@ import docker
 
 @dataclass(frozen=False)
 class DetectionTestingManagerInputDto:
-    config: Union[test,test_servers]
+    config: Union[test, test_servers]
     detections: List[Detection]
     views: list[DetectionTestingView]
 

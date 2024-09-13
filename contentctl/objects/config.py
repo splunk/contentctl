@@ -234,9 +234,6 @@ class build(validate):
             return self.getBuildDir() / f"{self.app.appid}-{self.app.version}.tar.gz"
         else:
             return self.getBuildDir() / f"{self.app.appid}-latest.tar.gz"
-    
-    def getSSAPath(self)->pathlib.Path:
-        return self.getBuildDir() / "ssa"
 
     def getAPIPath(self)->pathlib.Path:
         return self.getBuildDir() / "api"

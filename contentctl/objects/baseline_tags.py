@@ -4,12 +4,11 @@ from pydantic import BaseModel, Field, field_validator, ValidationInfo, model_se
 from typing import List, Any, Union
 
 from contentctl.objects.story import Story
-from contentctl.objects.deployment import Deployment
 from contentctl.objects.detection import Detection
 from contentctl.objects.enums import SecurityContentProductName
 from contentctl.objects.enums import SecurityDomain
 if TYPE_CHECKING:
-    from contentctl.input.director import DirectorOutputDto
+    pass
 
 
 

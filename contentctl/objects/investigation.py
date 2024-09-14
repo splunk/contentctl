@@ -1,9 +1,9 @@
 from __future__ import annotations
 import re
-from typing import TYPE_CHECKING, Optional, List, Any
-from pydantic import field_validator, computed_field, Field, ValidationInfo, ConfigDict,model_serializer
+from typing import TYPE_CHECKING, List, Any
+from pydantic import computed_field, Field, ConfigDict,model_serializer
 if TYPE_CHECKING:
-    from contentctl.input.director import DirectorOutputDto
+    pass
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
 from contentctl.objects.investigation_tags import InvestigationTags
@@ -66,10 +66,6 @@ class Investigation(SecurityContentObject):
 
 
     def model_post_init(self, ctx:dict[str,Any]):
-        # director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
-        # if not isinstance(director,DirectorOutputDto):
-        #     raise ValueError("DirectorOutputDto was not passed in context of Detection model_post_init")
-        director: Optional[DirectorOutputDto] = ctx.get("output_dto",None)
         for story in self.tags.analytic_story:
             story.investigations.append(self)
     

@@ -1,6 +1,5 @@
 from __future__ import annotations
-from typing import Union, Optional, List
-from pydantic import BaseModel, Field
+from typing import Optional
 
 from contentctl.objects.security_content_object import SecurityContentObject
 

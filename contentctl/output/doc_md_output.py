@@ -1,10 +1,8 @@
 import os
-import asyncio
 import sys
 
 from pathlib import Path
 
-from contentctl.objects.enums import SecurityContentType
 from contentctl.output.jinja_writer import JinjaWriter
 
 

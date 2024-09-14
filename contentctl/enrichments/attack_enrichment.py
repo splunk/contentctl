@@ -5,9 +5,9 @@ import os
 import sys
 from attackcti import attack_client
 import logging
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from dataclasses import field
-from typing import Annotated,Any
+from typing import Any
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.config import validate
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE
@@ -26,7 +26,7 @@ class AttackEnrichment(BaseModel):
     
     def getEnrichmentByMitreID(self, mitre_id:MITRE_ATTACK_ID_TYPE)->MitreAttackEnrichment:
         if not self.use_enrichment:
-            raise Exception(f"Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
+            raise Exception("Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
         
         enrichment = self.data.get(mitre_id, None)
         if enrichment is not None:

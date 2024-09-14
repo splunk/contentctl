@@ -3,7 +3,6 @@ from contentctl.actions.detection_testing.views.DetectionTestingView import (
 )
 
 import time
-import datetime
 import tqdm
 
 
@@ -39,9 +38,7 @@ class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True
             miniters=0,
             mininterval=0,
         )
-        fmt = self.format_pbar(
-            len(self.sync_obj.outputQueue), len(self.sync_obj.inputQueue)
-        )
+        self.format_pbar(len(self.sync_obj.outputQueue), len(self.sync_obj.inputQueue))
 
         self.showStatus()
 

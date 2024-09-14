@@ -1,6 +1,6 @@
 from __future__ import annotations
 import uuid
-from typing import TYPE_CHECKING, List, Optional, Annotated, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 from pydantic import (
     BaseModel,
     Field,

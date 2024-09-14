@@ -4,7 +4,6 @@ import re
 import os
 import json
 import configparser
-from xmlrpc.client import APPLICATION_ERROR
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 import pathlib
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -37,7 +36,7 @@ class ConfWriter():
             # Remove leading and trailing characters. Conf parsers may erroneously 
             # Parse fields if they have leading or trailing newlines/whitespace and we 
             # probably don't want that anyway as it doesn't look good in output
-            return obj.strip().replace(f"\n"," \\\n")
+            return obj.strip().replace("\n"," \\\n")
         else:
             return obj
 

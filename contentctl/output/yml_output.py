@@ -1,7 +1,6 @@
 import os
 
 from contentctl.output.detection_writer import DetectionWriter
-from contentctl.objects.detection import Detection
 
 
 class YmlOutput():

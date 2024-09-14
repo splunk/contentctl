@@ -1,4 +1,3 @@
-import os
 from contentctl.objects.config import release_notes
 from git import Repo
 import re
@@ -54,7 +53,7 @@ class ReleaseNotes:
                                 
 
                             # Check and create detection link
-                            if 'name' in data and 'id' in data and 'detections' in file_path.parts and not 'ssa_detections' in file_path.parts and 'detections/deprecated' not in file_path.parts:
+                            if 'name' in data and 'id' in data and 'detections' in file_path.parts and 'ssa_detections' not in file_path.parts and 'detections/deprecated' not in file_path.parts:
                                 
                                 if data['status'] == "production":
                                     temp_link = "https://research.splunk.com" + str(file_path).replace(str(repo_path),"")
@@ -230,9 +229,9 @@ class ReleaseNotes:
                 with open(outfile,'w') as writer:
                     writer.write(text_blob)
             
-        printNotes(notes, config.releaseNotesFilename(f"release_notes.txt"))
+        printNotes(notes, config.releaseNotesFilename("release_notes.txt"))
 
         print("\n\n### Other Updates\n-\n")
         print("\n## BA Release Notes")
         printNotes(ba_notes, config.releaseNotesFilename("ba_release_notes.txt"))
-        print(f"Release notes completed succesfully")
+        print("Release notes completed succesfully")

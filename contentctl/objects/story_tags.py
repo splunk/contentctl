@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field, model_serializer, ConfigDict
-from typing import List,Set,Optional, Annotated
+from typing import List,Set,Optional
 
 from enum import Enum
 

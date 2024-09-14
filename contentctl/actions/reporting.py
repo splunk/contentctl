@@ -1,5 +1,3 @@
-import os
-
 from dataclasses import dataclass
 
 from contentctl.input.director import DirectorOutputDto

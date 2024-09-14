@@ -1,5 +1,4 @@
 import os
-import json
 import pathlib
 
 from contentctl.output.json_writer import JsonWriter

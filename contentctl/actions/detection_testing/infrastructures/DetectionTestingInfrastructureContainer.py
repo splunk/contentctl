@@ -137,7 +137,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             container: docker.models.containers.Container = (
                 self.get_docker_client().containers.get(self.get_name())
             )
-        except Exception as e:
+        except Exception:
             # Container does not exist, no need to try and remove it
             return
         try:

@@ -306,8 +306,6 @@ class Detection_Abstract(SecurityContentObject):
         self.cve_enrichment = enriched_cves
         return self
 
-    splunk_app_enrichment: Optional[List[dict]] = None
-
     @computed_field
     @property
     def nes_fields(self) -> Optional[str]:

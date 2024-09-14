@@ -4,7 +4,6 @@ import shutil
 import requests
 import random
 import string
-from timeit import default_timer
 import pathlib
 
 from typing import Union, Tuple
@@ -17,7 +16,7 @@ if TYPE_CHECKING:
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
-TOTAL_BYTES = 0
+total_bytes = 0
 ALWAYS_PULL = True
 
 
@@ -141,14 +140,14 @@ class Utils:
             # Note, of course, that a hash can be in 0, 1, more branches!
             for branch_string in all_branches_containing_hash:
                 if branch_string.split(" ")[0] == "*" and (
-                    branch_string.split(" ")[-1] == branch_name or branch_name == None
+                    branch_string.split(" ")[-1] == branch_name or branch_name is None
                 ):
                     # Yes, the hash exists in the branch (or branch_name was None and it existed in at least one branch)!
                     return True
             # If we get here, it does not exist in the given branch
             raise (Exception("Does not exist in branch"))
 
-        except Exception as e:
+        except Exception:
             if branch_name is None:
                 branch_name = "ANY_BRANCH"
             if ALWAYS_PULL:
@@ -340,7 +339,7 @@ class Utils:
         input_pbar: Union[tqdm.tqdm, None] = None,
         overwrite_file: bool = False,
     ):
-        global TOTAL_BYTES
+        global total_bytes
         sourcePath = pathlib.Path(file_path)
         destinationPath = pathlib.Path(destination_file)
 
@@ -390,7 +389,6 @@ class Utils:
             )
 
         try:
-            download_start_time = default_timer()
             bytes_written = 0
             file_to_download = requests.get(file_path, stream=True)
             file_to_download.raise_for_status()
@@ -413,7 +411,7 @@ class Utils:
                     bytes_written += output.write(piece)
                     pbar.update(len(piece))
 
-            TOTAL_BYTES += bytes_written
+            total_bytes += bytes_written
 
         except requests.exceptions.ConnectionError as e:
             raise (

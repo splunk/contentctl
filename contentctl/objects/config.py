@@ -8,7 +8,7 @@ from pydantic import (
 from contentctl.output.yml_writer import YmlWriter
 from os import environ
 from datetime import datetime, UTC
-from typing import Optional,Any,Annotated,List,Union, Self
+from typing import Optional,Any,List,Union, Self
 import semantic_version
 import random
 from enum import StrEnum, auto
@@ -846,7 +846,7 @@ class release_notes(Config_Base):
         p =  self.path / "dist"
         try:
             p.mkdir(exist_ok=True,parents=True)
-        except Exception:
+        except Exception as e:
             raise Exception(f"Error making the directory '{p}' to hold release_notes: {str(e)}")
         return p/filename
 

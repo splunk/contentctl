@@ -1,3 +1,4 @@
+from contentctl.input.director import DirectorOutputDto
 import logging
 import os
 import pathlib
@@ -19,11 +20,6 @@ from contentctl.objects.config import test_common, All, Changes, Selected
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)
-
-
-
-from contentctl.input.director import DirectorOutputDto
-
 
 
 class GitService(BaseModel):
@@ -56,7 +52,7 @@ class GitService(BaseModel):
             target_tree = repo.revparse_single(target_branch).tree
             self.gitHash = target_tree.id
             diffs = repo.index.diff_to_tree(target_tree)
-        except Exception as e:
+        except Exception:
             raise Exception(f"Error parsing diff target_branch '{target_branch}'. Are you certain that it exists?")
         
         #Get the uncommitted changes in the current directory
@@ -72,7 +68,7 @@ class GitService(BaseModel):
         updated_lookups:List[Lookup] =[]
 
         for diff in all_diffs:
-            if type(diff) == pygit2.Patch:
+            if isinstance(diff, pygit2.Patch):
                 if diff.delta.status in (DeltaStatus.ADDED, DeltaStatus.MODIFIED, DeltaStatus.RENAMED):
                     #print(f"{DeltaStatus(diff.delta.status).name:<8}:{diff.delta.new_file.raw_path}")
                     decoded_path = pathlib.Path(diff.delta.new_file.raw_path.decode('utf-8'))
@@ -108,7 +104,7 @@ class GitService(BaseModel):
                             if len(matched) == 0:
                                 raise Exception(f"Failed to find any lookups that reference the modified CSV file  '{decoded_path}'")
                             elif len(matched) > 1:
-                                raise Exception(f"More than 1 Lookup reference the modified CSV file '{decoded_path}': {[l.file_path for l in matched ]}")
+                                raise Exception(f"More than 1 Lookup reference the modified CSV file '{decoded_path}': {[matched_csv.file_path for matched_csv in matched ]}")
                             else:
                                 updatedLookup = matched[0]
                         elif decoded_path.suffix == ".mlmodel":

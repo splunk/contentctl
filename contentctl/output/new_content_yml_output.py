@@ -1,8 +1,6 @@
 import os
 import pathlib
-from contentctl.objects.enums import SecurityContentType
 from contentctl.output.yml_writer import YmlWriter
-import pathlib
 from contentctl.objects.config import NewContentType
 class NewContentYmlOutput():
     output_path: pathlib.Path

@@ -2,9 +2,6 @@ from dataclasses import dataclass
 from contentctl.input.director import DirectorInputDto
 from contentctl.output.conf_output import ConfOutput
 
-
-from typing import Union
-
 @dataclass(frozen=True)
 class ACSDeployInputDto:
     director_input_dto: DirectorInputDto

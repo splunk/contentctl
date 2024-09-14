@@ -1,22 +1,12 @@
-from dataclasses import dataclass
-import os
 import glob
 import shutil
-import sys
 import tarfile
-from typing import Union
-from pathlib import Path
 import pathlib
-import time
 import timeit
 import datetime
-import shutil
-import json
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.config import build
-from requests import Session, post, get
-from requests.auth import HTTPBasicAuth
 
 class ConfOutput:
     config: build    
@@ -49,12 +39,6 @@ class ConfOutput:
             written_files.add(ConfWriter.writeConfFileHeader(pathlib.Path(output_app_path),self.config))
             
         return written_files
-
-        
-        #The contents of app.manifest are not a conf file, but json.
-        #DO NOT write a header for this file type, simply create the file
-        with open(self.config.getPackageDirectoryPath() / pathlib.Path('app.manifest'), 'w') as f:
-            pass
             
 
     def writeAppConf(self)->set[pathlib.Path]:

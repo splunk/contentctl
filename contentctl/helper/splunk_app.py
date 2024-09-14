@@ -1,9 +1,5 @@
-import os
-import time
 import json
-import xml.etree.ElementTree as ET
-from typing import List, Tuple, Optional
-from urllib.parse import urlencode
+from typing import Optional
 
 import requests
 import urllib3

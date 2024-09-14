@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, Optional, List,Any
 from pydantic import field_validator, ValidationInfo, Field, model_serializer
 if TYPE_CHECKING:
-    from contentctl.input.director import DirectorOutputDto
+    pass
 
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import DataModel, AnalyticsType
+from contentctl.objects.enums import DataModel
 from contentctl.objects.baseline_tags import BaselineTags
-from contentctl.objects.enums import DeploymentType
 #from contentctl.objects.deployment import Deployment
 
 # from typing import TYPE_CHECKING

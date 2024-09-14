@@ -146,7 +146,7 @@ class Inspect:
             from splunk_appinspect.main import (
                 validate, MODE_OPTION, APP_PACKAGE_ARGUMENT, OUTPUT_FILE_OPTION, 
                 LOG_FILE_OPTION, INCLUDED_TAGS_OPTION, EXCLUDED_TAGS_OPTION, 
-                PRECERT_MODE, TEST_MODE)
+                TEST_MODE)
         except Exception as e:
             print(e)
             # print("******WARNING******")

@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import Optional, Any
 from pydantic import Field, HttpUrl, model_serializer, BaseModel
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.event_source import EventSource
 
 
 class TA(BaseModel):

@@ -2,10 +2,9 @@ from dataclasses import dataclass
 from typing import List
 
 from contentctl.objects.config import test_common
-from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
+from contentctl.objects.enums import DetectionTestingMode
 from contentctl.objects.detection import Detection
 
-from contentctl.input.director import DirectorOutputDto
 
 from contentctl.actions.detection_testing.DetectionTestingManager import (
     DetectionTestingManager,

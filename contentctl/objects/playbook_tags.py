@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, List
+from typing import Optional, List
 from pydantic import BaseModel, Field
 import enum
 from contentctl.objects.detection import Detection

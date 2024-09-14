@@ -37,11 +37,7 @@ class YmlReader():
             print(exc)
             sys.exit(1)
         
-        if add_fields == False:
-            return yml_obj
+        if  add_fields:
+            yml_obj['file_path'] = str(file_path)
         
-        
-        yml_obj['file_path'] = str(file_path)
-    
-
         return yml_obj

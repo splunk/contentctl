@@ -1,13 +1,8 @@
 from __future__ import annotations
 from pycvesearch import CVESearch
-import functools
-import os
-import shelve
-import time
-from typing import Annotated, Any, Union, TYPE_CHECKING
+from typing import Annotated, Union, TYPE_CHECKING
 from pydantic import BaseModel,Field, computed_field
 from decimal import Decimal
-from requests.exceptions import ReadTimeout
 from contentctl.objects.annotated_types import CVE_TYPE
 if TYPE_CHECKING:
     from contentctl.objects.config import validate

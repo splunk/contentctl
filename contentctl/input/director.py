@@ -1,7 +1,5 @@
 import os
 import sys
-import pathlib
-from typing import Union
 from dataclasses import dataclass, field
 from pydantic import ValidationError
 from uuid import UUID
@@ -11,7 +9,6 @@ from contentctl.input.yml_reader import YmlReader
 from contentctl.objects.detection import Detection
 from contentctl.objects.story import Story
 
-from contentctl.objects.enums import SecurityContentProduct
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.playbook import Playbook
@@ -21,7 +18,6 @@ from contentctl.objects.lookup import Lookup
 from contentctl.objects.atomic import AtomicTest
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.data_source import DataSource
-from contentctl.objects.event_source import EventSource
 
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
@@ -29,7 +25,6 @@ from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.objects.config import validate
 from contentctl.objects.enums import SecurityContentType
 
-from contentctl.objects.enums import DetectionStatus
 from contentctl.helper.utils import Utils
 
 
@@ -145,7 +140,7 @@ class Director():
                 f for f in files 
             ]
         else:
-            raise (Exception(f"Cannot createSecurityContent for unknown product."))
+            raise (Exception("Cannot createSecurityContent for unknown product."))
 
         validation_errors = []
 

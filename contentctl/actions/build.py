@@ -1,11 +1,8 @@
-import sys
 import shutil
-import os
-
 from dataclasses import dataclass
 
-from contentctl.objects.enums import SecurityContentProduct, SecurityContentType
-from contentctl.input.director import Director, DirectorOutputDto
+from contentctl.objects.enums import SecurityContentType
+from contentctl.input.director import DirectorOutputDto
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.output.api_json_output import ApiJsonOutput
@@ -14,7 +11,6 @@ from contentctl.objects.lookup import Lookup
 import pathlib
 import json
 import datetime
-from typing import Union
 
 from contentctl.objects.config import build
 

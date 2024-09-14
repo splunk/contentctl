@@ -1,8 +1,10 @@
+from typing import Any
 class NewContentQuestions:
 
     @classmethod
-    def get_questions_detection(self) -> list:
-        questions = [
+    def get_questions_detection(cls) -> list[dict[str,Any]]:
+        
+        questions:list[dict[str,Any]] = [
             {
                 "type": "text",
                 "message": "enter detection name",
@@ -116,8 +118,8 @@ class NewContentQuestions:
         return questions
 
     @classmethod
-    def get_questions_story(self) -> list:
-        questions = [
+    def get_questions_story(cls) -> list[dict[str,Any]]:
+        questions:list[dict[str,Any]] = [
             {
                 "type": "text",
                 "message": "enter story name",

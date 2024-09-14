@@ -3,24 +3,17 @@ from contentctl.objects.config import test, test_servers, Container,Infrastructu
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import DetectionTestingInfrastructure
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import DetectionTestingInfrastructureContainer
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import DetectionTestingInfrastructureServer
-from urllib.parse import urlparse
-from copy import deepcopy
-from contentctl.objects.enums import DetectionTestingTargetInfrastructure
 import signal
 import datetime
-# from queue import Queue
 from dataclasses import dataclass
-# import threading
-import ctypes
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
-    DetectionTestingInfrastructure,
     DetectionTestingManagerOutputDto,
 )
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
 from contentctl.objects.enums import PostTestBehavior
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from contentctl.objects.detection import Detection
 import concurrent.futures
 import docker
@@ -87,7 +80,7 @@ class DetectionTestingManager(BaseModel):
             # Wait for all instances to be set up
             for future in concurrent.futures.as_completed(future_instances_setup):
                 try:
-                    result = future.result()
+                    _ = future.result()
                 except Exception as e:
                     self.output_dto.terminate = True
                     print(f"Error setting up container: {str(e)}")
@@ -102,7 +95,7 @@ class DetectionTestingManager(BaseModel):
                 # Wait for execution to finish
                 for future in concurrent.futures.as_completed(future_instances_execute):
                     try:
-                        result = future.result()
+                        _ = future.result()
                     except Exception as e:
                         self.output_dto.terminate = True
                         print(f"Error running in container: {str(e)}")
@@ -115,14 +108,14 @@ class DetectionTestingManager(BaseModel):
             }
             for future in concurrent.futures.as_completed(future_views_shutdowner):
                 try:
-                    result = future.result()
+                    _ = future.result()
                 except Exception as e:
                     print(f"Error stopping view: {str(e)}")
 
             # Wait for original view-related threads to complete
             for future in concurrent.futures.as_completed(future_views):
                 try:
-                    result = future.result()
+                    _ = future.result()
                 except Exception as e:
                     print(f"Error running container: {str(e)}")
 
@@ -134,7 +127,7 @@ class DetectionTestingManager(BaseModel):
             if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
                 try:
                     client = docker.from_env()
-                except Exception as e:
+                except Exception:
                     raise Exception("Unable to connect to docker.  Are you sure that docker is running on this host?")
                 try:
                     

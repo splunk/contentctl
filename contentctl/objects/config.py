@@ -176,7 +176,13 @@ class Config_Base(BaseModel):
         return str(path)
 
 class init(Config_Base):
-    pass
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    bare: bool = Field(default=False, description="contentctl normally provides some some example content "
+                       "(macros, stories, data_sources, and/or analytic stories).  This option disables "
+                       "initialization with that additional contnet.  Note that even if --bare is used, it "
+                       "init will still create the directory structure of the app, "
+                       "include the app_template directory with default content, and content in "
+                       "the deployment/ directory (since it is not yet easily customizable).")
 
 
 # TODO (#266): disable the use_enum_values configuration
@@ -238,9 +244,6 @@ class build(validate):
             return self.getBuildDir() / f"{self.app.appid}-{self.app.version}.tar.gz"
         else:
             return self.getBuildDir() / f"{self.app.appid}-latest.tar.gz"
-    
-    def getSSAPath(self)->pathlib.Path:
-        return self.getBuildDir() / "ssa"
 
     def getAPIPath(self)->pathlib.Path:
         return self.getBuildDir() / "api"

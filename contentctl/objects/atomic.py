@@ -118,7 +118,7 @@ class AtomicTest(BaseModel):
     @classmethod
     def parseArtRepo(cls, repo_path:pathlib.Path)->List[AtomicFile]:
         if not repo_path.is_dir():
-            print(f"WARNING: Atomic Red Team repo does NOT exist at {repo_path.absolute()}. You can check it out with:\n * git clone --single-branch https://github.com/redcanaryco/atomic-red-team. This will ONLY throw a validation error if you reference atomid_guids in your detection(s).")
+            print(f"WARNING: Atomic Red Team repo does NOT exist at {repo_path}. You can check it out with:\n * git clone --single-branch https://github.com/redcanaryco/atomic-red-team {repo_path}. This will ONLY throw a validation error if you reference atomid_guids in your detection(s).")
             return []
         atomics_path = repo_path/"atomics"
         if not atomics_path.is_dir():
@@ -181,28 +181,6 @@ class AtomicFile(BaseModel):
     display_name: str
     atomic_tests: List[AtomicTest]
 
-
-
-
-# ATOMICS_PATH = pathlib.Path("./atomics")
-# atomic_objects = []
-# atomic_simulations = []
-# for obj_path in ATOMICS_PATH.glob("**/T*.yaml"):
-#     try:
-#         with open(obj_path, 'r', encoding="utf-8") as obj_handle:
-#             obj_data = yaml.load(obj_handle, Loader=yaml.CSafeLoader)
-#             atomic_obj = AtomicFile.model_validate(obj_data)
-#     except Exception as e:
-#         print(f"Error parsing object at path {obj_path}: {str(e)}")
-#         print(f"We have successfully parsed {len(atomic_objects)}, however!")
-#         sys.exit(1)
-
-#     print(f"Successfully parsed {obj_path}!")
-#     atomic_objects.append(atomic_obj)
-#     atomic_simulations += atomic_obj.atomic_tests
-
-# print(f"Successfully parsed all {len(atomic_objects)} files!")
-# print(f"Successfully parsed all {len(atomic_simulations)} simulations!")
     
 
         

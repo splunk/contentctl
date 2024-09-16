@@ -1,12 +1,8 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field, model_serializer, ConfigDict
-from typing import List,Set,Optional, Annotated
-
 from enum import Enum
+from contentctl.objects.enums import StoryCategory, SecurityContentProductName
 
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
-from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhase, SecurityContentProductName
-from contentctl.objects.annotated_types import CVE_TYPE,MITRE_ATTACK_ID_TYPE
 
 class StoryUseCase(str,Enum):
    FRAUD_DETECTION = "Fraud Detection"
@@ -21,17 +17,9 @@ class StoryUseCase(str,Enum):
 # TODO (#266): disable the use_enum_values configuration
 class StoryTags(BaseModel):
    model_config = ConfigDict(extra='forbid', use_enum_values=True)
-   category: List[StoryCategory] = Field(...,min_length=1)
-   product: List[SecurityContentProductName] = Field(...,min_length=1)
+   category: list[StoryCategory] = Field(...,min_length=1)
+   product: list[SecurityContentProductName] = Field(...,min_length=1)
    usecase: StoryUseCase = Field(...)
-
-   # enrichment
-   mitre_attack_enrichments: Optional[List[MitreAttackEnrichment]] = None
-   mitre_attack_tactics: Optional[Set[MITRE_ATTACK_ID_TYPE]] = None
-   datamodels: Optional[Set[DataModel]] = None
-   kill_chain_phases: Optional[Set[KillChainPhase]] = None
-   cve: List[CVE_TYPE] = []
-   group: List[str] = Field([], description="A list of groups who leverage the techniques list in this Analytic Story.")
 
    def getCategory_conf(self) -> str:
       #if len(self.category) > 1:
@@ -45,10 +33,10 @@ class StoryTags(BaseModel):
          "category": list(self.category),
          "product": list(self.product),
          "usecase": self.usecase,
-         "mitre_attack_enrichments": self.mitre_attack_enrichments,
-         "mitre_attack_tactics": list(self.mitre_attack_tactics) if self.mitre_attack_tactics is not None else None,
-         "datamodels": list(self.datamodels) if self.datamodels is not None else None,
-         "kill_chain_phases": list(self.kill_chain_phases) if self.kill_chain_phases is not None else None  
+         #"mitre_attack_enrichments": self.mitre_attack_enrichments,
+         #"mitre_attack_tactics": list(self.mitre_attack_tactics) if self.mitre_attack_tactics is not None else None,
+         #"datamodels": list(self.datamodels) if self.datamodels is not None else None,
+         #"kill_chain_phases": list(self.kill_chain_phases) if self.kill_chain_phases is not None else None  
       }
 
         

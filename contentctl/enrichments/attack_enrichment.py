@@ -1,32 +1,26 @@
 
 from __future__ import annotations
-import csv
 import pathlib
-import os
-import sys
 from attackcti import attack_client
-import json
 import logging
-from pydantic import BaseModel, Field
-from dataclasses import field
-from typing import Annotated,Any
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment, MitreEnterpriseTechnique, MitreEnterpriseRelationship, MitreAttackGroup
+from pydantic import BaseModel, Field, ConfigDict
 from contentctl.objects.config import validate
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE
 logging.getLogger('taxii2client').setLevel(logging.CRITICAL)
 
+from attackcti.models import Technique, Relationship, Group, GroupTechnique
 
 class AttackEnrichment(BaseModel):
-    data: dict[str, MitreEnterpriseTechnique] = field(default_factory=dict)
+    data: dict[str, MitreAttackEnrichment] = Field(default_factory=dict)
     use_enrichment:bool = True
     
     @staticmethod
     def getAttackEnrichment(config:validate)->AttackEnrichment:
         enrichment = AttackEnrichment(use_enrichment=config.enrichments)
-        _ = enrichment.get_attack_lookup(str(config.path))
+        _ = enrichment.get_attack_lookup(config.mitre_cti_repo_path)
         return enrichment
     
-    def getEnrichmentByMitreID(self, mitre_id:MITRE_ATTACK_ID_TYPE)->MitreEnterpriseTechnique:
+    def getEnrichmentByMitreID(self, mitre_id:MITRE_ATTACK_ID_TYPE)->MitreAttackEnrichment:
         if not self.use_enrichment:
             raise Exception(f"Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
         
@@ -37,73 +31,164 @@ class AttackEnrichment(BaseModel):
             raise Exception(f"Error, Unable to find Mitre Enrichment for MitreID {mitre_id}")
         
     
-    def get_attack_lookup(self, input_path: str, store_csv: bool = False) -> dict[str,MitreEnterpriseTechnique]:
-        local_mitre_enrichment_path = pathlib.Path(input_path)/"mitre_enrichment.json"
+    def get_attack_lookup(self, input_path: pathlib.Path) -> None:
         if not self.use_enrichment:
-            return {}
-        print("Getting MITRE Attack Enrichment Data. This may take some time...")
-       
+            return None
+            
+        print(f"Parsing MITRE Enrichment Data...", end="", flush=True)
         try:
-            print(f"\r{'Client'.rjust(23)}: [{0:3.0f}%]...", end="", flush=True)
-            lift = attack_client()
-            print(f"\r{'Client'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
+            #First try to get the info from 
             
-            print(f"\r{'Techniques'.rjust(23)}: [{0.0:3.0f}%]...", end="", flush=True)
-            all_enterprise_techniques = lift.get_enterprise_techniques(stix_format=False)
-            
-            et:list[MitreEnterpriseTechnique] = []
-            for t in all_enterprise_techniques:
-                try:
-                    et.append(MitreEnterpriseTechnique.model_validate(t))
-                except Exception as e:
-                    print(e)
+            lift = attack_client(local_paths={
+                "enterprise":str(input_path/"enterprise-attack"),
+                "mobile":str(input_path/"ics-attack"),
+                "ics":str(input_path/"mobile-attack")
+            })
+          
 
-            print(f"\r{'Techniques'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
+            from stix2.v20.sdo import AttackPattern
+
+
+            all_techniques = lift.get_techniques_used_by_all_groups(stix_format=True)
+            techs:list[GroupTechnique] = []
+            for gt in all_techniques:
+                techs.append(GroupTechnique.model_validate(gt))
             
-            print(f"\r{'Relationships'.rjust(23)}: [{0.0:3.0f}%]...", end="", flush=True)
-            enterprise_relationships = lift.get_enterprise_relationships(stix_format=False)
-            print(f"\r{'Relationships'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
+
+            #Get all enterprise techniques and construct into objects
+            '''
+            techniques:list[AttackPattern | dict[str,Any]] = lift.get_enterprise_techniques(stix_format=False)
             
+            enterprise_techniques:list[MitreEnterpriseTechnique] = []
             
-            er:list[MitreEnterpriseRelationship] = []
-            for t in enterprise_relationships:
-                er.append(MitreEnterpriseRelationship.model_validate(t))
+            for t in techniques:
+                #Field aliases have been set for from attackcti.models.Technique that we must fix
+                # t.update(
+                #     {
+                #         "name":t['technique']
+                #     }
+                # )
+                Technique.model_validate(t)
+                enterprise_techniques.append(MitreEnterpriseTechnique.model_validate(t))
+            
+
+            #Get all relationships and parse into objects
+            relationships_dict = lift.get_enterprise_relationships(stix_format=False)
+            enterprise_relationships:list[MitreEnterpriseRelationship] = []
+            for t in relationships_dict:
+                #Field aliases have been set for from attackcti.models.Relationship that we must fix
+                t.update(
+                    {
+                        "relationship_type":t['relationship'],
+                        "source_ref":t['source_object'],
+                        "target_ref":t['target_object']
+                    }
+                )
+                Relationship.model_validate(t)
+                enterprise_relationships.append(MitreEnterpriseRelationship.model_validate(t))
             # We only care about intrusion-set relationships
-            er = list(filter(lambda r: r.source_object.startswith('intrusion-set'), er))
+            enterprise_relationships = list(filter(lambda r: r.source_object.startswith('intrusion-set'), enterprise_relationships))
 
-            print(f"\r{'Groups'.rjust(23)}: [{0:3.0f}%]...", end="", flush=True)
-            enterprise_groups = lift.get_enterprise_groups(stix_format=False)
-            print(f"\r{'Groups'.rjust(23)}: [{100:3.0f}%]...Done!", end="\n", flush=True)
-            eg: list[MitreAttackGroup] = []
-            for t in enterprise_groups:
-                eg.append(MitreAttackGroup.model_validate(t))
+            # Get all enterprise groups and parse into objects
+            groups_dict = lift.get_enterprise_groups(stix_format=False)
+            enterprise_groups: list[MitreAttackGroup] = []
+            for t in groups_dict:
+                #Field aliases have been set for from attackcti.models.Group that we must fix
+                t.update(
+                    {
+                        "name":t['group']
+                    }
+                )
+                Group.model_validate(t)
+                enterprise_groups.append(MitreAttackGroup.model_validate(t))
+
+            # Using the relationships, assign the appropriate groups to each technique
+            for tech in enterprise_techniques:                
+                tech.updateGroups(enterprise_relationships,enterprise_groups)
+        '''
             
-            for tech in et:                
-                tech.updateGroups(er,eg)
-            
-            print(f"Update {local_mitre_enrichment_path} with latest values")
-            
-            with open(local_mitre_enrichment_path, mode='w') as outp:
-                dumped = [m.model_dump() for m in et]
-                json.dump(dumped,outp, indent=3)
-                
-
-
-
         except Exception as err:
-            print(f'\nError: {str(err)}')
-            print(f"Use local copy {local_mitre_enrichment_path}")
-            if not local_mitre_enrichment_path.is_file():
-                raise FileNotFoundError(f"The local MITRE Enrichment file {local_mitre_enrichment_path} does not exist")
-            with open(local_mitre_enrichment_path, mode='r') as inp:
-                mitre_enrichment_as_json:list[dict[str,Any]] = json.load(inp)
-            
-            et:list[MitreEnterpriseTechnique] = []
-            for json_obj in mitre_enrichment_as_json:
-                et.append(MitreEnterpriseTechnique.model_validate(json_obj))
-            
-            
-                
+            print("ERROR")
+            raise Exception(f"Error getting MITRE Enrichment: {str(err)}")
+        
+        print("done!")
+        
+        self.data = MitreAttackEnrichment.constructFromEnrichment(techs)
 
-        print("Done!")
-        self.data = {tactic.technique_id: tactic for tactic in et}
+
+
+class MitreAttackEnrichment(BaseModel):
+    ConfigDict(use_enum_values=True)
+    mitre_attack_id: MITRE_ATTACK_ID_TYPE = Field(...)
+    mitre_attack_technique: str = Field(...)
+    mitre_attack_tactics: list[str] = Field(...)
+    mitre_attack_groups: list[str] = Field(...)
+    #Exclude this field from serialization - it is very large and not useful in JSON objects
+    mitre_attack_group_objects: list[GroupTechnique] = Field(..., exclude=True)
+    def __hash__(self) -> int:
+        return id(self)
+    
+    @classmethod
+    def constructFromEnrichment(cls, techniques_used_by_groups: list[GroupTechnique])->dict[MITRE_ATTACK_ID_TYPE, MitreAttackEnrichment]:
+        mapping: dict[MITRE_ATTACK_ID_TYPE, MitreAttackEnrichment] = {}
+        technique_ids = set([technique.technique_id for technique in techniques_used_by_groups])
+
+        for technique_id in sorted(technique_ids):    
+            all_groups = [group_technique for group_technique in techniques_used_by_groups if group_technique.technique_id == technique_id]
+            # convert groups to proper pydantic groups due to field aliases
+            mapping[technique_id] = cls(
+                        mitre_attack_id=technique_id,
+                        mitre_attack_technique=all_groups[0].technique,
+                        mitre_attack_tactics=all_groups[0].tactic,
+                        mitre_attack_groups=[group.group for group in all_groups],
+                        mitre_attack_group_objects=all_groups)
+
+        return mapping
+
+'''    
+from pydantic import BaseModel
+
+class GrandParent(BaseModel):
+    pass
+
+class Parent(GrandParent):
+    name: str
+
+class Child(Parent):
+    age: int
+
+#Child has type child, as expected
+child = Child(name="Tom", age=7)
+print(type(child))
+# <class 'Child'>
+
+#Parent actually has type Child!
+p = Parent.model_validate(child)
+print(type(p))
+# <class 'Child'>
+
+# Grandparent also has type Child!
+g = GrandParent.model_validate(child)
+print(type(g))
+# <class 'Child'>
+
+pp = Parent(**child.dict())
+type(pp)
+#<class 'Parent'>
+
+
+
+class Kidgparent():
+    pass
+    height=10
+
+class Kidparent(Kidgparent):
+    def __init__(self, name:str):
+        self.name = name
+class Kid(Kidparent):
+    def __init__(self, name:str, age:int):
+        self.age=age
+        super().__init__(name=name)
+
+kid = Kid(name="name", age=10)
+'''

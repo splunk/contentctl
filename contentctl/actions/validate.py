@@ -16,7 +16,7 @@ class Validate:
 
         director_output_dto = DirectorOutputDto(
             AtomicTest.getAtomicTestsFromArtRepo(
-                repo_path=input_dto.getAtomicRedTeamRepoPath(),
+                repo_path=input_dto.atomic_red_team_repo_path,
                 enabled=input_dto.enrichments,
             ),
             AttackEnrichment.getAttackEnrichment(input_dto),

@@ -59,6 +59,7 @@ def init_func(config:test):
 
 
 def validate_func(config:validate)->DirectorOutputDto:
+    config.ensureEnrichmentReposPresent()
     validate = Validate()
     return validate.execute(config)
 
@@ -213,7 +214,7 @@ def main():
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
     except Exception as e:
         if config is None:
-            print("There was a serious issue where the config file could not be created.\n"
+            print("The config file could not be created.\n"
                   "The entire stack trace is provided below (please include it if filing a bug report).\n")
             traceback.print_exc()
         elif config.verbose:

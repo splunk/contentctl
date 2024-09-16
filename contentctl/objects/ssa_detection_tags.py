@@ -3,7 +3,7 @@ import re
 from typing import List
 from pydantic import BaseModel, validator, ValidationError, model_validator, Field
 
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
+from contentctl.objects.mitre_attack_enrichment import MitreEnterpriseTechnique
 from contentctl.objects.constants import *
 from contentctl.objects.enums import SecurityContentProductName
 
@@ -34,7 +34,7 @@ class SSADetectionTags(BaseModel):
 
 
     # enrichment
-    mitre_attack_enrichments: list[MitreAttackEnrichment] = []
+    mitre_attack_enrichments: list[MitreEnterpriseTechnique] = []
     confidence_id: int = None
     impact_id: int = None
     context_ids: list = None

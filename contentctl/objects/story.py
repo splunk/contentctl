@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING,List
+from typing import TYPE_CHECKING,List,Any
 from contentctl.objects.story_tags import StoryTags
-from pydantic import Field, model_serializer,computed_field, model_validator
+from pydantic import Field, model_serializer,computed_field
 import re
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
@@ -65,15 +65,16 @@ class Story(SecurityContentObject):
             "author_company": self.author_company,
             "author_name":self.author_name
         }
-        detections = []
+        detections:list[dict[str,Any]] = []
         for detection in self.detections:
-            new_detection = {
+            new_detection:dict[str,Any] = {
                 "name":detection.name,
                 "source":detection.source,
                 "type":detection.type
             }
-            if self.tags.mitre_attack_enrichments is not None:
-                new_detection['tags'] = {"mitre_attack_enrichments": [{"mitre_attack_technique":  enrichment.mitre_attack_technique} for enrichment in detection.tags.mitre_attack_enrichments]}
+            
+            new_detection['tags'] = {"mitre_attack_enrichments": [{"mitre_attack_technique":  enrichment.mitre_attack_technique} for enrichment in detection.tags.mitre_attack_enrichments]}
+            
             detections.append(new_detection)
 
         model['detections'] = detections
@@ -82,37 +83,6 @@ class Story(SecurityContentObject):
         
         #return the model
         return super_fields
-
-    @model_validator(mode="after")
-    def setTagsFields(self):
-        
-        enrichments = []
-        for detection in self.detections:
-            enrichments.extend(detection.tags.mitre_attack_enrichments)
-        self.tags.mitre_attack_enrichments = list(set(enrichments))
-
-    
-        tactics = []
-        for enrichment in self.tags.mitre_attack_enrichments:
-            tactics.extend(enrichment.mitre_attack_tactics)
-        self.tags.mitre_attack_tactics = set(tactics)
-
-    
-    
-        datamodels = []
-        for detection in self.detections:
-            datamodels.extend(detection.datamodel)
-        self.tags.datamodels = set(datamodels)
-
-    
-    
-        kill_chain_phases = []
-        for detection in self.detections:
-            kill_chain_phases.extend(detection.tags.kill_chain_phases)
-        self.tags.kill_chain_phases = set(kill_chain_phases)
-
-        return self
-
 
     @computed_field
     @property

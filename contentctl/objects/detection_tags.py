@@ -1,6 +1,6 @@
 from __future__ import annotations
 import uuid
-from typing import TYPE_CHECKING, List, Optional, Annotated, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 from pydantic import (
     BaseModel,
     Field,
@@ -15,11 +15,12 @@ from pydantic import (
     model_serializer,
     model_validator
 )
-from contentctl.objects.story import Story
+
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
+    from contentctl.enrichments.attack_enrichment import MitreAttackEnrichment
 
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
+    from contentctl.objects.story import Story
 from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
 from contentctl.objects.observable import Observable
 from contentctl.objects.enums import (
@@ -181,7 +182,7 @@ class DetectionTags(BaseModel):
         if output_dto.attack_enrichment.use_enrichment is False:
             return self
 
-        mitre_enrichments: list[MitreAttackEnrichment] = []
+        mitre_enrichments: list[MitreEnterpriseTechnique] = []
         missing_tactics: list[str] = []
         for mitre_attack_id in self.mitre_attack_id:
             try:
@@ -221,8 +222,8 @@ class DetectionTags(BaseModel):
     def mapStoryNamesToStoryObjects(cls, v: list[str], info: ValidationInfo) -> list[Story]:
         if info.context is None:
             raise ValueError("ValidationInfo.context unexpectedly null")
-
-        return Story.mapNamesToSecurityContentObjects(v, info.context.get("output_dto", None))
+        return []
+        #return Story.mapNamesToSecurityContentObjects(v, info.context.get("output_dto", None))
 
     def getAtomicGuidStringArray(self) -> List[str]:
         return [str(atomic_guid.auto_generated_guid) for atomic_guid in self.atomic_guid]

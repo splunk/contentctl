@@ -18,7 +18,6 @@ from contentctl.objects.playbook import Playbook
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
-from contentctl.objects.ssa_detection import SSADetection
 from contentctl.objects.atomic import AtomicTest
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.data_source import DataSource
@@ -33,10 +32,7 @@ from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.enums import DetectionStatus
 from contentctl.helper.utils import Utils
 
-from contentctl.objects.enums import SecurityContentType
 
-from contentctl.objects.enums import DetectionStatus 
-from contentctl.helper.utils import Utils
 
 
 @dataclass
@@ -60,10 +56,7 @@ class DirectorOutputDto:
 
     def addContentToDictMappings(self, content: SecurityContentObject):
         content_name = content.name
-        if isinstance(content, SSADetection):
-            # Since SSA detections may have the same name as ESCU detection,
-            # for this function we prepend 'SSA ' to the name.
-            content_name = f"SSA {content_name}"
+        
         
         if content_name in self.name_to_content_map:
             raise ValueError(
@@ -149,7 +142,7 @@ class Director():
                 os.path.join(self.input_dto.path, str(contentType.name))
             )
             security_content_files = [
-                f for f in files if not f.name.startswith("ssa___")
+                f for f in files 
             ]
         else:
             raise (Exception(f"Cannot createSecurityContent for unknown product."))

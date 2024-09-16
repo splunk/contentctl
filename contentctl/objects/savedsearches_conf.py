@@ -133,8 +133,8 @@ class SavedsearchesConf(BaseModel):
             for line in file:
                 self._current_line_no += 1
 
-                # Break when we get to the end of the ESCU detections
-                if line.strip() == "### END ESCU DETECTIONS ###":
+                # Break when we get to the end of the app detections
+                if line.strip() == f"### END {self.app_label} DETECTIONS ###":
                     break
                 elif self._in_detections:
                     # Check if we are in the detections portion of the conf, and then if we are in a
@@ -164,7 +164,7 @@ class SavedsearchesConf(BaseModel):
                             "Found a non-empty line outside a stanza [see line "
                             f"{self._current_line_no} in {self.path}]."
                         )
-                elif line.strip() == "### ESCU DETECTIONS ###":
+                elif line.strip() == f"### {self.app_label} DETECTIONS ###":
                     # We have hit the detections portion of the conf and we adjust the state
                     # accordingly
                     self._in_detections = True

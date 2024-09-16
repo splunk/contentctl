@@ -19,7 +19,7 @@ from pydantic import (
     ValidationInfo
 )
 
-from contentctl.objects.constants import ESCU_APP_UID, DOWNLOADS_DIRECTORY
+from contentctl.objects.constants import DOWNLOADS_DIRECTORY
 from contentctl.output.yml_writer import YmlWriter
 from contentctl.helper.utils import Utils
 from contentctl.objects.enums import PostTestBehavior, DetectionTestingMode
@@ -286,7 +286,7 @@ class inspect(build):
         default=None,
         description=(
             "Local path to the previous app build for metatdata validation and versioning "
-            "enforcement (defaults to the latest release of ESCU published on Splunkbase)."
+            "enforcement (defaults to the latest release of the app published on Splunkbase)."
         )
     )
     stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
@@ -317,14 +317,17 @@ class inspect(build):
         latest version is downloaded from Splunkbase and it's filepath is returned, and saved to the
         in-memory config (so download doesn't happen twice in the same run).
 
-        :returns: Path object to previous ESCU build
+        :returns: Path object to previous app build
         :rtype: :class:`pathlib.Path`
         """
         previous_build_path = self.previous_build
         # Download the previous build as the latest release on Splunkbase if no path was provided
         if previous_build_path is None:
-            print("Downloading latest ESCU build from Splunkbase to serve as previous build during validation...")
-            app = SplunkApp(app_uid=ESCU_APP_UID)
+            print(
+                f"Downloading latest {self.app.label} build from Splunkbase to serve as previous "
+                "build during validation..."
+            )
+            app = SplunkApp(app_uid=self.app.uid)
             previous_build_path = app.download(
                 out=pathlib.Path(DOWNLOADS_DIRECTORY),
                 username=self.splunk_api_username,

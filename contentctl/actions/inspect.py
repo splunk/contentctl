@@ -279,7 +279,7 @@ class Inspect:
         """
         # TODO (#282): We should be inspect the same artifact we're passing around from the
         #   build stage ideally
-        # Unpack the savedsearch.conf of each ESCU package
+        # Unpack the savedsearch.conf of each app package
         current_build_conf = SavedsearchesConf.init_from_package(
             package_path=config.getPackageFilePath(include_version=False),
             app_name=config.app.label,

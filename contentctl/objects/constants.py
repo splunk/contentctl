@@ -138,8 +138,5 @@ RBA_OBSERVABLE_ROLE_MAPPING = {
     "Victim": 1
 }
 
-# The app UID in Splunkbase of ESCU
-ESCU_APP_UID = 3449
-
 # The relative path to the directory where any apps/packages will be downloaded
 DOWNLOADS_DIRECTORY = "downloads"

@@ -1,37 +1,44 @@
 from __future__ import annotations
+
+from os import environ
+from datetime import datetime, UTC
+from typing import Optional, Any, List, Union, Self
+import random
+from enum import StrEnum, auto
+import pathlib
+from urllib.parse import urlparse
+from abc import ABC, abstractmethod
+from functools import partialmethod
+
+import tqdm
+import semantic_version
 from pydantic import (
     BaseModel, Field, field_validator, 
     field_serializer, ConfigDict, DirectoryPath,
     PositiveInt, FilePath, HttpUrl, AnyUrl, model_validator,
     ValidationInfo
 )
-from contentctl.output.yml_writer import YmlWriter
-from os import environ
-from datetime import datetime, UTC
-from typing import Optional,Any,Annotated,List,Union, Self
-import semantic_version
-import random
-from enum import StrEnum, auto
-import pathlib
-from contentctl.helper.utils import Utils
-from urllib.parse import urlparse
-from abc import ABC, abstractmethod
-from contentctl.objects.enums import PostTestBehavior
-from contentctl.objects.detection import Detection
 
-import tqdm
-from functools import partialmethod
+from contentctl.objects.constants import DOWNLOADS_DIRECTORY
+from contentctl.output.yml_writer import YmlWriter
+from contentctl.helper.utils import Utils
+from contentctl.objects.enums import PostTestBehavior, DetectionTestingMode
+from contentctl.objects.detection import Detection
+from contentctl.objects.annotated_types import APPID_TYPE
+from contentctl.helper.splunk_app import SplunkApp
 
 ENTERPRISE_SECURITY_UID = 263
 COMMON_INFORMATION_MODEL_UID = 1621
 
 SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/download"
 
+
+# TODO (#266): disable the use_enum_values configuration
 class App_Base(BaseModel,ABC):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     uid: Optional[int] = Field(default=None)
     title: str = Field(description="Human-readable name used by the app. This can have special characters.")
-    appid: Optional[Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]]= Field(default=None,description="Internal name used by your app. "
+    appid: Optional[APPID_TYPE]= Field(default=None,description="Internal name used by your app. "
                                                                     "It may ONLY have characters, numbers, and underscores. No other characters are allowed.")
     version: str = Field(description="The version of your Content Pack.  This must follow semantic versioning guidelines.")
     description: Optional[str] = Field(default="description of app",description="Free text description of the Content Pack.")
@@ -51,6 +58,8 @@ class App_Base(BaseModel,ABC):
             if not config.getLocalAppDir().exists():
                 config.getLocalAppDir().mkdir(parents=True)
 
+
+# TODO (#266): disable the use_enum_values configuration
 class TestApp(App_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(default=None, description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
@@ -89,13 +98,15 @@ class TestApp(App_Base):
         
         return str(destination)
 
+
+# TODO (#266): disable the use_enum_values configuration
 class CustomApp(App_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     # Fields required for app.conf based on
     # https://docs.splunk.com/Documentation/Splunk/9.0.4/Admin/Appconf
     uid: int = Field(ge=2, lt=100000, default_factory=lambda:random.randint(20000,100000))
     title: str = Field(default="Content Pack",description="Human-readable name used by the app. This can have special characters.")
-    appid: Annotated[str, Field(pattern="^[a-zA-Z0-9_-]+$")]= Field(default="ContentPack",description="Internal name used by your app. "
+    appid: APPID_TYPE = Field(default="ContentPack",description="Internal name used by your app. "
                                                                     "It may ONLY have characters, numbers, and underscores. No other characters are allowed.")
     version: str = Field(default="0.0.1",description="The version of your Content Pack.  This must follow semantic versioning guidelines.", validate_default=True)
 
@@ -149,6 +160,7 @@ class CustomApp(App_Base):
         return str(destination)
 
 
+# TODO (#266): disable the use_enum_values configuration
 class Config_Base(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
 
@@ -164,9 +176,16 @@ class Config_Base(BaseModel):
         return str(path)
 
 class init(Config_Base):
-    pass
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    bare: bool = Field(default=False, description="contentctl normally provides some some example content "
+                       "(macros, stories, data_sources, and/or analytic stories).  This option disables "
+                       "initialization with that additional contnet.  Note that even if --bare is used, it "
+                       "init will still create the directory structure of the app, "
+                       "include the app_template directory with default content, and content in "
+                       "the deployment/ directory (since it is not yet easily customizable).")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class validate(Config_Base):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     enrichments: bool = Field(default=False, description="Enable MITRE, APP, and CVE Enrichments.  "\
@@ -186,7 +205,7 @@ class report(validate):
         return self.path/"reporting/"
 
 
-
+# TODO (#266): disable the use_enum_values configuration
 class build(validate):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     build_path: DirectoryPath = Field(default=DirectoryPath("dist/"), title="Target path for all build outputs")
@@ -225,9 +244,6 @@ class build(validate):
             return self.getBuildDir() / f"{self.app.appid}-{self.app.version}.tar.gz"
         else:
             return self.getBuildDir() / f"{self.app.appid}-latest.tar.gz"
-    
-    def getSSAPath(self)->pathlib.Path:
-        return self.getBuildDir() / "ssa"
 
     def getAPIPath(self)->pathlib.Path:
         return self.getBuildDir() / "api"
@@ -241,10 +257,88 @@ class StackType(StrEnum):
     classic = auto()
     victoria = auto()
 
+
 class inspect(build):
-    splunk_api_username: str = Field(description="Splunk API username used for running appinspect.")
-    splunk_api_password: str = Field(exclude=True, description="Splunk API password used for running appinspect.")
+    splunk_api_username: str = Field(
+        description="Splunk API username used for appinspect and Splunkbase downloads."
+    )
+    splunk_api_password: str = Field(
+        exclude=True,
+        description="Splunk API password used for appinspect and Splunkbase downloads."
+    )
+    enable_metadata_validation: bool = Field(
+        default=False,
+        description=(
+            "Flag indicating whether detection metadata validation and versioning enforcement "
+            "should be enabled."
+        )
+    )
+    enrichments: bool = Field(
+        default=True,
+        description=(
+            "[NOTE: enrichments must be ENABLED for inspect to run. Please adjust your config "
+            f"or CLI invocation appropriately] {validate.model_fields['enrichments'].description}"
+            )
+        )
+    # TODO (cmcginley): wording should change here if we want to be able to download any app from
+    #   Splunkbase
+    previous_build: str | None = Field(
+        default=None,
+        description=(
+            "Local path to the previous app build for metatdata validation and versioning "
+            "enforcement (defaults to the latest release of the app published on Splunkbase)."
+        )
+    )
     stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
+
+    @field_validator("enrichments", mode="after")
+    @classmethod
+    def validate_needed_flags_metadata_validation(cls, v: bool, info: ValidationInfo) -> bool:
+        """
+        Validates that `enrichments` is True for the inspect action
+
+        :param v: the field's value
+        :type v: bool
+        :param info: the ValidationInfo to be used
+        :type info: :class:`pydantic.ValidationInfo`
+
+        :returns: bool, for v
+        :rtype: bool
+        """
+        # Enforce that `enrichments` is True for the inspect action
+        if v is False:
+            raise ValueError("Field `enrichments` must be True for the `inspect` action")
+
+        return v
+
+    def get_previous_package_file_path(self) -> pathlib.Path:
+        """
+        Returns a Path object for the path to the prior package build. If no path was provided, the
+        latest version is downloaded from Splunkbase and it's filepath is returned, and saved to the
+        in-memory config (so download doesn't happen twice in the same run).
+
+        :returns: Path object to previous app build
+        :rtype: :class:`pathlib.Path`
+        """
+        previous_build_path = self.previous_build
+        # Download the previous build as the latest release on Splunkbase if no path was provided
+        if previous_build_path is None:
+            print(
+                f"Downloading latest {self.app.label} build from Splunkbase to serve as previous "
+                "build during validation..."
+            )
+            app = SplunkApp(app_uid=self.app.uid)
+            previous_build_path = app.download(
+                out=pathlib.Path(DOWNLOADS_DIRECTORY),
+                username=self.splunk_api_username,
+                password=self.splunk_api_password,
+                is_dir=True,
+                overwrite=True
+            )
+            print(f"Latest release downloaded from Splunkbase to: {previous_build_path}")
+            self.previous_build = str(previous_build_path)
+        return pathlib.Path(previous_build_path)
+
 
 class NewContentType(StrEnum):
     detection = auto()
@@ -255,6 +349,7 @@ class new(Config_Base):
     type: NewContentType = Field(default=NewContentType.detection, description="Specify the type of content you would like to create.")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class deploy_acs(inspect):
     model_config = ConfigDict(use_enum_values=True,validate_default=False, arbitrary_types_allowed=True)
     #ignore linter error
@@ -262,6 +357,7 @@ class deploy_acs(inspect):
     splunk_cloud_stack: str = Field(description="The name of your Splunk Cloud Stack")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class Infrastructure(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     splunk_app_username:str = Field(default="admin", description="Username for logging in to your Splunk Server")
@@ -273,11 +369,13 @@ class Infrastructure(BaseModel):
     instance_name: str = Field(...)
 
 
+# TODO (#266): disable the use_enum_values configuration
 class Container(Infrastructure):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     instance_address:str = Field(default="localhost", description="Address of your splunk server.")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class ContainerSettings(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     leave_running: bool = Field(default=True, description="Leave container running after it is first "
@@ -302,11 +400,14 @@ class All(BaseModel):
     #Doesn't need any extra logic
     pass
 
+
+# TODO (#266): disable the use_enum_values configuration
 class Changes(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     target_branch:str = Field(...,description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
 
 
+# TODO (#266): disable the use_enum_values configuration
 class Selected(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     files:List[FilePath] = Field(...,description="List of detection files to test, separated by spaces.")
@@ -672,17 +773,14 @@ class test_common(build):
 
     def getModeName(self)->str:
         if isinstance(self.mode, All):
-            return "All"
+            return DetectionTestingMode.all.value
         elif isinstance(self.mode, Changes):
-            return "Changes"
+            return DetectionTestingMode.changes.value
         else:
-            return "Selected"
+            return DetectionTestingMode.selected.value
 
 
-    
-
-
-
+# TODO (#266): disable the use_enum_values configuration
 class test(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     container_settings:ContainerSettings = ContainerSettings()
@@ -747,6 +845,9 @@ class test(test_common):
 
 
 TEST_ARGS_ENV = "CONTENTCTL_TEST_INFRASTRUCTURES"
+
+
+# TODO (#266): disable the use_enum_values configuration
 class test_servers(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     test_instances:List[Infrastructure] = Field([],description="Test against one or more preconfigured servers.", validate_default=True)

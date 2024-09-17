@@ -25,7 +25,7 @@ class AttackEnrichment(BaseModel):
     
     def getEnrichmentByMitreID(self, mitre_id:MITRE_ATTACK_ID_TYPE)->MitreAttackEnrichment:
         if not self.use_enrichment:
-            raise Exception(f"Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
+            raise Exception("Error, trying to add Mitre Enrichment, but use_enrichment was set to False")
         
         enrichment = self.data.get(mitre_id, None)
         if enrichment is not None:

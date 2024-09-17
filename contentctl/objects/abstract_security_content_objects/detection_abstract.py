@@ -388,7 +388,11 @@ class Detection_Abstract(SecurityContentObject):
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        
+
+        # NOTE: The `inspect` action is HIGHLY sensitive to the structure of the metadata line in
+        # the detection stanza in savedsearches.conf. Additive operations (e.g. a new field in the
+        # dict below) should not have any impact, but renaming or removing any of these fields will
+        # break the `inspect` action.
         return {
             'detection_id': str(self.id),
             'deprecated': '1' if self.status == DetectionStatus.deprecated.value else '0',          # type: ignore

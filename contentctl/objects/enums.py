@@ -54,7 +54,6 @@ class SecurityContentType(enum.Enum):
     deployments = 7
     investigations = 8
     unit_tests = 9
-    ssa_detections = 10
     data_sources = 11
     dashboards = 12
 
@@ -71,7 +70,6 @@ class SecurityContentType(enum.Enum):
 
 class SecurityContentProduct(enum.Enum):
     SPLUNK_APP = 1
-    SSA = 2
     API = 3
     CUSTOM = 4
 

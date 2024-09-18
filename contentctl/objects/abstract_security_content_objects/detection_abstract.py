@@ -104,15 +104,13 @@ class Detection_Abstract(SecurityContentObject):
 
 
         Args:
-            value (Union[str, dict[str,Any]]): The search. It can either be a string (and should be
-                SPL or a dict, in which case it is Sigma-formatted.
+            value (str): The SPL search. It must be an SPL-formatted string.
             info (ValidationInfo): The validation info can contain a number of different objects.
                 Today it only contains the director.
 
         Returns:
-            Union[str, dict[str,Any]]: The search, either in sigma or SPL format.
-        """        
-        
+            str: The search, as an SPL formatted string.
+        """
         
         # Otherwise, the search is SPL.
 
@@ -343,12 +341,13 @@ class Detection_Abstract(SecurityContentObject):
     @property
     def providing_technologies(self) -> List[ProvidingTechnology]:
         return ProvidingTechnology.getProvidingTechFromSearch(self.search)
-        
-    
+
+    # TODO (#247): Refactor the risk property of detection_abstract
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
         risk_objects: list[dict[str, str | int]] = []
+        # TODO (#246): "User Name" type should map to a "user" risk object and not "other"
         risk_object_user_types = {'user', 'username', 'email address'}
         risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
         process_threat_object_types = {'process name', 'process'}
@@ -410,7 +409,11 @@ class Detection_Abstract(SecurityContentObject):
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        
+
+        # NOTE: The `inspect` action is HIGHLY sensitive to the structure of the metadata line in
+        # the detection stanza in savedsearches.conf. Additive operations (e.g. a new field in the
+        # dict below) should not have any impact, but renaming or removing any of these fields will
+        # break the `inspect` action.
         return {
             'detection_id': str(self.id),
             'deprecated': '1' if self.status == DetectionStatus.deprecated.value else '0',          # type: ignore

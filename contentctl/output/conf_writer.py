@@ -35,7 +35,10 @@ class ConfWriter():
         # Failing to do so will result in an improperly formatted conf files that
         # cannot be parsed
         if isinstance(obj,str):
-            return obj.replace(f"\n"," \\\n")
+            # Remove leading and trailing characters. Conf parsers may erroneously 
+            # Parse fields if they have leading or trailing newlines/whitespace and we 
+            # probably don't want that anyway as it doesn't look good in output
+            return obj.strip().replace(f"\n"," \\\n")
         else:
             return obj
 

@@ -287,7 +287,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             return
         except Exception as e:
             self.pbar.write(
-                f"The follwoing roles do not exist:'{enterprise_security_roles}: {str(e)}"
+                f"The following role(s) do not exist:'{enterprise_security_roles}: {str(e)}"
             )
 
         self.get_conn().roles.post(

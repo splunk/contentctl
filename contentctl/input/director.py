@@ -18,7 +18,7 @@ from contentctl.objects.playbook import Playbook
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
-from contentctl.objects.atomic import AtomicTest
+from contentctl.objects.atomic import AtomicEnrichment
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.event_source import EventSource
@@ -39,7 +39,7 @@ from contentctl.helper.utils import Utils
 class DirectorOutputDto:
     # Atomic Tests are first because parsing them 
     # is far quicker than attack_enrichment
-    atomic_tests: None | list[AtomicTest]
+    atomic_enrichment: AtomicEnrichment
     attack_enrichment: AttackEnrichment
     cve_enrichment: CveEnrichment
     detections: list[Detection]
@@ -145,7 +145,7 @@ class Director():
                 f for f in files 
             ]
         else:
-            raise (Exception(f"Cannot createSecurityContent for unknown product."))
+            raise (Exception(f"Cannot createSecurityContent for unknown product {contentType}."))
 
         validation_errors = []
 

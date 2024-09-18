@@ -1,6 +1,6 @@
 from __future__ import annotations
 import uuid
-from typing import TYPE_CHECKING, List, Optional, Annotated, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 from pydantic import (
     BaseModel,
     Field,
@@ -32,7 +32,7 @@ from contentctl.objects.enums import (
     RiskLevel,
     SecurityContentProductName
 )
-from contentctl.objects.atomic import AtomicTest
+from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
 # TODO (#266): disable the use_enum_values configuration
@@ -240,7 +240,7 @@ class DetectionTags(BaseModel):
         if output_dto is None:
             raise ValueError("Context not provided to detection.detection_tags.atomic_guid validator")
 
-        all_tests: None | List[AtomicTest] = output_dto.atomic_tests
+        atomic_enrichment: AtomicEnrichment = output_dto.atomic_enrichment
 
         matched_tests: List[AtomicTest] = []
         missing_tests: List[UUID4] = []
@@ -254,7 +254,7 @@ class DetectionTags(BaseModel):
                 badly_formatted_guids.append(str(atomic_guid_str))
                 continue
             try:
-                matched_tests.append(AtomicTest.getAtomicByAtomicGuid(atomic_guid, all_tests))
+                matched_tests.append(atomic_enrichment.getAtomic(atomic_guid))
             except Exception:
                 missing_tests.append(atomic_guid)
 
@@ -265,7 +265,7 @@ class DetectionTags(BaseModel):
                 f"\n\tPlease review the output above for potential exception(s) when parsing the "
                 "Atomic Red Team Repo."
                 "\n\tVerify that these auto_generated_guid exist and try updating/pulling the "
-                f"repo again.: {[str(guid) for guid in missing_tests]}"
+                f"repo again: {[str(guid) for guid in missing_tests]}"
             )
         else:
             missing_tests_string = ""
@@ -278,6 +278,6 @@ class DetectionTags(BaseModel):
             raise ValueError(f"{bad_guids_string}{missing_tests_string}")
 
         elif len(missing_tests) > 0:
-            print(missing_tests_string)
+            raise ValueError(missing_tests_string)
 
         return matched_tests + [AtomicTest.AtomicTestWhenTestIsMissing(test) for test in missing_tests]

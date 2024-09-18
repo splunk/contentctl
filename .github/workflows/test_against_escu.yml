@@ -53,10 +53,11 @@ jobs:
           poetry install --no-interaction
 
 
-      - name: Clone the AtomicRedTeam Repo (for extended validation)
+      - name: Clone the AtomicRedTeam Repo and the Mitre/CTI repos for testing enrichments  
         run: |
           cd security_content
-          git clone --depth 1 https://github.com/redcanaryco/atomic-red-team
+          git clone --single-branch https://github.com/redcanaryco/atomic-red-team external_repos/atomic-red-team
+          git clone --single-branch https://github.com/mitre/cti external_repos/cti
 
       
       # We do not separately run validate and build 

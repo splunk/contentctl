@@ -410,13 +410,13 @@ class NistCategory(str, enum.Enum):
 class RiskSeverity(str,enum.Enum):
     # Levels taken from the following documentation link
     # https://docs.splunk.com/Documentation/ES/7.3.2/User/RiskScoring
-    # 20 - Info (0-20 for us)
-    # 40 - Low (21-40 for us)
-    # 60 - Medium (41-60 for us)
-    # 80 - High (61-80 for us)
-    # 100 - Critical (81 - 100 for us)
-    INFO = "Info"
-    LOW = "Low"
-    MEDIUM = "Medium"
-    HIGH = "High"
-    CRITICAL = "Critical"
+    # 20 - info (0-20 for us)
+    # 40 - low (21-40 for us)
+    # 60 - medium (41-60 for us)
+    # 80 - high (61-80 for us)
+    # 100 - critical (81 - 100 for us)
+    INFO = "info"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"

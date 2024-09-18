@@ -35,7 +35,7 @@ from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.base_test_result import TestResultStatus
-
+from contentctl.objects.drilldown import Drilldown
 # from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
@@ -73,6 +73,7 @@ class Detection_Abstract(SecurityContentObject):
     test_groups: Union[list[TestGroup], None] = Field(None, validate_default=True)
 
     data_source_objects: list[DataSource] = []
+    drilldown_searches: list[Drilldown] = Field(default=[], description="A list of Drilldowns that should be included with this search")
 
     @field_validator("search", mode="before")
     @classmethod
@@ -524,6 +525,15 @@ class Detection_Abstract(SecurityContentObject):
 
         # Derive TestGroups and IntegrationTests, adjust for ManualTests, skip as needed
         self.adjust_tests_and_groups()
+
+        #Add the default drilldown
+        #self.drilldown_searches.append(Drilldown.constructDrilldownFromDetection(self))
+        
+        # Update the search fields with the original search, if required
+        for drilldown in self.drilldown_searches:
+            drilldown.perform_search_substitutions(self)
+        print("adding default drilldown?")
+        self.drilldown_searches.append(Drilldown.constructDrilldownFromDetection(self))
 
     @field_validator('lookups', mode="before")
     @classmethod

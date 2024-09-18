@@ -33,7 +33,6 @@ from contentctl.objects.enums import (
     SecurityContentProductName
 )
 from contentctl.objects.atomic import AtomicTest
-from contentctl.objects.drilldown import Drilldown
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
 # TODO (#266): disable the use_enum_values configuration
@@ -113,7 +112,6 @@ class DetectionTags(BaseModel):
 
     # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
-    drilldown: Drilldown | None = None
     
     # The following validator is temporarily disabled pending further discussions
     # @validator('message')

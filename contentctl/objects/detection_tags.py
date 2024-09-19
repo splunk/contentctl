@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
 from contentctl.objects.observable import Observable
-from contentctl.objects.enums import Cis18Value, AssetType, SecurityDomain, RiskSeverity, KillChainPhase, NistCategory, SecurityContentProductName
 from contentctl.objects.enums import (
     Cis18Value,
     AssetType,

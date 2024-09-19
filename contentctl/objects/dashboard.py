@@ -2,13 +2,13 @@ from typing import Any
 from pydantic import Field, Json, model_validator
 
 import pathlib
-import copy
 from jinja2 import Environment
 import json
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.config import build
+from enum import StrEnum
 
-DEFAULT_DASHBAORD_JINJA2_TEMPLATE = '''<dashboard version="2" theme="light">
+DEFAULT_DASHBAORD_JINJA2_TEMPLATE = '''<dashboard version="2" theme="{{ dashboard.theme }}">
     <label>{{ dashboard.label(config) }}</label>
     <description></description>
     <definition><![CDATA[
@@ -23,11 +23,15 @@ DEFAULT_DASHBAORD_JINJA2_TEMPLATE = '''<dashboard version="2" theme="light">
     ]]></meta>
 </dashboard>'''
 
+class DashboardTheme(StrEnum):
+    light = "light"
+    dark = "dark"
+
 class Dashboard(SecurityContentObject):
     j2_template: str = Field(default=DEFAULT_DASHBAORD_JINJA2_TEMPLATE, description="Jinja2 Template used to construct the dashboard")
     description: str = Field(...,description="A description of the dashboard. This does not have to match "
                              "the description of the dashboard in the JSON file.", max_length=10000)
-
+    theme: DashboardTheme = Field(default=DashboardTheme.dark, description="The theme of the dashboard. Choose between 'light' and 'dark'.")
     json_obj: Json[dict[str,Any]] = Field(..., description="Valid JSON object that describes the dashboard")
     
     

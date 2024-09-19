@@ -1,3 +1,5 @@
+# Use for calculation of maximum length of name field
+from contentctl.objects.enums import SecurityDomain
 
 ATTACK_TACTICS_KILLCHAIN_MAPPING = {
     "Reconnaissance": "Reconnaissance",
@@ -140,3 +142,28 @@ RBA_OBSERVABLE_ROLE_MAPPING = {
 
 # The relative path to the directory where any apps/packages will be downloaded
 DOWNLOADS_DIRECTORY = "downloads"
+
+# Maximum length of the name field for a search.
+# This number is derived from a limitation that exists in 
+# ESCU where a search cannot be edited, due to validation
+# errors, if its name is longer than 99 characters.
+# When an saved search is cloned in Enterprise Security User Interface,
+# it is wrapped in the following: 
+# {Detection.tags.security_domain.value} - {SEARCH_STANZA_NAME} - Rule
+# Similarly, when we generate the search stanza name in contentctl, it
+# is app.label - detection.name - Rule
+# However, in product the search name is:
+# {CustomApp.label} - {detection.name} - Rule,
+# or in ESCU:
+# ESCU - {detection.name} - Rule,
+# this gives us a maximum length below.
+# When an ESCU search is cloned, it will 
+# have a full name like (the following is NOT a typo):
+# Endpoint - ESCU - Name of Search From YML File - Rule - Rule
+# The math below accounts for all these caveats
+ES_MAX_STANZA_LENGTH = 99
+CONTENTCTL_STANZA_NAME_FORMAT_TEMPLATE = "{app_label} - {detection_name} - Rule"
+ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE = "{security_domain_value} - {search_name} - Rule"
+SECURITY_DOMAIN_MAX_LENGTH = max([len(SecurityDomain[value]) for value in SecurityDomain._member_map_])
+CONTENTCTL_MAX_STANZA_LENGTH = ES_MAX_STANZA_LENGTH - len(ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE.format(security_domain_value="X"*SECURITY_DOMAIN_MAX_LENGTH,search_name=""))
+CONTENTCTL_MAX_SEARCH_NAME_LENGTH = CONTENTCTL_MAX_STANZA_LENGTH - len(CONTENTCTL_STANZA_NAME_FORMAT_TEMPLATE.format(app_label="ESCU", detection_name=""))

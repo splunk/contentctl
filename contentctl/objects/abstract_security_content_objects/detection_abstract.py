@@ -40,6 +40,12 @@ from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 import datetime
+from contentctl.objects.constants import (
+    ES_MAX_STANZA_LENGTH,
+    ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE,
+    CONTENTCTL_MAX_SEARCH_NAME_LENGTH
+)
+
 MISSING_SOURCES: set[str] = set()
 
 # Those AnalyticsTypes that we do not test via contentctl
@@ -51,7 +57,7 @@ SKIPPED_ANALYTICS_TYPES: set[str] = {
 # TODO (#266): disable the use_enum_values configuration
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
-    name:str = Field(...,max_length=67)
+    name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
@@ -74,26 +80,19 @@ class Detection_Abstract(SecurityContentObject):
 
     data_source_objects: list[DataSource] = []
 
-    def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=99)->str:
-        label = self.get_conf_stanza_name(app)
-        label_after_saving_in_product = f"{self.tags.security_domain.value} - {label} - Rule"
+    def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=ES_MAX_STANZA_LENGTH)->str:
+        stanza_name = self.get_conf_stanza_name(app)
+        stanza_name_after_saving_in_es = ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE.format(
+            security_domain_value = self.tags.security_domain.value, 
+            search_name = stanza_name
+            )
+        
     
-        if len(label_after_saving_in_product) > max_stanza_length:
+        if len(stanza_name_after_saving_in_es) > max_stanza_length:
             raise ValueError(f"label may only be {max_stanza_length} characters to allow updating in-product, "
-                             f"but stanza was actually {len(label_after_saving_in_product)} characters: '{label_after_saving_in_product}' ")
+                             f"but stanza was actually {len(stanza_name_after_saving_in_es)} characters: '{stanza_name_after_saving_in_es}' ")
         
-        return label
-    
-    def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=81)->str:
-        stanza_name = f"{app.label} - {self.name} - Rule"
-        if len(stanza_name) > max_stanza_length:
-            raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
-                             f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
-        #print(f"Stanza            Length[{len(stanza_name)}]")
-        return stanza_name
-    
-        
-    
+        return stanza_name    
 
     @field_validator("search", mode="before")
     @classmethod
@@ -674,7 +673,7 @@ class Detection_Abstract(SecurityContentObject):
         else:
             self.tags.nist = [NistCategory.DE_AE]
         return self
-    
+        
 
     @model_validator(mode="after")
     def ensureThrottlingFieldsExist(self):
@@ -684,10 +683,6 @@ class Detection_Abstract(SecurityContentObject):
         '''
         if self.tags.throttling is None:
             # No throttling configured for this detection
-            return self
-        
-        if not isinstance(self.search, str):
-            # Search is sigma-formatted, so we cannot perform this validation.
             return self
 
         missing_fields:list[str] = [field for field in self.tags.throttling.fields if field not in self.search]

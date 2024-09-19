@@ -5,8 +5,10 @@ if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment
     from contentctl.objects.security_content_object import SecurityContentObject
     from contentctl.input.director import DirectorOutputDto
+    from contentctl.objects.config import CustomApp
 
 from contentctl.objects.enums import AnalyticsType
+from contentctl.objects.constants import CONTENTCTL_MAX_STANZA_LENGTH, CONTENTCTL_STANZA_NAME_FORMAT_TEMPLATE
 import abc
 import uuid
 import datetime
@@ -56,7 +58,14 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             "description": self.description,
             "references": [str(url) for url in self.references or []]
         }
-
+    
+    def get_conf_stanza_name(self, app:CustomApp, max_stanza_length:int=CONTENTCTL_MAX_STANZA_LENGTH)->str:
+        stanza_name = CONTENTCTL_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=self.name)
+        if len(stanza_name) > max_stanza_length:
+            raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
+                             f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
+        return stanza_name
+    
     @staticmethod
     def objectListToNameList(objects: list[SecurityContentObject]) -> list[str]:
         return [object.getName() for object in objects]

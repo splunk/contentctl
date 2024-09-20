@@ -31,7 +31,7 @@ class Dashboard(SecurityContentObject):
     j2_template: str = Field(default=DEFAULT_DASHBAORD_JINJA2_TEMPLATE, description="Jinja2 Template used to construct the dashboard")
     description: str = Field(...,description="A description of the dashboard. This does not have to match "
                              "the description of the dashboard in the JSON file.", max_length=10000)
-    theme: DashboardTheme = Field(default=DashboardTheme.dark, description="The theme of the dashboard. Choose between 'light' and 'dark'.")
+    theme: DashboardTheme = Field(default=DashboardTheme.light, description="The theme of the dashboard. Choose between 'light' and 'dark'.")
     json_obj: Json[dict[str,Any]] = Field(..., description="Valid JSON object that describes the dashboard")
     
     

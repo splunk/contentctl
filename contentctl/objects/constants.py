@@ -162,8 +162,11 @@ DOWNLOADS_DIRECTORY = "downloads"
 # Endpoint - ESCU - Name of Search From YML File - Rule - Rule
 # The math below accounts for all these caveats
 ES_MAX_STANZA_LENGTH = 99
-CONTENTCTL_STANZA_NAME_FORMAT_TEMPLATE = "{app_label} - {detection_name} - Rule"
+CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE = "{app_label} - {detection_name} - Rule"
+CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE = "{app_label} - {detection_name}"
+CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE = "{app_label} - {detection_name} - Response Task"
+
 ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE = "{security_domain_value} - {search_name} - Rule"
 SECURITY_DOMAIN_MAX_LENGTH = max([len(SecurityDomain[value]) for value in SecurityDomain._member_map_])
 CONTENTCTL_MAX_STANZA_LENGTH = ES_MAX_STANZA_LENGTH - len(ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE.format(security_domain_value="X"*SECURITY_DOMAIN_MAX_LENGTH,search_name=""))
-CONTENTCTL_MAX_SEARCH_NAME_LENGTH = CONTENTCTL_MAX_STANZA_LENGTH - len(CONTENTCTL_STANZA_NAME_FORMAT_TEMPLATE.format(app_label="ESCU", detection_name=""))
+CONTENTCTL_MAX_SEARCH_NAME_LENGTH = CONTENTCTL_MAX_STANZA_LENGTH - len(CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(app_label="ESCU", detection_name=""))

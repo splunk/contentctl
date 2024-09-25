@@ -1,13 +1,13 @@
 
 ### RESPONSE TASKS ###
 
-{% for detection in objects %}
-{% if (detection.type == 'Investigation') %}
-[savedsearch://{{ detection.get_conf_stanza_name(app) }}]
+{% for investigation in objects %}
+{% if (investigation.type == 'Investigation') %}
+[savedsearch://{{ investigation.get_response_task_name(app) }}]
 type = investigation
 explanation = none
-{% if detection.how_to_implement is defined %}
-how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
+{% if investigation.how_to_implement is defined %}
+how_to_implement = {{ investigation.how_to_implement | escapeNewlines() }}
 {% else %}
 how_to_implement = none
 {% endif %}

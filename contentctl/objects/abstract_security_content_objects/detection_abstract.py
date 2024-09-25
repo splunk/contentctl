@@ -43,7 +43,8 @@ import datetime
 from contentctl.objects.constants import (
     ES_MAX_STANZA_LENGTH,
     ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE,
-    CONTENTCTL_MAX_SEARCH_NAME_LENGTH
+    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
+    CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE
 )
 
 MISSING_SOURCES: set[str] = set()
@@ -79,6 +80,12 @@ class Detection_Abstract(SecurityContentObject):
     test_groups: list[TestGroup] = []
 
     data_source_objects: list[DataSource] = []
+
+    def get_conf_stanza_name(self, app:CustomApp)->str:
+        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=self.name)
+        self.check_conf_stanza_max_length(stanza_name)
+        return stanza_name
+    
 
     def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=ES_MAX_STANZA_LENGTH)->str:
         stanza_name = self.get_conf_stanza_name(app)

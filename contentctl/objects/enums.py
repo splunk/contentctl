@@ -415,7 +415,7 @@ class RiskSeverity(str,enum.Enum):
     # 60 - medium (41-60 for us)
     # 80 - high (61-80 for us)
     # 100 - critical (81 - 100 for us)
-    INFO = "info"
+    INFORMATIONAL = "informational"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

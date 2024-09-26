@@ -16,6 +16,7 @@ from pydantic import (
     model_validator
 )
 from contentctl.objects.story import Story
+from contentctl.objects.throttling import Throttling
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
@@ -29,7 +30,6 @@ from contentctl.objects.enums import (
     RiskSeverity,
     KillChainPhase,
     NistCategory,
-    RiskLevel,
     SecurityContentProductName
 )
 from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
@@ -49,6 +49,23 @@ class DetectionTags(BaseModel):
     @property
     def risk_score(self) -> int:
         return round((self.confidence * self.impact)/100)
+    
+    @computed_field
+    @property
+    def severity(self)->RiskSeverity:
+        if 0 <= self.risk_score <= 20:
+            return RiskSeverity.INFORMATIONAL
+        elif 20 < self.risk_score <= 40:
+            return RiskSeverity.LOW
+        elif 40 < self.risk_score <= 60:
+            return RiskSeverity.MEDIUM
+        elif 60 < self.risk_score <= 80:
+            return RiskSeverity.HIGH
+        elif 80 < self.risk_score <= 100:
+            return RiskSeverity.CRITICAL
+        else:
+            raise Exception(f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}")
+
 
     mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
@@ -58,19 +75,8 @@ class DetectionTags(BaseModel):
     message: str = Field(...)
     product: list[SecurityContentProductName] = Field(..., min_length=1)
     required_fields: list[str] = Field(min_length=1)
-
+    throttling: Optional[Throttling] = None
     security_domain: SecurityDomain = Field(...)
-
-    @computed_field
-    @property
-    def risk_severity(self) -> RiskSeverity:
-        if self.risk_score >= 80:
-            return RiskSeverity('high')
-        elif (self.risk_score >= 50 and self.risk_score <= 79):
-            return RiskSeverity('medium')
-        else:
-            return RiskSeverity('low')
-
     cve: List[CVE_TYPE] = []
     atomic_guid: List[AtomicTest] = []
     drilldown_search: Optional[str] = None
@@ -79,10 +85,6 @@ class DetectionTags(BaseModel):
     mitre_attack_enrichments: List[MitreAttackEnrichment] = Field([], validate_default=True)
     confidence_id: Optional[PositiveInt] = Field(None, ge=1, le=3)
     impact_id: Optional[PositiveInt] = Field(None, ge=1, le=5)
-    # context_ids: list = None
-    risk_level_id: Optional[NonNegativeInt] = Field(None, le=4)
-    risk_level: Optional[RiskLevel] = None
-    # observable_str: str = None
     evidence_str: Optional[str] = None
 
     @computed_field
@@ -158,7 +160,7 @@ class DetectionTags(BaseModel):
             "message": self.message,
             "risk_score": self.risk_score,
             "security_domain": self.security_domain,
-            "risk_severity": self.risk_severity,
+            "risk_severity": self.severity,
             "mitre_attack_id": self.mitre_attack_id,
             "mitre_attack_enrichments": self.mitre_attack_enrichments
         }

@@ -8,25 +8,13 @@ if TYPE_CHECKING:
     from contentctl.objects.investigation import Investigation
     from contentctl.objects.baseline import Baseline
     from contentctl.objects.data_source import DataSource
+    from contentctl.objects.config import CustomApp
 
 from contentctl.objects.security_content_object import SecurityContentObject
-
-
-
-
-
-#from contentctl.objects.investigation import Investigation
-
-
 
 class Story(SecurityContentObject):
     narrative: str = Field(...)
     tags: StoryTags = Field(...)
-
-    # enrichments
-    #detection_names: List[str] = []
-    #investigation_names: List[str] = []
-    #baseline_names: List[str] = []
 
     # These are updated when detection and investigation objects are created.
     # Specifically in the model_post_init functions
@@ -46,9 +34,9 @@ class Story(SecurityContentObject):
         return sorted(list(data_source_objects))
 
 
-    def storyAndInvestigationNamesWithApp(self, app_name:str)->List[str]:
-        return [f"{app_name} - {name} - Rule" for name in self.detection_names] + \
-               [f"{app_name} - {name} - Response Task" for name in self.investigation_names]
+    def storyAndInvestigationNamesWithApp(self, app:CustomApp)->List[str]:
+        return [detection.get_conf_stanza_name(app) for detection in self.detections] + \
+               [investigation.get_response_task_name(app) for investigation in self.investigations]
         
     @model_serializer
     def serialize_model(self):

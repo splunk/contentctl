@@ -112,12 +112,12 @@ alert.suppress.fields = {{ detection.tags.throttling.conf_formatted_fields() }}
 alert.suppress.period = {{ detection.tags.throttling.period }}
 {% endif %}
 search = {{ detection.search | escapeNewlines() }}
-{% if detection.tags.drilldown%}
-action.notable.param.drilldown_name = {{ detection.tags.drilldown.name }}
-action.notable.param.drilldown_search = {{ detection.tags.drilldown.search | escapeNewlines()}}
-action.notable.param.drilldown_earliest_offset = {{ detection.tags.drilldown.earliest_offset }}
-action.notable.param.drilldown_latest_offset = {{ detection.tags.drilldown.latest_offset }}
-{% endif %}
+{% for drilldown_search in detection.drilldown_searches%}
+action.notable.param.drilldown_name = {{ drilldown_search.name }}
+action.notable.param.drilldown_search = {{ drilldown_search.search | escapeNewlines()}}
+action.notable.param.drilldown_earliest_offset = {{ drilldown_search.earliest_offset }}
+action.notable.param.drilldown_latest_offset = {{ drilldown_search.latest_offset }}
+{% endfor %}
 {% endif %}
 
 {% endfor %}

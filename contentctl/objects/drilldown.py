@@ -25,14 +25,14 @@ class Drilldown(BaseModel):
 
     @classmethod
     def constructDrilldownsFromDetection(cls, detection: Detection) -> list[Drilldown]:
-        if len([f"${o.name}$" for o in detection.tags.observable if o.role[0] == "Victim"]) == 0 and detection.type != AnalyticsType.Hunting:
-            print("no victim!")
-            # print(detection.tags.observable)
-            # print(detection.file_path)
+        victim_observables = [o for o in detection.tags.observable if o.role[0] == "Victim"] 
+        if len(victim_observables) == 0 or detection.type == AnalyticsType.Hunting:
+            # No victims, so no drilldowns
+            return []
 
-        variableNamesString = ' and'.join([f"${o.name}$" for o in detection.tags.observable if o.type[0] == "Victim"])
-        nameField = "View the detection results for }" + variableNamesString
-        appendedSearch =  " | search " + ' '.join([f"o.name = ${o.name}$" for o in detection.tags.observable])
+        variableNamesString = ' and '.join([f"${o.name}$" for o in victim_observables])
+        nameField = f"View the detection results for {variableNamesString}"
+        appendedSearch =  " | search " + ' '.join([f"{o.name} = ${o.name}$" for o in victim_observables])
         search_field = f"{detection.search}{appendedSearch}"
         detection_results = cls(name=nameField, earliest_offset=EARLIEST_OFFSET, latest_offset=LATEST_OFFSET, search=search_field)
         

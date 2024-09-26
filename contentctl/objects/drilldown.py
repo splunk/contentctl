@@ -9,8 +9,16 @@ SEARCH_PLACEHOLDER = "%original_detection_search%"
 class Drilldown(BaseModel):
     name: str = Field(..., description="The name of the drilldown search", min_length=5)
     search: str = Field(..., description="The text of a drilldown search. This must be valid SPL.", min_length=1)
-    earliest_offset:str = Field(default="$info_min_time$", description="Earliest offset time for the drilldown search", min_length= 1)
-    latest_offset:str = Field(default="$info_max_time$", description="Latest offset time for the driolldown search", min_length= 1)
+    earliest_offset:str = Field(..., 
+                                description="Earliest offset time for the drilldown search. "
+                                "The most common value for this field is '$info_min_time$', "
+                                "but it is NOT the default value and must be supplied explicitly.", 
+                                min_length= 1)
+    latest_offset:str = Field(..., 
+                              description="Latest offset time for the driolldown search. "
+                              "The most common value for this field is '$info_max_time$', "
+                              "but it is NOT the default value and must be supplied explicitly.", 
+                              min_length= 1)
 
     @classmethod
     def constructDrilldownFromDetection(cls, detection: Detection) -> Drilldown:

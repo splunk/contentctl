@@ -8,6 +8,7 @@ from xmlrpc.client import APPLICATION_ERROR
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 import pathlib
 from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.dashboard import Dashboard
 from contentctl.objects.config import build
 import xml.etree.ElementTree as ET
 
@@ -61,7 +62,7 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         template = j2_env.get_template(template_name)
         
-        output = template.render(objects=objects, APP_NAME=config.app.label, currentDate=datetime.datetime.now(datetime.UTC).date().isoformat())
+        output = template.render(objects=objects, app=config.app, currentDate=datetime.datetime.now(datetime.UTC).date().isoformat())
         
         output_path = config.getPackageDirectoryPath()/app_output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -94,7 +95,7 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         template = j2_env.get_template(template_name)
         
-        output = template.render(objects=objects, APP_NAME=config.app.label)
+        output = template.render(objects=objects, app=config.app)
         
         output_path = config.getPackageDirectoryPath()/app_output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -106,6 +107,22 @@ class ConfWriter():
         ConfWriter.validateXmlFile(output_path) 
 
     
+
+    @staticmethod
+    def writeDashboardFiles(config:build, dashboards:list[Dashboard])->set[pathlib.Path]:
+        written_files:set[pathlib.Path] = set()
+        for dashboard in dashboards:
+            output_file_path = dashboard.getOutputFilepathRelativeToAppRoot(config)
+            # Check that the full output path does not exist so that we are not having an
+            # name collision with a file in app_template
+            if (config.getPackageDirectoryPath()/output_file_path).exists():
+                raise FileExistsError(f"ERROR: Overwriting Dashboard File {output_file_path}. Does this file exist in {config.getAppTemplatePath()} AND {config.path/'dashboards'}?")
+                
+            ConfWriter.writeXmlFileHeader(output_file_path, config)
+            dashboard.writeDashboardFile(ConfWriter.getJ2Environment(), config)
+            ConfWriter.validateXmlFile(config.getPackageDirectoryPath()/output_file_path)
+            written_files.add(output_file_path)
+        return written_files
 
 
     @staticmethod
@@ -142,7 +159,7 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         
         template = j2_env.get_template(template_name)
-        output = template.render(objects=objects, APP_NAME=config.app.label)
+        output = template.render(objects=objects, app=config.app)
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'a') as f:

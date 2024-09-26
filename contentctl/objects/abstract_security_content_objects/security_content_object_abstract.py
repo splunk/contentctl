@@ -5,8 +5,10 @@ if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment
     from contentctl.objects.security_content_object import SecurityContentObject
     from contentctl.input.director import DirectorOutputDto
+    from contentctl.objects.config import CustomApp
 
 from contentctl.objects.enums import AnalyticsType
+from contentctl.objects.constants import CONTENTCTL_MAX_STANZA_LENGTH
 import abc
 import uuid
 import datetime
@@ -31,14 +33,14 @@ NO_FILE_NAME = "NO_FILE_NAME"
 
 # TODO (#266): disable the use_enum_values configuration
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    model_config = ConfigDict(use_enum_values=True, validate_default=True)
-
-    name: str = Field(...)
-    author: str = Field("Content Author", max_length=255)
-    date: datetime.date = Field(datetime.date.today())
-    version: NonNegativeInt = 1
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)  # we set a default here until all content has a uuid
-    description: str = Field("Enter Description Here", max_length=10000)
+    model_config = ConfigDict(use_enum_values=True,validate_default=True)
+    
+    name: str = Field(...,max_length=99)
+    author: str = Field(...,max_length=255)
+    date: datetime.date = Field(...)
+    version: NonNegativeInt = Field(...)
+    id: uuid.UUID = Field(...) #we set a default here until all content has a uuid
+    description: str = Field(...,max_length=10000)
     file_path: Optional[FilePath] = None
     references: Optional[List[HttpUrl]] = None
 
@@ -56,7 +58,13 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             "description": self.description,
             "references": [str(url) for url in self.references or []]
         }
-
+    
+    
+    def check_conf_stanza_max_length(self, stanza_name:str, max_stanza_length:int=CONTENTCTL_MAX_STANZA_LENGTH) -> None:
+        if len(stanza_name) > max_stanza_length:
+            raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
+                             f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
+    
     @staticmethod
     def objectListToNameList(objects: list[SecurityContentObject]) -> list[str]:
         return [object.getName() for object in objects]

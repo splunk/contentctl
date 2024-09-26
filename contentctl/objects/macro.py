@@ -3,7 +3,9 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List
 import re
-from pydantic import Field, model_serializer
+from pydantic import Field, model_serializer, NonNegativeInt
+import uuid
+import datetime
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -22,7 +24,11 @@ MACROS_TO_IGNORE.add("cim_corporate_web_domain_search") #Part of CIM/Splunk_SA_C
 class Macro(SecurityContentObject):
     definition: str = Field(..., min_length=1)
     arguments: List[str] = Field([])
-    
+    # TODO: Add id field to all macro ymls
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    date: datetime.date = Field(datetime.date.today())
+    author: str = Field("NO AUTHOR DEFINED",max_length=255)
+    version: NonNegativeInt = 1
     
 
 

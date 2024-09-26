@@ -67,7 +67,16 @@ class Detection_Abstract(SecurityContentObject):
     search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    explanation: Optional[str] = None
+    explanation: None | str = Field(
+        default=None,
+        exclude=True, #Don't serialize this value when dumping the object
+        description="Provide an explanation to be included "
+        "in the 'Explanation' field of the Detection in "
+        "the Use Case Library. If this field is not "
+        "defined in the YML, it will default to the "
+        "value of the 'description' field when " 
+        "serialized in analyticstories_detections.j2",
+    )
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)

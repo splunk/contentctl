@@ -54,8 +54,9 @@ class SecurityContentType(enum.Enum):
     deployments = 7
     investigations = 8
     unit_tests = 9
-    ssa_detections = 10
     data_sources = 11
+    dashboards = 12
+
 
 # Bringing these changes back in line will take some time after
 # the initial merge is complete
@@ -69,7 +70,6 @@ class SecurityContentType(enum.Enum):
 
 class SecurityContentProduct(enum.Enum):
     SPLUNK_APP = 1
-    SSA = 2
     API = 3
     CUSTOM = 4
 
@@ -407,15 +407,16 @@ class NistCategory(str, enum.Enum):
     RC_IM = "RC.IM"
     RC_CO = "RC.CO"
 
-class RiskLevel(str,enum.Enum):
-    INFO = "Info"
-    LOW = "Low"
-    MEDIUM = "Medium"
-    HIGH = "High"
-    CRITICAL = "Critical"
-
 class RiskSeverity(str,enum.Enum):
+    # Levels taken from the following documentation link
+    # https://docs.splunk.com/Documentation/ES/7.3.2/User/RiskScoring
+    # 20 - info (0-20 for us)
+    # 40 - low (21-40 for us)
+    # 60 - medium (41-60 for us)
+    # 80 - high (61-80 for us)
+    # 100 - critical (81 - 100 for us)
+    INFORMATIONAL = "informational"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
-
+    CRITICAL = "critical"

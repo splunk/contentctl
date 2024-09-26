@@ -285,6 +285,7 @@ class Detection_Abstract(SecurityContentObject):
             annotations_dict["cve"] = self.tags.cve
         annotations_dict["impact"] = self.tags.impact
         annotations_dict["type"] = self.type
+        annotations_dict["type_list"] = [self.type]
         # annotations_dict["version"] = self.version
 
         annotations_dict["data_source"] = self.data_source

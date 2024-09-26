@@ -20,7 +20,8 @@ from contentctl.objects.lookup import Lookup
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.baseline import Baseline
-
+    from contentctl.objects.config import CustomApp
+    
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
@@ -36,10 +37,16 @@ from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.base_test_result import TestResultStatus
 
-# from contentctl.objects.playbook import Playbook
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 import datetime
+from contentctl.objects.constants import (
+    ES_MAX_STANZA_LENGTH,
+    ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE,
+    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
+    CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE
+)
+
 MISSING_SOURCES: set[str] = set()
 
 # Those AnalyticsTypes that we do not test via contentctl
@@ -51,8 +58,8 @@ SKIPPED_ANALYTICS_TYPES: set[str] = {
 # TODO (#266): disable the use_enum_values configuration
 class Detection_Abstract(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True)
-
-    # contentType: SecurityContentType = SecurityContentType.detections
+    name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
+    #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
     data_source: list[str] = []
@@ -60,6 +67,16 @@ class Detection_Abstract(SecurityContentObject):
     search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
+    explanation: None | str = Field(
+        default=None,
+        exclude=True, #Don't serialize this value when dumping the object
+        description="Provide an explanation to be included "
+        "in the 'Explanation' field of the Detection in "
+        "the Use Case Library. If this field is not "
+        "defined in the YML, it will default to the "
+        "value of the 'description' field when " 
+        "serialized in analyticstories_detections.j2",
+    )
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -70,9 +87,29 @@ class Detection_Abstract(SecurityContentObject):
     # https://github.com/pydantic/pydantic/issues/9101#issuecomment-2019032541
     tests: List[Annotated[Union[UnitTest, IntegrationTest, ManualTest], Field(union_mode='left_to_right')]] = []
     # A list of groups of tests, relying on the same data
-    test_groups: Union[list[TestGroup], None] = Field(None, validate_default=True)
+    test_groups: list[TestGroup] = []
 
     data_source_objects: list[DataSource] = []
+
+    def get_conf_stanza_name(self, app:CustomApp)->str:
+        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=self.name)
+        self.check_conf_stanza_max_length(stanza_name)
+        return stanza_name
+    
+
+    def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=ES_MAX_STANZA_LENGTH)->str:
+        stanza_name = self.get_conf_stanza_name(app)
+        stanza_name_after_saving_in_es = ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE.format(
+            security_domain_value = self.tags.security_domain.value, 
+            search_name = stanza_name
+            )
+        
+    
+        if len(stanza_name_after_saving_in_es) > max_stanza_length:
+            raise ValueError(f"label may only be {max_stanza_length} characters to allow updating in-product, "
+                             f"but stanza was actually {len(stanza_name_after_saving_in_es)} characters: '{stanza_name_after_saving_in_es}' ")
+        
+        return stanza_name    
 
     @field_validator("search", mode="before")
     @classmethod
@@ -519,7 +556,7 @@ class Detection_Abstract(SecurityContentObject):
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
-            story.detections.append(self)
+            story.detections.append(self)     
 
         self.cve_enrichment_func(__context)
 
@@ -654,6 +691,27 @@ class Detection_Abstract(SecurityContentObject):
         else:
             self.tags.nist = [NistCategory.DE_AE]
         return self
+        
+
+    @model_validator(mode="after")
+    def ensureThrottlingFieldsExist(self):
+        '''
+        For throttling to work properly, the fields to throttle on MUST
+        exist in the search itself.  If not, then we cannot apply the throttling
+        '''
+        if self.tags.throttling is None:
+            # No throttling configured for this detection
+            return self
+
+        missing_fields:list[str] = [field for field in self.tags.throttling.fields if field not in self.search]
+        if len(missing_fields) > 0:
+            raise ValueError(f"The following throttle fields were missing from the search: {missing_fields}")
+
+        else:
+            # All throttling fields present in search
+            return self
+            
+
 
     @model_validator(mode="after")
     def ensureProperObservablesExist(self):

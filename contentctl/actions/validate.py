@@ -12,7 +12,7 @@ from contentctl.helper.splunk_app import SplunkApp
 
 
 class Validate:
-    def execute(self, input_dto: validate) -> DirectorOutputDto: 
+    def execute(self, input_dto: validate) -> DirectorOutputDto:
         director_output_dto = DirectorOutputDto(
             AtomicEnrichment.getAtomicEnrichment(input_dto),
             AttackEnrichment.getAttackEnrichment(input_dto),
@@ -26,6 +26,7 @@ class Validate:
             [],
             [],
             [],
+            []
         )
 
         director = Director(director_output_dto)

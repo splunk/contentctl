@@ -1,7 +1,8 @@
 from __future__ import annotations
-from pydantic import Field, computed_field, model_validator,ValidationInfo, model_serializer
-from typing import Optional,Any
-
+from pydantic import Field, computed_field,ValidationInfo, model_serializer, NonNegativeInt
+from typing import Any
+import uuid
+import datetime
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.deployment_scheduling import DeploymentScheduling
 from contentctl.objects.alert_action import AlertAction
@@ -15,9 +16,13 @@ class Deployment(SecurityContentObject):
     #author: str = None
     #description: str = None
     #contentType: SecurityContentType = SecurityContentType.deployments
+    
+    
     scheduling: DeploymentScheduling = Field(...)
     alert_action: AlertAction = AlertAction()
     type: DeploymentType = Field(...)
+    author: str = Field(...,max_length=255)
+    version: NonNegativeInt = 1
 
     #Type was the only tag exposed and should likely be removed/refactored.
     #For transitional reasons, provide this as a computed_field in prep for removal
@@ -25,7 +30,8 @@ class Deployment(SecurityContentObject):
     @property
     def tags(self)->dict[str,DeploymentType]:
         return {"type": self.type}
-    
+
+        
     @staticmethod
     def getDeployment(v:dict[str,Any], info:ValidationInfo)->Deployment:
         if v != {}:
@@ -36,8 +42,17 @@ class Deployment(SecurityContentObject):
             detection_name = info.data.get("name", None)
             if detection_name is None:
                 raise ValueError("Could not create inline deployment - Baseline or Detection lacking 'name' field,")
+
+            # Add a number of static values            
+            v.update({
+              'name': f"{detection_name} - Inline Deployment",
+              'id':uuid.uuid4(),
+              'date': datetime.date.today(),
+              'description': "Inline deployment created at runtime.",
+              'author': "contentctl tool"
+            })
+
             
-            v['name'] = f"{detection_name} - Inline Deployment"
             # This constructs a temporary in-memory deployment,
             # allowing the deployment to be easily defined in the 
             # detection on a per detection basis.

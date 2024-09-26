@@ -158,6 +158,7 @@ class CustomApp(App_Base):
                                 str(destination), 
                                 verbose_print=True)
         return str(destination)
+    
 
 
 # TODO (#266): disable the use_enum_values configuration
@@ -196,8 +197,45 @@ class validate(Config_Base):
     build_api: bool = Field(default=False, description="Should api objects be built and output in the build_path?")
     data_source_TA_validation: bool = Field(default=False, description="Validate latest TA information from Splunkbase")
 
-    def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
-        return self.path/atomic_red_team_repo_name
+    @property
+    def external_repos_path(self)->pathlib.Path:
+        return self.path/"external_repos"
+
+    @property    
+    def mitre_cti_repo_path(self)->pathlib.Path:
+        return self.external_repos_path/"cti"
+
+    @property
+    def atomic_red_team_repo_path(self):
+        return self.external_repos_path/"atomic-red-team"
+
+    @model_validator(mode="after")
+    def ensureEnrichmentReposPresent(self)->Self:
+        '''
+        Ensures that the enrichments repos, the atomic red team repo and the 
+        mitre attack enrichment repo, are present at the inded path.
+        Raises a detailed exception if either of these are not present
+        when enrichments are enabled.
+        '''
+        if not self.enrichments:
+            return self
+        # If enrichments are enabled, ensure that all of the
+        # enrichment directories exist
+        missing_repos:list[str] = []
+        if not self.atomic_red_team_repo_path.is_dir():
+            missing_repos.append(f"https://github.com/redcanaryco/atomic-red-team {self.atomic_red_team_repo_path}")
+
+        if not self.mitre_cti_repo_path.is_dir():
+            missing_repos.append(f"https://github.com/mitre/cti {self.mitre_cti_repo_path}")
+
+        if len(missing_repos) > 0: 
+            msg_list = ["The following repositories, which are required for enrichment, have not "
+                        f"been checked out to the {self.external_repos_path} directory. "
+                        "Please check them out using the following commands:"]
+            msg_list.extend([f"git clone --single-branch {repo_string}" for repo_string in missing_repos])
+            msg = '\n\t'.join(msg_list)
+            raise FileNotFoundError(msg)
+        return self
 
 class report(validate):
     #reporting takes no extra args, but we define it here so that it can be a mode on the command line    

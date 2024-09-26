@@ -5,30 +5,43 @@ if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
 from contentctl.objects.enums import AnalyticsType
 SEARCH_PLACEHOLDER = "%original_detection_search%"
+EARLIEST_OFFSET = "$info_min_time$"
+LATEST_OFFSET = "$info_max_time$"
+RISK_SEARCH = "index = risk | stats count values(search_name) values(risk_message) values(analyticstories) values(annotations._all) values(annotations.mitre_attack.mitre_tactic) by risk_object"
 
 class Drilldown(BaseModel):
     name: str = Field(..., description="The name of the drilldown search", min_length=5)
     search: str = Field(..., description="The text of a drilldown search. This must be valid SPL.", min_length=1)
     earliest_offset:str = Field(..., 
                                 description="Earliest offset time for the drilldown search. "
-                                "The most common value for this field is '$info_min_time$', "
+                                f"The most common value for this field is '{EARLIEST_OFFSET}', "
                                 "but it is NOT the default value and must be supplied explicitly.", 
                                 min_length= 1)
     latest_offset:str = Field(..., 
                               description="Latest offset time for the driolldown search. "
-                              "The most common value for this field is '$info_max_time$', "
+                              f"The most common value for this field is '{LATEST_OFFSET}', "
                               "but it is NOT the default value and must be supplied explicitly.", 
                               min_length= 1)
 
     @classmethod
-    def constructDrilldownFromDetection(cls, detection: Detection) -> Drilldown:
+    def constructDrilldownsFromDetection(cls, detection: Detection) -> list[Drilldown]:
         if len([f"${o.name}$" for o in detection.tags.observable if o.role[0] == "Victim"]) == 0 and detection.type != AnalyticsType.Hunting:
             print("no victim!")
             # print(detection.tags.observable)
             # print(detection.file_path)
-        name_field = "View the detection results for " + ' and ' + ''.join([f"${o.name}$" for o in detection.tags.observable if o.type[0] == "Victim"])
-        search_field = f"{detection.search} | search " + ' '.join([f"o.name = ${o.name}$" for o in detection.tags.observable])
-        return cls(name=name_field, search=search_field)
+
+        variableNamesString = ' and'.join([f"${o.name}$" for o in detection.tags.observable if o.type[0] == "Victim"])
+        nameField = "View the detection results for }" + variableNamesString
+        appendedSearch =  " | search " + ' '.join([f"o.name = ${o.name}$" for o in detection.tags.observable])
+        search_field = f"{detection.search}{appendedSearch}"
+        detection_results = cls(name=nameField, earliest_offset=EARLIEST_OFFSET, latest_offset=LATEST_OFFSET, search=search_field)
+        
+        
+        nameField = f"View risk events for the last 7 days for {variableNamesString}"
+        search_field = f"{RISK_SEARCH}{appendedSearch}"
+        risk_events_last_7_days = cls(name=nameField, earliest_offset=EARLIEST_OFFSET, latest_offset=LATEST_OFFSET, search=search_field)
+
+        return [detection_results,risk_events_last_7_days]
     
 
     def perform_search_substitutions(self, detection:Detection)->None:

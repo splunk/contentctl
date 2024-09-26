@@ -571,7 +571,7 @@ class Detection_Abstract(SecurityContentObject):
         for drilldown in self.drilldown_searches:
             drilldown.perform_search_substitutions(self)
         print("adding default drilldown?")
-        self.drilldown_searches.append(Drilldown.constructDrilldownFromDetection(self))
+        self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))
 
     @field_validator('lookups', mode="before")
     @classmethod

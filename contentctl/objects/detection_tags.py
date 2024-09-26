@@ -54,7 +54,7 @@ class DetectionTags(BaseModel):
     @property
     def severity(self)->RiskSeverity:
         if 0 <= self.risk_score <= 20:
-            return RiskSeverity.INFO
+            return RiskSeverity.INFORMATIONAL
         elif 20 < self.risk_score <= 40:
             return RiskSeverity.LOW
         elif 40 < self.risk_score <= 60:

@@ -570,11 +570,21 @@ class Detection_Abstract(SecurityContentObject):
         # Update the search fields with the original search, if required
         for drilldown in self.drilldown_searches:
             drilldown.perform_search_substitutions(self)
-        print("adding default drilldown?")
+        
+        #For experimental purposes, add the default drilldowns
         self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))
 
     @property
-    def drilldownsInJSON(self) -> list[dict[str,str]]:
+    def drilldowns_in_JSON(self) -> list[dict[str,str]]:
+        """This function is required for proper JSON 
+        serializiation of drilldowns to occur in savedsearches.conf.
+        It returns the list[Drilldown] as a list[dict].
+        Without this function, the jinja template is unable
+        to convert list[Drilldown] to JSON
+
+        Returns:
+            list[dict[str,str]]: List of Drilldowns dumped to dict format
+        """        
         return [drilldown.model_dump() for drilldown in self.drilldown_searches]
 
     @field_validator('lookups', mode="before")

@@ -7,6 +7,7 @@ from splunklib.data import Record
 from contentctl.helper.utils import Utils
 
 
+# TODO (#267): Align test reporting more closely w/ status enums (as it relates to "untested")
 # TODO (PEX-432): add status "UNSET" so that we can make sure the result is always of this enum
 #   type; remove mypy ignores associated w/ these typing issues once we do
 class TestResultStatus(str, Enum):

@@ -1,12 +1,15 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.objects.config import validate
+
 from contentctl.input.yml_reader import YmlReader
 from pydantic import BaseModel, model_validator, ConfigDict, FilePath, UUID4
+import dataclasses
 from typing import List, Optional, Dict, Union, Self
 import pathlib
-
-
 from enum import StrEnum, auto
-
+import uuid
 
 class SupportedPlatform(StrEnum):        
     windows = auto()
@@ -85,46 +88,22 @@ class AtomicTest(BaseModel):
     dependency_executor_name: Optional[DependencyExecutorType] = None
 
     @staticmethod
-    def AtomicTestWhenEnrichmentIsDisabled(auto_generated_guid: UUID4) -> AtomicTest:
-        return AtomicTest(name="Placeholder Atomic Test (enrichment disabled)",
-                          auto_generated_guid=auto_generated_guid,
-                          description="This is a placeholder AtomicTest. Because enrichments were not enabled, it has not been validated against the real Atomic Red Team Repo.",
-                          supported_platforms=[],
-                          executor=AtomicExecutor(name="Placeholder Executor (enrichment disabled)", 
-                                                  command="Placeholder command (enrichment disabled)"))
-    
-    @staticmethod
     def AtomicTestWhenTestIsMissing(auto_generated_guid: UUID4) -> AtomicTest:
         return AtomicTest(name="Missing Atomic",
                           auto_generated_guid=auto_generated_guid,
                           description="This is a placeholder AtomicTest. Either the auto_generated_guid is incorrect or it there was an exception while parsing its AtomicFile.",
                           supported_platforms=[],
                           executor=AtomicExecutor(name="Placeholder Executor (failed to find auto_generated_guid)", 
-                                                  command="Placeholder command (failed to find auto_generated_guid)"))
-
-
-    @classmethod
-    def getAtomicByAtomicGuid(cls, guid: UUID4, all_atomics:list[AtomicTest] | None)->AtomicTest:
-        if all_atomics is None:
-            return AtomicTest.AtomicTestWhenEnrichmentIsDisabled(guid)
-        matching_atomics = [atomic for atomic in all_atomics if atomic.auto_generated_guid == guid]
-        if len(matching_atomics) == 0:
-            raise ValueError(f"Unable to find atomic_guid {guid} in {len(all_atomics)} atomic_tests from ART Repo")
-        elif len(matching_atomics) > 1:
-            raise ValueError(f"Found {len(matching_atomics)} matching tests for atomic_guid {guid} in {len(all_atomics)} atomic_tests from ART Repo")
-        
-        return matching_atomics[0]
+                                                  command="Placeholder command (failed to find auto_generated_guid)"))    
     
     @classmethod
-    def parseArtRepo(cls, repo_path:pathlib.Path)->List[AtomicFile]:
-        if not repo_path.is_dir():
-            print(f"WARNING: Atomic Red Team repo does NOT exist at {repo_path.absolute()}. You can check it out with:\n * git clone --single-branch https://github.com/redcanaryco/atomic-red-team. This will ONLY throw a validation error if you reference atomid_guids in your detection(s).")
-            return []
+    def parseArtRepo(cls, repo_path:pathlib.Path)->dict[uuid.UUID, AtomicTest]:
+        test_mapping: dict[uuid.UUID, AtomicTest] = {}
         atomics_path = repo_path/"atomics"
         if not atomics_path.is_dir():
-            print(f"WARNING: Atomic Red Team repo exists at {repo_path.absolute}, but atomics directory does NOT exist at {atomics_path.absolute()}. Was it deleted or renamed? This will ONLY throw a validation error if you reference atomid_guids in your detection(s).")
-            return []
-        
+            raise FileNotFoundError(f"WARNING: Atomic Red Team repo exists at {repo_path}, "
+                                    f"but atomics directory does NOT exist at {atomics_path}. "
+                                    "Was it deleted or renamed?")
 
         atomic_files:List[AtomicFile] = []
         error_messages:List[str] = []
@@ -133,6 +112,7 @@ class AtomicTest(BaseModel):
                 atomic_files.append(cls.constructAtomicFile(obj_path))
             except Exception as e:
                 error_messages.append(f"File [{obj_path}]\n{str(e)}")
+
         if len(error_messages) > 0:
             exceptions_string = '\n\n'.join(error_messages)
             print(f"WARNING: The following [{len(error_messages)}] ERRORS were generated when parsing the Atomic Red Team Repo.\n"
@@ -140,38 +120,28 @@ class AtomicTest(BaseModel):
                    "Note that this is only a warning and contentctl will ignore Atomics contained in these files.\n"
                   f"However, if you have written a detection that references them, 'contentctl build --enrichments' will fail:\n\n{exceptions_string}")
         
-        return atomic_files
+        # Now iterate over all the files, collect all the tests, and return the dict mapping
+        redefined_guids:set[uuid.UUID] = set()
+        for atomic_file in atomic_files:
+            for atomic_test in atomic_file.atomic_tests:
+                if atomic_test.auto_generated_guid in test_mapping:
+                    redefined_guids.add(atomic_test.auto_generated_guid)
+                else:
+                    test_mapping[atomic_test.auto_generated_guid] = atomic_test
+        if len(redefined_guids) > 0:
+            guids_string = '\n\t'.join([str(guid) for guid in redefined_guids])
+            raise Exception(f"The following [{len(redefined_guids)}] Atomic Test"
+                            " auto_generated_guid(s) were defined more than once. "
+                            f"auto_generated_guids MUST be unique:\n\t{guids_string}")
+
+        print(f"Successfully parsed [{len(test_mapping)}] Atomic Red Team Tests!")
+        return test_mapping
     
     @classmethod
     def constructAtomicFile(cls, file_path:pathlib.Path)->AtomicFile:
         yml_dict = YmlReader.load_file(file_path) 
         atomic_file = AtomicFile.model_validate(yml_dict)
         return atomic_file
-    
-    @classmethod
-    def getAtomicTestsFromArtRepo(cls, repo_path:pathlib.Path, enabled:bool=True)->list[AtomicTest] | None:
-        # Get all the atomic files.  Note that if the ART repo is not found, we will not throw an error,
-        # but will not have any atomics. This means that if atomic_guids are referenced during validation,
-        # validation for those detections will fail
-        if not enabled:
-            return None
-        
-        atomic_files = cls.getAtomicFilesFromArtRepo(repo_path)
-            
-        atomic_tests:List[AtomicTest] = []
-        for atomic_file in atomic_files:
-            atomic_tests.extend(atomic_file.atomic_tests)
-        print(f"Found [{len(atomic_tests)}] Atomic Simulations in the Atomic Red Team Repo!")
-        return atomic_tests
-
-    
-    @classmethod
-    def getAtomicFilesFromArtRepo(cls, repo_path:pathlib.Path)->List[AtomicFile]:
-        return cls.parseArtRepo(repo_path)
-
-    
-    
-
 
 
 class AtomicFile(BaseModel):
@@ -182,27 +152,31 @@ class AtomicFile(BaseModel):
     atomic_tests: List[AtomicTest]
 
 
+class AtomicEnrichment(BaseModel):
+    data: dict[uuid.UUID,AtomicTest] = dataclasses.field(default_factory = dict)
+    use_enrichment: bool = False
 
+    @classmethod
+    def getAtomicEnrichment(cls, config:validate)->AtomicEnrichment:
+        enrichment = AtomicEnrichment(use_enrichment=config.enrichments)
+        if config.enrichments:
+            enrichment.data = AtomicTest.parseArtRepo(config.atomic_red_team_repo_path)
 
-# ATOMICS_PATH = pathlib.Path("./atomics")
-# atomic_objects = []
-# atomic_simulations = []
-# for obj_path in ATOMICS_PATH.glob("**/T*.yaml"):
-#     try:
-#         with open(obj_path, 'r', encoding="utf-8") as obj_handle:
-#             obj_data = yaml.load(obj_handle, Loader=yaml.CSafeLoader)
-#             atomic_obj = AtomicFile.model_validate(obj_data)
-#     except Exception as e:
-#         print(f"Error parsing object at path {obj_path}: {str(e)}")
-#         print(f"We have successfully parsed {len(atomic_objects)}, however!")
-#         sys.exit(1)
+        return enrichment
 
-#     print(f"Successfully parsed {obj_path}!")
-#     atomic_objects.append(atomic_obj)
-#     atomic_simulations += atomic_obj.atomic_tests
+    def getAtomic(self, atomic_guid: uuid.UUID)->AtomicTest:
+        if self.use_enrichment:
+            if atomic_guid in self.data:
+                return self.data[atomic_guid]
+            else:
+                raise Exception(f"Atomic with GUID {atomic_guid} not found.")
+        else:
+            # If enrichment is not enabled, for the sake of compatability
+            # return a stub test with no useful or meaningful information.
+            return AtomicTest.AtomicTestWhenTestIsMissing(atomic_guid)
 
-# print(f"Successfully parsed all {len(atomic_objects)} files!")
-# print(f"Successfully parsed all {len(atomic_simulations)} simulations!")
+    
+
     
 
         

@@ -1,32 +1,50 @@
 import re
-from typing import Union, Optional
 
 from pydantic import ConfigDict, BaseModel, Field, PrivateAttr, field_validator
-
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
 from contentctl.objects.observable import Observable
 
-# TODO (PEX-433): use SES_OBSERVABLE_TYPE_MAPPING
+# TODO (#259): Map our observable types to more than user/system
+# TODO (#247): centralize this mapping w/ usage of SES_OBSERVABLE_TYPE_MAPPING (see
+#   observable.py) and the ad hoc mapping made in detection_abstract.py (see the risk property func)
 TYPE_MAP: dict[str, list[str]] = {
-    "user": ["User"],
-    "system": ["Hostname", "IP Address", "Endpoint"],
-    "other": ["Process", "URL String", "Unknown", "Process Name"],
+    "system": [
+        "Hostname",
+        "IP Address",
+        "Endpoint"
+    ],
+    "user": [
+        "User",
+        "User Name",
+        "Email Address",
+        "Email"
+    ],
+    "hash_values": [],
+    "network_artifacts": [],
+    "host_artifacts": [],
+    "tools": [],
+    "other": [
+        "Process",
+        "URL String",
+        "Unknown",
+        "Process Name",
+        "MAC Address",
+        "File Name",
+        "File Hash",
+        "Resource UID",
+        "Uniform Resource Locator",
+        "File",
+        "Geo Location",
+        "Container",
+        "Registry Key",
+        "Registry Value",
+        "Other"
+    ]
 }
-# TODO (PEX-433): 'Email Address', 'File Name', 'File Hash', 'Other', 'User Name', 'File',
-#   'Process Name'
 
-# TODO (PEX-433): use SES_OBSERVABLE_ROLE_MAPPING
+# Roles that should not generate risks
 IGNORE_ROLES: list[str] = ["Attacker"]
-# Known valid roles: Victim, Parent Process, Child Process
-# TODO (PEX-433): 'Other', 'Target', 'Unknown'
-# TODO (PEX-433): is Other a valid role
-
-# TODO (PEX-433): do we need User Name in conjunction w/ User? User Name doesn't get mapped to
-#   "user" in risk events
-# TODO (PEX-433): similarly, do we need Process and Process Name?
-
-RESERVED_FIELDS = ["host"]
 
 
 class RiskEvent(BaseModel):
@@ -36,7 +54,7 @@ class RiskEvent(BaseModel):
     search_name: str
 
     # The subject of the risk event (e.g. a username, process name, system name, account ID, etc.)
-    risk_object: Union[int, str]
+    risk_object: int | str
 
     # The type of the risk object (e.g. user, system, or other)
     risk_object_type: str
@@ -59,16 +77,21 @@ class RiskEvent(BaseModel):
         default=[]
     )
 
+    # Contributing events search query (we use this to derive the corresponding field from the
+    # observables)
+    contributing_events_search: str
+
     # Private attribute caching the observable this RiskEvent is mapped to
-    _matched_observable: Optional[Observable] = PrivateAttr(default=None)
+    _matched_observable: Observable | None = PrivateAttr(default=None)
     
     # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
     # fields vary depending on the SPL which generated them
     model_config = ConfigDict(extra="allow")
 
+
     @field_validator("annotations_mitre_attack", "analyticstories", mode="before")
     @classmethod
-    def _convert_str_value_to_singleton(cls, v: Union[str, list[str]]) -> list[str]:
+    def _convert_str_value_to_singleton(cls, v: str | list[str]) -> list[str]:
         """
         Given a value, determine if its a list or a single str value; if a single value, return as a
         singleton. Do nothing if anything else.
@@ -77,6 +100,24 @@ class RiskEvent(BaseModel):
             return v
         else:
             return [v]
+
+    @property
+    def source_field_name(self) -> str:
+        """
+        A cached derivation of the source field name the risk event corresponds to in the relevant
+        event(s). Useful for mapping back to an observable in the detection.
+        """
+        pattern = re.compile(
+            r"\| savedsearch \"" + self.search_name + r"\" \| search (?P<field>[^=]+)=.+"
+        )
+        match = pattern.search(self.contributing_events_search)
+        if match is None:
+            raise ValueError(
+                "Unable to parse source field name from risk event using "
+                f"'contributing_events_search' ('{self.contributing_events_search}') using "
+                f"pattern: {pattern}"
+            )
+        return match.group("field")
 
     def validate_against_detection(self, detection: Detection) -> None:
         """
@@ -107,10 +148,8 @@ class RiskEvent(BaseModel):
         # Check risk_message
         self.validate_risk_message(detection)
 
-        # TODO (PEX-433): Re-enable this check once we have refined the logic and reduced the false
-        #   positive rate in risk/obseravble matching
         # Check several conditions against the observables
-        # self.validate_risk_against_observables(detection.tags.observable)
+        self.validate_risk_against_observables(detection.tags.observable)
 
     def validate_mitre_ids(self, detection: Detection) -> None:
         """
@@ -198,7 +237,11 @@ class RiskEvent(BaseModel):
         if self.risk_object_type != expected_type:
             raise ValidationFailed(
                 f"The risk object type ({self.risk_object_type}) does not match the expected type "
-                f"based on the matched observable ({matched_observable.type}=={expected_type})."
+                f"based on the matched observable ({matched_observable.type}->{expected_type}): "
+                f"risk=(object={self.risk_object}, type={self.risk_object_type}, "
+                f"source_field_name={self.source_field_name}), "
+                f"observable=(name={matched_observable.name}, type={matched_observable.type}, "
+                f"role={matched_observable.role})"
             )
 
     @staticmethod
@@ -219,8 +262,6 @@ class RiskEvent(BaseModel):
             f"Observable type {observable_type} does not have a mapping to a risk type in TYPE_MAP"
         )
 
-    # TODO (PEX-433): should this be an observable instance method? It feels less relevant to
-    #   observables themselves, as it's really only relevant to the handling of risk events
     @staticmethod
     def ignore_observable(observable: Observable) -> bool:
         """
@@ -229,37 +270,12 @@ class RiskEvent(BaseModel):
         :param observable: the Observable object we are checking the roles of
         :returns: a bool indicating whether this observable should be ignored or not
         """
-        # TODO (PEX-433): could there be a case where an observable has both an Attacker and Victim
-        #   (or equivalent) role? If so, how should we handle ignoring it?
         ignore = False
         for role in observable.role:
             if role in IGNORE_ROLES:
                 ignore = True
                 break
         return ignore
-
-    # TODO (PEX-433): two possibilities: alway check for the field itself and the field prefixed
-    #   w/ "orig_" OR more explicitly maintain a list of known "reserved fields", like "host". I
-    #   think I like option 2 better as it can have fewer unknown side effects
-    def matches_observable(self, observable: Observable) -> bool:
-        """
-        Given an observable, check if the risk event matches is
-        :param observable: the Observable object we are comparing the risk event against
-        :returns: bool indicating a match or not
-        """
-        # When field names collide w/ reserved fields in Splunk events (e.g. sourcetype or host)
-        # they get prefixed w/ "orig_"
-        attribute_name = observable.name
-        if attribute_name in RESERVED_FIELDS:
-            attribute_name = f"orig_{attribute_name}"
-
-        # Retrieve the value of this attribute and see if it matches the risk_object
-        value: Union[str, list[str]] = getattr(self, attribute_name)
-        if isinstance(value, str):
-            value = [value]
-
-        # The value of the attribute may be a list of values, so check for any matches
-        return self.risk_object in value
 
     def get_matched_observable(self, observables: list[Observable]) -> Observable:
         """
@@ -273,40 +289,41 @@ class RiskEvent(BaseModel):
         if self._matched_observable is not None:
             return self._matched_observable
 
-        matched_observable: Optional[Observable] = None
+        matched_observable: Observable | None = None
 
         # Iterate over the obervables and check for a match
         for observable in observables:
+            # TODO (#252): Refactor and re-enable per-field validation of risk events
             # Each the field name used in each observable shoud be present in the risk event
-            # TODO (PEX-433): this check is redundant I think; earlier in the unit test, observable
-            #   field
-            #   names are compared against the search result set, ensuring all are present; if all
-            #   are present in the result set, all are present in the risk event
-            if not hasattr(self, observable.name):
-                raise ValidationFailed(
-                    f"Observable field \"{observable.name}\" not found in risk event."
-                )
+            # if not hasattr(self, observable.name):
+            #     raise ValidationFailed(
+            #         f"Observable field \"{observable.name}\" not found in risk event."
+            #     )
 
             # Try to match the risk_object against a specific observable for the obervables with
-            # a valid role (some, like Attacker, don't get converted to risk events)
-            if not RiskEvent.ignore_observable(observable):
-                if self.matches_observable(observable):
-                    # TODO (PEX-433): This check fails as there are some instances where this is
-                    #   true (e.g. we have an observable for process and parent_process and both
-                    #   have the same name like "cmd.exe")
-                    if matched_observable is not None:
-                        raise ValueError(
-                            "Unexpected conditon: we don't expect the value corresponding to an "
-                            "observables field name to be repeated"
-                        )
-                    # NOTE: we explicitly do not break early as we want to check each observable
-                    matched_observable = observable
+            # a valid role (some, like Attacker, shouldn't get converted to risk events)
+            if self.source_field_name == observable.name:
+                if matched_observable is not None:
+                    raise ValueError(
+                        "Unexpected conditon: we don't expect the source event field "
+                        "corresponding to an observables field name to be repeated."
+                    )
+
+                # Report any risk events we find that shouldn't be there
+                if RiskEvent.ignore_observable(observable):
+                    raise ValidationFailed(
+                        "Risk event matched an observable with an invalid role: "
+                        f"(name={observable.name}, type={observable.type}, role={observable.role})")
+                # NOTE: we explicitly do not break early as we want to check each observable
+                matched_observable = observable
 
         # Ensure we were able to match the risk event to a specific observable
         if matched_observable is None:
             raise ValidationFailed(
-                f"Unable to match risk event ({self.risk_object}, {self.risk_object_type}) to an "
-                "appropriate observable"
+                f"Unable to match risk event (object={self.risk_object}, type="
+                f"{self.risk_object_type}, source_field_name={self.source_field_name}) to an "
+                "observable; please check for errors in the observable roles/types for this "
+                "detection, as well as the risk event build process in contentctl."
             )
 
         # Cache and return the matched observable

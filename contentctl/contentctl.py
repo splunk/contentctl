@@ -193,10 +193,7 @@ def main():
             t.__dict__.update(config.__dict__)
             init_func(t)
         elif type(config) == validate:
-            v=validate_func(config)
-            import code
-            code.interact(local=
-                          locals())
+            validate_func(config)
         elif type(config) == report:
             report_func(config)
         elif type(config) == build:

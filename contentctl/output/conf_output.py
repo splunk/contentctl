@@ -62,7 +62,7 @@ class ConfOutput:
     def writeMiscellaneousAppFiles(self)->set[pathlib.Path]:
         written_files:set[pathlib.Path] = set()
         
-        written_files.add(ConfWriter.writeConfFile(pathlib.Path("content-version.conf"),
+        written_files.add(ConfWriter.writeConfFile(pathlib.Path("default/content-version.conf"),
                                 "content-version.j2",
                                 self.config,
                                 [self.config.app]))

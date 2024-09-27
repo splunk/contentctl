@@ -5,7 +5,7 @@ from contentctl.input.director import Director, DirectorOutputDto
 from contentctl.objects.config import validate
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
-from contentctl.objects.atomic import AtomicTest
+from contentctl.objects.atomic import AtomicEnrichment
 from contentctl.helper.utils import Utils
 from contentctl.objects.data_source import DataSource
 from contentctl.helper.splunk_app import SplunkApp
@@ -13,12 +13,8 @@ from contentctl.helper.splunk_app import SplunkApp
 
 class Validate:
     def execute(self, input_dto: validate) -> DirectorOutputDto:
-
         director_output_dto = DirectorOutputDto(
-            AtomicTest.getAtomicTestsFromArtRepo(
-                repo_path=input_dto.getAtomicRedTeamRepoPath(),
-                enabled=input_dto.enrichments,
-            ),
+            AtomicEnrichment.getAtomicEnrichment(input_dto),
             AttackEnrichment.getAttackEnrichment(input_dto),
             CveEnrichment.getCveEnrichment(input_dto),
             [],
@@ -30,6 +26,7 @@ class Validate:
             [],
             [],
             [],
+            []
         )
 
         director = Director(director_output_dto)

@@ -1,26 +1,31 @@
 from __future__ import annotations
+
+from os import environ
+from datetime import datetime, UTC
+from typing import Optional, Any, List, Union, Self
+import random
+from enum import StrEnum, auto
+import pathlib
+from urllib.parse import urlparse
+from abc import ABC, abstractmethod
+from functools import partialmethod
+
+import tqdm
+import semantic_version
 from pydantic import (
     BaseModel, Field, field_validator, 
     field_serializer, ConfigDict, DirectoryPath,
     PositiveInt, FilePath, HttpUrl, AnyUrl, model_validator,
     ValidationInfo
 )
+
+from contentctl.objects.constants import DOWNLOADS_DIRECTORY
 from contentctl.output.yml_writer import YmlWriter
-from os import environ
-from datetime import datetime, UTC
-from typing import Optional,Any,Annotated,List,Union, Self
-import semantic_version
-import random
-from enum import StrEnum, auto
-import pathlib
 from contentctl.helper.utils import Utils
-from urllib.parse import urlparse
-from abc import ABC, abstractmethod
 from contentctl.objects.enums import PostTestBehavior, DetectionTestingMode
 from contentctl.objects.detection import Detection
 from contentctl.objects.annotated_types import APPID_TYPE
-import tqdm
-from functools import partialmethod
+from contentctl.helper.splunk_app import SplunkApp
 
 ENTERPRISE_SECURITY_UID = 263
 COMMON_INFORMATION_MODEL_UID = 1621
@@ -153,6 +158,7 @@ class CustomApp(App_Base):
                                 str(destination), 
                                 verbose_print=True)
         return str(destination)
+    
 
 
 # TODO (#266): disable the use_enum_values configuration
@@ -171,7 +177,13 @@ class Config_Base(BaseModel):
         return str(path)
 
 class init(Config_Base):
-    pass
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    bare: bool = Field(default=False, description="contentctl normally provides some some example content "
+                       "(macros, stories, data_sources, and/or analytic stories).  This option disables "
+                       "initialization with that additional contnet.  Note that even if --bare is used, it "
+                       "init will still create the directory structure of the app, "
+                       "include the app_template directory with default content, and content in "
+                       "the deployment/ directory (since it is not yet easily customizable).")
 
 
 # TODO (#266): disable the use_enum_values configuration
@@ -185,8 +197,45 @@ class validate(Config_Base):
     build_api: bool = Field(default=False, description="Should api objects be built and output in the build_path?")
     data_source_TA_validation: bool = Field(default=False, description="Validate latest TA information from Splunkbase")
 
-    def getAtomicRedTeamRepoPath(self, atomic_red_team_repo_name:str = "atomic-red-team"):
-        return self.path/atomic_red_team_repo_name
+    @property
+    def external_repos_path(self)->pathlib.Path:
+        return self.path/"external_repos"
+
+    @property    
+    def mitre_cti_repo_path(self)->pathlib.Path:
+        return self.external_repos_path/"cti"
+
+    @property
+    def atomic_red_team_repo_path(self):
+        return self.external_repos_path/"atomic-red-team"
+
+    @model_validator(mode="after")
+    def ensureEnrichmentReposPresent(self)->Self:
+        '''
+        Ensures that the enrichments repos, the atomic red team repo and the 
+        mitre attack enrichment repo, are present at the inded path.
+        Raises a detailed exception if either of these are not present
+        when enrichments are enabled.
+        '''
+        if not self.enrichments:
+            return self
+        # If enrichments are enabled, ensure that all of the
+        # enrichment directories exist
+        missing_repos:list[str] = []
+        if not self.atomic_red_team_repo_path.is_dir():
+            missing_repos.append(f"https://github.com/redcanaryco/atomic-red-team {self.atomic_red_team_repo_path}")
+
+        if not self.mitre_cti_repo_path.is_dir():
+            missing_repos.append(f"https://github.com/mitre/cti {self.mitre_cti_repo_path}")
+
+        if len(missing_repos) > 0: 
+            msg_list = ["The following repositories, which are required for enrichment, have not "
+                        f"been checked out to the {self.external_repos_path} directory. "
+                        "Please check them out using the following commands:"]
+            msg_list.extend([f"git clone --single-branch {repo_string}" for repo_string in missing_repos])
+            msg = '\n\t'.join(msg_list)
+            raise FileNotFoundError(msg)
+        return self
 
 class report(validate):
     #reporting takes no extra args, but we define it here so that it can be a mode on the command line    
@@ -233,9 +282,6 @@ class build(validate):
             return self.getBuildDir() / f"{self.app.appid}-{self.app.version}.tar.gz"
         else:
             return self.getBuildDir() / f"{self.app.appid}-latest.tar.gz"
-    
-    def getSSAPath(self)->pathlib.Path:
-        return self.getBuildDir() / "ssa"
 
     def getAPIPath(self)->pathlib.Path:
         return self.getBuildDir() / "api"
@@ -249,10 +295,89 @@ class StackType(StrEnum):
     classic = auto()
     victoria = auto()
 
+
 class inspect(build):
-    splunk_api_username: str = Field(exclude=True, description="Splunk API username used for running appinspect.")
-    splunk_api_password: str = Field(exclude=True, description="Splunk API password used for running appinspect.")
+
+    splunk_api_username: str = Field(
+        description="Splunk API username used for appinspect and Splunkbase downloads."
+    )
+    splunk_api_password: str = Field(
+        exclude=True,
+        description="Splunk API password used for appinspect and Splunkbase downloads."
+    )
+    enable_metadata_validation: bool = Field(
+        default=False,
+        description=(
+            "Flag indicating whether detection metadata validation and versioning enforcement "
+            "should be enabled."
+        )
+    )
+    enrichments: bool = Field(
+        default=True,
+        description=(
+            "[NOTE: enrichments must be ENABLED for inspect to run. Please adjust your config "
+            f"or CLI invocation appropriately] {validate.model_fields['enrichments'].description}"
+            )
+        )
+    # TODO (cmcginley): wording should change here if we want to be able to download any app from
+    #   Splunkbase
+    previous_build: str | None = Field(
+        default=None,
+        description=(
+            "Local path to the previous app build for metatdata validation and versioning "
+            "enforcement (defaults to the latest release of the app published on Splunkbase)."
+        )
+    )
     stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
+
+    @field_validator("enrichments", mode="after")
+    @classmethod
+    def validate_needed_flags_metadata_validation(cls, v: bool, info: ValidationInfo) -> bool:
+        """
+        Validates that `enrichments` is True for the inspect action
+
+        :param v: the field's value
+        :type v: bool
+        :param info: the ValidationInfo to be used
+        :type info: :class:`pydantic.ValidationInfo`
+
+        :returns: bool, for v
+        :rtype: bool
+        """
+        # Enforce that `enrichments` is True for the inspect action
+        if v is False:
+            raise ValueError("Field `enrichments` must be True for the `inspect` action")
+
+        return v
+
+    def get_previous_package_file_path(self) -> pathlib.Path:
+        """
+        Returns a Path object for the path to the prior package build. If no path was provided, the
+        latest version is downloaded from Splunkbase and it's filepath is returned, and saved to the
+        in-memory config (so download doesn't happen twice in the same run).
+
+        :returns: Path object to previous app build
+        :rtype: :class:`pathlib.Path`
+        """
+        previous_build_path = self.previous_build
+        # Download the previous build as the latest release on Splunkbase if no path was provided
+        if previous_build_path is None:
+            print(
+                f"Downloading latest {self.app.label} build from Splunkbase to serve as previous "
+                "build during validation..."
+            )
+            app = SplunkApp(app_uid=self.app.uid)
+            previous_build_path = app.download(
+                out=pathlib.Path(DOWNLOADS_DIRECTORY),
+                username=self.splunk_api_username,
+                password=self.splunk_api_password,
+                is_dir=True,
+                overwrite=True
+            )
+            print(f"Latest release downloaded from Splunkbase to: {previous_build_path}")
+            self.previous_build = str(previous_build_path)
+        return pathlib.Path(previous_build_path)
+
 
 class NewContentType(StrEnum):
     detection = auto()

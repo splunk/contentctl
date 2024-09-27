@@ -269,17 +269,25 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     ):
         indexes.append(self.sync_obj.replay_index)
         indexes_encoded = ";".join(indexes)
+        
         try:
+            # Set which roles should be configured. For Enterprise Security/Integration Testing,
+            # we must add some extra foles.
+            if self.global_config.enable_integration_testing:
+                roles = imported_roles + enterprise_security_roles
+            else:
+                roles = imported_roles
+
             self.get_conn().roles.post(
                 self.infrastructure.splunk_app_username,
-                imported_roles=imported_roles + enterprise_security_roles,
+                imported_roles=roles,
                 srchIndexesAllowed=indexes_encoded,
                 srchIndexesDefault=self.sync_obj.replay_index,
             )
             return
         except Exception as e:
             self.pbar.write(
-                f"Enterprise Security Roles do not exist:'{enterprise_security_roles}: {str(e)}"
+                f"The following role(s) do not exist:'{enterprise_security_roles}: {str(e)}"
             )
 
         self.get_conn().roles.post(
@@ -374,12 +382,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 return
 
             try:
-                # NOTE: (THIS CODE HAS MOVED) we handle skipping entire detections differently than
-                #   we do skipping individual test cases; we skip entire detections by excluding
-                #   them to an entirely separate queue, while we skip individual test cases via the
-                #   BaseTest.skip() method, such as when we are skipping all integration tests (see
-                #   DetectionBuilder.skipIntegrationTests)
-                # TODO: are we skipping by production status elsewhere?
                 detection = self.sync_obj.inputQueue.pop()
                 self.sync_obj.currentTestingQueue[self.get_name()] = detection
             except IndexError:

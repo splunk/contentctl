@@ -1,41 +1,29 @@
 import os
 import sys
-import pathlib
-from typing import Union
+from pathlib import Path
 from dataclasses import dataclass, field
 from pydantic import ValidationError
 from uuid import UUID
 from contentctl.input.yml_reader import YmlReader
 
-
 from contentctl.objects.detection import Detection
 from contentctl.objects.story import Story
 
-from contentctl.objects.enums import SecurityContentProduct
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.playbook import Playbook
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
-from contentctl.objects.ssa_detection import SSADetection
-from contentctl.objects.atomic import AtomicTest
+from contentctl.objects.atomic import AtomicEnrichment
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.data_source import DataSource
-from contentctl.objects.event_source import EventSource
-
+from contentctl.objects.dashboard import Dashboard
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 
 from contentctl.objects.config import validate
 from contentctl.objects.enums import SecurityContentType
-
-from contentctl.objects.enums import DetectionStatus
-from contentctl.helper.utils import Utils
-
-from contentctl.objects.enums import SecurityContentType
-
-from contentctl.objects.enums import DetectionStatus 
 from contentctl.helper.utils import Utils
 
 
@@ -43,7 +31,7 @@ from contentctl.helper.utils import Utils
 class DirectorOutputDto:
     # Atomic Tests are first because parsing them 
     # is far quicker than attack_enrichment
-    atomic_tests: None | list[AtomicTest]
+    atomic_enrichment: AtomicEnrichment
     attack_enrichment: AttackEnrichment
     cve_enrichment: CveEnrichment
     detections: list[Detection]
@@ -54,16 +42,15 @@ class DirectorOutputDto:
     macros: list[Macro]
     lookups: list[Lookup]
     deployments: list[Deployment]
+    dashboards: list[Dashboard]
+
     data_sources: list[DataSource]
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
     uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
 
     def addContentToDictMappings(self, content: SecurityContentObject):
         content_name = content.name
-        if isinstance(content, SSADetection):
-            # Since SSA detections may have the same name as ESCU detection,
-            # for this function we prepend 'SSA ' to the name.
-            content_name = f"SSA {content_name}"
+        
         
         if content_name in self.name_to_content_map:
             raise ValueError(
@@ -95,6 +82,9 @@ class DirectorOutputDto:
             self.stories.append(content)
         elif isinstance(content, Detection):
             self.detections.append(content)
+        elif isinstance(content, Dashboard):
+            self.dashboards.append(content)            
+
         elif isinstance(content, DataSource):
             self.data_sources.append(content)
         else:
@@ -122,7 +112,7 @@ class Director():
         self.createSecurityContent(SecurityContentType.data_sources)
         self.createSecurityContent(SecurityContentType.playbooks)
         self.createSecurityContent(SecurityContentType.detections)
-
+        self.createSecurityContent(SecurityContentType.dashboards)
         
         from contentctl.objects.abstract_security_content_objects.detection_abstract import MISSING_SOURCES
         if len(MISSING_SOURCES) > 0:
@@ -144,17 +134,18 @@ class Director():
             SecurityContentType.playbooks,
             SecurityContentType.detections,
             SecurityContentType.data_sources,
+            SecurityContentType.dashboards
         ]:
             files = Utils.get_all_yml_files_from_directory(
                 os.path.join(self.input_dto.path, str(contentType.name))
             )
             security_content_files = [
-                f for f in files if not f.name.startswith("ssa___")
+                f for f in files 
             ]
         else:
-            raise (Exception(f"Cannot createSecurityContent for unknown product."))
+            raise (Exception(f"Cannot createSecurityContent for unknown product {contentType}."))
 
-        validation_errors = []
+        validation_errors:list[tuple[Path,ValueError]] = []
 
         already_ran = False
         progress_percent = 0
@@ -196,6 +187,10 @@ class Director():
                 elif contentType == SecurityContentType.detections:
                     detection = Detection.model_validate(modelDict, context={"output_dto":self.output_dto, "app":self.input_dto.app})
                     self.output_dto.addContentToDictMappings(detection)
+                
+                elif contentType == SecurityContentType.dashboards:
+                        dashboard = Dashboard.model_validate(modelDict,context={"output_dto":self.output_dto})
+                        self.output_dto.addContentToDictMappings(dashboard)
 
                 elif contentType == SecurityContentType.data_sources:
                     data_source = DataSource.model_validate(

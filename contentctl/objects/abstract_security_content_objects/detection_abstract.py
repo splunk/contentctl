@@ -573,6 +573,10 @@ class Detection_Abstract(SecurityContentObject):
         print("adding default drilldown?")
         self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))
 
+    @property
+    def drilldownsInJSON(self) -> list[dict[str,str]]:
+        return [drilldown.model_dump() for drilldown in self.drilldown_searches]
+
     @field_validator('lookups', mode="before")
     @classmethod
     def getDetectionLookups(cls, v:list[str], info:ValidationInfo) -> list[Lookup]:

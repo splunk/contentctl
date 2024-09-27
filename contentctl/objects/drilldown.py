@@ -51,5 +51,3 @@ class Drilldown(BaseModel):
                   "If this was intentional, then please ignore this warning.\n")
         self.search = self.search.replace(SEARCH_PLACEHOLDER, detection.search)
     
-
-

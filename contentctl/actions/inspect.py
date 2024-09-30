@@ -297,10 +297,10 @@ class Inspect:
             validation_errors[rule_name] = []
             # No detections should be removed from build to build
             if rule_name not in current_build_conf.detection_stanzas:
-                if config.exception_on_removed_detections:
-                    validation_errors[rule_name].append(DetectionMissingError(rule_name=rule_name))
-                else:
+                if config.supress_missing_content_exceptions:
                     print(f"[SUPPRESSED] {DetectionMissingError(rule_name=rule_name).long_message}")
+                else:
+                    validation_errors[rule_name].append(DetectionMissingError(rule_name=rule_name))
                 continue
             # Pull out the individual stanza for readability
             previous_stanza = previous_build_conf.detection_stanzas[rule_name]

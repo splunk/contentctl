@@ -308,12 +308,14 @@ class inspect(build):
             "should be enabled."
         )
     )
-    exception_on_removed_detections: bool = Field(
-        default=True,
+    supress_missing_content_exceptions: bool = Field(
+        default=False,
         description=(
-            "Throw an exception during metadata validation if a detection that existed in "
+            "Suppress exceptions during metadata validation if a detection that existed in "
             "the previous build does not exist in this build. This is to ensure that content "
-            "is not accidentally removed."
+            "is not accidentally removed. In order to support testing both public and private "
+            "content, this warning can be suppressed. If it is suppressed, it will still be "
+            "printed out as a warning."
         )
     )
     enrichments: bool = Field(

@@ -1,8 +1,10 @@
 from __future__ import annotations
-from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer
+from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer, Field, NonNegativeInt
 from typing import TYPE_CHECKING, Optional, Any, Union
 import re
 import csv
+import uuid
+import datetime
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import validate
@@ -32,6 +34,11 @@ class Lookup(SecurityContentObject):
     match_type: Optional[str] = None
     min_matches: Optional[int] = None
     case_sensitive_match: Optional[bool] = None
+    # TODO: Add id field to all lookup ymls
+    id: uuid.UUID = Field(default_factory=uuid.uuid4) 
+    date: datetime.date = Field(datetime.date.today())
+    author: str = Field("NO AUTHOR DEFINED",max_length=255)
+    version: NonNegativeInt = 1
     
 
     @model_serializer

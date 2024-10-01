@@ -112,7 +112,8 @@ alert.suppress.fields = {{ detection.tags.throttling.conf_formatted_fields() }}
 alert.suppress.period = {{ detection.tags.throttling.period }}
 {% endif %}
 search = {{ detection.search | escapeNewlines() }}
-
+action.notable.param.drilldown_searches = {{ detection.drilldowns_in_JSON | tojson | escapeNewlines() }}
 {% endif %}
+
 {% endfor %}
 ### END {{ app.label }} DETECTIONS ###

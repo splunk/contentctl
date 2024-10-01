@@ -36,7 +36,7 @@ from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.base_test_result import TestResultStatus
-from contentctl.objects.drilldown import Drilldown
+from contentctl.objects.drilldown import Drilldown, DRILLDOWN_SEARCH_PLACEHOLDER
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 import datetime
@@ -564,15 +564,32 @@ class Detection_Abstract(SecurityContentObject):
         # Derive TestGroups and IntegrationTests, adjust for ManualTests, skip as needed
         self.adjust_tests_and_groups()
 
-        #Add the default drilldown
-        #self.drilldown_searches.append(Drilldown.constructDrilldownFromDetection(self))
-        
+        # Ensure that if there is at least 1 drilldown, at least
+        # 1 of the drilldowns contains the string Drilldown.SEARCH_PLACEHOLDER.
+        # This is presently a requirement when 1 or more drilldowns are added to a detection.
+        # Note that this is only required for production searches that are not hunting
+            
+        if self.type == AnalyticsType.Hunting.value or self.status != DetectionStatus.production.value:
+            #No additional check need to happen on the potential drilldowns.
+            pass
+        else:
+            found_placeholder = False
+            if len(self.drilldown_searches) < 2:
+                raise ValueError(f"This detection is required to have 2 drilldown_searches, but only has [{len(self.drilldown_searches)}]")
+            for drilldown in self.drilldown_searches:
+                if DRILLDOWN_SEARCH_PLACEHOLDER in drilldown.search:
+                    found_placeholder = True
+            if not found_placeholder:
+                raise ValueError("Detection has one or more drilldown_searches, but none of them "
+                                 f"contained '{DRILLDOWN_SEARCH_PLACEHOLDER}. This is a requirement "
+                                 "if drilldown_searches are defined.'")
+            
         # Update the search fields with the original search, if required
         for drilldown in self.drilldown_searches:
             drilldown.perform_search_substitutions(self)
-        
+
         #For experimental purposes, add the default drilldowns
-        self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))
+        #self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))
 
     @property
     def drilldowns_in_JSON(self) -> list[dict[str,str]]:

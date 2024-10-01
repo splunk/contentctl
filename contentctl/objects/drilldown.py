@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
 from contentctl.objects.enums import AnalyticsType
-SEARCH_PLACEHOLDER = "%original_detection_search%"
+DRILLDOWN_SEARCH_PLACEHOLDER = "%original_detection_search%"
 EARLIEST_OFFSET = "$info_min_time$"
 LATEST_OFFSET = "$info_max_time$"
 RISK_SEARCH = "index = risk  starthoursago = 168 endhoursago = 0 | stats count values(search_name) values(risk_message) values(analyticstories) values(annotations._all) values(annotations.mitre_attack.mitre_tactic) "
@@ -29,7 +29,7 @@ class Drilldown(BaseModel):
         if len(victim_observables) == 0 or detection.type == AnalyticsType.Hunting:
             # No victims, so no drilldowns
             return []
-        print("Adding default drilldowns. REMOVE THIS BEFORE MERGING")
+        print(f"Adding default drilldowns for [{detection.name}]")
         variableNamesString = ' and '.join([f"${o.name}$" for o in victim_observables])
         nameField = f"View the detection results for {variableNamesString}"
         appendedSearch =  " | search " + ' '.join([f"{o.name} = ${o.name}$" for o in victim_observables])
@@ -40,18 +40,20 @@ class Drilldown(BaseModel):
         nameField = f"View risk events for the last 7 days for {variableNamesString}"
         fieldNamesListString = ', '.join([o.name for o in victim_observables])
         search_field = f"{RISK_SEARCH}by {fieldNamesListString} {appendedSearch}"
-        #risk_events_last_7_days = cls(name=nameField, earliest_offset=EARLIEST_OFFSET, latest_offset=LATEST_OFFSET, search=search_field)
         risk_events_last_7_days = cls(name=nameField, earliest_offset=None, latest_offset=None, search=search_field)
 
         return [detection_results,risk_events_last_7_days]
     
 
     def perform_search_substitutions(self, detection:Detection)->None:
-        if (self.search.count("%") % 2) or (self.search.count("$") % 2):
-            print("\n\nWarning - a non-even number of '%' or '$' characters were found in the\n"
-                  f"drilldown search '{self.search}' for Detection {detection.file_path}.\n"
-                  "If this was intentional, then please ignore this warning.\n")
-        self.search = self.search.replace(SEARCH_PLACEHOLDER, detection.search)
+        """Replaces the field DRILLDOWN_SEARCH_PLACEHOLDER (%original_detection_search%)
+        with the search contained in the detection. We do this so that the YML does not
+        need the search copy/pasted from the search field into the drilldown object.
+
+        Args:
+            detection (Detection): Detection to be used to update the search field of the drilldown
+        """             
+        self.search = self.search.replace(DRILLDOWN_SEARCH_PLACEHOLDER, detection.search)
     
 
     @model_serializer

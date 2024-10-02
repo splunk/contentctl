@@ -84,6 +84,30 @@ action.slack = 1
 action.slack.param.channel = {{ detection.deployment.alert_action.slack.channel | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.slack.param.message = {{ detection.deployment.alert_action.slack.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 {% endif %}
+{% if detection.deployment.alert_action.slack.webhook_url_override is defined %}
+action.slack.param.webhook_url_override = {{ detection.deployment.alert_action.slack.webhook_url_override | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+{% endif %}
+{% if detection.deployment.alert_action.slack.fields is defined %}
+action.slack.param.fields = {{ detection.deployment.alert_action.slack.fields | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+{% endif %}
+{% if detection.deployment.alert_action.jira %}
+action.jira_service_desk = 1
+action.jira_service_desk.param.account = {{ detection.deployment.alert_action.jira.account | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_attachment = {{ detection.deployment.alert_action.jira.jira_attachment | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_dedup = {{ detection.deployment.alert_action.jira.jira_dedup | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_dedup_content = {{ detection.deployment.alert_action.jira.jira_dedup_content | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_description = {{ detection.deployment.alert_action.jira.jira_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_issue_type = {{ detection.deployment.alert_action.jira.jira_issue_type | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_priority = {{ detection.deployment.alert_action.jira.jira_priority | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_priority_dynamic = {{ detection.deployment.alert_action.jira.jira_priority_dynamic | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_summary = {{ detection.deployment.alert_action.jira.jira_summary | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.jira_service_desk.param.jira_project = {{ detection.deployment.alert_action.jira.jira_project | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+{% endif %}
+{% if detection.deployment.alert_action.pagerduty %}
+action.pagerduty = 1
+action.pagerduty.description = {{ detection.deployment.alert_action.pagerduty.pagerduty_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+action.pagerduty.param.integration_url_override = {{ detection.deployment.alert_action.pagerduty.integration_url_override | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
+{% endif %}
 {% if detection.deployment.alert_action.phantom%}
 action.sendtophantom = 1
 action.sendtophantom.param._cam_workers = {{ detection.deployment.alert_action.phantom.cam_workers | custom_jinja2_enrichment_filter(detection) }}

@@ -170,7 +170,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 raise ExceptionGroup(msg, e.exceptions) from e                                      # type: ignore
             raise Exception(msg) from e
 
-        self.format_pbar_string(TestReportingType.SETUP, self.get_name(), "Finished Setup!")
+        self.pbar.write(
+            self.format_pbar_string(
+                TestReportingType.SETUP,
+                self.get_name(),
+                "Finished Setup!",
+                set_pbar=False
+            )
+        )
 
     def wait_for_ui_ready(self):
         self.get_conn()

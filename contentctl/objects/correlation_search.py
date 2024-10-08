@@ -29,51 +29,13 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.risk_event import RiskEvent
 from contentctl.objects.notable_event import NotableEvent
 from contentctl.objects.observable import Observable
+from contentctl.helper.utils import Utils
 
 
-# TODO (cmcginley): disable logging
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = True
+ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
-
-
-def get_logger() -> logging.Logger:
-    """
-    Gets a logger instance for the module; logger is configured if not already configured. The
-    NullHandler is used to suppress loggging when running in production so as not to conflict w/
-    contentctl's larger pbar-based logging. The StreamHandler is enabled by setting ENABLE_LOGGING
-    to True (useful for debugging/testing locally)
-    """
-    # get logger for module
-    logger = logging.getLogger(__name__)
-
-    # set propagate to False if not already set as such (needed to that we do not flow up to any
-    # root loggers)
-    if logger.propagate:
-        logger.propagate = False
-
-    # if logger has no handlers, it needs to be configured for the first time
-    if not logger.hasHandlers():
-        # set level
-        logger.setLevel(LOG_LEVEL)
-
-        # if logging enabled, use a StreamHandler; else, use the NullHandler to suppress logging
-        handler: logging.Handler
-        if ENABLE_LOGGING:
-            handler = logging.FileHandler(LOG_PATH)
-        else:
-            handler = logging.NullHandler()
-
-        # Format our output
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s:%(name)s - %(message)s')
-        handler.setFormatter(formatter)
-
-        # Set handler level and add to logger
-        handler.setLevel(LOG_LEVEL)
-        logger.addHandler(handler)
-
-    return logger
 
 
 class SavedSearchKeys(str, Enum):
@@ -140,7 +102,12 @@ class ResultIterator:
         )
 
         # get logger
-        self.logger: logging.Logger = get_logger()
+        self.logger: logging.Logger = Utils.get_logger(
+            __name__,
+            LOG_LEVEL,
+            LOG_PATH,
+            ENABLE_LOGGING
+        )
 
     def __iter__(self) -> "ResultIterator":
         return self
@@ -222,7 +189,13 @@ class CorrelationSearch(BaseModel):
 
     # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
     # to conflict w/ tqdm)
-    logger: logging.Logger = Field(default_factory=get_logger)
+    logger: logging.Logger = Field(default_factory=lambda: Utils.get_logger(
+            __name__,
+            LOG_LEVEL,
+            LOG_PATH,
+            ENABLE_LOGGING
+        )
+    )
 
     # The search name (e.g. "ESCU - Windows Modify Registry EnableLinkedConnections - Rule")
     name: Optional[str] = None

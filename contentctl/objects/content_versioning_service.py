@@ -2,20 +2,25 @@ import time
 import uuid
 import json
 import re
+import logging
 from typing import Any, Callable
 from functools import cached_property
 
-from pydantic import BaseModel, PrivateAttr, computed_field
+from pydantic import BaseModel, PrivateAttr, computed_field, Field
 import splunklib.client as splunklib                                                                # type: ignore
 from splunklib.binding import HTTPError, ResponseReader                                             # type: ignore
 from splunklib.data import Record                                                                   # type: ignore
 
 from contentctl.objects.config import test_common, Infrastructure
 from contentctl.objects.detection import Detection
-from contentctl.objects.correlation_search import ResultIterator, get_logger
+from contentctl.objects.correlation_search import ResultIterator
+from contentctl.helper.utils import Utils
 
-# TODO (cmcginley): remove this logger
-logger = get_logger()
+# TODO (cmcginley): suppress logging
+# Suppress logging by default; enable for local testing
+ENABLE_LOGGING = True
+LOG_LEVEL = logging.DEBUG
+LOG_PATH = "content_versioning_service.log"
 
 # TODO (cmcginley): would it be better for this to only run on one instance? Or to consolidate
 #   error reporting at least?
@@ -39,6 +44,16 @@ class ContentVersioningService(BaseModel):
 
     # The list of detections
     detections: list[Detection]
+
+    # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
+    # to conflict w/ tqdm)
+    logger: logging.Logger = Field(default_factory=lambda: Utils.get_logger(
+            __name__,
+            LOG_LEVEL,
+            LOG_PATH,
+            ENABLE_LOGGING
+        )
+    )
 
     # The cached job on the splunk instance of the cms events
     _cms_main_job: splunklib.Job | None = PrivateAttr(default=None)
@@ -215,17 +230,17 @@ class ContentVersioningService(BaseModel):
         # Loop until timeout
         while elapsed_sleep_time < max_sleep:
             # Sleep, and add the time to the elapsed counter
-            logger.info(f"Waiting {time_to_sleep} for cms_parser to finish")
+            self.logger.info(f"Waiting {time_to_sleep} for cms_parser to finish")
             time.sleep(time_to_sleep)
             elapsed_sleep_time += time_to_sleep
-            logger.info(
+            self.logger.info(
                 f"Checking cms_main (attempt #{num_tries + 1} - {elapsed_sleep_time} seconds elapsed of "
                 f"{max_sleep} max)"
             )
 
             # Check if the number of CMS events matches or exceeds the number of detections
             if self.get_num_cms_events() >= len(self.detections):
-                logger.info(
+                self.logger.info(
                     f"Found {self.get_num_cms_events(use_cache=True)} events in cms_main which "
                     f"meets or exceeds the expected {len(self.detections)}."
                 )
@@ -263,7 +278,7 @@ class ContentVersioningService(BaseModel):
             f"search index=cms_main app_name=\"{self.global_config.app.appid}\" | "
             f"fields {', '.join(self.cms_fields)}"
         )
-        logger.debug(f"Query on cms_main: {query}")
+        self.logger.debug(f"Query on cms_main: {query}")
 
         # Get the job as a blocking operation, set the cache, and return
         self._cms_main_job = self.service.search(query, exec_mode="blocking")                       # type: ignore
@@ -305,9 +320,9 @@ class ContentVersioningService(BaseModel):
                 f"Expected {len(self.detections)} matching events in cms_main, but "
                 f"found {result_count}."
             )
-            logger.error(msg)
+            self.logger.error(msg)
             exceptions.append(Exception(msg))
-        logger.info(
+        self.logger.info(
             f"Expecting {len(self.detections)} matching events in cms_main, "
             f"found {result_count}."
         )
@@ -337,7 +352,7 @@ class ContentVersioningService(BaseModel):
                 # to strip the prefix and suffix used for the savedsearches.conf name so we can
                 # compare to the detection
                 cms_entry_name = cms_event["sourcetype"]
-                logger.info(f"{offset}: Matching cms_main entry '{cms_entry_name}' against detections")
+                self.logger.info(f"{offset}: Matching cms_main entry '{cms_entry_name}' against detections")
                 ptrn = re.compile(r"^" + self.global_config.app.label + r" - (?P<cms_entry_name>.+) - Rule$")
                 match = ptrn.match(cms_event["sourcetype"])
 
@@ -347,7 +362,7 @@ class ContentVersioningService(BaseModel):
                         f"[{cms_entry_name}]: Entry in cms_main did not match the expected naming "
                         "scheme; cannot compare to our detections."
                     )
-                    logger.error(msg)
+                    self.logger.error(msg)
                     exceptions.append(Exception(msg))
                     continue
 
@@ -361,7 +376,7 @@ class ContentVersioningService(BaseModel):
                         f"[{cms_entry_name}]: Detection appears more than once in the cms_main "
                         "index."
                     )
-                    logger.error(msg)
+                    self.logger.error(msg)
                     exceptions.append(Exception(msg))
                     continue
 
@@ -371,7 +386,7 @@ class ContentVersioningService(BaseModel):
                     # If we find a match, break this loop, set the found flag and move the detection
                     # from those that still need to matched to those already matched
                     if cms_entry_name == detection_name:
-                        logger.info(
+                        self.logger.info(
                             f"{offset}: Succesfully matched cms_main entry against detection "
                             f"('{detection_name}')!"
                         )
@@ -398,7 +413,7 @@ class ContentVersioningService(BaseModel):
                         f"[{cms_entry_name}]: Could not match entry in cms_main against any "
                         "of the expected detections."
                     )
-                    logger.error(msg)
+                    self.logger.error(msg)
                     exceptions.append(Exception(msg))
 
         # If we have any remaining detections, they could not be matched against an entry in
@@ -410,7 +425,7 @@ class ContentVersioningService(BaseModel):
                         f"[{detection_name}]: Detection not found in cms_main; there may be an "
                         "issue with savedsearches.conf"
                     )
-                logger.error(msg)
+                self.logger.error(msg)
                 exceptions.append(Exception(msg))
 
         # Raise exceptions as a group
@@ -421,7 +436,7 @@ class ContentVersioningService(BaseModel):
             )
 
         # Else, we've matched/validated all detections against cms_main
-        logger.info("Matched and validated all detections against cms_main!")
+        self.logger.info("Matched and validated all detections against cms_main!")
 
     def validate_detection_against_cms_event(
             self,
@@ -452,7 +467,7 @@ class ContentVersioningService(BaseModel):
                 f"[{detection.name}]: UUID in cms_event ('{cms_uuid}') does not match UUID in "
                 f"detection ('{detection.id}')"
             )
-            logger.error(msg)
+            self.logger.error(msg)
             return Exception(msg)
         elif cms_event["version"] != f"{detection.version}-1":
             # Compare the versions (we append '-1' to the detection version to be in line w/ the
@@ -461,7 +476,7 @@ class ContentVersioningService(BaseModel):
                 f"[{detection.name}]: Version in cms_event ('{cms_event['version']}') does not "
                 f"match version in detection ('{detection.version}-1')"
             )
-            logger.error(msg)
+            self.logger.error(msg)
             return Exception(msg)
         elif cms_event[full_search_key] != rule_name_from_detection:
             # Compare the full search name
@@ -469,7 +484,7 @@ class ContentVersioningService(BaseModel):
                 f"[{detection.name}]: Full search name in cms_event "
                 f"('{cms_event[full_search_key]}') does not match detection name"
             )
-            logger.error(msg)
+            self.logger.error(msg)
             return Exception(msg)
         elif cms_event["action.correlationsearch.label"] != f"{self.global_config.app.label} - {detection.name} - Rule":
             # Compare the correlation search label
@@ -477,7 +492,7 @@ class ContentVersioningService(BaseModel):
                 f"[{detection.name}]: Correlation search label in cms_event "
                 f"('{cms_event['action.correlationsearch.label']}') does not match detection name"
             )
-            logger.error(msg)
+            self.logger.error(msg)
             return Exception(msg)
         elif cms_event["sourcetype"] != f"{self.global_config.app.label} - {detection.name} - Rule":
             # Compare the full search name
@@ -485,7 +500,7 @@ class ContentVersioningService(BaseModel):
                 f"[{detection.name}]: Sourcetype in cms_event ('{cms_event[f'sourcetype']}') does "
                 f"not match detection name"
             )
-            logger.error(msg)
+            self.logger.error(msg)
             return Exception(msg)
 
         return None

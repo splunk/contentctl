@@ -31,8 +31,9 @@ from contentctl.objects.notable_event import NotableEvent
 from contentctl.objects.observable import Observable
 
 
+# TODO (cmcginley): disable logging
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
@@ -144,13 +145,14 @@ class ResultIterator:
     def __iter__(self) -> "ResultIterator":
         return self
 
-    def __next__(self) -> dict:
+    def __next__(self) -> dict[str, Any]:
         # Use a reader for JSON format so we can iterate over our results
         for result in self.results_reader:
             # log messages, or raise if error
             if isinstance(result, Message):
                 # convert level string to level int
-                level_name = result.type.strip().upper()
+                level_name: str = result.type.strip().upper()                                       # type: ignore
+                # TODO (cmcginley): this method is deprecated; replace with our own enum
                 level: int = logging.getLevelName(level_name)
 
                 # log message at appropriate level and raise if needed
@@ -161,7 +163,7 @@ class ResultIterator:
 
             # if dict, just return
             elif isinstance(result, dict):
-                return result
+                return result                                                                       # type: ignore
 
             # raise for any unexpected types
             else:

@@ -11,14 +11,13 @@ from tempfile import TemporaryDirectory, mktemp
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
 from shutil import copyfile
-from typing import Union, Optional
+from typing import Union, Optional, Callable
 
-from pydantic import BaseModel, PrivateAttr, Field, dataclasses
+from pydantic import BaseModel, PrivateAttr, Field, dataclasses, computed_field
 import requests                                                                                     # type: ignore
 import splunklib.client as client                                                                   # type: ignore
 from splunklib.binding import HTTPError                                                             # type: ignore
 from splunklib.results import JSONResultsReader, Message                                            # type: ignore
-import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
 
@@ -34,6 +33,7 @@ from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.correlation_search import CorrelationSearch, PbarData
+from contentctl.objects.content_versioning_service import ContentVersioningService
 from contentctl.helper.utils import Utils
 from contentctl.actions.detection_testing.progress_bar import (
     format_pbar_string,
@@ -60,6 +60,8 @@ class CleanupTestGroupResults(BaseModel):
 
 class ContainerStoppedException(Exception):
     pass
+
+
 class CannotRunBaselineException(Exception):
     # Support for testing detections with baselines 
     # does not currently exist in contentctl.
@@ -125,18 +127,19 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         )
 
         self.start_time = time.time()
+        setup_functions: list[tuple[Callable[[], None | client.Service], str]] = [
+            (self.start, "Starting"),
+            (self.get_conn, "Waiting for App Installation"),
+            (self.configure_conf_file_datamodels, "Configuring Datamodels"),
+            (self.create_replay_index, f"Create index '{self.sync_obj.replay_index}'"),
+            (self.configure_imported_roles, "Configuring Roles"),
+            (self.configure_delete_indexes, "Configuring Indexes"),
+            (self.configure_hec, "Configuring HEC"),
+        ]
+        setup_functions = setup_functions + self.content_versioning_service.setup_functions
+        setup_functions.append((self.wait_for_ui_ready, "Finishing Setup"))
         try:
-            for func, msg in [
-                (self.start, "Starting"),
-                (self.get_conn, "Waiting for App Installation"),
-                (self.configure_conf_file_datamodels, "Configuring Datamodels"),
-                (self.create_replay_index, f"Create index '{self.sync_obj.replay_index}'"),
-                (self.configure_imported_roles, "Configuring Roles"),
-                (self.configure_delete_indexes, "Configuring Indexes"),
-                (self.configure_hec, "Configuring HEC"),
-                (self.wait_for_ui_ready, "Finishing Setup")
-            ]:
-
+            for func, msg in setup_functions:
                 self.format_pbar_string(
                     TestReportingType.SETUP,
                     self.get_name(),
@@ -149,12 +152,22 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except Exception as e:
             self.pbar.write(str(e))
             self.finish()
-            return
+            raise
 
         self.format_pbar_string(TestReportingType.SETUP, self.get_name(), "Finished Setup!")
 
     def wait_for_ui_ready(self):
         self.get_conn()
+
+    @computed_field
+    @property
+    def content_versioning_service(self) -> ContentVersioningService:
+        return ContentVersioningService(
+            global_config=self.global_config,
+            infrastructure=self.infrastructure,
+            service=self.get_conn(),
+            detections=self.sync_obj.inputQueue
+        )
 
     def configure_hec(self):
         self.hec_channel = str(uuid.uuid4())
@@ -1198,7 +1211,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 job = self.get_conn().jobs.create(splunk_search, **kwargs)
                 results_stream = job.results(output_mode="json")
                 # TODO: should we be doing something w/ this reader?
-                _ = splunklib.results.JSONResultsReader(results_stream)
+                _ = JSONResultsReader(results_stream)
 
             except Exception as e:
                 raise (
@@ -1393,6 +1406,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def status(self):
         pass
 
+    # TODO (cmcginley): the finish function doesn't actually stop execution
     def finish(self):
         self.pbar.bar_format = f"Finished running tests on instance: [{self.get_name()}]"
         self.pbar.update()

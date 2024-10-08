@@ -90,7 +90,7 @@ class DetectionTestingManager(BaseModel):
                     result = future.result()
                 except Exception as e:
                     self.output_dto.terminate = True
-                    print(f"Error setting up container: {str(e)}")
+                    print(f"Error setting up instance: {str(e)}")
 
             # Start and wait for all tests to run
             if not self.output_dto.terminate:

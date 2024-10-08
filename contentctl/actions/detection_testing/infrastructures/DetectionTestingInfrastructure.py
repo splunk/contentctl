@@ -133,7 +133,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self.start_time = time.time()
 
         # Init the list of setup functions we always need
-        setup_functions: list[tuple[Callable[[], None | client.Service], str]] = [
+        primary_setup_functions: list[tuple[Callable[[], None | client.Service], str]] = [
             (self.start, "Starting"),
             (self.get_conn, "Waiting for App Installation"),
             (self.configure_conf_file_datamodels, "Configuring Datamodels"),
@@ -142,18 +142,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             (self.configure_imported_roles, "Configuring Roles"),
             (self.configure_delete_indexes, "Configuring Indexes"),
             (self.configure_hec, "Configuring HEC"),
+            (self.wait_for_ui_ready, "Finishing Primary Setup")
         ]
-
-        # Add any setup functions only applicable to content versioning validation
-        if self.should_test_content_versioning:
-            setup_functions = setup_functions + self.content_versioning_service.setup_functions
-
-        # Add the final setup function
-        setup_functions.append((self.wait_for_ui_ready, "Finishing Setup"))
 
         # Execute and report on each setup function
         try:
-            for func, msg in setup_functions:
+            # Run the primary setup functions
+            for func, msg in primary_setup_functions:
                 self.format_pbar_string(
                     TestReportingType.SETUP,
                     self.get_name(),
@@ -162,6 +157,18 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 )
                 func()
                 self.check_for_teardown()
+
+            # Run any setup functions only applicable to content versioning validation
+            if self.should_test_content_versioning:
+                for func, msg in self.content_versioning_service.setup_functions:
+                    self.format_pbar_string(
+                        TestReportingType.SETUP,
+                        self.get_name(),
+                        msg,
+                        update_sync_status=True,
+                    )
+                    func()
+                    self.check_for_teardown()
 
         except Exception as e:
             msg = f"[{self.get_name()}]: {str(e)}"

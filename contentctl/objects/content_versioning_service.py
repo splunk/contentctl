@@ -17,21 +17,42 @@ from contentctl.objects.correlation_search import ResultIterator, get_logger
 # TODO (cmcginley): remove this logger
 logger = get_logger()
 
+# TODO (cmcginley): would it be better for this to only run on one instance? Or to consolidate
+#   error reporting at least?
+
 
 class ContentVersioningService(BaseModel):
+    """
+    A model representing the content versioning service used in ES 8.0.0+. This model can be used
+    to validate that detections have been installed in a way that is compatible with content
+    versioning.
+    """
+
+    # The global contentctl config
     global_config: test_common
+
+    # The instance specific infra config
     infrastructure: Infrastructure
+
+    # The splunklib service
     service: splunklib.Service
+
+    # The list of detections
     detections: list[Detection]
 
+    # The cached job on the splunk instance of the cms events
     _cms_main_job: splunklib.Job | None = PrivateAttr(default=None)
 
     class Config:
+        # We need to allow arbitrary type for the splunklib service
         arbitrary_types_allowed = True
 
     @computed_field
     @property
     def setup_functions(self) -> list[tuple[Callable[[], None], str]]:
+        """
+        Returns the list of setup functions needed for content versioning testing
+        """
         return [
             (self.activate_versioning, "Activating Content Versioning"),
             (self.wait_for_cms_main, "Waiting for CMS Parser"),
@@ -56,7 +77,7 @@ class ContentVersioningService(BaseModel):
 
         # Query the content versioning service
         try:
-            response = self.service.request(                                                     # type: ignore
+            response = self.service.request(                                                        # type: ignore
                 method=method,
                 path_segment="configs/conf-feature_flags/general",
                 body=body,
@@ -119,8 +140,6 @@ class ContentVersioningService(BaseModel):
         """
         Activate the content versioning service
         """
-        # TODO (cmcginley): add conditional logging s.t. this check only happens when integration
-        #   testing is enabled AND ES is at least version 8.0, AND mode is `all`
         # Post to the SA-ContentVersioning service to set versioning status
         self._query_content_versioning_service(
             method="POST",
@@ -325,7 +344,7 @@ class ContentVersioningService(BaseModel):
                 # Report any errors extracting the detection name from the longer rule name
                 if match is None:
                     msg = (
-                        f"Entry in cms_main ('{cms_entry_name}') did not match the expected naming "
+                        f"[{cms_entry_name}]: Entry in cms_main did not match the expected naming "
                         "scheme; cannot compare to our detections."
                     )
                     logger.error(msg)
@@ -339,7 +358,7 @@ class ContentVersioningService(BaseModel):
                 # unexpected repeated entry
                 if cms_entry_name in matched_detections:
                     msg = (
-                        f"Detection '{cms_entry_name}' appears more than once in the cms_main "
+                        f"[{cms_entry_name}]: Detection appears more than once in the cms_main "
                         "index."
                     )
                     logger.error(msg)
@@ -376,7 +395,7 @@ class ContentVersioningService(BaseModel):
                 # Generate an exception if we couldn't match the CMS main entry to a detection
                 if result_matches_detection is False:
                     msg = (
-                        f"Could not match entry in cms_main for ('{cms_entry_name}') against any "
+                        f"[{cms_entry_name}]: Could not match entry in cms_main against any "
                         "of the expected detections."
                     )
                     logger.error(msg)
@@ -388,7 +407,7 @@ class ContentVersioningService(BaseModel):
             # Generate exceptions for the unmatched detections
             for detection_name in remaining_detections:
                 msg = (
-                        f"Detection '{detection_name}' not found in cms_main; there may be an "
+                        f"[{detection_name}]: Detection not found in cms_main; there may be an "
                         "issue with savedsearches.conf"
                     )
                 logger.error(msg)
@@ -430,8 +449,8 @@ class ContentVersioningService(BaseModel):
         # Compare the UUIDs
         if cms_uuid != detection.id:
             msg = (
-                f"UUID in cms_event ('{cms_uuid}') does not match UUID in detection "
-                f"('{detection.id}'): {detection.name}"
+                f"[{detection.name}]: UUID in cms_event ('{cms_uuid}') does not match UUID in "
+                f"detection ('{detection.id}')"
             )
             logger.error(msg)
             return Exception(msg)
@@ -439,33 +458,32 @@ class ContentVersioningService(BaseModel):
             # Compare the versions (we append '-1' to the detection version to be in line w/ the
             # internal representation in ES)
             msg = (
-                f"Version in cms_event ('{cms_event['version']}') does not match version in "
-                f"detection ('{detection.version}-1'): {detection.name}"
+                f"[{detection.name}]: Version in cms_event ('{cms_event['version']}') does not "
+                f"match version in detection ('{detection.version}-1')"
             )
             logger.error(msg)
             return Exception(msg)
         elif cms_event[full_search_key] != rule_name_from_detection:
             # Compare the full search name
             msg = (
-                f"Full search name in cms_event ('{cms_event[full_search_key]}') "
-                f"does not match detection name ('{detection.name}')"
+                f"[{detection.name}]: Full search name in cms_event "
+                f"('{cms_event[full_search_key]}') does not match detection name"
             )
             logger.error(msg)
             return Exception(msg)
         elif cms_event["action.correlationsearch.label"] != f"{self.global_config.app.label} - {detection.name} - Rule":
             # Compare the correlation search label
             msg = (
-                f"Correlation search label in cms_event "
-                f"('{cms_event['action.correlationsearch.label']}') does not match detection name "
-                f"('{detection.name}')"
+                f"[{detection.name}]: Correlation search label in cms_event "
+                f"('{cms_event['action.correlationsearch.label']}') does not match detection name"
             )
             logger.error(msg)
             return Exception(msg)
         elif cms_event["sourcetype"] != f"{self.global_config.app.label} - {detection.name} - Rule":
             # Compare the full search name
             msg = (
-                f"Sourcetype in cms_event ('{cms_event[f'sourcetype']}') does not match detection "
-                f"name ('{detection.name}')"
+                f"[{detection.name}]: Sourcetype in cms_event ('{cms_event[f'sourcetype']}') does "
+                f"not match detection name"
             )
             logger.error(msg)
             return Exception(msg)

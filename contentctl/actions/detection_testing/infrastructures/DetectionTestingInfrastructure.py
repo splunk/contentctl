@@ -20,8 +20,9 @@ from splunklib.binding import HTTPError                                         
 from splunklib.results import JSONResultsReader, Message                                            # type: ignore
 from urllib3 import disable_warnings
 import urllib.parse
+from semantic_version import Version                                                                # type: ignore
 
-from contentctl.objects.config import test_common, Infrastructure
+from contentctl.objects.config import test_common, Infrastructure, All
 from contentctl.objects.enums import PostTestBehavior, AnalyticsType
 from contentctl.objects.detection import Detection
 from contentctl.objects.base_test import BaseTest
@@ -41,6 +42,9 @@ from contentctl.actions.detection_testing.progress_bar import (
     FinalTestingStates,
     TestingStates
 )
+
+# The app name of ES; needed to check ES version
+ES_APP_NAME = "SplunkEnterpriseSecuritySuite"
 
 
 class SetupTestGroupResults(BaseModel):
@@ -127,17 +131,27 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         )
 
         self.start_time = time.time()
+
+        # Init the list of setup functions we always need
         setup_functions: list[tuple[Callable[[], None | client.Service], str]] = [
             (self.start, "Starting"),
             (self.get_conn, "Waiting for App Installation"),
             (self.configure_conf_file_datamodels, "Configuring Datamodels"),
             (self.create_replay_index, f"Create index '{self.sync_obj.replay_index}'"),
+            (self.check_for_es_install, "Checking for ES Install"),
             (self.configure_imported_roles, "Configuring Roles"),
             (self.configure_delete_indexes, "Configuring Indexes"),
             (self.configure_hec, "Configuring HEC"),
         ]
-        setup_functions = setup_functions + self.content_versioning_service.setup_functions
+
+        # Add any setup functions only applicable to content versioning validation
+        if self.should_test_content_versioning:
+            setup_functions = setup_functions + self.content_versioning_service.setup_functions
+
+        # Add the final setup function
         setup_functions.append((self.wait_for_ui_ready, "Finishing Setup"))
+
+        # Execute and report on each setup function
         try:
             for func, msg in setup_functions:
                 self.format_pbar_string(
@@ -150,9 +164,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.check_for_teardown()
 
         except Exception as e:
-            self.pbar.write(str(e))
+            msg = f"[{self.get_name()}]: {str(e)}"
             self.finish()
-            raise
+            if isinstance(e, ExceptionGroup):
+                raise ExceptionGroup(msg, e.exceptions) from e                                      # type: ignore
+            raise Exception(msg) from e
 
         self.format_pbar_string(TestReportingType.SETUP, self.get_name(), "Finished Setup!")
 
@@ -162,12 +178,71 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     @computed_field
     @property
     def content_versioning_service(self) -> ContentVersioningService:
+        """
+        A computed field returning a handle to the content versioning service, used by ES to
+        version detections. We use this model to validate that all detections have been installed
+        compatibly with ES versioning.
+
+        :return:  a handle to the content versioning service on the instance
+        :rtype: :class:`contentctl.objects.content_versioning_service.ContentVersioningService`
+        """
         return ContentVersioningService(
             global_config=self.global_config,
             infrastructure=self.infrastructure,
             service=self.get_conn(),
             detections=self.sync_obj.inputQueue
         )
+
+    @property
+    def should_test_content_versioning(self) -> bool:
+        """
+        Indicates whether we should test content versioning. Content versioning
+        should be tested when integration testing is enabled, the mode is all, and ES is at least
+        version 8.0.0.
+
+        :return: a bool indicating whether we should test content versioning
+        :rtype: bool
+        """
+        es_version = self.es_version
+        return (
+            self.global_config.enable_integration_testing 
+            and isinstance(self.global_config.mode, All)
+            and es_version is not None
+            and es_version >= Version("8.0.0")
+        )
+
+    @property
+    def es_version(self) -> Version | None:
+        """
+        Returns the version of Enterprise Security installed on the instance; None if not installed.
+
+        :return: the version of ES, as a semver aware object
+        :rtype: :class:`semantic_version.Version`
+        """
+        if not self.es_installed:
+            return None
+        return Version(self.get_conn().apps[ES_APP_NAME]["version"])                                # type: ignore
+
+    @property
+    def es_installed(self) -> bool:
+        """
+        Indicates whether ES is installed on the instance.
+
+        :return: a bool indicating whether ES is installed or not
+        :rtype: bool
+        """
+        return ES_APP_NAME in self.get_conn().apps
+
+    def check_for_es_install(self) -> None:
+        """
+        Validating function which raises an error if Enterprise Security is not installed and
+        integration testing is enabled.
+        """
+        if not self.es_installed and self.global_config.enable_integration_testing:
+            raise Exception(
+                "Enterprise Security does not appear to be installed on this instance and "
+                "integration testing is enabled."
+            )
 
     def configure_hec(self):
         self.hec_channel = str(uuid.uuid4())
@@ -282,25 +357,22 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     ):
         indexes.append(self.sync_obj.replay_index)
         indexes_encoded = ";".join(indexes)
+
+        # Include ES roles if installed
+        if self.es_installed:
+            imported_roles = imported_roles + enterprise_security_roles
         try:
             self.get_conn().roles.post(
                 self.infrastructure.splunk_app_username,
-                imported_roles=imported_roles + enterprise_security_roles,
+                imported_roles=imported_roles,
                 srchIndexesAllowed=indexes_encoded,
                 srchIndexesDefault=self.sync_obj.replay_index,
             )
             return
         except Exception as e:
-            self.pbar.write(
-                f"Enterprise Security Roles do not exist:'{enterprise_security_roles}: {str(e)}"
-            )
-
-        self.get_conn().roles.post(
-            self.infrastructure.splunk_app_username,
-            imported_roles=imported_roles,
-            srchIndexesAllowed=indexes_encoded,
-            srchIndexesDefault=self.sync_obj.replay_index,
-        )
+            msg = f"Error configuring roles: {str(e)}"
+            self.pbar.write(msg)
+            raise Exception(msg) from e
 
     def configure_delete_indexes(self, indexes: list[str] = ["_*", "*"]):
         indexes.append(self.sync_obj.replay_index)

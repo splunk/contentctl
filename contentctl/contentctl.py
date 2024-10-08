@@ -211,6 +211,9 @@ def main():
             test_common_func(config)
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
+    except FileNotFoundError as e:
+        print(e)
+        sys.exit(1)
     except Exception as e:
         if config is None:
             print("There was a serious issue where the config file could not be created.\n"

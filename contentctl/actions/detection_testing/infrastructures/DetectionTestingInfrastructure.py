@@ -358,13 +358,17 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         indexes.append(self.sync_obj.replay_index)
         indexes_encoded = ";".join(indexes)
 
-        # Include ES roles if installed
-        if self.es_installed:
-            imported_roles = imported_roles + enterprise_security_roles
+        # Set which roles should be configured. For Enterprise Security/Integration Testing,
+        # we must add some extra foles.
+        if self.global_config.enable_integration_testing:
+            roles = imported_roles + enterprise_security_roles
+        else:
+            roles = imported_roles
+
         try:
             self.get_conn().roles.post(
                 self.infrastructure.splunk_app_username,
-                imported_roles=imported_roles,
+                imported_roles=roles,
                 srchIndexesAllowed=indexes_encoded,
                 srchIndexesDefault=self.sync_obj.replay_index,
             )

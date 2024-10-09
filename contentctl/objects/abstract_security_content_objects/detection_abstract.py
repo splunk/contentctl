@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated
+from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated, Self
 import re
 import pathlib
 from enum import Enum
@@ -881,6 +881,27 @@ class Detection_Abstract(SecurityContentObject):
 
         # If all tests are successful (PASS/SKIP), return True
         return True
+
+    @classmethod
+    def get_detection_object_from_stanza_name(cls, stanza_name: str, app:CustomApp, detections: list[Self]) -> Self:
+        """Just as we have a way to go from detection to conf stanza, provide a mapping to go from conf stanza to detection.
+
+        Args:
+            stanza_name (str): The stanza name, probably read from savedsearches.conf
+            app (CustomApp): The app that was used to build the conf file.
+            detections (list[Detection_Abstract]): List of all detections in this repo
+
+        Raises:
+            Exception: An exception will be raised if the expected detection is not found
+
+        Returns:
+            Detection_Abstract: return the Detection_Abtract object with the appropriate name
+        """        
+        matching_detections = list(filter(lambda d: d.get_conf_stanza_name(app) == stanza_name, detections))
+        if len(matching_detections) == 1:
+            return matching_detections[0]
+        raise Exception(f"Failed to find exactly one detection with the conf stanza '{stanza_name}'")
+        
 
     def get_summary(
         self,

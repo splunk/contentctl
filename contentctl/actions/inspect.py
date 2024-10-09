@@ -16,9 +16,11 @@ from contentctl.objects.errors import (
     DetectionIDError,
     DetectionMissingError,
     VersionDecrementedError,
-    VersionBumpingError
+    VersionBumpingError,
+    MetadataValidationErrorFile
 )
-
+from contentctl.input.director import DirectorOutputDto
+from contentctl.objects.detection import Detection
 
 @dataclass(frozen=True)
 class InspectInputDto:
@@ -27,14 +29,14 @@ class InspectInputDto:
 
 class Inspect:
 
-    def execute(self, config: inspect) -> str:
+    def execute(self, config: inspect, director:DirectorOutputDto) -> str:
         if config.build_app or config.build_api:
 
-            self.inspectAppCLI(config)
-            appinspect_token = self.inspectAppAPI(config)
+            #self.inspectAppCLI(config)
+            #appinspect_token = self.inspectAppAPI(config)
 
             if config.enable_metadata_validation:
-                self.check_detection_metadata(config)
+                self.check_detection_metadata(config, director)
             else:
                 print("🟡 Detection metadata validation disabled, skipping.")
 
@@ -266,7 +268,26 @@ class Inspect:
 
         return
 
-    def check_detection_metadata(self, config: inspect) -> None:
+
+    def print_and_dump_metadata_errors_to_yml_file(self, config:inspect, errors_list: list[MetadataValidationError]) -> None:
+        """During validation, there may be a significant number of errors. 
+        In fact, there may be so many that when running at the command line, 
+        they are lost in the backscroll.  Additionally, it may be extremely 
+        helpful to have these errors parsed by a separate program that can 
+        then update the relevant files to fix the error automatically.  
+        This function writes out a strucuted file containing all errors 
+        to enable review and parsing by followon tools.
+
+        Args:
+            validation_errors (dict[str, list[MetadataValidationError]]):List of all errors for output. 
+        """        
+        m = MetadataValidationErrorFile.parse_from_errors_list(errors_list)
+        m.print_errors()
+        m.write_to_file(config.metadata_results_file)
+
+    #def emit_metadata_validation_summary(self, )
+
+    def check_detection_metadata(self, config: inspect, director:DirectorOutputDto) -> None:
         """
         Using a previous build, compare the savedsearches.conf files to detect any issues w/
         detection metadata. **NOTE**: Detection metadata validation can only be performed between
@@ -295,12 +316,15 @@ class Inspect:
         validation_errors: dict[str, list[MetadataValidationError]] = {}
         for rule_name in previous_build_conf.detection_stanzas:
             validation_errors[rule_name] = []
-            # No detections should be removed from build to build
+            # No detections should be removed from build to build.
+            # However, this error can be converted to a warning via 
+            # the following command line flag. This functionality exists
+            # to support validation of public-only vs public+private content
             if rule_name not in current_build_conf.detection_stanzas:
-                if config.supress_missing_content_exceptions:
-                    print(f"[SUPPRESSED] {DetectionMissingError(rule_name=rule_name).long_message}")
-                else:
-                    validation_errors[rule_name].append(DetectionMissingError(rule_name=rule_name))
+                validation_errors[rule_name].append(
+                    DetectionMissingError(rule_name=rule_name, 
+                                          suppress_as_warning=config.suppress_missing_content_exceptions))
+            
                 continue
             # Pull out the individual stanza for readability
             previous_stanza = previous_build_conf.detection_stanzas[rule_name]
@@ -310,6 +334,7 @@ class Inspect:
             if current_stanza.metadata.detection_id != previous_stanza.metadata.detection_id:
                 validation_errors[rule_name].append(
                     DetectionIDError(
+                        file_path=Detection.get_detection_object_from_stanza_name(rule_name, config.app, director.detections).file_path,
                         rule_name=rule_name,
                         current_id=current_stanza.metadata.detection_id,
                         previous_id=previous_stanza.metadata.detection_id
@@ -320,6 +345,7 @@ class Inspect:
             if current_stanza.metadata.detection_version < previous_stanza.metadata.detection_version:
                 validation_errors[rule_name].append(
                     VersionDecrementedError(
+                        file_path=Detection.get_detection_object_from_stanza_name(rule_name, config.app, director.detections).file_path,
                         rule_name=rule_name,
                         current_version=current_stanza.metadata.detection_version,
                         previous_version=previous_stanza.metadata.detection_version
@@ -330,6 +356,7 @@ class Inspect:
             if current_stanza.version_should_be_bumped(previous_stanza):
                 validation_errors[rule_name].append(
                     VersionBumpingError(
+                        file_path=Detection.get_detection_object_from_stanza_name(rule_name, config.app, director.detections).file_path,
                         rule_name=rule_name,
                         current_version=current_stanza.metadata.detection_version,
                         previous_version=previous_stanza.metadata.detection_version
@@ -339,18 +366,7 @@ class Inspect:
         # Convert our dict mapping to a flat list of errors for use in reporting
         validation_error_list = [x for inner_list in validation_errors.values() for x in inner_list]    
 
-        # Report failure/success
-        print("\nDetection Metadata Validation:")
-        if len(validation_error_list) > 0:
-            # Iterate over each rule and report the failures
-            for rule_name in validation_errors:
-                if len(validation_errors[rule_name]) > 0:
-                    print(f"\t❌ {rule_name}")
-                    for error in validation_errors[rule_name]:
-                        print(f"\t\t🔸 {error.short_message}")
-        else:
-            # If no errors in the list, report success
-            print("\t✅ Detection metadata looks good and all versions were bumped appropriately :)")
+        self.print_and_dump_metadata_errors_to_yml_file(config, validation_error_list)
 
         # Raise an ExceptionGroup for all validation issues
         if len(validation_error_list) > 0:

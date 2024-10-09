@@ -308,7 +308,7 @@ class inspect(build):
             "should be enabled."
         )
     )
-    supress_missing_content_exceptions: bool = Field(
+    suppress_missing_content_exceptions: bool = Field(
         default=False,
         description=(
             "Suppress exceptions during metadata validation if a detection that existed in "
@@ -335,6 +335,13 @@ class inspect(build):
         )
     )
     stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
+
+    @property
+    def metadata_results_file(self) -> pathlib.Path:
+        
+        return self.getPackageFilePath().parent / (self.getPackageFilePath().name + ".metadata-validation-results.yml")
+        
+        
 
     @field_validator("enrichments", mode="after")
     @classmethod

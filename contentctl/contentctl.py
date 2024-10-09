@@ -81,8 +81,8 @@ def build_func(config:build)->DirectorOutputDto:
 
 def inspect_func(config:inspect)->str:
     #Make sure that we have built the most recent version of the app
-    _ = build_func(config)
-    inspect_token = Inspect().execute(config)
+    director = build_func(config)
+    inspect_token = Inspect().execute(config, director)
     return inspect_token
     
 

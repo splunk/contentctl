@@ -172,11 +172,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # Retrieve all available indexes on the splunk instance
             all_indexes = self.get_all_indexes()
 
+            indexes = f"{self.sync_obj.replay_index}," + ",".join(all_indexes)
+
             res = self.get_conn().inputs.create(
                 name="DETECTION_TESTING_HEC",
                 kind="http",
                 index=self.sync_obj.replay_index,
-                indexes=all_indexes, # This allows the HEC to write to all indexes
+                indexes=indexes, # This allows the HEC to write to all indexes
                 useACK=True,
             )
             self.hec_token = str(res.token)
@@ -185,13 +187,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except Exception as e:
             raise (Exception(f"Failure creating HEC Endpoint: {str(e)}"))
 
-
     def get_all_indexes(self):
         """
         Retrieve a list of all indexes in the Splunk instance
         """
         try:
-            return [index.name for index in self.get_conn().indexes]
+            indexes = []
+            res = self.get_conn().indexes
+            for index in res.list():
+                indexes.append(index.name)
         except Exception as e:
             raise (Exception(f"Failure getting indexes: {str(e)}"))
 

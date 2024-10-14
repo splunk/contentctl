@@ -196,6 +196,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             res = self.get_conn().indexes
             for index in res.list():
                 indexes.append(index.name)
+            return indexes
         except Exception as e:
             raise (Exception(f"Failure getting indexes: {str(e)}"))
 

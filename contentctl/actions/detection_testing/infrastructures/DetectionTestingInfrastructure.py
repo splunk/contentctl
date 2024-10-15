@@ -13,7 +13,7 @@ from sys import stdout
 from shutil import copyfile
 from typing import Union, Optional
 
-from pydantic import BaseModel, PrivateAttr, Field, dataclasses
+from pydantic import ConfigDict, BaseModel, PrivateAttr, Field, dataclasses
 import requests                                                                                     # type: ignore
 import splunklib.client as client                                                                   # type: ignore
 from splunklib.binding import HTTPError                                                             # type: ignore
@@ -48,9 +48,9 @@ class SetupTestGroupResults(BaseModel):
     success: bool = True
     duration: float = 0
     start_time: float
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
 
 
 class CleanupTestGroupResults(BaseModel):
@@ -91,9 +91,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     _conn: client.Service = PrivateAttr()
     pbar: tqdm.tqdm = None
     start_time: Optional[float] = None
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
 
     def __init__(self, **data):
         super().__init__(**data)

@@ -10,10 +10,12 @@ class NotableEvent(BaseModel):
 
     # The search ID that found that generated this risk event
     orig_sid: str
-    
+
     # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
     # fields vary depending on the SPL which generated them
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(
+        extra='allow'
+    )
 
     def validate_against_detection(self, detection: Detection) -> None:
         raise NotImplementedError()

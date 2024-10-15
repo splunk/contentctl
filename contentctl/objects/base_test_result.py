@@ -2,7 +2,7 @@ from typing import Union, Any
 from enum import Enum
 
 from pydantic import ConfigDict, BaseModel
-from splunklib.data import Record
+from splunklib.data import Record                                                                   # type: ignore
 
 from contentctl.helper.utils import Utils
 
@@ -52,9 +52,12 @@ class BaseTestResult(BaseModel):
 
     # The Splunk endpoint URL
     sid_link: Union[None, str] = None
-    
+
     # Needed to allow for embedding of Exceptions in the model
-    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        validate_assignment=True,
+        arbitrary_types_allowed=True
+    )
 
     @property
     def passed(self) -> bool:

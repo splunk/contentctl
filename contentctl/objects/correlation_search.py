@@ -1,8 +1,9 @@
 import logging
 import time
 import json
-from typing import Union, Optional, Any
+from typing import Any
 from enum import Enum
+from functools import cached_property
 
 from pydantic import ConfigDict, BaseModel, computed_field, Field, PrivateAttr
 from splunklib.results import JSONResultsReader, Message                                            # type: ignore
@@ -15,7 +16,7 @@ from contentctl.objects.notable_action import NotableAction
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.actions.detection_testing.progress_bar import (
-    format_pbar_string,
+    format_pbar_string,                                                                             # type: ignore
     TestReportingType,
     TestingStates
 )
@@ -178,12 +179,14 @@ class PbarData(BaseModel):
     :param fq_test_name: the fully qualifed (fq) test name ("<detection_name>:<test_name>") used for logging
     :param start_time: the start time used for logging
     """
-    pbar: tqdm
+    pbar: tqdm                                                                                      # type: ignore
     fq_test_name: str
     start_time: float
-    
+
     # needed to support the tqdm type
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
 
 
 class CorrelationSearch(BaseModel):
@@ -196,78 +199,110 @@ class CorrelationSearch(BaseModel):
     :param pbar_data: the encapsulated info needed for logging w/ pbar
     :param test_index: the index attack data is forwarded to for testing (optionally used in cleanup)
     """
-    ## The following three fields are explicitly needed at instantiation                            # noqa: E266
-
     # the detection associated with the correlation search (e.g. "Windows Modify Registry EnableLinkedConnections")
-    detection: Detection
+    detection: Detection = Field(...)
 
     # a Service instance representing a connection to a Splunk instance
-    service: splunklib.Service
+    service: splunklib.Service = Field(...)
 
     # the encapsulated info needed for logging w/ pbar
-    pbar_data: PbarData
-
-    ## The following field is optional for instantiation                                            # noqa: E266
+    pbar_data: PbarData = Field(...)
 
     # The index attack data is sent to; can be None if we are relying on the caller to do our
     # cleanup of this index
-    test_index: Optional[str] = Field(default=None, min_length=1)
-
-    ## All remaining fields can be derived from other fields or have intentional defaults that      # noqa: E266
-    ## should not be changed (validators should prevent instantiating some of these fields directly # noqa: E266
-    ## to prevent undefined behavior)                                                               # noqa: E266
+    test_index: str | None = Field(default=None, min_length=1)
 
     # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
     # to conflict w/ tqdm)
-    logger: logging.Logger = Field(default_factory=get_logger)
+    logger: logging.Logger = Field(default_factory=get_logger, init=False)
 
-    # The search name (e.g. "ESCU - Windows Modify Registry EnableLinkedConnections - Rule")
+    # The set of indexes to clear on cleanup
+    indexes_to_purge: set[str] = Field(default=set(), init=False)
+
+    # The risk analysis adaptive response action (if defined)
+    _risk_analysis_action: RiskAnalysisAction | None = PrivateAttr(default=None)
+
+    # The notable adaptive response action (if defined)
+    _notable_action: NotableAction | None = PrivateAttr(default=None)
+
+    # The list of risk events found
+    _risk_events: list[RiskEvent] | None = PrivateAttr(default=None)
+
+    # The list of notable events found
+    _notable_events: list[NotableEvent] | None = PrivateAttr(default=None)
+
+    # Need arbitrary types to allow fields w/ types like SavedSearch; we also want to forbid
+    # unexpected fields
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        extra='forbid'
+    )
+
+    def model_post_init(self, __context: Any) -> None:
+        super().model_post_init(__context)
+
+        # Parse the initial values for the risk/notable actions
+        self._parse_risk_and_notable_actions()
+
     @computed_field
-    @property
+    @cached_property
     def name(self) -> str:
+        """
+        The search name (e.g. "ESCU - Windows Modify Registry EnableLinkedConnections - Rule")
+
+        :returns: the search name
+        :rtype: str
+        """
         return f"ESCU - {self.detection.name} - Rule"
 
-    # The path to the saved search on the Splunk instance
     @computed_field
-    @property
+    @cached_property
     def splunk_path(self) -> str:
+        """
+        The path to the saved search on the Splunk instance
+
+        :returns: the search path
+        :rtype: str
+        """
         return f"/saved/searches/{self.name}"
 
-    # A model of the saved search as provided by splunklib
     @computed_field
-    @property
-    def saved_search(self) -> splunklib.SavedSearch | None:
+    @cached_property
+    def saved_search(self) -> splunklib.SavedSearch:
+        """
+        A model of the saved search as provided by splunklib
+
+        :returns: the SavedSearch object
+        :rtype: :class:`splunklib.client.SavedSearch`
+        """
         return splunklib.SavedSearch(
             self.service,
             self.splunk_path,
         )
 
-    # The set of indexes to clear on cleanup
-    indexes_to_purge: set[str] = set()
-
-    # The risk analysis adaptive response action (if defined)
+    # TODO (cmcginley): need to make this refreshable
     @computed_field
     @property
     def risk_analysis_action(self) -> RiskAnalysisAction | None:
-        if not self.saved_search.content:
-            return None
-        return CorrelationSearch._get_risk_analysis_action(self.saved_search.content)
+        """
+        The risk analysis adaptive response action (if defined)
 
-    # The notable adaptive response action (if defined)
+        :returns: the RiskAnalysisAction object, if it exists
+        :rtype: :class:`contentctl.objects.risk_analysis_action.RiskAnalysisAction` | None
+        """
+        return self._risk_analysis_action
+
+    # TODO (cmcginley): need to make this refreshable
     @computed_field
     @property
     def notable_action(self) -> NotableAction | None:
-        if not self.saved_search.content:
-            return None
-        return CorrelationSearch._get_notable_action(self.saved_search.content)
+        """
+        The notable adaptive response action (if defined)
 
-    # The list of risk events found
-    _risk_events: Optional[list[RiskEvent]] = PrivateAttr(default=None)
-
-    # The list of notable events found
-    _notable_events: Optional[list[NotableEvent]] = PrivateAttr(default=None)
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra='forbid')
-
+        :returns: the NotableAction object, if it exists
+        :rtype: :class:`contentctl.objects.notable_action.NotableAction` | None
+        """
+        return self._notable_action
 
     @property
     def earliest_time(self) -> str:
@@ -327,7 +362,7 @@ class CorrelationSearch(BaseModel):
         return self.notable_action is not None
 
     @staticmethod
-    def _get_risk_analysis_action(content: dict[str, Any]) -> Optional[RiskAnalysisAction]:
+    def _get_risk_analysis_action(content: dict[str, Any]) -> RiskAnalysisAction | None:
         """
         Given the saved search content, parse the risk analysis action
         :param content: a dict of strings to values
@@ -341,7 +376,7 @@ class CorrelationSearch(BaseModel):
         return None
 
     @staticmethod
-    def _get_notable_action(content: dict[str, Any]) -> Optional[NotableAction]:
+    def _get_notable_action(content: dict[str, Any]) -> NotableAction | None:
         """
         Given the saved search content, parse the notable action
         :param content: a dict of strings to values
@@ -365,10 +400,6 @@ class CorrelationSearch(BaseModel):
                 relevant.append(observable)
         return relevant
 
-    # TODO (PEX-484): ideally, we could handle this and the following init w/ a call to
-    #   model_post_init, so that all the logic is encapsulated w/in _parse_risk_and_notable_actions
-    #   but that is a pydantic v2 feature (see the init validators for risk/notable actions):
-    #   https://docs.pydantic.dev/latest/api/base_model/#pydantic.main.BaseModel.model_post_init
     def _parse_risk_and_notable_actions(self) -> None:
         """Parses the risk/notable metadata we care about from self.saved_search.content
 
@@ -379,12 +410,12 @@ class CorrelationSearch(BaseModel):
             unpacked to be anything other than a singleton
         """
         # grab risk details if present
-        self.risk_analysis_action = CorrelationSearch._get_risk_analysis_action(
+        self._risk_analysis_action = CorrelationSearch._get_risk_analysis_action(
             self.saved_search.content                                                               # type: ignore
         )
 
         # grab notable details if present
-        self.notable_action = CorrelationSearch._get_notable_action(self.saved_search.content)      # type: ignore
+        self._notable_action = CorrelationSearch._get_notable_action(self.saved_search.content)     # type: ignore
 
     def refresh(self) -> None:
         """Refreshes the metadata in the SavedSearch entity, and re-parses the fields we care about
@@ -672,7 +703,7 @@ class CorrelationSearch(BaseModel):
         # TODO (#250): Re-enable and refactor code that validates the specific risk counts
         # Validate risk events in aggregate; we should have an equal amount of risk events for each
         # relevant observable, and the total count should match the total number of events
-        # individual_count: Optional[int] = None
+        # individual_count: int | None = None
         # total_count = 0
         # for observable_str in observable_counts:
         #     self.logger.debug(
@@ -736,7 +767,7 @@ class CorrelationSearch(BaseModel):
             )
 
         # initialize result as None
-        result: Optional[IntegrationTestResult] = None
+        result: IntegrationTestResult | None = None
 
         # keep track of time slept and number of attempts for exponential backoff (base 2)
         elapsed_sleep_time = 0

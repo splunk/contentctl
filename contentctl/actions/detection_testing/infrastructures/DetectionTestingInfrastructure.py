@@ -48,7 +48,9 @@ class SetupTestGroupResults(BaseModel):
     success: bool = True
     duration: float = 0
     start_time: float
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
 
 
 class CleanupTestGroupResults(BaseModel):
@@ -89,7 +91,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     _conn: client.Service = PrivateAttr()
     pbar: tqdm.tqdm = None
     start_time: Optional[float] = None
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
 
     def __init__(self, **data):
         super().__init__(**data)

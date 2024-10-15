@@ -23,30 +23,30 @@ class RiskAnalysisAction(BaseModel):
 
     @field_validator("message", mode="before")
     @classmethod
-    def _validate_message(cls, message) -> str:
+    def _validate_message(cls, v: Any) -> str:
         """
-        Validate splunk_path and derive if None
+        Validate message and derive if None
         """
-        if message is None:
+        if v is None:
             raise ValueError(
                 "RiskAnalysisAction.message is a required field, cannot be None. Check the "
                 "detection YAML definition to ensure a message is defined"
             )
 
-        if not isinstance(message, str):
+        if not isinstance(v, str):
             raise ValueError(
                 "RiskAnalysisAction.message must be a string. Check the detection YAML definition "
                 "to ensure message is defined as a string"
             )
 
-        if len(message.strip()) < 1:
+        if len(v.strip()) < 1:
             raise ValueError(
                 "RiskAnalysisAction.message must be a meaningful string, with a length greater than"
                 "or equal to 1 (once stripped of trailing/leading whitespace). Check the detection "
                 "YAML definition to ensure message is defined as a meanigful string"
             )
 
-        return message
+        return v
 
     @classmethod
     def parse_from_dict(cls, dict_: dict[str, Any]) -> "RiskAnalysisAction":

@@ -79,7 +79,7 @@ class DetectionTags(BaseModel):
     security_domain: SecurityDomain = Field(...)
     cve: List[CVE_TYPE] = []
     atomic_guid: List[AtomicTest] = []
-    drilldown_search: Optional[str] = None
+    
 
     # enrichment
     mitre_attack_enrichments: List[MitreAttackEnrichment] = Field([], validate_default=True)
@@ -114,7 +114,7 @@ class DetectionTags(BaseModel):
 
     # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
-
+    
     # The following validator is temporarily disabled pending further discussions
     # @validator('message')
     # def validate_message(cls,v,values):

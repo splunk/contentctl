@@ -168,6 +168,7 @@ class Detection_Abstract(SecurityContentObject):
         the model from the list of unit tests. Also, preemptively skips all manual tests, as well as
         tests for experimental/deprecated detections and Correlation type detections.
         """
+        
         # Since ManualTest and UnitTest are not differentiable without looking at the manual_test
         # tag, Pydantic builds all tests as UnitTest objects. If we see the manual_test flag, we
         # convert these to ManualTest
@@ -829,6 +830,45 @@ class Detection_Abstract(SecurityContentObject):
 
         # Found everything
         return self
+
+    @field_validator("tests", mode="before")
+    def ensure_yml_test_is_unittest(cls, v:list[dict]):
+        """The typing for the tests field allows it to be one of
+        a number of different types of tests. However, ONLY
+        UnitTest should be allowed to be defined in the YML
+        file.  If part of the UnitTest defined in the YML
+        is incorrect, such as the attack_data file, then
+        it will FAIL to be instantiated as a UnitTest and
+        may instead be instantiated as a different type of
+        test, such as IntegrationTest (since that requires
+        less fields) which is incorrect. Ensure that any
+        raw data read from the YML can actually construct
+        a valid UnitTest and, if not, return errors right
+        away instead of letting Pydantic try to construct
+        it into a different type of test
+
+        Args:
+            v (list[dict]): list of dicts read from the yml. 
+            Each one SHOULD be a valid UnitTest. If we cannot
+            construct a valid unitTest from it, a ValueError should be raised
+
+        Returns:
+            _type_: The input of the function, assuming no 
+            ValueError is raised.
+        """        
+        valueErrors:list[ValueError] = []
+        for unitTest in v:
+            #This raises a ValueError on a failed UnitTest.
+            try:
+                UnitTest.model_validate(unitTest)
+            except ValueError as e:
+                valueErrors.append(e)
+        if len(valueErrors):
+            raise ValueError(valueErrors)
+        # All of these can be constructred as UnitTests with no
+        # Exceptions, so let the normal flow continue
+        return v
+        
 
     @field_validator("tests")
     def tests_validate(

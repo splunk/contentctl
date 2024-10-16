@@ -1,7 +1,7 @@
 import re
+from functools import cached_property
 
-from pydantic import BaseModel, Field, PrivateAttr, field_validator, computed_field
-
+from pydantic import ConfigDict, BaseModel, Field, PrivateAttr, field_validator, computed_field
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
 from contentctl.objects.observable import Observable
@@ -85,10 +85,11 @@ class RiskEvent(BaseModel):
     # Private attribute caching the observable this RiskEvent is mapped to
     _matched_observable: Observable | None = PrivateAttr(default=None)
 
-    class Config:
-        # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
-        # fields vary depending on the SPL which generated them
-        extra = "allow"
+    # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
+    # fields vary depending on the SPL which generated them
+    model_config = ConfigDict(
+        extra="allow"
+    )
 
     @field_validator("annotations_mitre_attack", "analyticstories", mode="before")
     @classmethod
@@ -103,7 +104,7 @@ class RiskEvent(BaseModel):
             return [v]
 
     @computed_field
-    @property
+    @cached_property
     def source_field_name(self) -> str:
         """
         A cached derivation of the source field name the risk event corresponds to in the relevant

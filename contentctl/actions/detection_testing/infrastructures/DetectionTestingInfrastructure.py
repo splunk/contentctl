@@ -13,7 +13,7 @@ from sys import stdout
 from shutil import copyfile
 from typing import Union, Optional, Callable
 
-from pydantic import BaseModel, PrivateAttr, Field, dataclasses, computed_field
+from pydantic import ConfigDict, BaseModel, PrivateAttr, Field, dataclasses, computed_field
 import requests                                                                                     # type: ignore
 import splunklib.client as client                                                                   # type: ignore
 from splunklib.binding import HTTPError                                                             # type: ignore
@@ -52,9 +52,9 @@ class SetupTestGroupResults(BaseModel):
     success: bool = True
     duration: float = 0
     start_time: float
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
 
 
 class CleanupTestGroupResults(BaseModel):
@@ -74,6 +74,15 @@ class CannotRunBaselineException(Exception):
     # exception
     pass
 
+class ReplayIndexDoesNotExistOnServer(Exception):
+    '''
+    In order to replay data files into the Splunk Server
+    for testing, they must be replayed into an index that
+    exists. If that index does not exist, this error will
+    be generated and raised before we try to do anything else
+    with that Data File.
+    '''
+    pass
 
 @dataclasses.dataclass(frozen=False)
 class DetectionTestingManagerOutputDto():
@@ -81,7 +90,7 @@ class DetectionTestingManagerOutputDto():
     outputQueue: list[Detection] = Field(default_factory=list)
     currentTestingQueue: dict[str, Union[Detection, None]] = Field(default_factory=dict)
     start_time: Union[datetime.datetime, None] = None
-    replay_index: str = "CONTENTCTL_TESTING_INDEX"
+    replay_index: str = "contentctl_testing_index"
     replay_host: str = "CONTENTCTL_HOST"
     timeout_seconds: int = 60
     terminate: bool = False
@@ -94,12 +103,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     sync_obj: DetectionTestingManagerOutputDto
     hec_token: str = ""
     hec_channel: str = ""
+    all_indexes_on_server: list[str] = []
     _conn: client.Service = PrivateAttr()
     pbar: tqdm.tqdm = None
     start_time: Optional[float] = None
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -138,6 +148,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             (self.get_conn, "Waiting for App Installation"),
             (self.configure_conf_file_datamodels, "Configuring Datamodels"),
             (self.create_replay_index, f"Create index '{self.sync_obj.replay_index}'"),
+            (self.get_all_indexes, "Getting all indexes from server")
             (self.check_for_es_install, "Checking for ES Install"),
             (self.configure_imported_roles, "Configuring Roles"),
             (self.configure_delete_indexes, "Configuring Indexes"),
@@ -271,12 +282,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             pass
 
         try:
-
             res = self.get_conn().inputs.create(
                 name="DETECTION_TESTING_HEC",
                 kind="http",
                 index=self.sync_obj.replay_index,
-                indexes=f"{self.sync_obj.replay_index},_internal,_audit",
+                indexes=",".join(self.all_indexes_on_server), # This allows the HEC to write to all indexes
                 useACK=True,
             )
             self.hec_token = str(res.token)
@@ -284,6 +294,23 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         except Exception as e:
             raise (Exception(f"Failure creating HEC Endpoint: {str(e)}"))
+
+    def get_all_indexes(self) -> None:
+        """
+        Retrieve a list of all indexes in the Splunk instance
+        """
+        try:
+            # We do not include the replay index because by
+            # the time we get to this function, it has already
+            # been created on the server.
+            indexes = []
+            res = self.get_conn().indexes
+            for index in res.list():
+                indexes.append(index.name)
+            # Retrieve all available indexes on the splunk instance
+            self.all_indexes_on_server = indexes
+        except Exception as e:
+            raise (Exception(f"Failure getting indexes: {str(e)}"))
 
     def get_conn(self) -> client.Service:
         try:
@@ -367,10 +394,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self,
         imported_roles: list[str] = ["user", "power", "can_delete"],
         enterprise_security_roles: list[str] = ["ess_admin", "ess_analyst", "ess_user"],
-        indexes: list[str] = ["_*", "*"],
     ):
-        indexes.append(self.sync_obj.replay_index)
-        indexes_encoded = ";".join(indexes)
 
         # Set which roles should be configured. For Enterprise Security/Integration Testing,
         # we must add some extra foles.
@@ -383,7 +407,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.get_conn().roles.post(
                 self.infrastructure.splunk_app_username,
                 imported_roles=roles,
-                srchIndexesAllowed=indexes_encoded,
+                srchIndexesAllowed=";".join(self.all_indexes_on_server),
                 srchIndexesDefault=self.sync_obj.replay_index,
             )
             return
@@ -392,15 +416,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.pbar.write(msg)
             raise Exception(msg) from e
 
-    def configure_delete_indexes(self, indexes: list[str] = ["_*", "*"]):
-        indexes.append(self.sync_obj.replay_index)
+    def configure_delete_indexes(self):
         endpoint = "/services/properties/authorize/default/deleteIndexesAllowed"
-        indexes_encoded = ";".join(indexes)
         try:
-            self.get_conn().post(endpoint, value=indexes_encoded)
+            self.get_conn().post(endpoint, value=";".join(self.all_indexes_on_server))
         except Exception as e:
             self.pbar.write(
-                f"Error configuring deleteIndexesAllowed with '{indexes_encoded}': [{str(e)}]"
+                f"Error configuring deleteIndexesAllowed with '{self.all_indexes_on_server}': [{str(e)}]"
             )
 
     def wait_for_conf_file(self, app_name: str, conf_file_name: str):
@@ -748,8 +770,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Set the mode and timeframe, if required
         kwargs = {"exec_mode": "blocking"}
-
-        
 
         # Set earliest_time and latest_time appropriately if FORCE_ALL_TIME is False
         if not FORCE_ALL_TIME:
@@ -1130,8 +1150,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Get the start time and compute the timeout
         search_start_time = time.time()
         search_stop_time = time.time() + self.sync_obj.timeout_seconds        
-        
-        # Make a copy of the search string since we may 
+
+        # Make a copy of the search string since we may
         # need to make some small changes to it below
         search = detection.search
 
@@ -1183,8 +1203,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 # Initialize the collection of fields that are empty that shouldn't be
                 present_threat_objects: set[str] = set()
                 empty_fields: set[str] = set()
-                
-                
 
                 # Filter out any messages in the results
                 for result in results:
@@ -1214,7 +1232,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     # not populated and we should throw an error.  This can happen if there is a typo
                     # on a field.  In this case, the field will appear but will not contain any values
                     current_empty_fields: set[str] = set()
-                    
+
                     for field in observable_fields_set:
                         if result.get(field, 'null') == 'null':
                             if field in risk_object_fields_set:
@@ -1234,9 +1252,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                             if field in threat_object_fields_set:
                                 present_threat_objects.add(field)
                                 continue
-                                
 
-                    
                     # If everything succeeded up until now, and no empty fields are found in the
                     # current result, then the search was a success
                     if len(current_empty_fields) == 0:
@@ -1250,8 +1266,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     else:
                         empty_fields = empty_fields.union(current_empty_fields)
-                        
-                        
+
                 missing_threat_objects = threat_object_fields_set - present_threat_objects
                 # Report a failure if there were empty fields in a threat object in all results
                 if len(missing_threat_objects) > 0:
@@ -1267,7 +1282,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         duration=time.time() - search_start_time,
                     )
                     return
-                
 
                 test.result.set_job_content(
                             job.content,
@@ -1328,9 +1342,19 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         test_group: TestGroup,
         test_group_start_time: float,
     ):
+        # Before attempting to replay the file, ensure that the index we want
+        # to replay into actuall exists. If not, we should throw a detailed
+        # exception that can easily be interpreted by the user.
+        if attack_data_file.custom_index is not None and \
+            attack_data_file.custom_index not in self.all_indexes_on_server:
+            raise ReplayIndexDoesNotExistOnServer(
+                f"Unable to replay data file {attack_data_file.data} "
+                f"into index '{attack_data_file.custom_index}'. "
+                "The index does not exist on the Splunk Server. "
+                f"The only valid indexes on the server are {self.all_indexes_on_server}"
+            )
+
         tempfile = mktemp(dir=tmp_dir)
-
-
         if not (str(attack_data_file.data).startswith("http://") or 
                 str(attack_data_file.data).startswith("https://")) :
             if pathlib.Path(str(attack_data_file.data)).is_file():
@@ -1374,7 +1398,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         f"Could not download attack data file [{attack_data_file.data}]:{str(e)}"
                     )
                 )
-
 
         # Upload the data
         self.format_pbar_string(

@@ -159,8 +159,6 @@ class CustomApp(App_Base):
                                 verbose_print=True)
         return str(destination)
     
-
-
 # TODO (#266): disable the use_enum_values configuration
 class Config_Base(BaseModel):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
@@ -288,7 +286,6 @@ class build(validate):
 
     def getAppTemplatePath(self)->pathlib.Path:
         return self.path/"app_template"
-    
 
 
 class StackType(StrEnum):
@@ -309,6 +306,16 @@ class inspect(build):
         description=(
             "Flag indicating whether detection metadata validation and versioning enforcement "
             "should be enabled."
+        )
+    )
+    suppress_missing_content_exceptions: bool = Field(
+        default=False,
+        description=(
+            "Suppress exceptions during metadata validation if a detection that existed in "
+            "the previous build does not exist in this build. This is to ensure that content "
+            "is not accidentally removed. In order to support testing both public and private "
+            "content, this warning can be suppressed. If it is suppressed, it will still be "
+            "printed out as a warning."
         )
     )
     enrichments: bool = Field(
@@ -950,7 +957,6 @@ class test_servers(test_common):
                 index+=1
 
 
-        
 class release_notes(Config_Base):
     old_tag:Optional[str] = Field(None, description="Name of the tag to diff against to find new content. "
                                           "If it is not supplied, then it will be inferred as the "
@@ -1033,5 +1039,3 @@ class release_notes(Config_Base):
         
         
     #     return self
-
-

@@ -325,8 +325,6 @@ class inspect(build):
             f"or CLI invocation appropriately] {validate.model_fields['enrichments'].description}"
             )
         )
-    # TODO (cmcginley): wording should change here if we want to be able to download any app from
-    #   Splunkbase
     previous_build: str | None = Field(
         default=None,
         description=(

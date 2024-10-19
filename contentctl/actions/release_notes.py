@@ -114,7 +114,10 @@ class ReleaseNotes:
             #If a branch name is supplied, compare against develop
             if config.latest_branch not in repo.branches:
                 raise ValueError(f"latest branch {config.latest_branch} does not exist in the repository. Make sure your branch name is correct")
-            compare_against = "develop"
+            if config.compare_against not in repo.branches:
+                compare_against = config.compare_against
+            else:
+                compare_against = "develop"
             commit1 = repo.commit(config.latest_branch)
             commit2 = repo.commit(compare_against)    
             diff_index = commit2.diff(commit1)

@@ -966,7 +966,7 @@ class release_notes(Config_Base):
     new_tag:Optional[str] = Field(None, description="Name of the tag containing new content. If it is not supplied,"
                                           " then it will be inferred as the newest tag at runtime.")
     latest_branch:Optional[str] = Field(None, description="Branch name for which we are generating release notes for")
-    compare_against:Optional[str] = Field(None, description="Branch name for which we are comparing the files changes against")
+    compare_against:Optional[str] = Field(default="develop", description="Branch name for which we are comparing the files changes against")
 
     def releaseNotesFilename(self, filename:str)->pathlib.Path:
         #Assume that notes are written to dist/. This does not respect build_dir since that is

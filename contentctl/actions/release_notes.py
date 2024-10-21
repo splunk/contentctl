@@ -116,9 +116,8 @@ class ReleaseNotes:
                 raise ValueError(f"latest branch {config.latest_branch} does not exist in the repository. Make sure your branch name is correct")
             if config.compare_against not in repo.branches:
                 raise ValueError(f"compare_against branch {config.compare_against} does not exist in the repository. Make sure your branch name is correct")
-            compare_against = config.compare_against
             commit1 = repo.commit(config.latest_branch)
-            commit2 = repo.commit(compare_against)    
+            commit2 = repo.commit(config.compare_against)    
             diff_index = commit2.diff(commit1)
         
         modified_files:List[pathlib.Path] = []

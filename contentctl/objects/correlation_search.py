@@ -988,6 +988,9 @@ class CorrelationSearch(BaseModel):
         and the cron schedule persist after cleanup
         :param delete_test_index: flag indicating whether the test index should be cleared or not (defaults to False)
         """
+        print("\n\n\n\npre cleanup\n\n\n\n")
+        _ = input()
+        print("\n\n\n\ngot user okay\n\n\n\n")
         # delete_test_index can't be true when test_index is None
         if delete_test_index and (self.test_index is None):
             raise ClientError("test_index is None, cannot delete it")

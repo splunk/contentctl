@@ -330,7 +330,6 @@ class SecurityDomain(str, enum.Enum):
     IDENTITY = "identity"
     ACCESS = "access"
     AUDIT = "audit"
-    CLOUD = "cloud"
 
 class AssetType(str, enum.Enum):
     AWS_ACCOUNT = "AWS Account"

@@ -1,35 +1,33 @@
-[tool.poetry]
+[project]
+dynamic = ["version"]
 name = "contentctl"
-version = "4.4.1"
-
 description = "Splunk Content Control Tool"
-authors = ["STRT <research@splunk.com>"]
-license = "Apache 2.0"
 readme = "README.md"
 
-[tool.poetry.scripts]
+dependencies = [
+    "pydantic>=2.8.2,<3",
+    "PyYAML>=6.0.2,<7",
+    "requests>=2.32.3,<3",
+    "pycvesearch>=1.2,<2",
+    "xmltodict>=0.13,<0.15",
+    "attackcti>=0.4.0,<1",
+    "Jinja2>=3.1.4,<4",
+    "questionary>=2.0.1,<3",
+    "docker>=7.1.0,<8",
+    "splunk-sdk>=2.0.2,<3",
+    "semantic-version>=2.10.0,<3",
+    "bottle>=0.12.25,<0.14.0",
+    "tqdm>=4.66.5,<5",
+    "pygit2>=1.15.1,<2",
+    "tyro>=0.8.3,<1",
+    "gitpython>=3.1.43,<4",
+]
+
+[project.scripts]
 contentctl = 'contentctl.contentctl:main'
 
-[tool.poetry.dependencies]
-python = "^3.11"
-pydantic = "^2.8.2"
-PyYAML = "^6.0.2"
-requests = "~2.32.3"
-pycvesearch = "^1.2"
-xmltodict = ">=0.13,<0.15"
-attackcti = "^0.4.0"
-Jinja2 = "^3.1.4"
-questionary = "^2.0.1"
-docker = "^7.1.0"
-splunk-sdk = "^2.0.2"
-semantic-version = "^2.10.0"
-bottle = ">=0.12.25,<0.14.0"
-tqdm = "^4.66.5"
-pygit2 = "^1.15.1"
-tyro = "^0.8.3"
-gitpython = "^3.1.43"
-setuptools = ">=69.5.1,<76.0.0"
-[tool.poetry.dev-dependencies]
+[project.urls]
+Repository = "https://dev.azure.com/mvtdesjardins/TH-Investigation/_git/contentctl"
 
 [build-system]
 requires = ["setuptools>=70.3.0", "calver==2022.6.26"]

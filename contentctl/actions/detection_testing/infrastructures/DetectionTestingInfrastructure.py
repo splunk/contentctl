@@ -148,7 +148,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             (self.get_conn, "Waiting for App Installation"),
             (self.configure_conf_file_datamodels, "Configuring Datamodels"),
             (self.create_replay_index, f"Create index '{self.sync_obj.replay_index}'"),
-            (self.get_all_indexes, "Getting all indexes from server")
+            (self.get_all_indexes, "Getting all indexes from server"),
             (self.check_for_es_install, "Checking for ES Install"),
             (self.configure_imported_roles, "Configuring Roles"),
             (self.configure_delete_indexes, "Configuring Indexes"),

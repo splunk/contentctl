@@ -29,7 +29,7 @@ jobs:
     displayName: 'Install build dependencies'
 
   # Our built wheel will land in dist
-  - bash: python setup.py bdist_wheel --universal
+  - bash: python -m build
     displayName: Build package
 
   # Upload everything in src/simple_package/dist (including subfolders) to the build artifacts for later use or debugging

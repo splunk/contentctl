@@ -25,7 +25,7 @@ jobs:
     displayName: 'Use Python $(python.version)'
 
   - script: |
-      python -m pip install --upgrade pip wheel setuptools
+      python -m pip install --upgrade pip wheel setuptools build
     displayName: 'Install build dependencies'
 
   # Our built wheel will land in dist

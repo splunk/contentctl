@@ -240,7 +240,7 @@ class CorrelationSearch(BaseModel):
         :returns: the search path
         :rtype: str
         """
-        return f"/saved/searches/{self.name}"
+        return f"saved/searches/{self.name}"
 
     @computed_field
     @cached_property

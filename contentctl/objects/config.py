@@ -47,7 +47,7 @@ class App_Base(BaseModel,ABC):
     
 
     def getSplunkbasePath(self)->HttpUrl:
-        return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid, release=self.version))
+        return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid, version=self.version))
 
     @abstractmethod
     def getApp(self, config:test, stage_file:bool=False)->str:

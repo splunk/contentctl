@@ -65,7 +65,7 @@ class TestApp(App_Base):
     hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(default=None, description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
     
 
-    @field_serializer('hardcoded_path',when_used='always')
+    @field_serializer('hardcoded_path',when_used='unless-none')
     def serialize_path(path: Union[AnyUrl, pathlib.Path])->str:
         return str(path)
 

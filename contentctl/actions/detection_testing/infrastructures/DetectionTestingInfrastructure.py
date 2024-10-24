@@ -171,6 +171,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
             # Run any setup functions only applicable to content versioning validation
             if self.should_test_content_versioning:
+                self.pbar.write(
+                    self.format_pbar_string(
+                        TestReportingType.SETUP,
+                        self.get_name(),
+                        "Beginning Content Versioning Validation...",
+                        set_pbar=False
+                    )
+                )
                 for func, msg in self.content_versioning_service.setup_functions:
                     self.format_pbar_string(
                         TestReportingType.SETUP,

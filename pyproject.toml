@@ -29,6 +29,13 @@ contentctl = 'contentctl.contentctl:main'
 [project.urls]
 Repository = "https://dev.azure.com/mvtdesjardins/TH-Investigation/_git/contentctl"
 
+[tool.setuptools]
+
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+
 [build-system]
 requires = ["setuptools>=70.3.0", "calver==2022.6.26"]
 build-backend = "setuptools.build_meta"

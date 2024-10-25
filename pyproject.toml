@@ -30,12 +30,17 @@ contentctl = 'contentctl.contentctl:main'
 Repository = "https://dev.azure.com/mvtdesjardins/TH-Investigation/_git/contentctl"
 
 [tool.setuptools]
-
-include-package-data = true
+#include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
 
+[tool.setuptools.package-data]
+"contentctl" = ["**/*.*"]
+
+[tool.setuptools.exclude-package-data]
+"contentctl" = ["**/__pycache__/**"]
+
 [build-system]
-requires = ["setuptools>=70.3.0", "calver==2022.6.26"]
+requires = ["setuptools>=75.2.0", "calver==2022.6.26"]
 build-backend = "setuptools.build_meta"

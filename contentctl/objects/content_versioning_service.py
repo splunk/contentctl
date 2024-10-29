@@ -19,10 +19,12 @@ from contentctl.helper.utils import Utils
 # TODO (cmcginley):
 #   - [x] version naming scheme seems to have changed from X - X to X.X
 #   - [x] sourcetype no longer holds detection name but instead is stash_common_detection_model
-#   - [ ] action.escu.full_search_name no longer available
-#   - [ ] check to see if we can get "name"
+#   - [x] action.escu.full_search_name no longer available
+#   - [x] check to see if we can get "name"
 #   - [ ] move strings to enums
-#   - [ ] additionally, timeout for cms_parser seems to need more time
+#   - [x] additionally, timeout for cms_parser seems to need more time
+#   - [ ] validate multi-line fields -> search, description, action.notable.param.rule_description,
+#         action.notable.param.drilldown_searches
 
 # TODO (cmcginley): suppress logging
 # Suppress logging by default; enable for local testing
@@ -366,14 +368,20 @@ class ContentVersioningService(BaseModel):
         remaining_detections = {x.name: x for x in self.detections}
         matched_detections: dict[str, Detection] = {}
 
+        # Create a filter for a specific memory error we're ok ignoring
+        sub_second_order_pattern = re.compile(
+            r".*Events might not be returned in sub-second order due to search memory limits.*"
+        )
+
         # Iterate over the results until we've gone through them all
         while offset < result_count:
             iterator = ResultIterator(
-                job.results(                                                                        # type: ignore
+                response_reader=job.results(                                                        # type: ignore
                     output_mode="json",
                     count=count,
                     offset=offset
-                )
+                ),
+                error_filters=[sub_second_order_pattern]
             )
 
             # Iterate over the currently fetched results

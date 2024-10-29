@@ -1,6 +1,7 @@
 import logging
 import time
 import json
+import re
 from typing import Any
 from enum import Enum
 from functools import cached_property
@@ -34,7 +35,7 @@ from contentctl.helper.utils import Utils
 
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
@@ -93,14 +94,24 @@ class ResultIterator:
     Given a ResponseReader, constructs a JSONResultsReader and iterates over it; when Message instances are encountered,
     they are logged if the message is anything other than "error", in which case an error is raised. Regular results are
     returned as expected
+
     :param response_reader: a ResponseReader object
-    :param logger: a Logger object
+    :type response_reader: :class:`splunklib.binding.ResponseReader`
+    :param error_filters: set of re Patterns used to filter out errors we're ok ignoring
+    :type error_filters: list[:class:`re.Pattern[str]`]
     """
-    def __init__(self, response_reader: ResponseReader) -> None:
+    def __init__(
+            self,
+            response_reader: ResponseReader,
+            error_filters: list[re.Pattern[str]] = []
+    ) -> None:
         # init the results reader
         self.results_reader: JSONResultsReader = JSONResultsReader(
             response_reader
         )
+
+        # the list of patterns for errors to ignore
+        self.error_filters: list[re.Pattern[str]] = error_filters
 
         # get logger
         self.logger: logging.Logger = Utils.get_logger(
@@ -127,6 +138,11 @@ class ResultIterator:
                 message = f"SPLUNK: {result.message}"
                 self.logger.log(level, message)
                 if level == logging.ERROR:
+                    # if the error matches any of the filters, just continue on
+                    for filter in self.error_filters:
+                        if filter.match(message):
+                            continue
+                    # if no filter was matched, raise
                     raise ServerError(message)
 
             # if dict, just return

@@ -32,7 +32,7 @@ setuptools = ">=69.5.1,<76.0.0"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.6.4"
+ruff = "^0.7.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

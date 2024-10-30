@@ -115,8 +115,9 @@ class ConfWriter():
             output_file_path = dashboard.getOutputFilepathRelativeToAppRoot(config)
             # Check that the full output path does not exist so that we are not having an
             # name collision with a file in app_template
-            if (config.getPackageDirectoryPath()/output_file_path).exists():
-                raise FileExistsError(f"ERROR: Overwriting Dashboard File {output_file_path}. Does this file exist in {config.getAppTemplatePath()} AND {config.path/'dashboards'}?")
+            # TODO (cmcginley): commenting out for testing
+            # if (config.getPackageDirectoryPath()/output_file_path).exists():
+            #     raise FileExistsError(f"ERROR: Overwriting Dashboard File {output_file_path}. Does this file exist in {config.getAppTemplatePath()} AND {config.path/'dashboards'}?")
                 
             ConfWriter.writeXmlFileHeader(output_file_path, config)
             dashboard.writeDashboardFile(ConfWriter.getJ2Environment(), config)

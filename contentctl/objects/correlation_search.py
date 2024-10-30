@@ -137,13 +137,19 @@ class ResultIterator:
                 # log message at appropriate level and raise if needed
                 message = f"SPLUNK: {result.message}"
                 self.logger.log(level, message)
+                filtered = False
                 if level == logging.ERROR:
-                    # if the error matches any of the filters, just continue on
+                    # if the error matches any of the filters, flag it
                     for filter in self.error_filters:
-                        if filter.match(message):
-                            continue
+                        self.logger.debug(f"Filter: {filter}; message: {message}")
+                        if filter.match(message) is not None:
+                            self.logger.debug(f"Error matched filter {filter}; continuing")
+                            filtered = True
+                            break
+
                     # if no filter was matched, raise
-                    raise ServerError(message)
+                    if not filtered:
+                        raise ServerError(message)
 
             # if dict, just return
             elif isinstance(result, dict):

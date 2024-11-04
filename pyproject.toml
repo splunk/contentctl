@@ -1,6 +1,7 @@
 [tool.poetry]
 name = "contentctl"
-version = "4.4.0"
+version = "4.4.3"
+
 description = "Splunk Content Control Tool"
 authors = ["STRT <research@splunk.com>"]
 license = "Apache 2.0"
@@ -15,7 +16,7 @@ pydantic = "^2.8.2"
 PyYAML = "^6.0.2"
 requests = "~2.32.3"
 pycvesearch = "^1.2"
-xmltodict = "^0.13.0"
+xmltodict = ">=0.13,<0.15"
 attackcti = "^0.4.0"
 Jinja2 = "^3.1.4"
 questionary = "^2.0.1"

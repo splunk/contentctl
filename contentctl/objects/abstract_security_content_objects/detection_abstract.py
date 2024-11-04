@@ -39,7 +39,7 @@ from contentctl.objects.data_source import DataSource
 from contentctl.objects.rba import rba_object
 
 from contentctl.objects.base_test_result import TestResultStatus
-
+from contentctl.objects.drilldown import Drilldown, DRILLDOWN_SEARCH_PLACEHOLDER
 from contentctl.objects.enums import ProvidingTechnology
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 import datetime
@@ -71,6 +71,17 @@ class Detection_Abstract(SecurityContentObject):
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     rba: rba_object = Field(...)
+    explanation: None | str = Field(
+        default=None,
+        exclude=True, #Don't serialize this value when dumping the object
+        description="Provide an explanation to be included "
+        "in the 'Explanation' field of the Detection in "
+        "the Use Case Library. If this field is not "
+        "defined in the YML, it will default to the "
+        "value of the 'description' field when " 
+        "serialized in analyticstories_detections.j2",
+    )
+
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -84,6 +95,7 @@ class Detection_Abstract(SecurityContentObject):
     test_groups: list[TestGroup] = []
 
     data_source_objects: list[DataSource] = []
+    drilldown_searches: list[Drilldown] = Field(default=[], description="A list of Drilldowns that should be included with this search")
 
     def get_conf_stanza_name(self, app:CustomApp)->str:
         stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=self.name)
@@ -161,6 +173,7 @@ class Detection_Abstract(SecurityContentObject):
         the model from the list of unit tests. Also, preemptively skips all manual tests, as well as
         tests for experimental/deprecated detections and Correlation type detections.
         """
+        
         # Since ManualTest and UnitTest are not differentiable without looking at the manual_test
         # tag, Pydantic builds all tests as UnitTest objects. If we see the manual_test flag, we
         # convert these to ManualTest
@@ -279,6 +292,7 @@ class Detection_Abstract(SecurityContentObject):
             annotations_dict["cve"] = self.tags.cve
         annotations_dict["impact"] = self.tags.impact
         annotations_dict["type"] = self.type
+        annotations_dict["type_list"] = [self.type]
         # annotations_dict["version"] = self.version
 
         annotations_dict["data_source"] = self.data_source
@@ -556,6 +570,46 @@ class Detection_Abstract(SecurityContentObject):
         # Derive TestGroups and IntegrationTests, adjust for ManualTests, skip as needed
         self.adjust_tests_and_groups()
 
+        # Ensure that if there is at least 1 drilldown, at least
+        # 1 of the drilldowns contains the string Drilldown.SEARCH_PLACEHOLDER.
+        # This is presently a requirement when 1 or more drilldowns are added to a detection.
+        # Note that this is only required for production searches that are not hunting
+            
+        if self.type == AnalyticsType.Hunting.value or self.status != DetectionStatus.production.value:
+            #No additional check need to happen on the potential drilldowns.
+            pass
+        else:
+            found_placeholder = False
+            if len(self.drilldown_searches) < 2:
+                raise ValueError(f"This detection is required to have 2 drilldown_searches, but only has [{len(self.drilldown_searches)}]")
+            for drilldown in self.drilldown_searches:
+                if DRILLDOWN_SEARCH_PLACEHOLDER in drilldown.search:
+                    found_placeholder = True
+            if not found_placeholder:
+                raise ValueError("Detection has one or more drilldown_searches, but none of them "
+                                 f"contained '{DRILLDOWN_SEARCH_PLACEHOLDER}. This is a requirement "
+                                 "if drilldown_searches are defined.'")
+            
+        # Update the search fields with the original search, if required
+        for drilldown in self.drilldown_searches:
+            drilldown.perform_search_substitutions(self)
+
+        #For experimental purposes, add the default drilldowns
+        #self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))
+
+    @property
+    def drilldowns_in_JSON(self) -> list[dict[str,str]]:
+        """This function is required for proper JSON 
+        serializiation of drilldowns to occur in savedsearches.conf.
+        It returns the list[Drilldown] as a list[dict].
+        Without this function, the jinja template is unable
+        to convert list[Drilldown] to JSON
+
+        Returns:
+            list[dict[str,str]]: List of Drilldowns dumped to dict format
+        """        
+        return [drilldown.model_dump() for drilldown in self.drilldown_searches]
+
     @field_validator('lookups', mode="before")
     @classmethod
     def getDetectionLookups(cls, v:list[str], info:ValidationInfo) -> list[Lookup]:
@@ -781,6 +835,45 @@ class Detection_Abstract(SecurityContentObject):
 
         # Found everything
         return self
+
+    @field_validator("tests", mode="before")
+    def ensure_yml_test_is_unittest(cls, v:list[dict]):
+        """The typing for the tests field allows it to be one of
+        a number of different types of tests. However, ONLY
+        UnitTest should be allowed to be defined in the YML
+        file.  If part of the UnitTest defined in the YML
+        is incorrect, such as the attack_data file, then
+        it will FAIL to be instantiated as a UnitTest and
+        may instead be instantiated as a different type of
+        test, such as IntegrationTest (since that requires
+        less fields) which is incorrect. Ensure that any
+        raw data read from the YML can actually construct
+        a valid UnitTest and, if not, return errors right
+        away instead of letting Pydantic try to construct
+        it into a different type of test
+
+        Args:
+            v (list[dict]): list of dicts read from the yml. 
+            Each one SHOULD be a valid UnitTest. If we cannot
+            construct a valid unitTest from it, a ValueError should be raised
+
+        Returns:
+            _type_: The input of the function, assuming no 
+            ValueError is raised.
+        """        
+        valueErrors:list[ValueError] = []
+        for unitTest in v:
+            #This raises a ValueError on a failed UnitTest.
+            try:
+                UnitTest.model_validate(unitTest)
+            except ValueError as e:
+                valueErrors.append(e)
+        if len(valueErrors):
+            raise ValueError(valueErrors)
+        # All of these can be constructred as UnitTests with no
+        # Exceptions, so let the normal flow continue
+        return v
+        
 
     @field_validator("tests")
     def tests_validate(

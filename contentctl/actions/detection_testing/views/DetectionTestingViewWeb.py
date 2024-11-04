@@ -1,12 +1,14 @@
-from bottle import template, Bottle, ServerAdapter
-from contentctl.actions.detection_testing.views.DetectionTestingView import (
-    DetectionTestingView,
-)
+from threading import Thread
 
+from bottle import template, Bottle, ServerAdapter
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 import jinja2
 import webbrowser
-from threading import Thread
+from pydantic import ConfigDict
+
+from contentctl.actions.detection_testing.views.DetectionTestingView import (
+    DetectionTestingView,
+)
 
 DEFAULT_WEB_UI_PORT = 7999
 
@@ -100,9 +102,9 @@ class SimpleWebServer(ServerAdapter):
 class DetectionTestingViewWeb(DetectionTestingView):
     bottleApp: Bottle = Bottle()
     server: SimpleWebServer = SimpleWebServer(host="0.0.0.0", port=DEFAULT_WEB_UI_PORT)
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
 
     def setup(self):
         self.bottleApp.route("/", callback=self.showStatus)

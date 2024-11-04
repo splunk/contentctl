@@ -1,4 +1,5 @@
 from typing import Any
+from contentctl.objects.enums import DataSource
 
 
 class NewContentQuestions:
@@ -48,46 +49,9 @@ class NewContentQuestions:
                 'type': 'checkbox',
                 'message': 'Your data source',
                 'name': 'data_source',
-                'choices': [
-                    "OSQuery ES Process Events",
-                    "Powershell 4104",
-                    "Sysmon Event ID 1",
-                    "Sysmon Event ID 3",
-                    "Sysmon Event ID 5",
-                    "Sysmon Event ID 6",
-                    "Sysmon Event ID 7",
-                    "Sysmon Event ID 8",
-                    "Sysmon Event ID 9",
-                    "Sysmon Event ID 10",
-                    "Sysmon Event ID 11",
-                    "Sysmon Event ID 13",
-                    "Sysmon Event ID 15",
-                    "Sysmon Event ID 20",
-                    "Sysmon Event ID 21",
-                    "Sysmon Event ID 22",
-                    "Sysmon Event ID 23",
-                    "Windows Security 4624",
-                    "Windows Security 4625",
-                    "Windows Security 4648",
-                    "Windows Security 4663",
-                    "Windows Security 4688",
-                    "Windows Security 4698",
-                    "Windows Security 4703",
-                    "Windows Security 4720",
-                    "Windows Security 4732",
-                    "Windows Security 4738",
-                    "Windows Security 4741",
-                    "Windows Security 4742",
-                    "Windows Security 4768",
-                    "Windows Security 4769",
-                    "Windows Security 4771",
-                    "Windows Security 4776",
-                    "Windows Security 4781",
-                    "Windows Security 4798",
-                    "Windows Security 5136",
-                    "Windows Security 5145",
-                    "Windows System 7045"
-                ]
+                #In the future, we should dynamically populate this from the DataSource Objects we have parsed from the data_sources directory
+                'choices': sorted(DataSource._value2member_map_ )
+                
             },
             {
                 "type": "text",

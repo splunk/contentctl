@@ -830,10 +830,18 @@ class test(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     container_settings:ContainerSettings = ContainerSettings()
     test_instances: List[Container] = Field([], exclude = True, validate_default=True)
-    splunk_api_username: Optional[str] = Field(default=None, exclude = True,description="Splunk API username used for running appinspect or installating apps from Splunkbase")
-    splunk_api_password: Optional[str] = Field(default=None, exclude = True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
     
     
+    splunk_api_username: None | str = Field(default=None, exclude = True,description="Splunk API username used for running appinspect or installating apps from Splunkbase. Can be replaced by the 'SPLUNKBASE_USERNAME' environment variable.")
+    splunk_api_password: None | str = Field(default=None, exclude = True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase. Can be replaced by the 'SPLUNKBASE_PASSWORD' environment variable.")
+
+    def __init__(self, **kwargs: Any):
+        if "SPLUNKBASE_USERNAME" in environ:
+            kwargs['splunk_api_username'] = environ["SPLUNKBASE_USERNAME"]
+        if "SPLUNKBASE_PASSWORD" in environ:
+            kwargs['splunk_api_password'] = environ["SPLUNKBASE_PASSWORD"]
+        super().__init__(**kwargs)
+
     def getContainerInfrastructureObjects(self)->Self:
         try:
             self.test_instances = self.container_settings.getContainers()

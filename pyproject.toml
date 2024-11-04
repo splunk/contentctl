@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "contentctl"
-version = "4.4.1"
+version = "4.4.3"
 
 description = "Splunk Content Control Tool"
 authors = ["STRT <research@splunk.com>"]

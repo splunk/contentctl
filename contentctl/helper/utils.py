@@ -1,3 +1,4 @@
+import logging
 import os
 import git
 import shutil
@@ -19,6 +20,13 @@ from contentctl.objects.security_content_object import SecurityContentObject
 
 TOTAL_BYTES = 0
 ALWAYS_PULL = True
+LOG = logging.getLogger("main")
+LOG.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - [%(levelname)-8s] %(message)s')
+handler.setFormatter(formatter)
+LOG.addHandler(handler)
 
 
 class Utils:
@@ -485,3 +493,7 @@ class Utils:
         ratio = numerator / denominator
         percent = ratio * 100
         return Utils.getFixedWidth(percent, decimal_places) + "%"
+
+    @staticmethod
+    def get_logger() -> logging.Logger:
+        return LOG

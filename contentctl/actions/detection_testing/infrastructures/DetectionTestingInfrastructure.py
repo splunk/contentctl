@@ -44,11 +44,7 @@ from contentctl.actions.detection_testing.progress_bar import (
     TestingStates
 )
 
-LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
-LOG.addHandler(handler)
+LOG = Utils.get_logger()
 
 
 class SetupTestGroupResults(BaseModel):
@@ -180,13 +176,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def configure_hec(self):
         self.hec_channel = str(uuid.uuid4())
         try:
-            res = self.get_conn().input(
-                path="/servicesNS/nobody/splunk_httpinput/data/inputs/http/http:%2F%2FDETECTION_TESTING_HEC"
-            )
-            self.hec_token = str(res.token)
-            return
-        except Exception:
-            # HEC input does not exist.  That's okay, we will create it
+            # Delete old HEC
+            self.get_conn().inputs.delete("DETECTION_TESTING_HEC", kind='http')
+        except HTTPError as e:
+            # HEC input didn't exist in the first place, everything is good.
             pass
 
         try:
@@ -1283,16 +1276,16 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         test_group_start_time: float,
     ):
         # Before attempting to replay the file, ensure that the index we want
-        # to replay into actuall exists. If not, we should throw a detailed
-        # exception that can easily be interpreted by the user.
+        # to replay into actually exists. If not, we create the index.
         if attack_data_file.custom_index is not None and \
             attack_data_file.custom_index not in self.all_indexes_on_server:
-            raise ReplayIndexDoesNotExistOnServer(
-                f"Unable to replay data file {attack_data_file.data} "
-                f"into index '{attack_data_file.custom_index}'. "
-                "The index does not exist on the Splunk Server. "
-                f"The only valid indexes on the server are {self.all_indexes_on_server}"
-            )
+            index = self.get_conn().indexes.create(name=attack_data_file.custom_index)
+            LOG.debug(f"Created Index {attack_data_file.custom_index}: {index}")
+            LOG.debug("Re-retup of the HEC and roles and indexes...")
+            self.get_all_indexes()
+            self.configure_imported_roles()
+            self.configure_delete_indexes()
+            self.configure_hec()
 
         tempfile = mktemp(dir=tmp_dir)
         if not (str(attack_data_file.data).startswith("http://") or 

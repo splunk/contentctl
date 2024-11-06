@@ -4,31 +4,33 @@
 is_configured = false
 state = enabled
 state_change_requires_restart = false
-build = {{ objects[0].build }}
+build = {{ app.build }}
 
 [triggers]
-reload.analytic_stories = simple
-reload.usage_searches = simple
-reload.use_case_library = simple
-reload.correlationsearches = simple
-reload.analyticstories = simple
-reload.governance = simple
-reload.managed_configurations = simple
-reload.postprocess = simple
-reload.content-version = simple
-reload.es_investigations = simple
+{% for custom_conf_file in custom_conf_files%}
+reload.{{custom_conf_file}} = simple
+{% endfor %}
 
 [launcher]
-author = {{ objects[0].author_company }}
-version = {{ objects[0].version }} 
-description = {{ objects[0].description | escapeNewlines() }}
+author = {{ app.author_company }}
+version = {{ app.version }} 
+description = {{ app.description | escapeNewlines() }}
 
 [ui]
 is_visible = true
-label = {{ objects[0].title }}
+label = {{ app.title }}
 
 [package]
-id = {{ objects[0].appid }}
+id = {{ app.appid }}
+{% if app.uid == 3449 %}
+check_for_updates = true
+{% else %}
+check_for_updates = false
+{% endif %}
+
+[id]
+version = {{ app.version }}
+name = {{ app.appid }}
 
 
 

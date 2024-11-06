@@ -1,3 +1,5 @@
+import time
+
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
 )
@@ -25,6 +27,9 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
 
         self.container = self.make_container()
         self.container.start()
+        # There might be a small delay between the starting of the container and the binding of the ports for splunk.
+        # To avoid a "connection refused" error, wait a little bit before finishing the method call.
+        time.sleep(20)
 
     def finish(self):
         if self.container is not None:

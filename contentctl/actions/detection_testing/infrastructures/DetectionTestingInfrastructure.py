@@ -178,9 +178,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         try:
             # Delete old HEC
             self.get_conn().inputs.delete("DETECTION_TESTING_HEC", kind='http')
-        except HTTPError as e:
+        except (HTTPError, KeyError) as e:
             # HEC input didn't exist in the first place, everything is good.
             pass
+        except Exception as e:
+            LOG.error("Error when deleting input DETECTION_TESTING_HEC.")
+            LOG.exception(e)
+            raise e
 
         try:
             res = self.get_conn().inputs.create(
@@ -191,10 +195,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 useACK=True,
             )
             self.hec_token = str(res.token)
+            breakpoint()
             return
 
         except Exception as e:
-            raise (Exception(f"Failure creating HEC Endpoint: {str(e)}"))
+            raise Exception(f"Failure creating HEC Endpoint: {str(e)}")
 
     def get_all_indexes(self) -> None:
         """
@@ -232,6 +237,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                             installed_config_apps.append(config_app.appid)
                 LOG.debug("Apps in the Splunk instance: " + str(list(map(lambda x: x.name, splunk_instance_apps))))
                 LOG.debug(f"apps in contentctl package found in Splunk instance: {installed_config_apps}")
+                if len(installed_config_apps) >= len(config_apps):
+                    break
             except Exception as e:
                 LOG.exception(e)
             time.sleep(5)

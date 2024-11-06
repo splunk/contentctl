@@ -369,7 +369,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.check_for_teardown()
             time.sleep(1)
             try:
-                print('woahhhhh')
                 _ = self.get_conn().get(
                     f"configs/conf-{conf_file_name}", app=app_name
                 )
@@ -1136,7 +1135,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             threat_object_fields_set = set([o.name for o in detection.tags.observable if "Attacker" in o.role]) # just the "threat objects"
 
             # Ensure the search had at least one result
-            if int(job.content.get("resultCount", "0")) > 0:
+            if int(job.content["resultCount"]) > 0:
                 # Initialize the test result
                 test.result = UnitTestResult()
 
@@ -1239,6 +1238,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     self.infrastructure,
                     TestResultStatus.FAIL,
                     duration=time.time() - search_start_time,
+                    message=f"Search had 0 result. {job.content}"
                 )
                 tick += 1
 

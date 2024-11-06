@@ -238,7 +238,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                                 continue
                             installed_config_apps.append(config_app.appid)
                 LOG.debug("Apps in the Splunk instance: " + str(list(map(lambda x: x.name, splunk_instance_apps))))
-                LOG.debug("apps in contentctl package found in Splunk instance: " + installed_config_apps)
+                LOG.debug(f"apps in contentctl package found in Splunk instance: {installed_config_apps}")
             except Exception as e:
                 LOG.exception(e)
             time.sleep(5)

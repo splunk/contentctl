@@ -39,11 +39,8 @@ class NewContentYmlOutput():
             .replace('.','_') \
             .replace('/','_') \
             .lower()
-        if 'Splunk Behavioral Analytics' in product:
-            
-            file_name = 'ssa___' + file_name + '.yml'
-        else:
-            file_name = file_name + '.yml'
+        
+        file_name = file_name + '.yml'
         return file_name
 
 
@@ -54,8 +51,6 @@ class NewContentYmlOutput():
             .replace('.','_') \
             .replace('/','_') \
             .lower()
-        if 'Splunk Behavioral Analytics' in product:          
-            file_name = 'ssa___' + file_name + '.test.yml'
-        else:
-            file_name = file_name + '.test.yml'
+        
+        file_name = file_name + '.test.yml'
         return file_name

@@ -13,12 +13,13 @@ class TestType(str, Enum):
     """
     UNIT = "unit"
     INTEGRATION = "integration"
+    MANUAL = "manual"
 
     def __str__(self) -> str:
         return self.value
 
 
-# TODO (cmcginley): enforce distinct test names w/in detections
+# TODO (#224): enforce distinct test names w/in detections
 class BaseTest(BaseModel, ABC):
     model_config = ConfigDict(extra="forbid")
     """

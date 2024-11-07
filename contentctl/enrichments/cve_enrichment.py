@@ -5,10 +5,10 @@ import os
 import shelve
 import time
 from typing import Annotated, Any, Union, TYPE_CHECKING
-from pydantic import BaseModel,Field, computed_field
+from pydantic import ConfigDict, BaseModel,Field, computed_field
 from decimal import Decimal
 from requests.exceptions import ReadTimeout
-
+from contentctl.objects.annotated_types import CVE_TYPE
 if TYPE_CHECKING:
     from contentctl.objects.config import validate
 
@@ -18,9 +18,9 @@ CVESSEARCH_API_URL = 'https://cve.circl.lu'
 
 
 class CveEnrichmentObj(BaseModel):
-    id:Annotated[str, "^CVE-[1|2][0-9]{3}-[0-9]+$"]
-    cvss:Annotated[Decimal, Field(ge=.1, le=10, decimal_places=1)]
-    summary:str
+    id: CVE_TYPE
+    cvss: Annotated[Decimal, Field(ge=.1, le=10, decimal_places=1)]
+    summary: str
     
     @computed_field
     @property
@@ -32,13 +32,12 @@ class CveEnrichmentObj(BaseModel):
 class CveEnrichment(BaseModel):
     use_enrichment: bool = True
     cve_api_obj: Union[CVESearch,None] = None
-    
 
-    class Config:
-        # Arbitrary_types are allowed to let us use the CVESearch Object
-        arbitrary_types_allowed = True
-        frozen = True
-        
+    # Arbitrary_types are allowed to let us use the CVESearch Object
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        frozen=True
+    )
 
     @staticmethod
     def getCveEnrichment(config:validate, timeout_seconds:int=10, force_disable_enrichment:bool=True)->CveEnrichment:

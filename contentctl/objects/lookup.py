@@ -1,26 +1,30 @@
 from __future__ import annotations
-from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer
+from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer, Field, NonNegativeInt
 from typing import TYPE_CHECKING, Optional, Any, Union
 import re
 import csv
+import uuid
+import datetime
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import validate
 from contentctl.objects.security_content_object import SecurityContentObject
 
-
+# This section is used to ignore lookups that are NOT  shipped with ESCU app but are used in the detections. Adding exclusions here will so that contentctl builds will not fail.
 LOOKUPS_TO_IGNORE = set(["outputlookup"])
 LOOKUPS_TO_IGNORE.add("ut_shannon_lookup") #In the URL toolbox app which is recommended for ESCU
 LOOKUPS_TO_IGNORE.add("identity_lookup_expanded") #Shipped with the Asset and Identity Framework
 LOOKUPS_TO_IGNORE.add("cim_corporate_web_domain_lookup") #Shipped with the Asset and Identity Framework
 LOOKUPS_TO_IGNORE.add("alexa_lookup_by_str") #Shipped with the Asset and Identity Framework
 LOOKUPS_TO_IGNORE.add("interesting_ports_lookup") #Shipped with the Asset and Identity Framework
+LOOKUPS_TO_IGNORE.add("admon_groups_def") #Shipped with the SA-admon addon
 
 #Special case for the Detection "Exploit Public Facing Application via Apache Commons Text"
 LOOKUPS_TO_IGNORE.add("=") 
 LOOKUPS_TO_IGNORE.add("other_lookups") 
 
 
+# TODO (#220): Split Lookup into 2 classes
 class Lookup(SecurityContentObject):
     
     collection: Optional[str] = None
@@ -31,6 +35,11 @@ class Lookup(SecurityContentObject):
     min_matches: Optional[int] = None
     max_matches: Optional[int] = None
     case_sensitive_match: Optional[bool] = None
+    # TODO: Add id field to all lookup ymls
+    id: uuid.UUID = Field(default_factory=uuid.uuid4) 
+    date: datetime.date = Field(datetime.date.today())
+    author: str = Field("NO AUTHOR DEFINED",max_length=255)
+    version: NonNegativeInt = 1
     
 
     @model_serializer

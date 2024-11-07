@@ -57,19 +57,26 @@ class ConfOutput:
             pass
             
 
-    def writeAppConf(self)->set[pathlib.Path]:
+    
+
+    def writeMiscellaneousAppFiles(self)->set[pathlib.Path]:
         written_files:set[pathlib.Path] = set()
-        for output_app_path, template_name in [ ("default/app.conf", "app.conf.j2"),
-                                                ("default/content-version.conf", "content-version.j2")]:
-            written_files.add(ConfWriter.writeConfFile(pathlib.Path(output_app_path),
-                                    template_name,
-                                    self.config,
-                                    [self.config.app]))
+        
+        written_files.add(ConfWriter.writeConfFile(pathlib.Path("default/content-version.conf"),
+                                "content-version.j2",
+                                self.config,
+                                [self.config.app]))
         
         written_files.add(ConfWriter.writeManifestFile(pathlib.Path("app.manifest"),
                                               "app.manifest.j2",
                                               self.config,
                                               [self.config.app]))
+        
+        written_files.add(ConfWriter.writeServerConf(self.config))
+
+        written_files.add(ConfWriter.writeAppConf(self.config))
+                                              
+
         return written_files
 
         
@@ -152,6 +159,10 @@ class ConfOutput:
                                     'macros.j2',
                                     self.config, objects))
         
+        elif type == SecurityContentType.dashboards:
+            written_files.update(ConfWriter.writeDashboardFiles(self.config, objects))
+
+
         return written_files
             
 
@@ -169,15 +180,8 @@ class ConfOutput:
     
     def packageAppSlim(self) -> None:
         
-
-        # input_app_path = pathlib.Path(self.config.build.path_root)/f"{self.config.build.name}"
-        
-        # readme_file = pathlib.Path("README")
-        # if not readme_file.is_file():
-        #     raise Exception("The README file does not exist in this directory. Cannot build app.")
-        # shutil.copyfile(readme_file, input_app_path/readme_file.name)
-        
-        
+        raise Exception("Packaging with splunk-packaging-toolkit not currently supported as slim only supports Python 3.7. "
+                        "Please raise an issue in the contentctl GitHub if you encounter this exception.")
         try:
             import slim
             from slim.utils import SlimLogger

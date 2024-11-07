@@ -18,8 +18,10 @@ jobs:
       fail-fast: false
       matrix:
         python_version: ["3.11", "3.12"]
+        
         operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14"]
-        #operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
+        # Do not test against ESCU until known character encoding issue is resolved
+        # operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14", "windows-2022"]
 
 
     runs-on: ${{ matrix.operating_system }}
@@ -51,10 +53,11 @@ jobs:
           poetry install --no-interaction
 
 
-      - name: Clone the AtomicRedTeam Repo (for extended validation)
+      - name: Clone the AtomicRedTeam Repo and the Mitre/CTI repos for testing enrichments  
         run: |
           cd security_content
-          git clone --depth 1 https://github.com/redcanaryco/atomic-red-team
+          git clone --single-branch https://github.com/redcanaryco/atomic-red-team external_repos/atomic-red-team
+          git clone --single-branch https://github.com/mitre/cti external_repos/cti
 
       
       # We do not separately run validate and build 

@@ -1,13 +1,13 @@
 from typing import Any
 import json
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 from contentctl.objects.risk_object import RiskObject
 from contentctl.objects.threat_object import ThreatObject
 
 
-# TODO (cmcginley): add logic which reports concretely that integration testing failed (or would fail)
+# TODO (#231): add logic which reports concretely that integration testing failed (or would fail)
 #   as a result of a missing victim observable
 class RiskAnalysisAction(BaseModel):
     """Representation of a risk analysis action
@@ -21,11 +21,11 @@ class RiskAnalysisAction(BaseModel):
     risk_objects: list[RiskObject]
     message: str
 
-    @validator("message", always=True, pre=True)
+    @field_validator("message", mode="before")
     @classmethod
-    def _validate_message(cls, v, values) -> str:
+    def _validate_message(cls, v: Any) -> str:
         """
-        Validate splunk_path and derive if None
+        Validate message and derive if None
         """
         if v is None:
             raise ValueError(
@@ -77,7 +77,7 @@ class RiskAnalysisAction(BaseModel):
         risk_objects: list[RiskObject] = []
         threat_objects: list[ThreatObject] = []
 
-        # TODO (cmcginley): add validation ensuring at least 1 risk objects
+        # TODO (#231): add validation ensuring at least 1 risk objects
         for entry in object_dicts:
             if "risk_object_field" in entry:
                 risk_objects.append(RiskObject(

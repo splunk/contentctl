@@ -54,8 +54,9 @@ class SecurityContentType(enum.Enum):
     deployments = 7
     investigations = 8
     unit_tests = 9
-    ssa_detections = 10
     data_sources = 11
+    dashboards = 12
+
 
 # Bringing these changes back in line will take some time after
 # the initial merge is complete
@@ -69,7 +70,6 @@ class SecurityContentType(enum.Enum):
 
 class SecurityContentProduct(enum.Enum):
     SPLUNK_APP = 1
-    SSA = 2
     API = 3
     CUSTOM = 4
 
@@ -197,21 +197,21 @@ class KillChainPhase(str, enum.Enum):
 class DataSource(str,enum.Enum):
     OSQUERY_ES_PROCESS_EVENTS = "OSQuery ES Process Events"
     POWERSHELL_4104 = "Powershell 4104"
-    SYSMON_EVENT_ID_1 = "Sysmon Event ID 1"
-    SYSMON_EVENT_ID_10 = "Sysmon Event ID 10"
-    SYSMON_EVENT_ID_11 = "Sysmon Event ID 11"
-    SYSMON_EVENT_ID_13 = "Sysmon Event ID 13"
-    SYSMON_EVENT_ID_15 = "Sysmon Event ID 15"
-    SYSMON_EVENT_ID_20 = "Sysmon Event ID 20"
-    SYSMON_EVENT_ID_21 = "Sysmon Event ID 21"
-    SYSMON_EVENT_ID_22 = "Sysmon Event ID 22"
-    SYSMON_EVENT_ID_23 = "Sysmon Event ID 23"
-    SYSMON_EVENT_ID_3 = "Sysmon Event ID 3"
-    SYSMON_EVENT_ID_5 = "Sysmon Event ID 5"
-    SYSMON_EVENT_ID_6 = "Sysmon Event ID 6"
-    SYSMON_EVENT_ID_7 = "Sysmon Event ID 7"
-    SYSMON_EVENT_ID_8 = "Sysmon Event ID 8"
-    SYSMON_EVENT_ID_9 = "Sysmon Event ID 9"
+    SYSMON_EVENT_ID_1 = "Sysmon EventID 1"
+    SYSMON_EVENT_ID_3 = "Sysmon EventID 3"
+    SYSMON_EVENT_ID_5 = "Sysmon EventID 5"
+    SYSMON_EVENT_ID_6 = "Sysmon EventID 6"
+    SYSMON_EVENT_ID_7 = "Sysmon EventID 7"
+    SYSMON_EVENT_ID_8 = "Sysmon EventID 8"
+    SYSMON_EVENT_ID_9 = "Sysmon EventID 9"
+    SYSMON_EVENT_ID_10 = "Sysmon EventID 10"
+    SYSMON_EVENT_ID_11 = "Sysmon EventID 11"
+    SYSMON_EVENT_ID_13 = "Sysmon EventID 13"
+    SYSMON_EVENT_ID_15 = "Sysmon EventID 15"
+    SYSMON_EVENT_ID_20 = "Sysmon EventID 20"
+    SYSMON_EVENT_ID_21 = "Sysmon EventID 21"
+    SYSMON_EVENT_ID_22 = "Sysmon EventID 22"
+    SYSMON_EVENT_ID_23 = "Sysmon EventID 23"
     WINDOWS_SECURITY_4624 = "Windows Security 4624"
     WINDOWS_SECURITY_4625 = "Windows Security 4625"
     WINDOWS_SECURITY_4648 = "Windows Security 4648"
@@ -330,7 +330,6 @@ class SecurityDomain(str, enum.Enum):
     IDENTITY = "identity"
     ACCESS = "access"
     AUDIT = "audit"
-    CLOUD = "cloud"
 
 class AssetType(str, enum.Enum):
     AWS_ACCOUNT = "AWS Account"
@@ -407,14 +406,16 @@ class NistCategory(str, enum.Enum):
     RC_IM = "RC.IM"
     RC_CO = "RC.CO"
 
-class RiskLevel(str,enum.Enum):
-    INFO = "Info"
-    LOW = "Low"
-    MEDIUM = "Medium"
-    HIGH = "High"
-    CRITICAL = "Critical"
-
 class RiskSeverity(str,enum.Enum):
+    # Levels taken from the following documentation link
+    # https://docs.splunk.com/Documentation/ES/7.3.2/User/RiskScoring
+    # 20 - info (0-20 for us)
+    # 40 - low (21-40 for us)
+    # 60 - medium (41-60 for us)
+    # 80 - high (61-80 for us)
+    # 100 - critical (81 - 100 for us)
+    INFORMATIONAL = "informational"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+    CRITICAL = "critical"

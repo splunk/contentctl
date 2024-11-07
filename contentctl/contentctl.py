@@ -19,6 +19,7 @@ from contentctl.actions.test import TestInputDto
 from contentctl.actions.reporting import ReportingInputDto, Reporting
 from contentctl.actions.inspect import Inspect
 from contentctl.input.yml_reader import YmlReader
+from contentctl.actions.deploy_acs import Deploy
 from contentctl.actions.release_notes import ReleaseNotes
 
 # def print_ascii_art():
@@ -95,8 +96,11 @@ def new_func(config:new):
 
 
 def deploy_acs_func(config:deploy_acs):
-    #This is a bit challenging to get to work with the default values.
-    raise Exception("deploy acs not yet implemented") 
+    print("Building and inspecting app...")
+    token = inspect_func(config)
+    print("App successfully built and inspected.")
+    print("Deploying app...")
+    Deploy().execute(config, token)
 
 def test_common_func(config:test_common):
     if type(config) == test:
@@ -113,17 +117,14 @@ def test_common_func(config:test_common):
     test_input_dto = TestInputDto(detections_to_test, config)
     
     t = Test()
-    
-    # Remove detections that we do not want to test because they are
-    # not production, the correct type, or manual_test only
-    filted_test_input_dto = t.filter_detections(test_input_dto)
+    t.filter_tests(test_input_dto)
     
     if config.plan_only:
         #Emit the test plan and quit. Do not actually run the test
-        config.dumpCICDPlanAndQuit(gitServer.getHash(),filted_test_input_dto.detections)
+        config.dumpCICDPlanAndQuit(gitServer.getHash(),test_input_dto.detections)
         return 
     
-    success = t.execute(filted_test_input_dto)
+    success = t.execute(test_input_dto)
     
     if success:
         #Everything passed!
@@ -214,6 +215,9 @@ def main():
             test_common_func(config)
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
+    except FileNotFoundError as e:
+        print(e)
+        sys.exit(1)
     except Exception as e:
         if config is None:
             print("There was a serious issue where the config file could not be created.\n"
@@ -229,4 +233,7 @@ def main():
             print(e)
             
         sys.exit(1)
-    
+
+
+if __name__ == "__main__":
+    main()

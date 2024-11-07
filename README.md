@@ -3,8 +3,20 @@
 <p align="center">
 <img src="docs/contentctl_logo_white.png" title="In case you're wondering, it's a capybara" alt="contentctl logo" width="250" height="250"></p>
 
+# contentctl Quick Start Guide
+If you are already familiar with contentctl, the following common commands may be very useful for basic operations
 
-
+| Operation | Command |
+|-----------|---------|
+| Create a repository | `contentctl init` |
+| Validate Your Content | `contentctl validate` |
+| Validate Your Content, performing MITRE Enrichments | `contentctl validate --enrichments`|
+| Build Your App | `contentctl build` |
+| Test All the content in your app, pausing so that you can debug a search if it fails | `contentctl test --post-test-behavior pause_on_failure mode:all` |
+| Test All the content in your app, pausing after every detection to allow debugging | `contentctl test --post-test-behavior always_pause mode:all` |
+| Test 1 or more specified detections. If you are testing more than one detection, the paths are space-separated. You may also use shell-expanded regexes | `contentctl test --post-test-behavior always_pause mode:selected --mode.files detections/endpoint/7zip_commandline_to_smb_share_path.yml detections/cloud/aws_multi_factor_authentication_disabled.yml detections/application/okta*` |
+| Diff your current branch with a target_branch and test detections that have been updated. Your current branch **must be DIFFERENT** than the target_branch | `contentctl test --post-test-behavior always_pause mode:changes --mode.target_branch develop` |
+| Perform Integration Testing of all content. Note that Enterprise Security MUST be listed as an app in your contentctl.yml folder, otherwise all tests will subsequently fail | `contentctl test --enable-integration-testing --post-test-behavior never_pause mode:all` |
 
 # Introduction
 #### Security Is Hard 
@@ -65,10 +77,7 @@ Testing is run using [GitHub Hosted Runners](https://docs.github.com/en/actions/
 
 | Requirement | Supported | Description |  Passing Integration Tests |
 | --------------------- | ----- | ---- | ------ |
-| Python <3.9 | No | No support planned.  contentctl tool uses modern language constructs not supported ion Python3.8 and below | N/A |
-| Python 3.9 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions) |
-| Python 3.10 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions) |
-| Python 3.11 | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions)  |
+| Python 3.11+ | Yes | contentctl tool is written in Python | Yes (locally + GitHub Actions)  |
 | Docker (local) | Yes | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test. | (locally + GitHub Actions) |
 | Docker (remote) | Planned | A running Splunk Server is required for Dynamic Testing.  contentctl can automatically create, configure, and destroy this server as a Splunk container during the lifetime of a test. | No |
 
@@ -80,7 +89,7 @@ It is typically recommended to install poetry to the Global Python Environment.*
 
 #### Install via pip (recommended): 
 ```
-python3.9 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 pip install contentctl
 ```
@@ -89,7 +98,7 @@ pip install contentctl
 ```
 git clone https://github.com/splunk/contentctl
 cd contentctl
-python3.9 -m pip install poetry
+python3.11 -m pip install poetry
 poetry install
 poetry shell
 contentctl --help
@@ -125,7 +134,7 @@ This section is under active development.  It will allow you to a [MITRE Map](ht
 Choose TYPE {detection, story} to create new content for the Content Pack.  The tool will interactively ask a series of questions required for generating a basic piece of content and automatically add it to the Content Pack.
 
 ### contentctl inspect
-This section is under development.  It will enable the user to perform an appinspect of the content pack in preparation for deployment onto a Splunk Instance or via Splunk Cloud.
+This section is under development.  The inspect action performs a number of post-build validations. Primarily, it will enable the user to perform an appinspect of the content pack in preparation for deployment onto a Splunk Instance or via Splunk Cloud. It also compares detections in the new build against a prior build, confirming that any changed detections have had their versions incremented (this comparison happens at the savedsearch.conf level, which is why it must happen after the build). Please also note that new versions of contentctl may result in the generation of different savedsearches.conf files without any content changes in YML (new keys at the .conf level which will necessitate bumping of the version in the YML file).
 
 ### contentctl deploy
 The reason to build content is so that it can be deployed to your environment.  However, deploying content to multiple servers and different types of infrastructure can be tricky and time-consuming.  contentctl makes this easy by supporting a number of different deployment mechanisms. Deployment targets can be defined in [contentctl.yml](/contentctl/templates/contentctl_default.yml).

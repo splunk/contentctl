@@ -1,18 +1,24 @@
 from __future__ import annotations
 from typing import Optional, Any
-from pydantic import Field, model_serializer
+from pydantic import Field, HttpUrl, model_serializer, BaseModel, ConfigDict
 from contentctl.objects.security_content_object import SecurityContentObject
 
+
+class TA(BaseModel):
+    name: str
+    url: HttpUrl | None = None
+    version: str
 class DataSource(SecurityContentObject):
+    model_config = ConfigDict(extra="forbid")
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None
-    configuration: Optional[str] = None 
-    supported_TA: Optional[list] = None
-    fields: Optional[list] = None
-    field_mappings: Optional[list] = None
-    convert_to_log_source: Optional[list] = None
-    example_log: Optional[str] = None
+    configuration: Optional[str] = None
+    supported_TA: list[TA] = []
+    fields: None | list = None
+    field_mappings: None | list = None
+    convert_to_log_source: None | list = None
+    example_log: None | str = None
 
 
     @model_serializer

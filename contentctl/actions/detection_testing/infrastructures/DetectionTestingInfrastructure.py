@@ -195,7 +195,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 useACK=True,
             )
             self.hec_token = str(res.token)
-            breakpoint()
             return
 
         except Exception as e:

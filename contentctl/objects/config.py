@@ -95,6 +95,10 @@ class TestApp(App_Base):
             destination = config.getLocalAppDir() / server_path.name
             if stage_file:
                 Utils.download_file_from_http(file_url_string, str(destination))
+        # Needed for `contentctl validate` and `contentctl build` else it fails without the splunkbase creds,
+        # which shouldn't be mandatory for validation or building the app.
+        elif self.version is not None and self.uid is not None:
+            destination = self.getSplunkbasePath()
         else:
             raise Exception(f"Unknown path for app '{self.title}'")
         

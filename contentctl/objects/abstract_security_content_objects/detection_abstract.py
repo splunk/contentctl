@@ -796,7 +796,7 @@ class Detection_Abstract(SecurityContentObject):
         if self.status not in [DetectionStatus.production.value]: # type: ignore
             return self
         
-        if self.deployment.alert_action.rba is None:
+        if self.deployment.alert_action.rba.enabled is False:
             # confirm we don't have an RBA config
             if self.rba is None:
                 return self

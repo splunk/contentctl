@@ -39,11 +39,17 @@ class risk_object(BaseModel):
     type: RiskObjectType
     score: int
 
+    def __hash__(self):
+        return hash((self.field, self.type, self.score))
+
 class threat_object(BaseModel):
     field: str
     type: ThreatObjectType
 
+    def __hash__(self):
+        return hash((self.field, self.type))
+
 class rba_object(BaseModel, ABC):
     message: str
-    risk_objects: Set[risk_object]
-    threat_objects: Set[threat_object] = set()
+    risk_objects: Set[risk_object] 
+    threat_objects: Set[threat_object]

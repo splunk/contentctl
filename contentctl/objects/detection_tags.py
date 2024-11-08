@@ -72,7 +72,6 @@ class DetectionTags(BaseModel):
 
     # TODO (#249): Add pydantic validator to ensure observables are unique within a detection
     observable: List[Observable] = []
-    message: str = Field(...)
     product: list[SecurityContentProductName] = Field(..., min_length=1)
     required_fields: list[str] = Field(min_length=1)
     throttling: Optional[Throttling] = None
@@ -157,7 +156,6 @@ class DetectionTags(BaseModel):
             "kill_chain_phases": self.kill_chain_phases,
             "nist": self.nist,
             "observable": self.observable,
-            "message": self.message,
             "risk_score": self.risk_score,
             "security_domain": self.security_domain,
             "risk_severity": self.severity,

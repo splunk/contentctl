@@ -366,66 +366,87 @@ class Detection_Abstract(SecurityContentObject):
     def providing_technologies(self) -> List[ProvidingTechnology]:
         return ProvidingTechnology.getProvidingTechFromSearch(self.search)
 
-    # TODO (#247): Refactor the risk property of detection_abstract
+
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
         risk_objects: list[dict[str, str | int]] = []
-        # TODO (#246): "User Name" type should map to a "user" risk object and not "other"
-        risk_object_user_types = {'user', 'username', 'email address'}
-        risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
-        process_threat_object_types = {'process name', 'process'}
-        file_threat_object_types = {'file name', 'file', 'file hash'}
-        url_threat_object_types = {'url string', 'url'}
-        ip_threat_object_types = {'ip address'}
 
-        for entity in self.tags.observable:
+        for entity in self.rba.risk_objects:
             risk_object: dict[str, str | int] = dict()
-            if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
-                risk_object['risk_object_type'] = 'user'
-                risk_object['risk_object_field'] = entity.name
-                risk_object['risk_score'] = self.tags.risk_score
-                risk_objects.append(risk_object)
-
-            elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
-                risk_object['risk_object_type'] = 'system'
-                risk_object['risk_object_field'] = entity.name
-                risk_object['risk_score'] = self.tags.risk_score
-                risk_objects.append(risk_object)
-
-            elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = "process"
-                risk_objects.append(risk_object)
-
-            elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = "file_name"
-                risk_objects.append(risk_object)
-
-            elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = "ip_address"
-                risk_objects.append(risk_object)
-
-            elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = "url"
-                risk_objects.append(risk_object)
-            
-            elif 'Attacker' in entity.role:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = entity.type.lower()
-                risk_objects.append(risk_object)
-
-            else:
-                risk_object['risk_object_type'] = 'other'
-                risk_object['risk_object_field'] = entity.name
-                risk_object['risk_score'] = self.tags.risk_score
-                risk_objects.append(risk_object)
-                continue
-
+            risk_object['risk_object_type'] = entity.type
+            risk_object['risk_object_field'] = entity.field
+            risk_object['risk_score'] = entity.score
+            risk_objects.append(risk_object)
+        
+        for entity in self.rba.threat_objects:
+            threat_object: dict[str, str] = dict()
+            threat_object['threat_object_field'] = entity.field
+            threat_object['threat_object_type'] = entity.type
+            risk_objects.append(threat_object)
         return risk_objects
+
+
+    # TODO Remove observable code
+    # @computed_field
+    # @property
+    # def risk(self) -> list[dict[str, Any]]:
+    #     risk_objects: list[dict[str, str | int]] = []
+    #     # TODO (#246): "User Name" type should map to a "user" risk object and not "other"
+    #     risk_object_user_types = {'user', 'username', 'email address'}
+    #     risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
+    #     process_threat_object_types = {'process name', 'process'}
+    #     file_threat_object_types = {'file name', 'file', 'file hash'}
+    #     url_threat_object_types = {'url string', 'url'}
+    #     ip_threat_object_types = {'ip address'}
+
+    #     for entity in self.tags.observable:
+    #         risk_object: dict[str, str | int] = dict()
+    #         if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
+    #             risk_object['risk_object_type'] = 'user'
+    #             risk_object['risk_object_field'] = entity.name
+    #             risk_object['risk_score'] = self.tags.risk_score
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
+    #             risk_object['risk_object_type'] = 'system'
+    #             risk_object['risk_object_field'] = entity.name
+    #             risk_object['risk_score'] = self.tags.risk_score
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = "process"
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = "file_name"
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = "ip_address"
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = "url"
+    #             risk_objects.append(risk_object)
+            
+    #         elif 'Attacker' in entity.role:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = entity.type.lower()
+    #             risk_objects.append(risk_object)
+
+    #         else:
+    #             risk_object['risk_object_type'] = 'other'
+    #             risk_object['risk_object_field'] = entity.name
+    #             risk_object['risk_score'] = self.tags.risk_score
+    #             risk_objects.append(risk_object)
+    #             continue
+
+    #     return risk_objects
 
     @computed_field
     @property

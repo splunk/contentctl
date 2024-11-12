@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 from typing import Annotated, Optional, List,Any
-from pydantic import field_validator, ValidationInfo, Field, model_serializer
+from pydantic import field_validator, ValidationInfo, Field, model_serializer, computed_field
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
@@ -15,7 +15,6 @@ from contentctl.objects.constants import CONTENTCTL_MAX_SEARCH_NAME_LENGTH,CONTE
 class Baseline(SecurityContentObject):
     name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     type: Annotated[str,Field(pattern="^Baseline$")] = Field(...)
-    datamodel: Optional[List[DataModel]] = None
     search: str = Field(..., min_length=4)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
@@ -34,6 +33,10 @@ class Baseline(SecurityContentObject):
     def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
         return Deployment.getDeployment(v,info)
     
+    @computed_field
+    @property
+    def datamodel(self) -> List[DataModel]:
+        return [dm for dm in DataModel if dm.value in self.search]
 
     @model_serializer
     def serialize_model(self):

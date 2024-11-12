@@ -805,17 +805,17 @@ class Detection_Abstract(SecurityContentObject):
                     "Detection does not have a matching RBA deployment config, the RBA portion should be omitted."
                 )
         else:
-            print(self.name)
             if self.rba is None:
                 raise ValueError(
                     "Detection is expected to have an RBA object based on its deployment config"
                 )
-            if len(self.rba.risk_objects) > 0: # type: ignore
-                return self
             else:
-                raise ValueError(
-                    "Detection expects an RBA config with at least one risk object."
-                )
+                if len(self.rba.risk_objects) > 0: # type: ignore
+                    return self
+                else:
+                    raise ValueError(
+                        "Detection expects an RBA config with at least one risk object."
+                    )
 
     # TODO - Remove old observable code
     # @model_validator(mode="after")

@@ -294,6 +294,7 @@ class StackType(StrEnum):
 
 
 class inspect(build):
+
     splunk_api_username: str = Field(
         description="Splunk API username used for appinspect and Splunkbase downloads."
     )

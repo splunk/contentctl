@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.detection import Detection
+from contentctl.objects.data_source import DataSource
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.config import test_common, All, Changes, Selected
 
@@ -67,9 +68,12 @@ class GitService(BaseModel):
 
         #Make a filename to content map
         filepath_to_content_map = { obj.file_path:obj for (_,obj) in self.director.name_to_content_map.items()} 
-        updated_detections:set[Detection] = set()
-        updated_macros:set[Macro] = set()
-        updated_lookups:set[Lookup] = set()
+
+        updated_detections: set[Detection] = set()
+        updated_macros: set[Macro] = set()
+        updated_lookups: set[Lookup] = set()
+        updated_datasources: set[DataSource] = set()
+
 
         for diff in all_diffs:
             if type(diff) == pygit2.Patch:
@@ -90,6 +94,13 @@ class GitService(BaseModel):
                             updated_macros.add(macroObject)
                         else:
                             raise Exception(f"Error getting macro object for file {str(decoded_path)}")
+                        
+                    elif decoded_path.is_relative_to(self.config.path/"data_sources") and decoded_path.suffix == ".yml":
+                        datasourceObject = filepath_to_content_map.get(decoded_path, None)
+                        if isinstance(datasourceObject, DataSource):
+                            updated_datasources.add(datasourceObject)
+                        else:
+                            raise Exception(f"Error getting data source object for file {str(decoded_path)}")
 
                     elif decoded_path.is_relative_to(self.config.path/"lookups"):
                         # We need to convert this to a yml. This means we will catch
@@ -115,7 +126,6 @@ class GitService(BaseModel):
                             # Detected a changed .mlmodel file. However, since we do not have testing for these detections at 
                             # this time, we will ignore this change.
                             updatedLookup = None
-                            
 
                         else:
                             raise Exception(f"Detected a changed file in the lookups/ directory '{str(decoded_path)}'.\n"
@@ -136,7 +146,8 @@ class GitService(BaseModel):
 
         # If a detection has at least one dependency on changed content,
         # then we must test it again
-        changed_macros_and_lookups:set[SecurityContentObject] = updated_macros.union(updated_lookups)
+
+        changed_macros_and_lookups_and_datasources:set[SecurityContentObject] = updated_macros.union(updated_lookups, updated_datasources)
         
         for detection in self.director.detections:
             if detection in updated_detections:
@@ -144,7 +155,7 @@ class GitService(BaseModel):
                 # to add it again
                 continue
 
-            for obj in changed_macros_and_lookups:
+            for obj in changed_macros_and_lookups_and_datasources:
                 if obj in detection.get_content_dependencies():
                    updated_detections.add(detection)
                    break

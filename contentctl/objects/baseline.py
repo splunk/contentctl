@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-from typing import Annotated, Optional, List,Any
+from typing import Annotated, List,Any
 from pydantic import field_validator, ValidationInfo, Field, model_serializer, computed_field
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.security_content_object import SecurityContentObject

@@ -70,7 +70,7 @@ class Detection_Abstract(SecurityContentObject):
     search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    rba: Optional[rba_object] = Field(...)
+    rba: Optional[rba_object] = Field(default=None)
     explanation: None | str = Field(
         default=None,
         exclude=True, #Don't serialize this value when dumping the object
@@ -796,7 +796,7 @@ class Detection_Abstract(SecurityContentObject):
         if self.status not in [DetectionStatus.production.value]: # type: ignore
             return self
         
-        if self.deployment.alert_action.rba.enabled is False:
+        if self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None:
             # confirm we don't have an RBA config
             if self.rba is None:
                 return self
@@ -848,6 +848,9 @@ class Detection_Abstract(SecurityContentObject):
 
     @model_validator(mode="after")
     def search_rba_fields_exist_validate(self):
+        if self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None:
+            return self
+        
         risk_fields = [ob.field.lower() for ob in self.rba.risk_objects]
         threat_fields = [ob.field.lower() for ob in self.rba.threat_objects]
         rba_fields = risk_fields + threat_fields

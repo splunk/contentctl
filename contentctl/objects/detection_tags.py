@@ -155,7 +155,6 @@ class DetectionTags(BaseModel):
             "cis20": self.cis20,
             "kill_chain_phases": self.kill_chain_phases,
             "nist": self.nist,
-            "observable": self.observable,
             "risk_score": self.risk_score,
             "security_domain": self.security_domain,
             "risk_severity": self.severity,

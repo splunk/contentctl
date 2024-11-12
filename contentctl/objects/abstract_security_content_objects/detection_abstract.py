@@ -853,9 +853,15 @@ class Detection_Abstract(SecurityContentObject):
 
     @model_validator(mode="after")
     def search_rba_fields_exist_validate(self):
+        # Return immediately if RBA isn't required
         if self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None:
             return self
         
+        # Raise error if RBA isn't present 
+        if self.rba is None:
+            raise ValueError(
+                "RBA is required for this detection based on its deployment config"
+            )
         risk_fields = [ob.field.lower() for ob in self.rba.risk_objects]
         threat_fields = [ob.field.lower() for ob in self.rba.threat_objects]
         rba_fields = risk_fields + threat_fields

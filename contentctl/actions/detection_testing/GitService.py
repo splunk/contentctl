@@ -69,10 +69,10 @@ class GitService(BaseModel):
         #Make a filename to content map
         filepath_to_content_map = { obj.file_path:obj for (_,obj) in self.director.name_to_content_map.items()} 
 
-        updated_detections:List[Detection] = set()
-        updated_macros:List[Macro] = set()
-        updated_lookups:List[Lookup] = set()
-        updated_datasources:List[DataSource] = set()
+        updated_detections: set[Detection] = set()
+        updated_macros: set[Macro] = set()
+        updated_lookups: set[Lookup] = set()
+        updated_datasources: set[DataSource] = set()
 
 
         for diff in all_diffs:
@@ -98,7 +98,7 @@ class GitService(BaseModel):
                     elif decoded_path.is_relative_to(self.config.path/"data_sources") and decoded_path.suffix == ".yml":
                         datasourceObject = filepath_to_content_map.get(decoded_path, None)
                         if isinstance(datasourceObject, DataSource):
-                            updated_datasources.append(datasourceObject)
+                            updated_datasources.add(datasourceObject)
                         else:
                             raise Exception(f"Error getting data source object for file {str(decoded_path)}")
 

@@ -794,8 +794,7 @@ class Detection_Abstract(SecurityContentObject):
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        if self.status not in [DetectionStatus.production.value]: # type: ignore
-            return self
+        
         
         if self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None:
             # confirm we don't have an RBA config
@@ -855,7 +854,7 @@ class Detection_Abstract(SecurityContentObject):
     @model_validator(mode="after")
     def search_rba_fields_exist_validate(self):
         # Return immediately if RBA isn't required
-        if (self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None) or self.status != DetectionStatus.production.value: #type: ignore
+        if (self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None): #type: ignore
             return self
         
         # Raise error if RBA isn't present 

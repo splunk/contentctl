@@ -29,8 +29,7 @@ class NewContent:
         answers['date'] = datetime.today().strftime('%Y-%m-%d')
         answers['author'] = answers['detection_author']
         del answers['detection_author']
-        answers['data_sources'] = answers['data_source']
-        del answers['data_source']
+        answers['data_source'] = answers['data_source']
         answers['type'] = answers['detection_type']
         del answers['detection_type']
         answers['status'] = "production" #start everything as production since that's what we INTEND the content to become   

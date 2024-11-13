@@ -1,0 +1,4 @@
+[shclustering]
+{% for custom_conf_file in custom_conf_files%}
+conf_replication_include.{{custom_conf_file}} = true
+{% endfor %}

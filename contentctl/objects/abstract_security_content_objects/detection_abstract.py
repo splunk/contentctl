@@ -791,10 +791,6 @@ class Detection_Abstract(SecurityContentObject):
             self: Returns itself if the validation passes
         """
 
-        # NOTE: we ignore the type error around self.status because we are using Pydantic's
-        # use_enum_values configuration
-        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        
         
         if self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None:
             # confirm we don't have an RBA config

@@ -689,6 +689,7 @@ class Detection_Abstract(SecurityContentObject):
         objects: list[SecurityContentObject] = []
         objects += self.macros
         objects += self.lookups
+        objects += self.data_source_objects
         return objects
 
     @field_validator("deployment", mode="before")

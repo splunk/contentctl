@@ -5,6 +5,7 @@ import pathlib
 import tyro
 
 from contentctl.actions.initialize import Initialize
+from contentctl.helper.utils import Utils
 from contentctl.objects.config import init, validate, build,  new, deploy_acs, test, test_servers, inspect, report, test_common, release_notes
 from contentctl.actions.validate import Validate
 from contentctl.actions.new_content import NewContent
@@ -51,8 +52,7 @@ from contentctl.actions.release_notes import ReleaseNotes
 #     """
 #     )
 
-
-
+LOG = Utils.get_logger()
 
 def init_func(config:test):    
     Initialize().execute(config)
@@ -153,7 +153,8 @@ def main():
             config_obj = YmlReader().load_file(configFile)
             t = test.model_validate(config_obj)
     except Exception as e:
-        print(f"Error validating 'contentctl.yml':\n{str(e)}")
+        LOG.error(f"Error validating 'contentctl.yml':\n{str(e)}")
+        LOG.exception(e)
         sys.exit(1)
         
     

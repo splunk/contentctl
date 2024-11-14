@@ -30,7 +30,8 @@ from contentctl.helper.splunk_app import SplunkApp
 ENTERPRISE_SECURITY_UID = 263
 COMMON_INFORMATION_MODEL_UID = 1621
 
-SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/download"
+SPLUNKBASE_BASE_URL = "https://splunkbase.splunk.com"
+SPLUNKBASE_URL = SPLUNKBASE_BASE_URL + "/app/{uid}/release/{version}/download"
 
 
 # TODO (#266): disable the use_enum_values configuration
@@ -93,6 +94,10 @@ class TestApp(App_Base):
             destination = config.getLocalAppDir() / server_path.name
             if stage_file:
                 Utils.download_file_from_http(file_url_string, str(destination))
+        # Needed for `contentctl validate` and `contentctl build` else it fails without the splunkbase creds,
+        # which shouldn't be mandatory for validation or building the app.
+        elif self.version is not None and self.uid is not None:
+            destination = self.getSplunkbasePath()
         else:
             raise Exception(f"Unknown path for app '{self.title}'")
         
@@ -886,7 +891,7 @@ class test(test_common):
 
         container_paths = []
         for path in paths:
-            if path.startswith(SPLUNKBASE_URL):
+            if path.startswith(SPLUNKBASE_BASE_URL):
                 container_paths.append(path)
             else:
                 container_paths.append((self.getContainerAppDir()/pathlib.Path(path).name).as_posix())

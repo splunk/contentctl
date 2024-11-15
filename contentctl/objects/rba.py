@@ -30,7 +30,7 @@ class ThreatObjectType(str, Enum):
     PROCESS_HASH = "process_hash"
     REGISTRY_PATH = "registry_path"
     REGISTRY_VALUE_NAME = "registry_value_name"
-    REGISTRY_VALUE_TEXT = "regstiry_value_text"
+    REGISTRY_VALUE_TEXT = "registry_value_text"
     SERVICE = "service"
     URL = "url"
 

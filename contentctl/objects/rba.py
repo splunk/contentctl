@@ -21,6 +21,7 @@ class ThreatObjectType(str, Enum):
     EMAIL_SUBJECT = "email_subject"
     FILE_HASH = "file_hash"
     FILE_NAME = "file_name"
+    FILE_PATH = "file_path"
     HTTP_USER_AGENT = "http_user_agent"
     IP_ADDRESS = "ip_address"
     PROCESS = "process"
@@ -32,6 +33,7 @@ class ThreatObjectType(str, Enum):
     REGISTRY_VALUE_NAME = "registry_value_name"
     REGISTRY_VALUE_TEXT = "registry_value_text"
     SERVICE = "service"
+    SYSTEM = "system"
     URL = "url"
 
 class risk_object(BaseModel):

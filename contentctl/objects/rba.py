@@ -34,6 +34,7 @@ class ThreatObjectType(str, Enum):
     REGISTRY_VALUE_TEXT = "registry_value_text"
     SERVICE = "service"
     SYSTEM = "system"
+    TLS_HASH = "tls_hash"
     URL = "url"
 
 class risk_object(BaseModel):

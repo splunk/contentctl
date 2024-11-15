@@ -850,7 +850,7 @@ class Detection_Abstract(SecurityContentObject):
     @model_validator(mode="after")
     def search_rba_fields_exist_validate(self):
         # Return immediately if RBA isn't required
-        if (self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None): #type: ignore
+        if (self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None) and self.rba is None: #type: ignore
             return self
         
         # Raise error if RBA isn't present 

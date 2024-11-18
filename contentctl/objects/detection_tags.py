@@ -74,7 +74,6 @@ class DetectionTags(BaseModel):
     observable: List[Observable] = []
     message: str = Field(...)
     product: list[SecurityContentProductName] = Field(..., min_length=1)
-    required_fields: list[str] = Field(min_length=1)
     throttling: Optional[Throttling] = None
     security_domain: SecurityDomain = Field(...)
     cve: List[CVE_TYPE] = []

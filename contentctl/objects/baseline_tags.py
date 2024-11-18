@@ -18,7 +18,6 @@ class BaselineTags(BaseModel):
     # TODO (#223): can we remove str from the possible types here?
     detections: List[Union[Detection,str]] = Field(...)
     product: List[SecurityContentProductName] = Field(...,min_length=1)
-    required_fields: List[str] = Field(...,min_length=1)
     security_domain: SecurityDomain = Field(...)
 
 
@@ -34,7 +33,6 @@ class BaselineTags(BaseModel):
             "analytic_story": [story.name for story in self.analytic_story],
             "detections": [detection.name for detection in self.detections if isinstance(detection,Detection)],
             "product": self.product,
-            "required_fields":self.required_fields,
             "security_domain":self.security_domain,
             "deployments": None
         }

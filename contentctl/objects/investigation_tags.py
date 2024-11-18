@@ -8,7 +8,6 @@ class InvestigationTags(BaseModel):
     model_config = ConfigDict(extra="forbid")
     analytic_story: List[Story] = Field([],min_length=1)
     product: List[SecurityContentInvestigationProductName] = Field(...,min_length=1)
-    required_fields: List[str] = Field(min_length=1)
     security_domain: SecurityDomain = Field(...)
 
 
@@ -24,7 +23,6 @@ class InvestigationTags(BaseModel):
         model= {
             "analytic_story": [story.name for story in self.analytic_story],
             "product": self.product,
-            "required_fields": self.required_fields,
             "security_domain": self.security_domain,
         }
         

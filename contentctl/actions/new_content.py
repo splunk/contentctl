@@ -49,7 +49,6 @@ class NewContent:
         answers['tags']['mitre_attack_id'] = [x.strip() for x in answers['mitre_attack_ids'].split(',')]
         answers['tags']['observable'] = [{'name': 'UPDATE', 'type': 'UPDATE', 'role': ['UPDATE']}]
         answers['tags']['product'] = ['Splunk Enterprise','Splunk Enterprise Security','Splunk Cloud']
-        answers['tags']['required_fields'] = ['UPDATE']
         answers['tags']['risk_score'] = 'UPDATE (impact * confidence)/100'
         answers['tags']['security_domain'] = answers['security_domain']
         del answers["security_domain"]

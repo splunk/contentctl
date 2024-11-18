@@ -11,7 +11,7 @@ readme = "README.md"
 contentctl = 'contentctl.contentctl:main'
 
 [tool.poetry.dependencies]
-python = "^3.11,<3.13"
+python = "^3.11,<3.14"
 pydantic = "^2.8.2"
 PyYAML = "^6.0.2"
 requests = "~2.32.3"

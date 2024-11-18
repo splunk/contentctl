@@ -42,7 +42,6 @@ class DetectionTags(BaseModel):
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []
-    context: list[str] = []
     confidence: NonNegativeInt = Field(...,le=100)
     impact: NonNegativeInt = Field(...,le=100)
     @computed_field

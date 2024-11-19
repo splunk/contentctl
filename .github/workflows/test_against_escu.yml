@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with: 
           path: security_content
-          repository: splunk/security_content
+          ref: strict_yml_fields #quick test against updated content
 
       #Install the given version of Python we will test against
       - name: Install Required Python Version

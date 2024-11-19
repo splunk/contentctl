@@ -13,6 +13,20 @@ from contentctl.objects.abstract_security_content_objects.security_content_objec
 from contentctl.output.yml_writer import YmlWriter
 
 class NewContent:
+    DEFAULT_DRILLDOWN_DEF = [
+        {
+            "name": 'View the detection results for - "$first_observable_name_here$" and "$second_observable_name_here$"',
+            "search": '%original_detection_search% | search  first_observable_type_here = "$first_observable_name_here$" second_observable_type_here = $second_observable_name_here$',
+            "earliest_offset": '$info_min_time$',
+            "latest_offset": '$info_max_time$' 
+        },
+        {
+            "name": 'View risk events for the last 7 days for - "$first_observable_name_here$" and "$second_observable_name_here$"',
+            "search": '| from datamodel Risk.All_Risk | search normalized_risk_object IN ("$first_observable_name_here$", "$second_observable_name_here$") starthoursago=168  | stats count min(_time) as firstTime max(_time) as lastTime values(search_name) as "Search Name" values(risk_message) as "Risk Message" values(analyticstories) as "Analytic Stories" values(annotations._all) as "Annotations" values(annotations.mitre_attack.mitre_tactic) as "ATT&CK Tactics" by normalized_risk_object | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`',
+            "earliest_offset": '$info_min_time$',
+            "latest_offset": '$info_max_time$' 
+        }
+    ]
 
     def buildDetection(self)->dict[str,Any]:
         questions = NewContentQuestions.get_questions_detection()
@@ -40,6 +54,8 @@ class NewContent:
         answers['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
         answers['known_false_positives'] = 'UPDATE_KNOWN_FALSE_POSITIVES'            
         answers['references'] = ['REFERENCE']
+        if answers['type'] in ["TTP", "Correlation", "Anomaly", "TTP"]:
+            answers['drilldown_searches'] = NewContent.DEFAULT_DRILLDOWN_DEF
         answers['tags'] = dict()
         answers['tags']['analytic_story'] = ['UPDATE_STORY_NAME']
         answers['tags']['asset_type'] = 'UPDATE asset_type'
@@ -49,7 +65,6 @@ class NewContent:
         answers['tags']['mitre_attack_id'] = [x.strip() for x in answers['mitre_attack_ids'].split(',')]
         answers['tags']['observable'] = [{'name': 'UPDATE', 'type': 'UPDATE', 'role': ['UPDATE']}]
         answers['tags']['product'] = ['Splunk Enterprise','Splunk Enterprise Security','Splunk Cloud']
-        answers['tags']['risk_score'] = 'UPDATE (impact * confidence)/100'
         answers['tags']['security_domain'] = answers['security_domain']
         del answers["security_domain"]
         answers['tags']['cve'] = ['UPDATE WITH CVE(S) IF APPLICABLE']
@@ -60,7 +75,7 @@ class NewContent:
                 'name': "True Positive Test",
                 'attack_data': [ 
                     {
-                    'data': "https://github.com/splunk/contentctl/wiki",
+                    'data': "Go to https://github.com/splunk/contentctl/wiki for information about the format of this field",
                     "sourcetype": "UPDATE SOURCETYPE",
                     "source": "UPDATE SOURCE"
                     }

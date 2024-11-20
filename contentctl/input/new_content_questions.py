@@ -57,7 +57,7 @@ class NewContentQuestions:
                 "type": "text",
                 "message": "enter search (spl)",
                 "name": "detection_search",
-                "default": "| UPDATE_SPL",
+                "default": "| _UPDATE_ SPL",
             },
             {
                 "type": "text",

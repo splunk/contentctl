@@ -9,7 +9,8 @@ from datetime import datetime
 import pathlib
 from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import SecurityContentObject_Abstract
 from contentctl.output.yml_writer import YmlWriter
-
+from contentctl.objects.enums import AssetType
+from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, SES_OBSERVABLE_ROLE_MAPPING
 class NewContent:
     DEFAULT_DRILLDOWN_DEF = [
         {
@@ -25,6 +26,7 @@ class NewContent:
             "latest_offset": '$info_max_time$' 
         }
     ]
+    UPDATE_PREFIX = "_UPDATE_"
 
     def buildDetection(self) -> tuple[dict[str, Any], str]:
         questions = NewContentQuestions.get_questions_detection()
@@ -36,7 +38,7 @@ class NewContent:
             raise ValueError("User didn't answer one or more questions!")
 
         data_source_field = (
-            answers["data_source"] if len(answers["data_source"]) > 0 else ["UPDATE"]
+            answers["data_source"] if len(answers["data_source"]) > 0 else [f"{NewContent.UPDATE_PREFIX} zero or more data_sources"]
         )
         file_name = (
             answers["detection_name"]
@@ -52,7 +54,7 @@ class NewContent:
             mitre_attack_ids = [x.strip() for x in answers["mitre_attack_ids"].split(",")]
         else:
             #string was too short, so just put a placeholder
-            mitre_attack_ids = ["UPDATE"]
+            mitre_attack_ids = [f"{NewContent.UPDATE_PREFIX} zero or more mitre_attack_ids"]
 
         output_file_answers: dict[str, Any] = {
             "name": answers["detection_name"],
@@ -62,22 +64,22 @@ class NewContent:
             "author": answers["detection_author"],
             "status": "production",  # start everything as production since that's what we INTEND the content to become
             "type": answers["detection_type"],
-            "description": "UPDATE_DESCRIPTION",
+            "description": f"{NewContent.UPDATE_PREFIX} by providing a description of your search",
             "data_source": data_source_field,
             "search": f"{answers['detection_search']} | `{file_name}_filter`'",
-            "how_to_implement": "UPDATE_HOW_TO_IMPLEMENT",
-            "known_false_positives": "UPDATE_KNOWN_FALSE_POSITIVES",
-            "references": ["REFERENCE"],
+            "how_to_implement": f"{NewContent.UPDATE_PREFIX} how to implement your search",
+            "known_false_positives": f"{NewContent.UPDATE_PREFIX} known false positives for your search",
+            "references": [f"{NewContent.UPDATE_PREFIX} zero or more http references to provide more information about your search"],
             "drilldown_searches": NewContent.DEFAULT_DRILLDOWN_DEF,
             "tags": {
-                "analytic_story": ["UPDATE_STORY_NAME"],
-                "asset_type": "UPDATE asset_type",
-                "confidence": "UPDATE value between 1-100",
-                "impact": "UPDATE value between 1-100",
-                "message": "UPDATE message",
+                "analytic_story": [f"{NewContent.UPDATE_PREFIX} by providing zero or more analytic stories"],
+                "asset_type": f"{NewContent.UPDATE_PREFIX} by providing and asset type from {list(AssetType._value2member_map_)}",
+                "confidence": f"{NewContent.UPDATE_PREFIX} by providing a value between 1-100",
+                "impact": f"{NewContent.UPDATE_PREFIX} by providing a value between 1-100",
+                "message": f"{NewContent.UPDATE_PREFIX} by providing a risk message. Fields in your search results can be referenced using $fieldName$",
                 "mitre_attack_id": mitre_attack_ids,
                 "observable": [
-                    {"name": "UPDATE", "type": "UPDATE", "role": ["UPDATE"]}
+                    {"name": f"{NewContent.UPDATE_PREFIX} the field name of the observable. This is a field that exists in your search results.", "type": f"{NewContent.UPDATE_PREFIX} the type of your observable from the list {list(SES_OBSERVABLE_TYPE_MAPPING.keys())}.", "role": [f"{NewContent.UPDATE_PREFIX} the role from the list {list(SES_OBSERVABLE_ROLE_MAPPING.keys())}"]}
                 ],
                 "product": [
                     "Splunk Enterprise",
@@ -85,16 +87,16 @@ class NewContent:
                     "Splunk Cloud",
                 ],
                 "security_domain": answers["security_domain"],
-                "cve": ["UPDATE WITH CVE(S) IF APPLICABLE"],
+                "cve": [f"{NewContent.UPDATE_PREFIX} with CVE(s) if applicable"],
             },
             "tests": [
                 {
                     "name": "True Positive Test",
                     "attack_data": [
                         {
-                            "data": "Go to https://github.com/splunk/contentctl/wiki for information about the format of this field",
-                            "sourcetype": "UPDATE SOURCETYPE",
-                            "source": "UPDATE SOURCE",
+                            "data": f"{NewContent.UPDATE_PREFIX} the data file to replay. Go to https://github.com/splunk/contentctl/wiki for information about the format of this field",
+                            "sourcetype": f"{NewContent.UPDATE_PREFIX} the sourcetype of your data file.",
+                            "source": f"{NewContent.UPDATE_PREFIX} the source of your datafile",
                         }
                     ],
                 }

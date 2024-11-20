@@ -101,7 +101,7 @@ class NewContent:
             ],
         }
 
-        if answers["detection_type"] not in ["TTP", "Correlation", "Anomaly", "TTP"]:
+        if answers["detection_type"] not in ["TTP", "Anomaly", "Correlation"]:
             del output_file_answers["drilldown_searches"]
 
         return output_file_answers, answers['detection_kind']

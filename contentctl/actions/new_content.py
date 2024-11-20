@@ -12,21 +12,23 @@ from contentctl.output.yml_writer import YmlWriter
 from contentctl.objects.enums import AssetType
 from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, SES_OBSERVABLE_ROLE_MAPPING
 class NewContent:
+    UPDATE_PREFIX = "_UPDATE_"
+    
     DEFAULT_DRILLDOWN_DEF = [
         {
-            "name": 'View the detection results for - "$first_observable_name_here$" and "$second_observable_name_here$"',
-            "search": '%original_detection_search% | search  first_observable_type_here = "$first_observable_name_here$" second_observable_type_here = $second_observable_name_here$',
+            "name": f'View the detection results for - "${UPDATE_PREFIX}FIRST_RISK_OBJECT$" and "${UPDATE_PREFIX}SECOND_RISK_OBJECT$"',
+            "search": f'%original_detection_search% | search  "${UPDATE_PREFIX}FIRST_RISK_OBJECT = "${UPDATE_PREFIX}FIRST_RISK_OBJECT$" second_observable_type_here = "${UPDATE_PREFIX}SECOND_RISK_OBJECT$"',
             "earliest_offset": '$info_min_time$',
             "latest_offset": '$info_max_time$' 
         },
         {
-            "name": 'View risk events for the last 7 days for - "$first_observable_name_here$" and "$second_observable_name_here$"',
-            "search": '| from datamodel Risk.All_Risk | search normalized_risk_object IN ("$first_observable_name_here$", "$second_observable_name_here$") starthoursago=168  | stats count min(_time) as firstTime max(_time) as lastTime values(search_name) as "Search Name" values(risk_message) as "Risk Message" values(analyticstories) as "Analytic Stories" values(annotations._all) as "Annotations" values(annotations.mitre_attack.mitre_tactic) as "ATT&CK Tactics" by normalized_risk_object | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`',
+            "name": f'View risk events for the last 7 days for - "${UPDATE_PREFIX}FIRST_RISK_OBJECT$" and "${UPDATE_PREFIX}SECOND_RISK_OBJECT$"',
+            "search": f'| from datamodel Risk.All_Risk | search normalized_risk_object IN ("${UPDATE_PREFIX}FIRST_RISK_OBJECT$", "${UPDATE_PREFIX}SECOND_RISK_OBJECT$") starthoursago=168  | stats count min(_time) as firstTime max(_time) as lastTime values(search_name) as "Search Name" values(risk_message) as "Risk Message" values(analyticstories) as "Analytic Stories" values(annotations._all) as "Annotations" values(annotations.mitre_attack.mitre_tactic) as "ATT&CK Tactics" by normalized_risk_object | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`',
             "earliest_offset": '$info_min_time$',
             "latest_offset": '$info_max_time$' 
         }
     ]
-    UPDATE_PREFIX = "_UPDATE_"
+    
 
     def buildDetection(self) -> tuple[dict[str, Any], str]:
         questions = NewContentQuestions.get_questions_detection()

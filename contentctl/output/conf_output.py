@@ -57,19 +57,26 @@ class ConfOutput:
             pass
             
 
-    def writeAppConf(self)->set[pathlib.Path]:
+    
+
+    def writeMiscellaneousAppFiles(self)->set[pathlib.Path]:
         written_files:set[pathlib.Path] = set()
-        for output_app_path, template_name in [ ("default/app.conf", "app.conf.j2"),
-                                                ("default/content-version.conf", "content-version.j2")]:
-            written_files.add(ConfWriter.writeConfFile(pathlib.Path(output_app_path),
-                                    template_name,
-                                    self.config,
-                                    [self.config.app]))
+        
+        written_files.add(ConfWriter.writeConfFile(pathlib.Path("default/content-version.conf"),
+                                "content-version.j2",
+                                self.config,
+                                [self.config.app]))
         
         written_files.add(ConfWriter.writeManifestFile(pathlib.Path("app.manifest"),
                                               "app.manifest.j2",
                                               self.config,
                                               [self.config.app]))
+        
+        written_files.add(ConfWriter.writeServerConf(self.config))
+
+        written_files.add(ConfWriter.writeAppConf(self.config))
+                                              
+
         return written_files
 
     # TODO (cmcginley): we could have a discrepancy between detections tested and those delivered

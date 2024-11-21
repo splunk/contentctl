@@ -1,4 +1,5 @@
 from typing import List,Union
+import traceback
 from contentctl.objects.config import test, test_servers, Container,Infrastructure
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import DetectionTestingInfrastructure
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import DetectionTestingInfrastructureContainer
@@ -98,6 +99,10 @@ class DetectionTestingManager(BaseModel):
                     _ = future.result()
                 except Exception as e:
                     self.output_dto.terminate = True
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
                     errors["INSTANCE SETUP ERRORS"].append(e)
 
             # Start and wait for all tests to run
@@ -113,6 +118,10 @@ class DetectionTestingManager(BaseModel):
                         _ = future.result()
                     except Exception as e:
                         self.output_dto.terminate = True
+                        # Output the traceback if we encounter errors in verbose mode
+                        if self.input_dto.config.verbose:
+                            tb = traceback.format_exc()
+                            print(tb)
                         errors["TESTING ERRORS"].append(e)
 
             self.output_dto.terminate = True
@@ -125,6 +134,10 @@ class DetectionTestingManager(BaseModel):
                 try:
                     _ = future.result()
                 except Exception as e:
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
                     errors["ERRORS DURING VIEW SHUTDOWN"].append(e)
 
             # Wait for original view-related threads to complete
@@ -132,6 +145,10 @@ class DetectionTestingManager(BaseModel):
                 try:
                     _ = future.result()
                 except Exception as e:
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
                     errors["ERRORS DURING VIEW EXECUTION"].append(e)
 
             # Log any errors

@@ -569,26 +569,25 @@ class Detection_Abstract(SecurityContentObject):
         # 1 of the drilldowns contains the string Drilldown.SEARCH_PLACEHOLDER.
         # This is presently a requirement when 1 or more drilldowns are added to a detection.
         # Note that this is only required for production searches that are not hunting
-
-        # TODO (cmcginley): commenting out for testing    
-        # if self.type == AnalyticsType.Hunting.value or self.status != DetectionStatus.production.value:
-        #     #No additional check need to happen on the potential drilldowns.
-        #     pass
-        # else:
-        #     found_placeholder = False
-        #     if len(self.drilldown_searches) < 2:
-        #         raise ValueError(f"This detection is required to have 2 drilldown_searches, but only has [{len(self.drilldown_searches)}]")
-        #     for drilldown in self.drilldown_searches:
-        #         if DRILLDOWN_SEARCH_PLACEHOLDER in drilldown.search:
-        #             found_placeholder = True
-        #     if not found_placeholder:
-        #         raise ValueError("Detection has one or more drilldown_searches, but none of them "
-        #                          f"contained '{DRILLDOWN_SEARCH_PLACEHOLDER}. This is a requirement "
-        #                          "if drilldown_searches are defined.'")
             
-        # # Update the search fields with the original search, if required
-        # for drilldown in self.drilldown_searches:
-        #     drilldown.perform_search_substitutions(self)
+        if self.type == AnalyticsType.Hunting.value or self.status != DetectionStatus.production.value:
+            #No additional check need to happen on the potential drilldowns.
+            pass
+        else:
+            found_placeholder = False
+            if len(self.drilldown_searches) < 2:
+                raise ValueError(f"This detection is required to have 2 drilldown_searches, but only has [{len(self.drilldown_searches)}]")
+            for drilldown in self.drilldown_searches:
+                if DRILLDOWN_SEARCH_PLACEHOLDER in drilldown.search:
+                    found_placeholder = True
+            if not found_placeholder:
+                raise ValueError("Detection has one or more drilldown_searches, but none of them "
+                                 f"contained '{DRILLDOWN_SEARCH_PLACEHOLDER}. This is a requirement "
+                                 "if drilldown_searches are defined.'")
+            
+        # Update the search fields with the original search, if required
+        for drilldown in self.drilldown_searches:
+            drilldown.perform_search_substitutions(self)
 
         #For experimental purposes, add the default drilldowns
         #self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))

@@ -47,7 +47,6 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             raise (Exception(f"Failed to get docker client: {str(e)}"))
 
     def check_for_teardown(self):
-
         try:
             container: docker.models.containers.Container = self.get_docker_client().containers.get(self.get_name())
         except Exception as e:

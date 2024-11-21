@@ -29,7 +29,7 @@ class YmlReader():
                 # and use NewContent.UPDATE_PREFIX, 
                 # but there is a circular dependency right now which makes that difficult.
                 # We have instead hardcoded UPDATE_PREFIX
-                UPDATE_PREFIX = "_UPDATE_"
+                UPDATE_PREFIX = "__UPDATE__"
                 data = file_handler.read()
                 if UPDATE_PREFIX in data:
                     raise Exception(f"The file {file_path} contains the value '{UPDATE_PREFIX}'. Please fill out any unpopulated fields as required.")

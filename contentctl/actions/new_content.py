@@ -12,7 +12,7 @@ from contentctl.output.yml_writer import YmlWriter
 from contentctl.objects.enums import AssetType
 from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, SES_OBSERVABLE_ROLE_MAPPING
 class NewContent:
-    UPDATE_PREFIX = "_UPDATE_"
+    UPDATE_PREFIX = "__UPDATE__"
     
     DEFAULT_DRILLDOWN_DEF = [
         {
@@ -68,7 +68,7 @@ class NewContent:
             "type": answers["detection_type"],
             "description": f"{NewContent.UPDATE_PREFIX} by providing a description of your search",
             "data_source": data_source_field,
-            "search": f"{answers['detection_search']} | `{file_name}_filter`'",
+            "search": f"{answers['detection_search']} | `{file_name}_filter`",
             "how_to_implement": f"{NewContent.UPDATE_PREFIX} how to implement your search",
             "known_false_positives": f"{NewContent.UPDATE_PREFIX} known false positives for your search",
             "references": [f"{NewContent.UPDATE_PREFIX} zero or more http references to provide more information about your search"],

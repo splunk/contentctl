@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "contentctl"
-version = "4.4.4"
+version = "4.4.7"
 
 description = "Splunk Content Control Tool"
 authors = ["STRT <research@splunk.com>"]
@@ -11,8 +11,8 @@ readme = "README.md"
 contentctl = 'contentctl.contentctl:main'
 
 [tool.poetry.dependencies]
-python = "^3.11"
-pydantic = "^2.8.2"
+python = "^3.11,<3.13"
+pydantic = "~2.9.2"
 PyYAML = "^6.0.2"
 requests = "~2.32.3"
 pycvesearch = "^1.2"

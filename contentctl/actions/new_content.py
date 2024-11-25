@@ -40,6 +40,24 @@ class NewContent:
         answers['how_to_implement'] = 'UPDATE_HOW_TO_IMPLEMENT'
         answers['known_false_positives'] = 'UPDATE_KNOWN_FALSE_POSITIVES'            
         answers['references'] = ['REFERENCE']
+        if answers['type'] == "TTP" or answers['type'] == "Anomaly":
+            answers['rba'] = {
+                'message': "UPDATE Risk Message",
+                'risk_objects': [
+                    {
+                    'field': 'UPDATE RISK OBJECT FIELD NAME',
+                    'type': 'UPDATE SYSTEM, USER, OR OTHER',
+                    'score': 10
+                }
+                ],
+                'threat_objects': [
+                    {
+                        'field': 'UPDATE THREAT OBJECT FIELD',
+                        'type': 'UPDATE THREAT OBJECT TYPE'
+                    }
+                ]
+            }
+            
         answers['tags'] = dict()
         answers['tags']['analytic_story'] = ['UPDATE_STORY_NAME']
         answers['tags']['asset_type'] = 'UPDATE asset_type'
@@ -47,10 +65,8 @@ class NewContent:
         answers['tags']['impact'] = 'UPDATE value between 1-100'
         answers['tags']['message'] = 'UPDATE message'
         answers['tags']['mitre_attack_id'] = [x.strip() for x in answers['mitre_attack_ids'].split(',')]
-        answers['tags']['observable'] = [{'name': 'UPDATE', 'type': 'UPDATE', 'role': ['UPDATE']}]
         answers['tags']['product'] = ['Splunk Enterprise','Splunk Enterprise Security','Splunk Cloud']
         answers['tags']['required_fields'] = ['UPDATE']
-        answers['tags']['risk_score'] = 'UPDATE (impact * confidence)/100'
         answers['tags']['security_domain'] = answers['security_domain']
         del answers["security_domain"]
         answers['tags']['cve'] = ['UPDATE WITH CVE(S) IF APPLICABLE']

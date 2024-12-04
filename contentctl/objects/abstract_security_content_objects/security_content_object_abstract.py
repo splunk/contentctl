@@ -31,9 +31,9 @@ import pathlib
 NO_FILE_NAME = "NO_FILE_NAME"
 
 
-# TODO (#266): disable the use_enum_values configuration
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True,extra="forbid")
+    model_config = ConfigDict(validate_default=True)
+    
     name: str = Field(...,max_length=99)
     author: str = Field(...,max_length=255)
     date: datetime.date = Field(...)

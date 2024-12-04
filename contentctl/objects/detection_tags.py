@@ -35,10 +35,9 @@ from contentctl.objects.enums import (
 from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
-# TODO (#266): disable the use_enum_values configuration
 class DetectionTags(BaseModel):
     # detection spec
-    model_config = ConfigDict(use_enum_values=True,validate_default=False, extra='forbid')
+    model_config = ConfigDict(validate_default=False)
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []

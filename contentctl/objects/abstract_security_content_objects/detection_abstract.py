@@ -58,9 +58,7 @@ SKIPPED_ANALYTICS_TYPES: set[str] = {
 }
 
 
-# TODO (#266): disable the use_enum_values configuration
 class Detection_Abstract(SecurityContentObject):
-    model_config = ConfigDict(use_enum_values=True)
     name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
@@ -215,7 +213,7 @@ class Detection_Abstract(SecurityContentObject):
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
 
         # Skip tests for non-production detections
-        if self.status != DetectionStatus.production.value:                                         # type: ignore
+        if self.status != DetectionStatus.production.value:                                         
             self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
 
         # Skip tests for detecton types like Correlation which are not supported via contentctl

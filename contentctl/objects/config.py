@@ -434,7 +434,7 @@ class ContainerSettings(BaseModel):
 
 class All(BaseModel):
     #Doesn't need any extra logic
-    mode_name = "All"
+    mode_name:str = "All"
     pass
 
 
@@ -446,7 +446,7 @@ class Changes(BaseModel):
 
 class Selected(BaseModel):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)
-    mode_name = "Selected"
+    mode_name:str = "Selected"
     files:List[FilePath] = Field(...,description="List of detection files to test, separated by spaces.")
 
     @field_serializer('files',when_used='always')

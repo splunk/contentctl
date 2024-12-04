@@ -48,7 +48,7 @@ class NewContentQuestions:
             {
                 'type': 'checkbox',
                 'message': 'Your data source',
-                'name': 'data_source',
+                'name': 'data_sources',
                 #In the future, we should dynamically populate this from the DataSource Objects we have parsed from the data_sources directory
                 'choices': sorted(DataSource._value2member_map_ )
                 

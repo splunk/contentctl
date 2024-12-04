@@ -44,7 +44,7 @@ action.escu.providing_technologies = null
 action.escu.analytic_story = {{ objectListToNameList(detection.tags.analytic_story) | tojson }}
 {% if detection.deployment.alert_action.rba.enabled%}
 action.risk = 1
-action.risk.param._risk_message = {{ detection.tags.message | escapeNewlines() }}
+action.risk.param._risk_message = {{ detection.rba.message | escapeNewlines() }}
 action.risk.param._risk = {{ detection.risk | tojson }}
 action.risk.param._risk_score = 0
 action.risk.param.verbose = 0

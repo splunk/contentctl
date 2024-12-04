@@ -29,6 +29,7 @@ class YmlOutput():
                         "how_to_implement": True,
                         "known_false_positives": True,
                         "references": True,
+                        "rba": True
                         "tags": 
                             {
                                 "analytic_story": True,
@@ -41,7 +42,6 @@ class YmlOutput():
                                 "message": True,
                                 "mitre_attack_id": True,
                                 "kill_chain_phases:": True,
-                                "observable": True,
                                 "product": True,
                                 "required_fields": True,
                                 "risk_score": True,

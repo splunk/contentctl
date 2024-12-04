@@ -151,7 +151,7 @@ class DetectionTags(BaseModel):
         # Since this field has no parent, there is no need to call super() serialization function
         return {
             "analytic_story": [story.name for story in self.analytic_story],
-            "asset_type": self.asset_type.value,
+            "asset_type": self.asset_type,
             "cis20": self.cis20,
             "kill_chain_phases": self.kill_chain_phases,
             "nist": self.nist,

@@ -442,7 +442,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     self.format_pbar_string(
                         TestReportingType.GROUP,
                         test_group.name,
-                        FinalTestingStates.SKIP.value,
+                        FinalTestingStates.SKIP,
                         start_time=time.time(),
                         set_pbar=False,
                     )
@@ -483,7 +483,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.GROUP,
                     test_group.name,
-                    TestingStates.DONE_GROUP.value,
+                    TestingStates.DONE_GROUP,
                     start_time=setup_results.start_time,
                     set_pbar=False,
                 )
@@ -504,7 +504,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self.format_pbar_string(
             TestReportingType.GROUP,
             test_group.name,
-            TestingStates.BEGINNING_GROUP.value,
+            TestingStates.BEGINNING_GROUP,
             start_time=setup_start_time
         )
         # https://github.com/WoLpH/python-progressbar/issues/164
@@ -544,7 +544,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self.format_pbar_string(
             TestReportingType.GROUP,
             test_group.name,
-            TestingStates.DELETING.value,
+            TestingStates.DELETING,
             start_time=test_group_start_time,
         )
 
@@ -632,7 +632,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.SKIP.value,
+                    FinalTestingStates.SKIP,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -664,7 +664,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.ERROR.value,
+                    FinalTestingStates.ERROR,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -724,7 +724,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 res = "ERROR"
                 link = detection.search
             else:
-                res = test.result.status.value.upper()                                              # type: ignore
+                res = test.result.status.upper()                                              # type: ignore
                 link = test.result.get_summary_dict()["sid_link"]
 
             self.format_pbar_string(
@@ -755,7 +755,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.PASS.value,
+                    FinalTestingStates.PASS,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -766,7 +766,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.SKIP.value,
+                    FinalTestingStates.SKIP,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -777,7 +777,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.FAIL.value,
+                    FinalTestingStates.FAIL,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -788,7 +788,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.ERROR.value,
+                    FinalTestingStates.ERROR,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -821,7 +821,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         test_start_time = time.time()
 
         # First, check to see if the test should be skipped (Hunting or Correlation)
-        if detection.type in [AnalyticsType.Hunting.value, AnalyticsType.Correlation.value]:
+        if detection.type in [AnalyticsType.Hunting, AnalyticsType.Correlation]:
             test.skip(
                 f"TEST SKIPPED: detection is type {detection.type} and cannot be integration "
                 "tested at this time"
@@ -843,11 +843,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # Determine the reporting state (we should only encounter SKIP/FAIL/ERROR)
             state: str
             if test.result.status == TestResultStatus.SKIP:
-                state = FinalTestingStates.SKIP.value
+                state = FinalTestingStates.SKIP
             elif test.result.status == TestResultStatus.FAIL:
-                state = FinalTestingStates.FAIL.value
+                state = FinalTestingStates.FAIL
             elif test.result.status == TestResultStatus.ERROR:
-                state = FinalTestingStates.ERROR.value
+                state = FinalTestingStates.ERROR
             else:
                 raise ValueError(
                     f"Status for (integration) '{detection.name}:{test.name}' was preemptively set"
@@ -891,7 +891,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.INTEGRATION,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.FAIL.value,
+                    FinalTestingStates.FAIL,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -935,7 +935,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             if test.result is None:
                 res = "ERROR"
             else:
-                res = test.result.status.value.upper()                                              # type: ignore
+                res = test.result.status.upper()                                              # type: ignore
 
             # Get the link to the saved search in this specific instance
             link = f"https://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
@@ -968,7 +968,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.INTEGRATION,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.PASS.value,
+                    FinalTestingStates.PASS,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -979,7 +979,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.INTEGRATION,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.SKIP.value,
+                    FinalTestingStates.SKIP,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -990,7 +990,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.INTEGRATION,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.FAIL.value,
+                    FinalTestingStates.FAIL,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -1001,7 +1001,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.INTEGRATION,
                     f"{detection.name}:{test.name}",
-                    FinalTestingStates.ERROR.value,
+                    FinalTestingStates.ERROR,
                     start_time=test_start_time,
                     set_pbar=False,
                 )
@@ -1077,7 +1077,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.UNIT,
                     f"{detection.name}:{test.name}",
-                    TestingStates.PROCESSING.value,
+                    TestingStates.PROCESSING,
                     start_time=start_time
                 )
 
@@ -1086,7 +1086,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.format_pbar_string(
                 TestReportingType.UNIT,
                 f"{detection.name}:{test.name}",
-                TestingStates.SEARCHING.value,
+                TestingStates.SEARCHING,
                 start_time=start_time,
             )
 
@@ -1289,7 +1289,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.format_pbar_string(
                     TestReportingType.GROUP,
                     test_group.name,
-                    TestingStates.DOWNLOADING.value,
+                    TestingStates.DOWNLOADING,
                     start_time=test_group_start_time
                 )
 
@@ -1307,7 +1307,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self.format_pbar_string(
             TestReportingType.GROUP,
             test_group.name,
-            TestingStates.REPLAYING.value,
+            TestingStates.REPLAYING,
             start_time=test_group_start_time
         )
 

@@ -434,16 +434,19 @@ class ContainerSettings(BaseModel):
 
 class All(BaseModel):
     #Doesn't need any extra logic
+    mode_name = "All"
     pass
 
 
 class Changes(BaseModel):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)
+    mode_name: str = "Changes"
     target_branch:str = Field(...,description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.")
 
 
 class Selected(BaseModel):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)
+    mode_name = "Selected"
     files:List[FilePath] = Field(...,description="List of detection files to test, separated by spaces.")
 
     @field_serializer('files',when_used='always')
@@ -672,12 +675,12 @@ DEFAULT_APPS:List[TestApp] = [
 class test_common(build):
     mode:Union[Changes, Selected, All] = Field(All(), union_mode='left_to_right')
     post_test_behavior: PostTestBehavior = Field(default=PostTestBehavior.pause_on_failure, description="Controls what to do when a test completes.\n\n"
-                                                                                                        f"'{PostTestBehavior.always_pause.value}' -  the state of "
+                                                                                                        f"'{PostTestBehavior.always_pause}' -  the state of "
                                                                                                         "the test will always pause after a test, allowing the user to log into the "
                                                                                                         "server and experiment with the search and data before it is removed.\n\n"
-                                                                                                        f"'{PostTestBehavior.pause_on_failure.value}' - pause execution ONLY when a test fails. The user may press ENTER in the terminal "
+                                                                                                        f"'{PostTestBehavior.pause_on_failure}' - pause execution ONLY when a test fails. The user may press ENTER in the terminal "
                                                                                                         "running the test to move on to the next test.\n\n"
-                                                                                                        f"'{PostTestBehavior.never_pause.value}' -  never stop testing, even if a test fails.\n\n"
+                                                                                                        f"'{PostTestBehavior.never_pause}' -  never stop testing, even if a test fails.\n\n"
                                                                                                         "***SPECIAL NOTE FOR CI/CD*** 'never_pause' MUST be used for a test to "
                                                                                                         "run in an unattended manner or in a CI/CD system - otherwise a single failed test "
                                                                                                         "will result in the testing never finishing as the tool waits for input.")
@@ -694,7 +697,7 @@ class test_common(build):
                                " interactive command line workflow that can display progress bars and status information frequently. "
                                "Unfortunately it is incompatible with, or may cause poorly formatted logs, in many CI/CD systems or other unattended environments. "
                                "If you are running contentctl in CI/CD, then please set this argument to True. Note that if you are running in a CI/CD context, "
-                               f"you also MUST set post_test_behavior to {PostTestBehavior.never_pause.value}. Otherwiser, a failed detection will cause"
+                               f"you also MUST set post_test_behavior to {PostTestBehavior.never_pause}. Otherwiser, a failed detection will cause"
                                "the CI/CD running to pause indefinitely.")
 
     apps: List[TestApp] = Field(default=DEFAULT_APPS, exclude=False, description="List of apps to install in test environment")
@@ -703,7 +706,7 @@ class test_common(build):
     def dumpCICDPlanAndQuit(self, githash: str, detections:List[Detection]):
         output_file = self.path / "test_plan.yml"
         self.mode = Selected(files=sorted([detection.file_path for detection in detections], key=lambda path: str(path)))
-        self.post_test_behavior = PostTestBehavior.never_pause.value
+        self.post_test_behavior = PostTestBehavior.never_pause
         #required so that CI/CD does not get too much output or hang
         self.disable_tqdm = True
 
@@ -770,12 +773,12 @@ class test_common(build):
     def suppressTQDM(self)->Self:
         if self.disable_tqdm:
             tqdm.tqdm.__init__ = partialmethod(tqdm.tqdm.__init__, disable=True)
-            if self.post_test_behavior != PostTestBehavior.never_pause.value:
+            if self.post_test_behavior != PostTestBehavior.never_pause:
                 raise ValueError(f"You have disabled tqdm, presumably because you are "
                                  f"running in CI/CD or another unattended context.\n"
                                  f"However, post_test_behavior is set to [{self.post_test_behavior}].\n"
                                  f"If that is the case, then you MUST set post_test_behavior "
-                                 f"to [{PostTestBehavior.never_pause.value}].\n"
+                                 f"to [{PostTestBehavior.never_pause}].\n"
                                  "Otherwise, if a detection fails in CI/CD, your CI/CD runner will hang forever.")
         return self
                          
@@ -803,15 +806,6 @@ class test_common(build):
         if self.plan_only and not isinstance(self.mode, Changes):
             raise ValueError("plan_only MUST be used with --mode:changes")        
         return self
-
-
-    def getModeName(self)->str:
-        if isinstance(self.mode, All):
-            return DetectionTestingMode.all.value
-        elif isinstance(self.mode, Changes):
-            return DetectionTestingMode.changes.value
-        else:
-            return DetectionTestingMode.selected.value
 
 
 class test(test_common):

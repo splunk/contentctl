@@ -2,7 +2,6 @@ from dataclasses import dataclass
 import questionary
 from typing import Any
 from contentctl.input.new_content_questions import NewContentQuestions
-from contentctl.output.new_content_yml_output import NewContentYmlOutput
 from contentctl.objects.config import new, NewContentType
 import uuid
 from datetime import datetime

@@ -18,9 +18,8 @@ class StoryUseCase(str,Enum):
    OTHER = "Other"
 
 
-# TODO (#266): disable the use_enum_values configuration
 class StoryTags(BaseModel):
-   model_config = ConfigDict(extra='forbid', use_enum_values=True)
+   model_config = ConfigDict(extra='forbid')
    category: List[StoryCategory] = Field(...,min_length=1)
    product: List[SecurityContentProductName] = Field(...,min_length=1)
    usecase: StoryUseCase = Field(...)

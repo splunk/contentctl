@@ -2,7 +2,7 @@ import logging
 import time
 import json
 from typing import Any
-from enum import Enum
+from enum import StrEnum, IntEnum
 from functools import cached_property
 
 from pydantic import ConfigDict, BaseModel, computed_field, Field, PrivateAttr
@@ -76,7 +76,7 @@ def get_logger() -> logging.Logger:
     return logger
 
 
-class SavedSearchKeys(str, Enum):
+class SavedSearchKeys(StrEnum):
     """
     Various keys into the SavedSearch content
     """
@@ -89,7 +89,7 @@ class SavedSearchKeys(str, Enum):
     DISBALED_KEY = "disabled"
 
 
-class Indexes(str, Enum):
+class Indexes(StrEnum):
     """
     Indexes we search against
     """
@@ -98,7 +98,7 @@ class Indexes(str, Enum):
     NOTABLE_INDEX = "notable"
 
 
-class TimeoutConfig(int, Enum):
+class TimeoutConfig(IntEnum):
     """
     Configuration values for the exponential backoff timer
     """
@@ -115,7 +115,7 @@ class TimeoutConfig(int, Enum):
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good
 #   now, but maybe not always...); maybe set latest/earliest to None?
-class ScheduleConfig(str, Enum):
+class ScheduleConfig(StrEnum):
     """
     Configuraton values for the saved search schedule
     """
@@ -310,7 +310,7 @@ class CorrelationSearch(BaseModel):
         The earliest time configured for the saved search
         """
         if self.saved_search is not None:
-            return self.saved_search.content[SavedSearchKeys.EARLIEST_TIME_KEY.value]
+            return self.saved_search.content[SavedSearchKeys.EARLIEST_TIME_KEY]
         else:
             raise ClientError("Something unexpected went wrong in initialization; saved_search was not populated")
 
@@ -320,7 +320,7 @@ class CorrelationSearch(BaseModel):
         The latest time configured for the saved search
         """
         if self.saved_search is not None:
-            return self.saved_search.content[SavedSearchKeys.LATEST_TIME_KEY.value]
+            return self.saved_search.content[SavedSearchKeys.LATEST_TIME_KEY]
         else:
             raise ClientError("Something unexpected went wrong in initialization; saved_search was not populated")
 
@@ -330,7 +330,7 @@ class CorrelationSearch(BaseModel):
         The cron schedule configured for the saved search
         """
         if self.saved_search is not None:
-            return self.saved_search.content[SavedSearchKeys.CRON_SCHEDULE_KEY.value]
+            return self.saved_search.content[SavedSearchKeys.CRON_SCHEDULE_KEY]
         else:
             raise ClientError("Something unexpected went wrong in initialization; saved_search was not populated")
 
@@ -340,7 +340,7 @@ class CorrelationSearch(BaseModel):
         Whether the saved search is enabled
         """
         if self.saved_search is not None:
-            if int(self.saved_search.content[SavedSearchKeys.DISBALED_KEY.value]):
+            if int(self.saved_search.content[SavedSearchKeys.DISBALED_KEY]):
                 return False
             else:
                 return True
@@ -368,7 +368,7 @@ class CorrelationSearch(BaseModel):
         :param content: a dict of strings to values
         :returns: a RiskAnalysisAction, or None if none exists
         """
-        if int(content[SavedSearchKeys.RISK_ACTION_KEY.value]):
+        if int(content[SavedSearchKeys.RISK_ACTION_KEY]):
             try:
                 return RiskAnalysisAction.parse_from_dict(content)
             except ValueError as e:
@@ -383,7 +383,7 @@ class CorrelationSearch(BaseModel):
         :returns: a NotableAction, or None if none exists
         """
         # grab notable details if present
-        if int(content[SavedSearchKeys.NOTABLE_ACTION_KEY.value]):
+        if int(content[SavedSearchKeys.NOTABLE_ACTION_KEY]):
             return NotableAction.parse_from_dict(content)
         return None
 
@@ -463,9 +463,9 @@ class CorrelationSearch(BaseModel):
 
     def update_timeframe(
         self,
-        earliest_time: str = ScheduleConfig.EARLIEST_TIME.value,
-        latest_time: str = ScheduleConfig.LATEST_TIME.value,
-        cron_schedule: str = ScheduleConfig.CRON_SCHEDULE.value,
+        earliest_time: str = ScheduleConfig.EARLIEST_TIME,
+        latest_time: str = ScheduleConfig.LATEST_TIME,
+        cron_schedule: str = ScheduleConfig.CRON_SCHEDULE,
         refresh: bool = True
     ) -> None:
         """Updates the correlation search timeframe to work with test data
@@ -481,9 +481,9 @@ class CorrelationSearch(BaseModel):
         """
         # update the SavedSearch accordingly
         data = {
-            SavedSearchKeys.EARLIEST_TIME_KEY.value: earliest_time,
-            SavedSearchKeys.LATEST_TIME_KEY.value: latest_time,
-            SavedSearchKeys.CRON_SCHEDULE_KEY.value: cron_schedule
+            SavedSearchKeys.EARLIEST_TIME_KEY: earliest_time,
+            SavedSearchKeys.LATEST_TIME_KEY: latest_time,
+            SavedSearchKeys.CRON_SCHEDULE_KEY: cron_schedule
         }
         self.logger.info(data)
         self.logger.info(f"Updating timeframe for '{self.name}': {data}")
@@ -554,7 +554,7 @@ class CorrelationSearch(BaseModel):
             for result in result_iterator:
                 # sanity check that this result from the iterator is a risk event and not some
                 # other metadata
-                if result["index"] == Indexes.RISK_INDEX.value:
+                if result["index"] == Indexes.RISK_INDEX:
                     try:
                         parsed_raw = json.loads(result["_raw"])
                         event = RiskEvent.parse_obj(parsed_raw)
@@ -619,7 +619,7 @@ class CorrelationSearch(BaseModel):
             for result in result_iterator:
                 # sanity check that this result from the iterator is a notable event and not some
                 # other metadata
-                if result["index"] == Indexes.NOTABLE_INDEX.value:
+                if result["index"] == Indexes.NOTABLE_INDEX:
                     try:
                         parsed_raw = json.loads(result["_raw"])
                         event = NotableEvent.parse_obj(parsed_raw)
@@ -746,7 +746,7 @@ class CorrelationSearch(BaseModel):
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
     #   it for completion, but that seems more tricky
-    def test(self, max_sleep: int = TimeoutConfig.MAX_SLEEP.value, raise_on_exc: bool = False) -> IntegrationTestResult:
+    def test(self, max_sleep: int = TimeoutConfig.MAX_SLEEP, raise_on_exc: bool = False) -> IntegrationTestResult:
         """Execute the integration test
 
         Executes an integration test for this CorrelationSearch. First, ensures no matching risk/notables already exist
@@ -760,10 +760,10 @@ class CorrelationSearch(BaseModel):
         """
         # max_sleep must be greater than the base value we must wait for the scheduled searchjob to run (jobs run every
         # 60s)
-        if max_sleep < TimeoutConfig.BASE_SLEEP.value:
+        if max_sleep < TimeoutConfig.BASE_SLEEP:
             raise ClientError(
                 f"max_sleep value of {max_sleep} is less than the base sleep required "
-                f"({TimeoutConfig.BASE_SLEEP.value})"
+                f"({TimeoutConfig.BASE_SLEEP})"
             )
 
         # initialize result as None
@@ -774,7 +774,7 @@ class CorrelationSearch(BaseModel):
         num_tries = 0
 
         # set the initial base sleep time
-        time_to_sleep = TimeoutConfig.BASE_SLEEP.value
+        time_to_sleep = TimeoutConfig.BASE_SLEEP
 
         try:
             # first make sure the indexes are currently empty and the detection is starting from a disabled state
@@ -999,9 +999,9 @@ class CorrelationSearch(BaseModel):
         if delete_test_index:
             self.indexes_to_purge.add(self.test_index)                                              # type: ignore
         if self._risk_events is not None:
-            self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
+            self.indexes_to_purge.add(Indexes.RISK_INDEX)
         if self._notable_events is not None:
-            self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
+            self.indexes_to_purge.add(Indexes.NOTABLE_INDEX)
 
         # delete the indexes
         for index in self.indexes_to_purge:

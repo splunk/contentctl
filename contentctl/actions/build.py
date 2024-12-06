@@ -4,7 +4,7 @@ import os
 
 from dataclasses import dataclass
 
-from contentctl.objects.enums import SecurityContentProduct, SecurityContentType
+from contentctl.objects.enums import SecurityContentType
 from contentctl.input.director import Director, DirectorOutputDto
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.conf_writer import ConfWriter

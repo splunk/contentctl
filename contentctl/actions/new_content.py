@@ -110,23 +110,3 @@ class NewContent:
         full_output_path = input_dto.path / subdirectory / SecurityContentObject_Abstract.contentNameToFileName(content_dict.get('name'))
         YmlWriter.writeYmlFile(str(full_output_path), content_dict)
 
-
-
-    def writeObjectNewContent(self, object: dict, subdirectory_name: str, type: NewContentType) -> None:
-        if type == NewContentType.detection:
-            file_path = os.path.join(self.output_path, 'detections', subdirectory_name, self.convertNameToFileName(object['name'], object['tags']['product']))
-            output_folder = pathlib.Path(self.output_path)/'detections'/subdirectory_name
-            #make sure the output folder exists for this detection
-            output_folder.mkdir(exist_ok=True)
-
-            YmlWriter.writeDetection(file_path, object)
-            print("Successfully created detection " + file_path)
-        
-        elif type == NewContentType.story:
-            file_path = os.path.join(self.output_path, 'stories', self.convertNameToFileName(object['name'], object['tags']['product']))
-            YmlWriter.writeStory(file_path, object)
-            print("Successfully created story " + file_path)        
-        
-        else:
-            raise(Exception(f"Object Must be Story or Detection, but is not: {object}"))
-

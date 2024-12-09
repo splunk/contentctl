@@ -1,11 +1,7 @@
 
 import yaml
 from typing import Any
-from semantic_version import Version
-yaml.SafeDumper.add_multi_representer(
-    Version,
-    yaml.representer.SafeRepresenter.represent_str
-)
+
 
 class YmlWriter:
 

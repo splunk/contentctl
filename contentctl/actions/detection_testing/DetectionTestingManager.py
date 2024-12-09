@@ -1,4 +1,5 @@
 from typing import List,Union
+import traceback
 from contentctl.objects.config import test, test_servers, Container,Infrastructure
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import DetectionTestingInfrastructure
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import DetectionTestingInfrastructureContainer
@@ -28,7 +29,7 @@ import docker
 
 @dataclass(frozen=False)
 class DetectionTestingManagerInputDto:
-    config: Union[test,test_servers]
+    config: Union[test, test_servers]
     detections: List[Detection]
     views: list[DetectionTestingView]
 
@@ -65,7 +66,7 @@ class DetectionTestingManager(BaseModel):
                 print("*******************************")
 
         signal.signal(signal.SIGINT, sigint_handler)
-        
+
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self.input_dto.config.test_instances),
         ) as instance_pool, concurrent.futures.ThreadPoolExecutor(
@@ -73,11 +74,19 @@ class DetectionTestingManager(BaseModel):
         ) as view_runner, concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self.input_dto.config.test_instances),
         ) as view_shutdowner:
+            # Capture any errors for reporting at the end after all threads have been gathered
+            errors: dict[str, list[Exception]] = {
+                "INSTANCE SETUP ERRORS": [],
+                "TESTING ERRORS": [],
+                "ERRORS DURING VIEW SHUTDOWN": [],
+                "ERRORS DURING VIEW EXECUTION": [],
+            }
 
             # Start all the views
             future_views = {
                 view_runner.submit(view.setup): view for view in self.input_dto.views
             }
+
             # Configure all the instances
             future_instances_setup = {
                 instance_pool.submit(instance.setup): instance
@@ -87,10 +96,14 @@ class DetectionTestingManager(BaseModel):
             # Wait for all instances to be set up
             for future in concurrent.futures.as_completed(future_instances_setup):
                 try:
-                    result = future.result()
+                    _ = future.result()
                 except Exception as e:
                     self.output_dto.terminate = True
-                    print(f"Error setting up container: {str(e)}")
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
+                    errors["INSTANCE SETUP ERRORS"].append(e)
 
             # Start and wait for all tests to run
             if not self.output_dto.terminate:
@@ -102,10 +115,14 @@ class DetectionTestingManager(BaseModel):
                 # Wait for execution to finish
                 for future in concurrent.futures.as_completed(future_instances_execute):
                     try:
-                        result = future.result()
+                        _ = future.result()
                     except Exception as e:
                         self.output_dto.terminate = True
-                        print(f"Error running in container: {str(e)}")
+                        # Output the traceback if we encounter errors in verbose mode
+                        if self.input_dto.config.verbose:
+                            tb = traceback.format_exc()
+                            print(tb)
+                        errors["TESTING ERRORS"].append(e)
 
             self.output_dto.terminate = True
 
@@ -115,16 +132,36 @@ class DetectionTestingManager(BaseModel):
             }
             for future in concurrent.futures.as_completed(future_views_shutdowner):
                 try:
-                    result = future.result()
+                    _ = future.result()
                 except Exception as e:
-                    print(f"Error stopping view: {str(e)}")
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
+                    errors["ERRORS DURING VIEW SHUTDOWN"].append(e)
 
             # Wait for original view-related threads to complete
             for future in concurrent.futures.as_completed(future_views):
                 try:
-                    result = future.result()
+                    _ = future.result()
                 except Exception as e:
-                    print(f"Error running container: {str(e)}")
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
+                    errors["ERRORS DURING VIEW EXECUTION"].append(e)
+
+            # Log any errors
+            for error_type in errors:
+                if len(errors[error_type]) > 0:
+                    print()
+                    print(f"[{error_type}]:")
+                    for error in errors[error_type]:
+                        print(f"\t❌ {str(error)}")
+                        if isinstance(error, ExceptionGroup):
+                            for suberror in error.exceptions:                                       # type: ignore
+                                print(f"\t\t❌ {str(suberror)}")                                    # type: ignore
+                    print()
 
         return self.output_dto
 

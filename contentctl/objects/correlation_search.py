@@ -131,7 +131,7 @@ class ResultIterator:
             if isinstance(result, Message):
                 # convert level string to level int
                 level_name: str = result.type.strip().upper()                                       # type: ignore
-                # TODO (cmcginley): this method is deprecated; replace with our own enum
+                # TODO (PEX-510): this method is deprecated; replace with our own enum
                 level: int = logging.getLevelName(level_name)
 
                 # log message at appropriate level and raise if needed

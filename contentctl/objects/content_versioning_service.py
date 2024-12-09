@@ -16,15 +16,6 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.correlation_search import ResultIterator
 from contentctl.helper.utils import Utils
 
-# TODO (cmcginley):
-#   - [x] version naming scheme seems to have changed from X - X to X.X
-#   - [x] sourcetype no longer holds detection name but instead is stash_common_detection_model
-#   - [x] action.escu.full_search_name no longer available
-#   - [x] check to see if we can get "name"
-#   - [ ] move strings to enums
-#   - [x] additionally, timeout for cms_parser seems to need more time
-#   - [ ] validate multi-line fields -> search, description, action.notable.param.rule_description,
-#         action.notable.param.drilldown_searches
 
 # TODO (cmcginley): suppress logging
 # Suppress logging by default; enable for local testing
@@ -310,8 +301,8 @@ class ContentVersioningService(BaseModel):
 
         # Construct the query looking for CMS events matching the content app name
         query = (
-            f"search index=cms_main app_name=\"{self.global_config.app.appid}\" | "
-            f"fields {', '.join(self.cms_fields)}"
+            f"search index=cms_main sourcetype=stash_common_detection_model "
+            f"app_name=\"{self.global_config.app.appid}\" | fields {', '.join(self.cms_fields)}"
         )
         self.logger.debug(f"[{self.infrastructure.instance_name}] Query on cms_main: {query}")
 
@@ -503,7 +494,7 @@ class ContentVersioningService(BaseModel):
         :return: The generated exception, or None
         :rtype: Exception | None
         """
-        # TODO (cmcginley): validate additional fields between the cms_event and the detection
+        # TODO (PEX-509): validate additional fields between the cms_event and the detection
 
         cms_uuid = uuid.UUID(cms_event["detection_id"])
         rule_name_from_detection = f"{self.global_config.app.label} - {detection.name} - Rule"
@@ -532,15 +523,6 @@ class ContentVersioningService(BaseModel):
                 f"[{self.infrastructure.instance_name}][{detection.name}]: Correlation search "
                 f"label in cms_event ('{cms_event['action.correlationsearch.label']}') does not "
                 "match detection name"
-            )
-            self.logger.error(msg)
-            return Exception(msg)
-        elif cms_event["sourcetype"] != "stash_common_detection_model":
-            # Compare the full search name
-            msg = (
-                f"[{self.infrastructure.instance_name}] [{detection.name}]: Unexpected sourcetype "
-                f"in cms_event ('{cms_event[f'sourcetype']}'); expected "
-                "'stash_common_detection_model'"
             )
             self.logger.error(msg)
             return Exception(msg)

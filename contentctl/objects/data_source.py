@@ -1,8 +1,7 @@
 from __future__ import annotations
 from typing import Optional, Any
-from pydantic import Field, HttpUrl, model_serializer, BaseModel
+from pydantic import Field, HttpUrl, model_serializer, BaseModel, ConfigDict
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.event_source import EventSource
 
 
 class TA(BaseModel):
@@ -10,15 +9,16 @@ class TA(BaseModel):
     url: HttpUrl | None = None
     version: str
 class DataSource(SecurityContentObject):
+    model_config = ConfigDict(extra="forbid")
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None
     configuration: Optional[str] = None
     supported_TA: list[TA] = []
-    fields: Optional[list] = None
-    field_mappings: Optional[list] = None
-    convert_to_log_source: Optional[list] = None
-    example_log: Optional[str] = None
+    fields: None | list = None
+    field_mappings: None | list = None
+    convert_to_log_source: None | list = None
+    example_log: None | str = None
 
 
     @model_serializer

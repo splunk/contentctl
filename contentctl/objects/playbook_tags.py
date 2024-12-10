@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field,ConfigDict
 import enum
 from contentctl.objects.detection import Detection
 
@@ -36,6 +36,7 @@ class DefendTechnique(str,enum.Enum):
     D3_SRA = "D3-SRA"
     D3_RUAA = "D3-RUAA"
 class PlaybookTag(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     analytic_story: Optional[list] = None
     detections: Optional[list] = None
     platform_tags: list[str] = Field(...,min_length=0)
@@ -45,6 +46,9 @@ class PlaybookTag(BaseModel):
     product: list[PlaybookProduct] = Field([],min_length=0)
     use_cases: list[PlaybookUseCase] = Field([],min_length=0)
     defend_technique_id: Optional[List[DefendTechnique]] = None
+    
+    labels:list[str] = []
+    playbook_outputs:list[str] = []
     
     detection_objects: list[Detection] = []
     

@@ -35,7 +35,7 @@ SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/down
 
 # TODO (#266): disable the use_enum_values configuration
 class App_Base(BaseModel,ABC):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True, extra='forbid')
     uid: Optional[int] = Field(default=None)
     title: str = Field(description="Human-readable name used by the app. This can have special characters.")
     appid: Optional[APPID_TYPE]= Field(default=None,description="Internal name used by your app. "

@@ -33,6 +33,7 @@ class Lookup(SecurityContentObject):
     default_match: Optional[bool] = None
     match_type: Optional[str] = None
     min_matches: Optional[int] = None
+    max_matches: Optional[int] = None
     case_sensitive_match: Optional[bool] = None
     # TODO: Add id field to all lookup ymls
     id: uuid.UUID = Field(default_factory=uuid.uuid4) 
@@ -52,6 +53,7 @@ class Lookup(SecurityContentObject):
             "default_match": "true" if self.default_match is True else "false",
             "match_type": self.match_type,
             "min_matches": self.min_matches,
+            "max_matches": self.max_matches,
             "case_sensitive_match": "true" if self.case_sensitive_match is True else "false",
             "collection": self.collection,
             "fields_list": self.fields_list

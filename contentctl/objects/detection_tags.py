@@ -38,13 +38,12 @@ from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 # TODO (#266): disable the use_enum_values configuration
 class DetectionTags(BaseModel):
     # detection spec
-    model_config = ConfigDict(use_enum_values=True, validate_default=False)
+    model_config = ConfigDict(use_enum_values=True,validate_default=False, extra='forbid')
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
-
-    confidence: NonNegativeInt = Field(..., le=100)
-    impact: NonNegativeInt = Field(..., le=100)
-
+    group: list[str] = []
+    confidence: NonNegativeInt = Field(...,le=100)
+    impact: NonNegativeInt = Field(...,le=100)
     @computed_field
     @property
     def risk_score(self) -> int:
@@ -73,7 +72,6 @@ class DetectionTags(BaseModel):
     # TODO (#249): Add pydantic validator to ensure observables are unique within a detection
     observable: List[Observable] = []
     product: list[SecurityContentProductName] = Field(..., min_length=1)
-    required_fields: list[str] = Field(min_length=1)
     throttling: Optional[Throttling] = None
     security_domain: SecurityDomain = Field(...)
     cve: List[CVE_TYPE] = []

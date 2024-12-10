@@ -43,7 +43,6 @@ class YmlOutput():
                                 "mitre_attack_id": True,
                                 "kill_chain_phases:": True,
                                 "product": True,
-                                "required_fields": True,
                                 "risk_score": True,
                                 "security_domain": True
                             },

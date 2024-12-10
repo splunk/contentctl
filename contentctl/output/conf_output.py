@@ -79,7 +79,7 @@ class ConfOutput:
 
         return written_files
 
-    # TODO (cmcginley): we could have a discrepancy between detections tested and those delivered
+    # TODO (#339): we could have a discrepancy between detections tested and those delivered
     #   based on the jinja2 template
     #   {% if (detection.type == 'TTP' or detection.type == 'Anomaly' or detection.type == 'Hunting' or detection.type == 'Correlation') %}
     def writeObjects(self, objects: list, type: SecurityContentType = None) -> set[pathlib.Path]:

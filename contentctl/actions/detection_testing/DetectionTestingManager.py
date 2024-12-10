@@ -67,6 +67,7 @@ class DetectionTestingManager(BaseModel):
 
         signal.signal(signal.SIGINT, sigint_handler)
 
+        # TODO (#337): futures can be hard to maintain/debug; let's consider alternatives
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=len(self.input_dto.config.test_instances),
         ) as instance_pool, concurrent.futures.ThreadPoolExecutor(

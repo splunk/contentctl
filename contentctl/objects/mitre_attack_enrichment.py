@@ -85,7 +85,7 @@ class MitreAttackGroup(BaseModel):
 
 # TODO (#266): disable the use_enum_values configuration
 class MitreAttackEnrichment(BaseModel):
-    ConfigDict(use_enum_values=True)
+    ConfigDict(use_enum_values=True,extra='forbid')
     mitre_attack_id: MITRE_ATTACK_ID_TYPE = Field(...)
     mitre_attack_technique: str = Field(...)
     mitre_attack_tactics: List[MitreTactics] = Field(...)

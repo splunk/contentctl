@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import Field, computed_field,ValidationInfo, model_serializer, NonNegativeInt
+from pydantic import Field, computed_field,ValidationInfo, model_serializer, NonNegativeInt, ConfigDict
 from typing import Any
 import uuid
 import datetime
@@ -11,6 +11,7 @@ from contentctl.objects.enums import DeploymentType
 
 
 class Deployment(SecurityContentObject):
+    model_config = ConfigDict(extra="forbid")
     #id: str = None
     #date: str = None
     #author: str = None
@@ -72,7 +73,6 @@ class Deployment(SecurityContentObject):
             "tags": self.tags
         }
 
-        
         #Combine fields from this model with fields from parent
         model.update(super_fields)
         

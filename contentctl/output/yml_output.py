@@ -43,7 +43,6 @@ class YmlOutput():
                                 "kill_chain_phases:": True,
                                 "observable": True,
                                 "product": True,
-                                "required_fields": True,
                                 "risk_score": True,
                                 "security_domain": True
                             },

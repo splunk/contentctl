@@ -16,13 +16,10 @@ from contentctl.objects.config import CustomApp
 class Investigation(SecurityContentObject):
     model_config = ConfigDict(use_enum_values=True,validate_default=False)
     type: str = Field(...,pattern="^Investigation$")
-    datamodel: list[DataModel] = Field(...)
     name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     search: str = Field(...)
     how_to_implement: str = Field(...)
     known_false_positives: str = Field(...)
-    
-    
     tags: InvestigationTags
 
     # enrichment
@@ -37,6 +34,11 @@ class Investigation(SecurityContentObject):
             inputs.append(str(input))
 
         return inputs
+
+    @computed_field
+    @property
+    def datamodel(self) -> List[DataModel]:
+        return [dm for dm in DataModel if dm.value in self.search]
 
     @computed_field
     @property

@@ -41,6 +41,7 @@ class InputArgumentType(StrEnum):
     Url = "Url"
 
 class AtomicExecutor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str
     elevation_required: Optional[bool] = False #Appears to be optional
     command: Optional[str] = None

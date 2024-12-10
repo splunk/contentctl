@@ -9,9 +9,10 @@ import pathlib
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 from functools import partialmethod
-
+import importlib.metadata
 import tqdm
-import semantic_version
+from semantic_version import Version
+import re
 from pydantic import (
     BaseModel, Field, field_validator, 
     field_serializer, ConfigDict, DirectoryPath,
@@ -139,7 +140,7 @@ class CustomApp(App_Base):
     @field_validator('version')
     def validate_version(cls, v, values):
         try:
-            _ = semantic_version.Version(v)
+            _ = Version(v)
         except Exception as e:
             raise(ValueError(f"The specified version does not follow the semantic versioning spec (https://semver.org/). {str(e)}"))
         return v
@@ -169,6 +170,76 @@ class Config_Base(BaseModel):
                          "This option makes debugging contentctl errors much easier, but produces way more "
                          "output than is useful under most uses cases. "
                          "Please use this flag if you are submitting a bug report or issue on GitHub.")
+    contentctl_library_version: Version = Field(description="Different versions of "
+                                                                    "contentctl may produce different application builds. "
+                                                                    "For that reason, the version of contentctl MUST be "
+                                                                    "specified in the contentctl.yml file.  If this version "
+                                                                    "does not match the installed version EXACTLY, "
+                                                                    "then an exception will be generated.")
+    
+    
+    
+    
+
+    @field_validator('contentctl_library_version', mode='before')
+    def convertToSemver(cls,v:str | Version, values:Any)->Version:
+        if not isinstance(v, Version):
+            return Version(v)
+        return v
+        
+    @model_validator(mode="after")
+    def ensureProperVersionOfContentCtlAndPresenceOfRequirements(self)->Self:
+        '''
+        Different versions of contentctl may result in builds of the same underlying content
+        having different contents (fields in conf files, app structure, etc). For that reason,
+        the state of the app MUST be associated with an exact contentctl version.  This function
+        ensures that:
+        - This version of contentctl matches the version defined in contentctl_library_version EXACTLY
+        - the requirements.txt file exists in the root of the repo (and also has the same version).  This makes CI/CD scripts far easier to develop.
+
+        If either of these checks are not met, then contentctl will exit with a verbose error message.
+        '''
+        
+        installed_contentctl_version = Version(importlib.metadata.version('contentctl'))
+        
+        #Ensure that requirements.txt exists in the correct location 
+        # and contains the EXACT appropriate version string
+        requirements_file = self.path/'requirements.txt'
+        
+        if not requirements_file.is_file():
+            raise Exception(f"Error: The file '{requirements_file}' does not exist. "
+                            f"This file MUST exist and contain the exact line  to match the field 'contentctl_library_version' in contentctl.yml:"
+                            f"\ncontentctl=={self.contentctl_library_version}")
+
+        with requirements_file.open('r') as requirements_file_handle:
+            requirements_file_data = requirements_file_handle.read()
+            requirements_contentctl_version_match = re.findall(r'contentctl==([^\s]*)', requirements_file_data)
+            if len(requirements_contentctl_version_match) != 1:
+                raise Exception(f"Error: Failed to find exactly one version of contentctl in the '{requirements_file}' does not exist. \n"
+                                f"This file MUST contain the exact line to match the field 'contentctl_library_version' in contentctl.yml:"
+                                f"\ncontentctl=={self.contentctl_library_version}")
+
+            try:
+                requirements_contentctl_version = Version(requirements_contentctl_version_match[0])
+            except Exception:
+                raise Exception(f"The version of contentctl specified in {requirements_file} is "
+                                f"not a valid semantic_version: '{requirements_contentctl_version_match[0]}'")
+
+        if installed_contentctl_version == requirements_contentctl_version == self.contentctl_library_version:
+            return self
+        
+        
+        raise Exception("There is a mismatch between the installed version of contentctl and required version of contentctl. These values MUST match:"
+            f"\n  Installed contentctl:                                 [{installed_contentctl_version}]"
+            f"\n  requirements.txt contentctl:                          [{requirements_contentctl_version}]"
+            f"\n  contentctl_library_version defined in contentctl.yml: [{self.contentctl_library_version}]"
+            "\nPlease bring these versions into alignment.")
+
+    
+
+    @field_serializer('contentctl_library_version',when_used='always')
+    def serialize_verison(contentctl_library_version: Version)->str:
+        return str(contentctl_library_version)
     
     @field_serializer('path',when_used='always')
     def serialize_path(path: DirectoryPath)->str:
@@ -182,6 +253,31 @@ class init(Config_Base):
                        "init will still create the directory structure of the app, "
                        "include the app_template directory with default content, and content in "
                        "the deployment/ directory (since it is not yet easily customizable).")
+    
+    @model_validator(mode='before')
+    @classmethod
+    def ensureRequiremetsDotTextExists(cls, data:Any, info: ValidationInfo)->Any:
+        '''
+        The requirements.txt file MUST exist in the path. If it does not, create it
+        in the correct path with the contents of the current version of 
+        contentctil which is installed.
+        '''
+        print(data)
+        print(info)
+        path:pathlib.Path | None = data.get("path", None)
+        if path is None:
+            raise Exception("'path' not provided for contentctl.yml")
+
+        requirements_file_path = path/'requirements.txt' 
+        if pathlib.Path(requirements_file_path).is_file():
+            return data
+
+        print(f"requirements.txt not found in '{path}'. Creating it...")
+        with open(requirements_file_path, 'w') as req_file:
+            version_line = f"contentctl=={importlib.metadata.version('contentctl')}\n"
+            req_file.write(version_line)
+
+        return data
 
 
 # TODO (#266): disable the use_enum_values configuration
@@ -250,29 +346,18 @@ class build(validate):
     def serialize_build_path(path: DirectoryPath)->str:
         return str(path)
 
-    @field_validator('build_path',mode='before')
-    @classmethod
-    def ensure_build_path(cls, v:Union[str,DirectoryPath]):
-        '''
-        If the build path does not exist, then create it.
-        If the build path is actually a file, then raise a descriptive
-        exception.
-        '''
-        if isinstance(v,str):
-            v = pathlib.Path(v)
-        if v.is_dir():
-            return v
-        elif v.is_file():
-            raise ValueError(f"Build path {v} must be a directory, but instead it is a file")
-        elif not v.exists():
-            v.mkdir(parents=True)
-        return v
     
     def getBuildDir(self)->pathlib.Path:
-        return self.path / self.build_path
+        p = self.path / self.build_path
+        if not p.is_dir():
+            p.mkdir(parents=True)
+        return p
 
     def getPackageDirectoryPath(self)->pathlib.Path:
-        return self.getBuildDir() /  f"{self.app.appid}"
+        p = self.getBuildDir() /  f"{self.app.appid}"
+        if not p.is_dir():
+            p.mkdir(parents=True)
+        return p
         
 
     def getPackageFilePath(self, include_version:bool=False)->pathlib.Path:
@@ -282,10 +367,16 @@ class build(validate):
             return self.getBuildDir() / f"{self.app.appid}-latest.tar.gz"
 
     def getAPIPath(self)->pathlib.Path:
-        return self.getBuildDir() / "api"
+        p = self.getBuildDir() / "api"
+        if not p.is_dir():
+            p.mkdir(parents=True)
+        return p
 
     def getAppTemplatePath(self)->pathlib.Path:
-        return self.path/"app_template"
+        p = self.path/"app_template"
+        if not p.is_dir():
+            p.mkdir(parents=True)
+        return p
 
 
 class StackType(StrEnum):

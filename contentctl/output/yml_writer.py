@@ -2,6 +2,7 @@
 import yaml
 from typing import Any
 
+
 class YmlWriter:
 
     @staticmethod

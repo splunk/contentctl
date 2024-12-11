@@ -37,7 +37,7 @@ class Investigation(SecurityContentObject):
     @computed_field
     @property
     def datamodel(self) -> List[DataModel]:
-        return [dm for dm in DataModel if dm.value in self.search]
+        return [dm for dm in DataModel if dm in self.search]
 
     @computed_field
     @property

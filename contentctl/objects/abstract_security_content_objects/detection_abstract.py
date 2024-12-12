@@ -811,6 +811,7 @@ class Detection_Abstract(SecurityContentObject):
                         "Detection expects an RBA config with at least one risk object."
                     )
 
+
     # TODO - Remove old observable code
     # @model_validator(mode="after")
     # def ensureProperObservablesExist(self):
@@ -885,6 +886,7 @@ class Detection_Abstract(SecurityContentObject):
             )
 
         if len(error_messages) > 0 and self.status == DetectionStatus.production: 
+
             msg = (
                 "Use of fields in rba/messages that do not appear in search:\n\t- "
                 "\n\t- ".join(error_messages)

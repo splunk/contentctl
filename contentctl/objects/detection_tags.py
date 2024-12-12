@@ -37,7 +37,8 @@ from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
 class DetectionTags(BaseModel):
     # detection spec
-    model_config = ConfigDict(validate_default=False)
+
+    model_config = ConfigDict(validate_default=False, extra='forbid')
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []

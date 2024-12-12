@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated
 import re
 import pathlib
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import (
     field_validator,
@@ -51,13 +51,11 @@ MISSING_SOURCES: set[str] = set()
 
 # Those AnalyticsTypes that we do not test via contentctl
 SKIPPED_ANALYTICS_TYPES: set[str] = {
-    AnalyticsType.Correlation.value
+    AnalyticsType.Correlation
 }
 
 
-# TODO (#266): disable the use_enum_values configuration
 class Detection_Abstract(SecurityContentObject):
-    model_config = ConfigDict(use_enum_values=True)
     name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
@@ -101,7 +99,7 @@ class Detection_Abstract(SecurityContentObject):
     def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=ES_MAX_STANZA_LENGTH)->str:
         stanza_name = self.get_conf_stanza_name(app)
         stanza_name_after_saving_in_es = ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE.format(
-            security_domain_value = self.tags.security_domain.value, 
+            security_domain_value = self.tags.security_domain, 
             search_name = stanza_name
             )
         
@@ -210,7 +208,7 @@ class Detection_Abstract(SecurityContentObject):
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
 
         # Skip tests for non-production detections
-        if self.status != DetectionStatus.production.value:                                         # type: ignore
+        if self.status != DetectionStatus.production:                                         
             self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
 
         # Skip tests for detecton types like Correlation which are not supported via contentctl
@@ -263,7 +261,7 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def datamodel(self) -> List[DataModel]:
-        return [dm for dm in DataModel if dm.value in self.search]
+        return [dm for dm in DataModel if dm in self.search]
         
             
     
@@ -308,13 +306,13 @@ class Detection_Abstract(SecurityContentObject):
     def mappings(self) -> dict[str, List[str]]:
         mappings: dict[str, Any] = {}
         if len(self.tags.cis20) > 0:
-            mappings["cis20"] = [tag.value for tag in self.tags.cis20]
+            mappings["cis20"] = [tag for tag in self.tags.cis20]
         if len(self.tags.kill_chain_phases) > 0:
-            mappings['kill_chain_phases'] = [phase.value for phase in self.tags.kill_chain_phases]
+            mappings['kill_chain_phases'] = [phase for phase in self.tags.kill_chain_phases]
         if len(self.tags.mitre_attack_id) > 0:
             mappings['mitre_attack'] = self.tags.mitre_attack_id
         if len(self.tags.nist) > 0:
-            mappings['nist'] = [category.value for category in self.tags.nist]
+            mappings['nist'] = [category for category in self.tags.nist]
 
         # No need to sort the dict! It has been constructed in-order.
         # However, if this logic is changed, then consider reordering or
@@ -435,7 +433,7 @@ class Detection_Abstract(SecurityContentObject):
         # break the `inspect` action.
         return {
             'detection_id': str(self.id),
-            'deprecated': '1' if self.status == DetectionStatus.deprecated.value else '0',          # type: ignore
+            'deprecated': '1' if self.status == DetectionStatus.deprecated else '0',          # type: ignore
             'detection_version': str(self.version),
             'publish_time': datetime.datetime(self.date.year,self.date.month,self.date.day,0,0,0,0,tzinfo=datetime.timezone.utc).timestamp()
         }
@@ -570,7 +568,7 @@ class Detection_Abstract(SecurityContentObject):
         # This is presently a requirement when 1 or more drilldowns are added to a detection.
         # Note that this is only required for production searches that are not hunting
             
-        if self.type == AnalyticsType.Hunting.value or self.status != DetectionStatus.production.value:
+        if self.type == AnalyticsType.Hunting or self.status != DetectionStatus.production:
             #No additional check need to happen on the potential drilldowns.
             pass
         else:
@@ -713,14 +711,14 @@ class Detection_Abstract(SecurityContentObject):
         if status != DetectionStatus.production:
             errors.append(
                 f"status is '{status.name}'. Detections that are enabled by default MUST be "
-                f"'{DetectionStatus.production.value}'"
+                f"'{DetectionStatus.production}'"
                 )
 
         if searchType not in [AnalyticsType.Anomaly, AnalyticsType.Correlation, AnalyticsType.TTP]:
             errors.append(
-                f"type is '{searchType.value}'. Detections that are enabled by default MUST be one"
+                f"type is '{searchType}'. Detections that are enabled by default MUST be one"
                 " of the following types: "
-                f"{[AnalyticsType.Anomaly.value, AnalyticsType.Correlation.value, AnalyticsType.TTP.value]}")
+                f"{[AnalyticsType.Anomaly, AnalyticsType.Correlation, AnalyticsType.TTP]}")
         if len(errors) > 0:
             error_message = "\n  - ".join(errors)
             raise ValueError(f"Detection is 'enabled_by_default: true' however \n  - {error_message}")
@@ -729,7 +727,7 @@ class Detection_Abstract(SecurityContentObject):
 
     @model_validator(mode="after")
     def addTags_nist(self):
-        if self.type == AnalyticsType.TTP.value:
+        if self.type == AnalyticsType.TTP:
             self.tags.nist = [NistCategory.DE_CM]
         else:
             self.tags.nist = [NistCategory.DE_AE]
@@ -767,11 +765,11 @@ class Detection_Abstract(SecurityContentObject):
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        if self.status not in [DetectionStatus.production.value]:                                   # type: ignore
+        if self.status not in [DetectionStatus.production]:                                   # type: ignore
             # Only perform this validation on production detections
             return self
 
-        if self.type not in [AnalyticsType.TTP.value, AnalyticsType.Anomaly.value]:
+        if self.type not in [AnalyticsType.TTP, AnalyticsType.Anomaly]:
             # Only perform this validation on TTP and Anomaly detections
             return self
 
@@ -822,7 +820,7 @@ class Detection_Abstract(SecurityContentObject):
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        if len(error_messages) > 0 and self.status == DetectionStatus.production.value:         # type: ignore
+        if len(error_messages) > 0 and self.status == DetectionStatus.production:         # type: ignore
             msg = (
                 "Use of fields in observables/messages that do not appear in search:\n\t- "
                 "\n\t- ".join(error_messages)
@@ -878,7 +876,7 @@ class Detection_Abstract(SecurityContentObject):
         info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest | ManualTest]:
         # Only production analytics require tests
-        if info.data.get("status", "") != DetectionStatus.production.value:
+        if info.data.get("status", "") != DetectionStatus.production:
             return v
 
         # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined
@@ -991,7 +989,7 @@ class Detection_Abstract(SecurityContentObject):
             value = getattr(self, field)
 
             # Enums and Path objects cannot be serialized directly, so we convert it to a string
-            if isinstance(value, Enum) or isinstance(value, pathlib.Path):
+            if isinstance(value, StrEnum) or isinstance(value, pathlib.Path):
                 value = str(value)
 
             # Alias any fields as needed
@@ -1013,7 +1011,7 @@ class Detection_Abstract(SecurityContentObject):
             # Initialize the dict as a mapping of strings to str/bool
             result: dict[str, Union[str, bool]] = {
                 "name": test.name,
-                "test_type": test.test_type.value
+                "test_type": test.test_type
             }
 
             # If result is not None, get a summary of the test result w/ the requested fields

@@ -31,10 +31,8 @@ import pathlib
 NO_FILE_NAME = "NO_FILE_NAME"
 
 
-# TODO (#266): disable the use_enum_values configuration
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    model_config = ConfigDict(use_enum_values=True,validate_default=True)
-    
+    model_config = ConfigDict(validate_default=True,extra="forbid")
     name: str = Field(...,max_length=99)
     author: str = Field(...,max_length=255)
     date: datetime.date = Field(...)
@@ -162,10 +160,10 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
 
         type_to_deployment_name_map = {
-            AnalyticsType.TTP.value: "ESCU Default Configuration TTP",
-            AnalyticsType.Hunting.value: "ESCU Default Configuration Hunting",
-            AnalyticsType.Correlation.value: "ESCU Default Configuration Correlation",
-            AnalyticsType.Anomaly.value: "ESCU Default Configuration Anomaly",
+            AnalyticsType.TTP: "ESCU Default Configuration TTP",
+            AnalyticsType.Hunting: "ESCU Default Configuration Hunting",
+            AnalyticsType.Correlation: "ESCU Default Configuration Correlation",
+            AnalyticsType.Anomaly: "ESCU Default Configuration Anomaly",
             "Baseline": "ESCU Default Configuration Baseline"
         }
         converted_type_field = type_to_deployment_name_map[typeField]

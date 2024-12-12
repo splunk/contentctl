@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import Field, computed_field,ValidationInfo, model_serializer, NonNegativeInt
+from pydantic import Field, computed_field,ValidationInfo, model_serializer, NonNegativeInt, ConfigDict
 from typing import Any
 import uuid
 import datetime
@@ -10,14 +10,7 @@ from contentctl.objects.alert_action import AlertAction
 from contentctl.objects.enums import DeploymentType
 
 
-class Deployment(SecurityContentObject):
-    #id: str = None
-    #date: str = None
-    #author: str = None
-    #description: str = None
-    #contentType: SecurityContentType = SecurityContentType.deployments
-    
-    
+class Deployment(SecurityContentObject):    
     scheduling: DeploymentScheduling = Field(...)
     alert_action: AlertAction = AlertAction()
     type: DeploymentType = Field(...)
@@ -72,7 +65,6 @@ class Deployment(SecurityContentObject):
             "tags": self.tags
         }
 
-        
         #Combine fields from this model with fields from parent
         model.update(super_fields)
         

@@ -5,7 +5,6 @@ from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfras
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import DetectionTestingInfrastructureServer
 from urllib.parse import urlparse
 from copy import deepcopy
-from contentctl.objects.enums import DetectionTestingTargetInfrastructure
 import signal
 import datetime
 # from queue import Queue

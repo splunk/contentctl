@@ -21,7 +21,6 @@ from contentctl.actions.inspect import Inspect
 from contentctl.input.yml_reader import YmlReader
 from contentctl.actions.deploy_acs import Deploy
 from contentctl.actions.release_notes import ReleaseNotes
-from semantic_version import Version
 import importlib.metadata
 # def print_ascii_art():
 #     print(
@@ -149,8 +148,7 @@ def main():
                       "Please ensure that contentctl.yml exists by manually creating it or running 'contentctl init'")
             # Otherwise generate a stub config file.
             # It will be used during init workflow
-            from semantic_version import Version
-            t = test(contentctl_library_version=Version(importlib.metadata.version('contentctl')))
+            t = test(contentctl_library_version=importlib.metadata.version('contentctl'))
             config_obj = t.model_dump()
             
         else:
@@ -195,7 +193,7 @@ def main():
 
         #Make sure the right version of contentctl is installed
         config.ensureProperVersionOfContentCtl()        
-        
+
         if type(config) == init:
             t.__dict__.update(config.__dict__)
             init_func(t)

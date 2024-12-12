@@ -1,10 +1,10 @@
 import time
-from enum import Enum
+from enum import StrEnum
 from tqdm import tqdm
 import datetime
 
 
-class TestReportingType(str, Enum):
+class TestReportingType(StrEnum):
     """
     5-char identifiers for the type of testing being reported on
     """
@@ -21,7 +21,7 @@ class TestReportingType(str, Enum):
     INTEGRATION = "INTEG"
 
 
-class TestingStates(str, Enum):
+class TestingStates(StrEnum):
     """
     Defined testing states
     """
@@ -40,10 +40,10 @@ class TestingStates(str, Enum):
 
 
 # the longest length of any state
-LONGEST_STATE = max(len(w.value) for w in TestingStates)
+LONGEST_STATE = max(len(w) for w in TestingStates)
 
 
-class FinalTestingStates(str, Enum):
+class FinalTestingStates(StrEnum):
     """
     The possible final states for a test (for pbar reporting)
     """
@@ -82,7 +82,7 @@ def format_pbar_string(
     :returns: a formatted string for use w/ pbar
     """
     # Extract and ljust our various fields
-    field_one = test_reporting_type.value
+    field_one = test_reporting_type
     field_two = test_name.ljust(MAX_TEST_NAME_LENGTH)
     field_three = state.ljust(LONGEST_STATE)
     field_four = datetime.timedelta(seconds=round(time.time() - start_time))

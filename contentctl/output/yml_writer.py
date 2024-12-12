@@ -1,6 +1,21 @@
 
 import yaml
 from typing import Any
+from enum import StrEnum, IntEnum
+
+# Set the following so that we can write StrEnum and IntEnum
+# to files. Otherwise, we will get the following errors when trying
+# to write to files:
+# yaml.representer.RepresenterError: ('cannot represent an object',.....
+yaml.SafeDumper.add_multi_representer(
+    StrEnum,
+    yaml.representer.SafeRepresenter.represent_str
+)
+
+yaml.SafeDumper.add_multi_representer(
+    IntEnum,
+    yaml.representer.SafeRepresenter.represent_int
+)
 
 class YmlWriter:
 

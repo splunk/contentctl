@@ -1,8 +1,9 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, RBA_OBSERVABLE_ROLE_MAPPING
 
 
 class Observable(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str
     type: str
     role: list[str]

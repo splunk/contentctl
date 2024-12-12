@@ -149,7 +149,7 @@ DOWNLOADS_DIRECTORY = "downloads"
 # errors, if its name is longer than 99 characters.
 # When an saved search is cloned in Enterprise Security User Interface,
 # it is wrapped in the following: 
-# {Detection.tags.security_domain.value} - {SEARCH_STANZA_NAME} - Rule
+# {Detection.tags.security_domain} - {SEARCH_STANZA_NAME} - Rule
 # Similarly, when we generate the search stanza name in contentctl, it
 # is app.label - detection.name - Rule
 # However, in product the search name is:

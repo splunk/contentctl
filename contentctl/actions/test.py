@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from contentctl.objects.config import test_common
+from contentctl.objects.config import test_common, Selected, Changes
 from contentctl.objects.enums import DetectionTestingMode, DetectionStatus, AnalyticsType
 from contentctl.objects.detection import Detection
 
@@ -78,10 +78,9 @@ class Test:
             input_dto=manager_input_dto, output_dto=output_dto
         )
 
-        mode = input_dto.config.getModeName()
         if len(input_dto.detections) == 0:
             print(
-                f"With Detection Testing Mode '{mode}', there were [0] detections found to test."
+                f"With Detection Testing Mode '{input_dto.config.mode.mode_name}', there were [0] detections found to test."
                 "\nAs such, we will quit immediately."
             )
             # Directly call stop so that the summary.yml will be generated. Of course it will not
@@ -89,8 +88,8 @@ class Test:
             # detections were tested.
             file.stop()
         else:
-            print(f"MODE: [{mode}] - Test [{len(input_dto.detections)}] detections")
-            if mode in [DetectionTestingMode.changes.value, DetectionTestingMode.selected.value]:
+            print(f"MODE: [{input_dto.config.mode.mode_name}] - Test [{len(input_dto.detections)}] detections")
+            if isinstance(input_dto.config.mode,  Selected) or isinstance(input_dto.config.mode, Changes):
                 files_string = '\n- '.join(
                     [str(pathlib.Path(detection.file_path).relative_to(input_dto.config.path)) for detection in input_dto.detections]
                 )

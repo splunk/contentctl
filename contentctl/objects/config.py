@@ -185,7 +185,7 @@ class Config_Base(BaseModel):
         If either of these checks are not met, then contentctl will exit with a verbose error message.
         '''
         
-        installed_contentctl_version = Version(importlib.metadata.version('contentctl'))
+        installed_contentctl_version = importlib.metadata.version('contentctl')
         
         if installed_contentctl_version == self.contentctl_library_version:
             return self

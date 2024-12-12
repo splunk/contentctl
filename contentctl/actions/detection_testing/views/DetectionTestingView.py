@@ -110,11 +110,11 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 total_skipped += 1
 
             # Aggregate production status metrics
-            if detection.status == DetectionStatus.production.value:                                # type: ignore
+            if detection.status == DetectionStatus.production:                                
                 total_production += 1
-            elif detection.status == DetectionStatus.experimental.value:                            # type: ignore
+            elif detection.status == DetectionStatus.experimental:                            
                 total_experimental += 1
-            elif detection.status == DetectionStatus.deprecated.value:                              # type: ignore
+            elif detection.status == DetectionStatus.deprecated:                              
                 total_deprecated += 1
 
             # Check if the detection is manual_test
@@ -178,7 +178,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
         # Construct and return the larger results dict
         result_dict = {
             "summary": {
-                "mode": self.config.getModeName(),
+                "mode": self.config.mode.mode_name,
                 "enable_integration_testing": self.config.enable_integration_testing,
                 "success": overall_success,
                 "total_detections": total_detections,

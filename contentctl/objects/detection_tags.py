@@ -35,10 +35,9 @@ from contentctl.objects.enums import (
 from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
-# TODO (#266): disable the use_enum_values configuration
 class DetectionTags(BaseModel):
     # detection spec
-    model_config = ConfigDict(use_enum_values=True,validate_default=False, extra='forbid')
+    model_config = ConfigDict(validate_default=False, extra='forbid')
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []
@@ -150,7 +149,7 @@ class DetectionTags(BaseModel):
         # Since this field has no parent, there is no need to call super() serialization function
         return {
             "analytic_story": [story.name for story in self.analytic_story],
-            "asset_type": self.asset_type.value,
+            "asset_type": self.asset_type,
             "cis20": self.cis20,
             "kill_chain_phases": self.kill_chain_phases,
             "nist": self.nist,

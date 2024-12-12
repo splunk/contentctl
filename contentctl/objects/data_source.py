@@ -9,7 +9,6 @@ class TA(BaseModel):
     url: HttpUrl | None = None
     version: str
 class DataSource(SecurityContentObject):
-    model_config = ConfigDict(extra="forbid")
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None

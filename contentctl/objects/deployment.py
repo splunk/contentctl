@@ -10,15 +10,7 @@ from contentctl.objects.alert_action import AlertAction
 from contentctl.objects.enums import DeploymentType
 
 
-class Deployment(SecurityContentObject):
-    model_config = ConfigDict(extra="forbid")
-    #id: str = None
-    #date: str = None
-    #author: str = None
-    #description: str = None
-    #contentType: SecurityContentType = SecurityContentType.deployments
-    
-    
+class Deployment(SecurityContentObject):    
     scheduling: DeploymentScheduling = Field(...)
     alert_action: AlertAction = AlertAction()
     type: DeploymentType = Field(...)

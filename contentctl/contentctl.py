@@ -21,8 +21,8 @@ from contentctl.actions.inspect import Inspect
 from contentctl.input.yml_reader import YmlReader
 from contentctl.actions.deploy_acs import Deploy
 from contentctl.actions.release_notes import ReleaseNotes
-import importlib.metadata
 from semantic_version import Version
+import importlib.metadata
 # def print_ascii_art():
 #     print(
 #         """
@@ -56,9 +56,7 @@ from semantic_version import Version
 
 
 
-def init_func(config:test):   
-    print("test here") 
-    config.contentctl_library_version = Version(importlib.metadata.version('contentctl'))
+def init_func(config:test):    
     Initialize().execute(config)
 
 
@@ -142,7 +140,6 @@ def main():
         # We MUST load a config (with testing info) object so that we can
         # properly construct the command line, including 'contentctl test' parameters.
         if not configFile.is_file():
-            extras_dict = {'contentctl_library_version': importlib.metadata.version('contentctl')}
             if "init" not in sys.argv and "--help" not in sys.argv and "-h" not in sys.argv:
                 raise Exception(f"'{configFile}' not found in the current directory.\n"
                                 "Please ensure you are in the correct directory or run 'contentctl init' to create a new content pack.")
@@ -152,8 +149,8 @@ def main():
                       "Please ensure that contentctl.yml exists by manually creating it or running 'contentctl init'")
             # Otherwise generate a stub config file.
             # It will be used during init workflow
-
-            t = test(**extras_dict)
+            from semantic_version import Version
+            t = test(contentctl_library_version=Version(importlib.metadata.version('contentctl')))
             config_obj = t.model_dump()
             
         else:
@@ -196,6 +193,8 @@ def main():
         with warnings.catch_warnings(action="ignore"):
             config = tyro.cli(models)
 
+        #Make sure the right version of contentctl is installed
+        config.ensureProperVersionOfContentCtl()        
         
         if type(config) == init:
             t.__dict__.update(config.__dict__)

@@ -9,9 +9,10 @@ import pathlib
 from urllib.parse import urlparse
 from abc import ABC, abstractmethod
 from functools import partialmethod
-
+import importlib.metadata
 import tqdm
-import semantic_version
+from semantic_version import Version
+import re
 from pydantic import (
     BaseModel, Field, field_validator, 
     field_serializer, ConfigDict, DirectoryPath,
@@ -136,7 +137,7 @@ class CustomApp(App_Base):
     @field_validator('version')
     def validate_version(cls, v, values):
         try:
-            _ = semantic_version.Version(v)
+            _ = Version(v)
         except Exception as e:
             raise(ValueError(f"The specified version does not follow the semantic versioning spec (https://semver.org/). {str(e)}"))
         return v
@@ -165,6 +166,49 @@ class Config_Base(BaseModel):
                          "This option makes debugging contentctl errors much easier, but produces way more "
                          "output than is useful under most uses cases. "
                          "Please use this flag if you are submitting a bug report or issue on GitHub.")
+    contentctl_library_version: str = Field(default=importlib.metadata.version('contentctl'), 
+                                            description="Different versions of "
+                                                        "contentctl may produce different application builds. "
+                                                        "For that reason, the version of contentctl MUST be "
+                                                        "specified in the contentctl.yml file.  If this version "
+                                                        "does not match the installed version EXACTLY, "
+                                                        "then an exception will be generated.")
+    @model_validator(mode="after")
+    def ensureProperVersionOfContentCtl(self)->Self:
+        '''
+        Different versions of contentctl may result in builds of the same underlying content
+        having different contents (fields in conf files, app structure, etc). For that reason,
+        the state of the app MUST be associated with an exact contentctl version.  This function
+        ensures that:
+        - This version of contentctl matches the version defined in contentctl_library_version EXACTLY
+        - the requirements.txt file exists in the root of the repo (and also has the same version).  This makes CI/CD scripts far easier to develop.
+
+        If either of these checks are not met, then contentctl will exit with a verbose error message.
+        '''
+        
+        installed_contentctl_version = importlib.metadata.version('contentctl')
+        
+        if installed_contentctl_version == self.contentctl_library_version:
+            return self
+        
+        
+        raise Exception("There is a mismatch between the installed version of contentctl and required version of contentctl. These values MUST match:"
+            f"\n  Installed contentctl:                                 [{installed_contentctl_version}]"
+            f"\n  contentctl_library_version defined in contentctl.yml: [{self.contentctl_library_version}]"
+            "\nPlease bring these versions into alignment.\n\n"
+            "If you are using contentctl in a CI/CD context, it may be "
+            "helpful to use the following command to install the version "
+            "of contentctl specified in the YML file:\n"
+            f'''  * pip install "contentctl==$(grep 'contentctl_library_version' {self.path/'contentctl.yml'}  | cut -d':' -f2- | sed 's/ //')"\n\n'''
+            #"Or, if you are hosting a custom version of contentctl in a git repo, for example at with 'contentctl_library_version: git+https://github.com/splunk/contentctl':\n"
+            #f'''  * pip install "$(grep 'contentctl_library_version' {self.path/'contentctl.yml'}  | cut -d':' -f2- | sed 's/ //')"'''
+            )
+
+    
+
+    @field_serializer('contentctl_library_version',when_used='always')
+    def serialize_verison(contentctl_library_version: Version)->str:
+        return str(contentctl_library_version)
     
     @field_serializer('path',when_used='always')
     def serialize_path(path: DirectoryPath)->str:
@@ -178,7 +222,7 @@ class init(Config_Base):
                        "init will still create the directory structure of the app, "
                        "include the app_template directory with default content, and content in "
                        "the deployment/ directory (since it is not yet easily customizable).")
-
+    
 
 class validate(Config_Base):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)
@@ -244,6 +288,7 @@ class build(validate):
     def serialize_build_path(path: DirectoryPath)->str:
         return str(path)
 
+    
     @field_validator('build_path',mode='before')
     @classmethod
     def ensure_build_path(cls, v:Union[str,DirectoryPath]):
@@ -279,7 +324,10 @@ class build(validate):
         return self.getBuildDir() / "api"
 
     def getAppTemplatePath(self)->pathlib.Path:
-        return self.path/"app_template"
+        p = self.path/"app_template"
+        if not p.is_dir():
+            p.mkdir(parents=True)
+        return p
 
 
 class StackType(StrEnum):

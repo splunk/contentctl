@@ -17,6 +17,7 @@ yaml.SafeDumper.add_multi_representer(
     yaml.representer.SafeRepresenter.represent_int
 )
 
+
 class YmlWriter:
 
     @staticmethod

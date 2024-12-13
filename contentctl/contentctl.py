@@ -21,7 +21,7 @@ from contentctl.actions.inspect import Inspect
 from contentctl.input.yml_reader import YmlReader
 from contentctl.actions.deploy_acs import Deploy
 from contentctl.actions.release_notes import ReleaseNotes
-
+import importlib.metadata
 # def print_ascii_art():
 #     print(
 #         """
@@ -133,6 +133,10 @@ def test_common_func(config:test_common):
     raise Exception("There was at least one unsuccessful test")
 
 def main():
+    if "--version" in sys.argv:
+        print(f"contentctl {importlib.metadata.version('contentctl')}")
+        sys.exit(0)
+
     try:
         configFile = pathlib.Path("contentctl.yml")
         
@@ -148,7 +152,6 @@ def main():
                       "Please ensure that contentctl.yml exists by manually creating it or running 'contentctl init'")
             # Otherwise generate a stub config file.
             # It will be used during init workflow
-
             t = test()
             config_obj = t.model_dump()
             
@@ -192,7 +195,6 @@ def main():
         with warnings.catch_warnings(action="ignore"):
             config = tyro.cli(models)
 
-        
         if type(config) == init:
             t.__dict__.update(config.__dict__)
             init_func(t)

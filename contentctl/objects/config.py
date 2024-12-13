@@ -166,7 +166,8 @@ class Config_Base(BaseModel):
                          "This option makes debugging contentctl errors much easier, but produces way more "
                          "output than is useful under most uses cases. "
                          "Please use this flag if you are submitting a bug report or issue on GitHub.")
-    contentctl_library_version: str = Field(description="Different versions of "
+    contentctl_library_version: str = Field(default=importlib.metadata.version('contentctl'), 
+                                            description="Different versions of "
                                                         "contentctl may produce different application builds. "
                                                         "For that reason, the version of contentctl MUST be "
                                                         "specified in the contentctl.yml file.  If this version "

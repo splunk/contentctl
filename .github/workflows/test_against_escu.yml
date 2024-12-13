@@ -64,7 +64,7 @@ jobs:
       - name: Run contentctl build
         run: |
           cd security_content
-          poetry run contentctl build --enrichments
+          poetry run contentctl build --enrichments --contentctl_library_version $(poetry run contentctl --version | sed "s/contentctl //")
 
       # Do not run a test - it will take far too long!
       # Do not upload any artifacts

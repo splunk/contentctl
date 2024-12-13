@@ -133,6 +133,10 @@ def test_common_func(config:test_common):
     raise Exception("There was at least one unsuccessful test")
 
 def main():
+    if "--version" in sys.argv:
+        print(f"contentctl {importlib.metadata.version('contentctl')}")
+        sys.exit(0)
+
     try:
         configFile = pathlib.Path("contentctl.yml")
         

@@ -152,7 +152,7 @@ def main():
                       "Please ensure that contentctl.yml exists by manually creating it or running 'contentctl init'")
             # Otherwise generate a stub config file.
             # It will be used during init workflow
-            t = test(contentctl_library_version=importlib.metadata.version('contentctl'))
+            t = test()
             config_obj = t.model_dump()
             
         else:
@@ -194,9 +194,6 @@ def main():
         # warnings again when creating the cli
         with warnings.catch_warnings(action="ignore"):
             config = tyro.cli(models)
-
-        #Make sure the right version of contentctl is installed
-        config.ensureProperVersionOfContentCtl()        
 
         if type(config) == init:
             t.__dict__.update(config.__dict__)

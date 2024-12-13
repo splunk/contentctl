@@ -173,7 +173,7 @@ class Config_Base(BaseModel):
                                                         "specified in the contentctl.yml file.  If this version "
                                                         "does not match the installed version EXACTLY, "
                                                         "then an exception will be generated.")
-        
+    @model_validator(mode="after")
     def ensureProperVersionOfContentCtl(self)->Self:
         '''
         Different versions of contentctl may result in builds of the same underlying content

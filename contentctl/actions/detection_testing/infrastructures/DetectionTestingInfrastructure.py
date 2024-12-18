@@ -1,3 +1,4 @@
+import logging
 import time
 import uuid
 import abc
@@ -17,12 +18,13 @@ from pydantic import ConfigDict, BaseModel, PrivateAttr, Field, dataclasses
 import requests                                                                                     # type: ignore
 import splunklib.client as client                                                                   # type: ignore
 from splunklib.binding import HTTPError                                                             # type: ignore
+from splunklib.client import Service
 from splunklib.results import JSONResultsReader, Message                                            # type: ignore
 import splunklib.results
 from urllib3 import disable_warnings
 import urllib.parse
 
-from contentctl.objects.config import test_common, Infrastructure
+from contentctl.objects.config import test_common, Infrastructure, ENTERPRISE_SECURITY_UID
 from contentctl.objects.enums import PostTestBehavior, AnalyticsType
 from contentctl.objects.detection import Detection
 from contentctl.objects.base_test import BaseTest
@@ -41,6 +43,8 @@ from contentctl.actions.detection_testing.progress_bar import (
     FinalTestingStates,
     TestingStates
 )
+
+LOG = Utils.get_logger()
 
 
 class SetupTestGroupResults(BaseModel):
@@ -107,6 +111,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
     def __init__(self, **data):
         super().__init__(**data)
+        self._conn: None | Service = None
 
     # TODO: why not use @abstractmethod
     def start(self):
@@ -138,7 +143,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         try:
             for func, msg in [
                 (self.start, "Starting"),
-                (self.get_conn, "Waiting for App Installation"),
+                (self.get_conn, "Getting initial connection"),
+                (self.wait_for_app_installation, "Waiting for App Installation"),
                 (self.configure_conf_file_datamodels, "Configuring Datamodels"),
                 (self.create_replay_index, f"Create index '{self.sync_obj.replay_index}'"),
                 (self.get_all_indexes, "Getting all indexes from server"),
@@ -170,14 +176,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def configure_hec(self):
         self.hec_channel = str(uuid.uuid4())
         try:
-            res = self.get_conn().input(
-                path="/servicesNS/nobody/splunk_httpinput/data/inputs/http/http:%2F%2FDETECTION_TESTING_HEC"
-            )
-            self.hec_token = str(res.token)
-            return
-        except Exception:
-            # HEC input does not exist.  That's okay, we will create it
+            # Delete old HEC
+            self.get_conn().inputs.delete("DETECTION_TESTING_HEC", kind='http')
+        except (HTTPError, KeyError) as e:
+            # HEC input didn't exist in the first place, everything is good.
             pass
+        except Exception as e:
+            LOG.error("Error when deleting input DETECTION_TESTING_HEC.")
+            LOG.exception(e)
+            raise e
 
         try:
             res = self.get_conn().inputs.create(
@@ -210,6 +217,31 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         except Exception as e:
             raise (Exception(f"Failure getting indexes: {str(e)}"))
 
+    def wait_for_app_installation(self):
+        config_apps = self.global_config.apps
+        installed_config_apps = []
+        while len(installed_config_apps) < len(config_apps):
+            try:
+                # Get apps installed in the Splunk instance
+                splunk_instance_apps = self.get_conn().apps.list()
+
+                # Try to find all the apps we want to be installed (config_apps)
+                installed_config_apps = []
+                for config_app in config_apps:
+                    for splunk_instance_app in splunk_instance_apps:
+                        if config_app.appid == splunk_instance_app.name:
+                            # For Enterprise Security, we need to make sure the app is also configured.
+                            if config_app.uid == ENTERPRISE_SECURITY_UID and splunk_instance_app.content.get('configured') != '1':
+                                continue
+                            installed_config_apps.append(config_app.appid)
+                LOG.debug("Apps in the Splunk instance: " + str(list(map(lambda x: x.name, splunk_instance_apps))))
+                LOG.debug(f"apps in contentctl package found in Splunk instance: {installed_config_apps}")
+                if len(installed_config_apps) >= len(config_apps):
+                    break
+            except Exception as e:
+                LOG.exception(e)
+            time.sleep(5)
+
     def get_conn(self) -> client.Service:
         try:
             if not self._conn:
@@ -218,8 +250,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 # continue trying to re-establish a connection until after
                 # the server has restarted
                 self.connect_to_api()
-        except Exception:
+        except Exception as e:
             # there was some issue getting the connection. Try again just once
+            LOG.exception(e)
             self.connect_to_api()
         return self._conn
 
@@ -295,7 +328,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     ):  
         try:
             # Set which roles should be configured. For Enterprise Security/Integration Testing,
-            # we must add some extra foles.
+            # we must add some extra roles.
             if self.global_config.enable_integration_testing:
                 roles = imported_roles + enterprise_security_roles
             else:
@@ -1100,7 +1133,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             threat_object_fields_set = set([o.name for o in detection.tags.observable if "Attacker" in o.role]) # just the "threat objects"
 
             # Ensure the search had at least one result
-            if int(job.content.get("resultCount", "0")) > 0:
+            if int(job.content["resultCount"]) > 0:
                 # Initialize the test result
                 test.result = UnitTestResult()
 
@@ -1203,6 +1236,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     self.infrastructure,
                     TestResultStatus.FAIL,
                     duration=time.time() - search_start_time,
+                    message=f"Search had 0 result. {job.content}"
                 )
                 tick += 1
 
@@ -1247,16 +1281,16 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         test_group_start_time: float,
     ):
         # Before attempting to replay the file, ensure that the index we want
-        # to replay into actuall exists. If not, we should throw a detailed
-        # exception that can easily be interpreted by the user.
+        # to replay into actually exists. If not, we create the index.
         if attack_data_file.custom_index is not None and \
             attack_data_file.custom_index not in self.all_indexes_on_server:
-            raise ReplayIndexDoesNotExistOnServer(
-                f"Unable to replay data file {attack_data_file.data} "
-                f"into index '{attack_data_file.custom_index}'. "
-                "The index does not exist on the Splunk Server. "
-                f"The only valid indexes on the server are {self.all_indexes_on_server}"
-            )
+            index = self.get_conn().indexes.create(name=attack_data_file.custom_index)
+            LOG.info(f"Created Index {attack_data_file.custom_index}: {index}")
+            LOG.info("Re-retup of the HEC and roles and indexes...")
+            self.get_all_indexes()
+            self.configure_imported_roles()
+            self.configure_delete_indexes()
+            self.configure_hec()
 
         tempfile = mktemp(dir=tmp_dir)
         if not (str(attack_data_file.data).startswith("http://") or 
@@ -1358,7 +1392,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         url_with_hec_path = urllib.parse.urljoin(
             url_with_port, "services/collector/raw"
         )
-        with open(tempfile, "rb") as datafile:
+        with open(tempfile, "r") as datafile:
             try:
                 res = requests.post(
                     url_with_hec_path,

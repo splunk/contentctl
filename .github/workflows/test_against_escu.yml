@@ -6,9 +6,8 @@
 # note yet been fixed in security_content, we may see this workflow fail.
 name: test_against_escu
 on:
-  push:
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
   schedule:
     - cron: "44 4 * * *"
 
@@ -17,9 +16,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python_version: ["3.11", "3.12"]
+        python_version: ["3.11", "3.12", "3.13"]
         
-        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14"]
+        operating_system: ["ubuntu-24.04", "macos-15"]
         # Do not test against ESCU until known character encoding issue is resolved
         # operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14", "windows-2022"]
 
@@ -53,10 +52,11 @@ jobs:
           poetry install --no-interaction
 
 
-      - name: Clone the AtomicRedTeam Repo (for extended validation)
+      - name: Clone the AtomicRedTeam Repo and the Mitre/CTI repos for testing enrichments  
         run: |
           cd security_content
-          git clone --depth 1 https://github.com/redcanaryco/atomic-red-team
+          git clone --single-branch https://github.com/redcanaryco/atomic-red-team external_repos/atomic-red-team
+          git clone --single-branch https://github.com/mitre/cti external_repos/cti
 
       
       # We do not separately run validate and build 

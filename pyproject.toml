@@ -1,6 +1,7 @@
 [tool.poetry]
 name = "contentctl"
-version = "4.2.4"
+version = "5.0.0"
+
 description = "Splunk Content Control Tool"
 authors = ["STRT <research@splunk.com>"]
 license = "Apache 2.0"
@@ -10,27 +11,25 @@ readme = "README.md"
 contentctl = 'contentctl.contentctl:main'
 
 [tool.poetry.dependencies]
-python = "^3.11"
-pydantic = "^2.7.1"
-PyYAML = "^6.0.1"
-requests = "~2.32.2"
+
+python = "^3.11,<3.14"
+pydantic = "~2.9.2"
+PyYAML = "^6.0.2"
+requests = "~2.32.3"
 pycvesearch = "^1.2"
-xmltodict = "^0.13.0"
-attackcti = ">=0.3.7,<0.5.0"
+xmltodict = ">=0.13,<0.15"
+attackcti = "^0.4.0"
 Jinja2 = "^3.1.4"
 questionary = "^2.0.1"
 docker = "^7.1.0"
-splunk-sdk = "^2.0.1"
+splunk-sdk = "^2.0.2"
 semantic-version = "^2.10.0"
-bottle = "^0.12.25"
-tqdm = "^4.66.4"
-#splunk-appinspect = "^2.36.0"
-pysigma = "^0.11.5"
-pysigma-backend-splunk = "^1.1.0"
-pygit2 = "^1.14.1"
-tyro = "^0.8.3"
+bottle = ">=0.12.25,<0.14.0"
+tqdm = "^4.66.5"
+pygit2 = "^1.15.1"
+tyro = "^0.9.2"
 gitpython = "^3.1.43"
-setuptools = ">=69.5.1,<73.0.0"
+setuptools = ">=69.5.1,<76.0.0"
 [tool.poetry.dev-dependencies]
 
 [build-system]

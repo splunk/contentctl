@@ -1,7 +1,7 @@
 from typing import Any
 import json
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 from contentctl.objects.risk_object import RiskObject
 from contentctl.objects.threat_object import ThreatObject
@@ -21,11 +21,11 @@ class RiskAnalysisAction(BaseModel):
     risk_objects: list[RiskObject]
     message: str
 
-    @validator("message", always=True, pre=True)
+    @field_validator("message", mode="before")
     @classmethod
-    def _validate_message(cls, v, values) -> str:
+    def _validate_message(cls, v: Any) -> str:
         """
-        Validate splunk_path and derive if None
+        Validate message and derive if None
         """
         if v is None:
             raise ValueError(

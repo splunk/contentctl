@@ -5,8 +5,10 @@ if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment
     from contentctl.objects.security_content_object import SecurityContentObject
     from contentctl.input.director import DirectorOutputDto
+    from contentctl.objects.config import CustomApp
 
 from contentctl.objects.enums import AnalyticsType
+from contentctl.objects.constants import CONTENTCTL_MAX_STANZA_LENGTH
 import abc
 import uuid
 import datetime
@@ -30,14 +32,13 @@ NO_FILE_NAME = "NO_FILE_NAME"
 
 
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
-    model_config = ConfigDict(use_enum_values=True, validate_default=True)
-
-    name: str = Field(...)
-    author: str = Field("Content Author", max_length=255)
-    date: datetime.date = Field(datetime.date.today())
-    version: NonNegativeInt = 1
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)  # we set a default here until all content has a uuid
-    description: str = Field("Enter Description Here", max_length=10000)
+    model_config = ConfigDict(validate_default=True,extra="forbid")
+    name: str = Field(...,max_length=99)
+    author: str = Field(...,max_length=255)
+    date: datetime.date = Field(...)
+    version: NonNegativeInt = Field(...)
+    id: uuid.UUID = Field(...) #we set a default here until all content has a uuid
+    description: str = Field(...,max_length=10000)
     file_path: Optional[FilePath] = None
     references: Optional[List[HttpUrl]] = None
 
@@ -55,7 +56,13 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             "description": self.description,
             "references": [str(url) for url in self.references or []]
         }
-
+    
+    
+    def check_conf_stanza_max_length(self, stanza_name:str, max_stanza_length:int=CONTENTCTL_MAX_STANZA_LENGTH) -> None:
+        if len(stanza_name) > max_stanza_length:
+            raise ValueError(f"conf stanza may only be {max_stanza_length} characters, "
+                             f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' ")
+    
     @staticmethod
     def objectListToNameList(objects: list[SecurityContentObject]) -> list[str]:
         return [object.getName() for object in objects]
@@ -153,10 +160,10 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
             raise ValueError("Cannot set deployment - DirectorOutputDto not passed to Detection Constructor in context")
 
         type_to_deployment_name_map = {
-            AnalyticsType.TTP.value: "ESCU Default Configuration TTP",
-            AnalyticsType.Hunting.value: "ESCU Default Configuration Hunting",
-            AnalyticsType.Correlation.value: "ESCU Default Configuration Correlation",
-            AnalyticsType.Anomaly.value: "ESCU Default Configuration Anomaly",
+            AnalyticsType.TTP: "ESCU Default Configuration TTP",
+            AnalyticsType.Hunting: "ESCU Default Configuration Hunting",
+            AnalyticsType.Correlation: "ESCU Default Configuration Correlation",
+            AnalyticsType.Anomaly: "ESCU Default Configuration Anomaly",
             "Baseline": "ESCU Default Configuration Baseline"
         }
         converted_type_field = type_to_deployment_name_map[typeField]

@@ -29,6 +29,15 @@ references:
 - https://attack.mitre.org/techniques/T1560/001/
 - https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/
 - https://thedfirreport.com/2021/01/31/bazar-no-ryuk/
+drilldown_searches:
+- name: View the detection results for $user$ and $dest$
+  search: '%original_detection_search% | search  user = $user$ dest = $dest$'
+  earliest_offset: $info_min_time$
+  latest_offset: $info_max_time$
+- name: View risk events for the last 7 days for $user$ and $dest$
+  search: '| from datamodel Risk.All_Risk | search normalized_risk_object IN ($user$, $dest$) starthoursago=168 endhoursago=1 | stats count min(_time) as firstTime max(_time) as lastTime values(search_name) as "Search Name" values(risk_message) as "Risk Message" values(analyticstories) as "Analytic Stories" values(annotations._all) as "Annotations" values(annotations.mitre_attack.mitre_tactic) as "ATT&CK Tactics" by normalized_risk_object | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`'
+  earliest_offset: $info_min_time$
+  latest_offset: $info_max_time$
 tags:
   analytic_story:
   - Cobalt Strike
@@ -53,27 +62,15 @@ tags:
   - name: parent_process_name
     type: Process
     role:
-    - Parent Process
+    - Attacker
   - name: process_name
     type: Process
     role:
-    - Child Process
+    - Attacker
   product:
   - Splunk Enterprise
   - Splunk Enterprise Security
   - Splunk Cloud
-  required_fields:
-  - _time
-  - Processes.process_name
-  - Processes.process
-  - Processes.dest
-  - Processes.user
-  - Processes.parent_process_name
-  - Processes.process_name
-  - Processes.parent_process
-  - Processes.process_id
-  - Processes.parent_process_id
-  risk_score: 64
   security_domain: endpoint
 tests:
 - name: True Positive Test

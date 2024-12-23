@@ -45,6 +45,7 @@ class Lookup(SecurityContentObject, abc.ABC):
     min_matches: None | NonNegativeInt = Field(default=None)
     max_matches: None | Annotated[NonNegativeInt, Field(ge=1, le=1000)] = Field(default=None)    
     case_sensitive_match: None | bool = Field(default=None)
+
     
 
 
@@ -59,6 +60,7 @@ class Lookup(SecurityContentObject, abc.ABC):
             "default_match": "true" if self.default_match is True else "false",
             "match_type": self.match_type,
             "min_matches": self.min_matches,
+            "max_matches": self.max_matches,
             "case_sensitive_match": "true" if self.case_sensitive_match is True else "false",
         }
         

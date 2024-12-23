@@ -3,11 +3,12 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List
 import re
-from pydantic import Field, model_serializer
+from pydantic import Field, model_serializer, NonNegativeInt
+import uuid
+import datetime
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.security_content_object import SecurityContentObject
-
 
 #The following macros are included in commonly-installed apps.
 #As such, we will ignore if they are missing from our app.
@@ -22,7 +23,11 @@ MACROS_TO_IGNORE.add("cim_corporate_web_domain_search") #Part of CIM/Splunk_SA_C
 class Macro(SecurityContentObject):
     definition: str = Field(..., min_length=1)
     arguments: List[str] = Field([])
-    
+    # TODO: Add id field to all macro ymls
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    date: datetime.date = Field(datetime.date.today())
+    author: str = Field("NO AUTHOR DEFINED",max_length=255)
+    version: NonNegativeInt = 1
     
 
 
@@ -49,10 +54,15 @@ class Macro(SecurityContentObject):
         #If a comment ENDS in a macro, for example ```this is a comment with a macro `macro_here````
         #then there is a small edge case where the regex below does not work properly.  If that is 
         #the case, we edit the search slightly to insert a space
-        text_field = re.sub(r"\`\`\`\`", r"` ```", text_field)
-        text_field = re.sub(r"\`\`\`.*?\`\`\`", " ", text_field)
-        
+        if re.findall(r"\`\`\`\`", text_field):
+            raise ValueError("Search contained four or more '`' characters in a row which is invalid SPL"
+                            "This may have occurred when a macro was commented out.\n"
+                            "Please ammend your search to remove the substring '````'")
 
+        # replace all the macros with a space    
+        text_field = re.sub(r"\`\`\`[\s\S]*?\`\`\`", " ", text_field) 
+        
+        
         macros_to_get = re.findall(r'`([^\s]+)`', text_field)
         #If macros take arguments, stop at the first argument.  We just want the name of the macro
         macros_to_get = set([macro[:macro.find('(')] if macro.find('(') != -1 else macro for macro in macros_to_get])
@@ -62,4 +72,3 @@ class Macro(SecurityContentObject):
         macros_to_get -= macros_to_ignore
         return Macro.mapNamesToSecurityContentObjects(list(macros_to_get), director)
         
-    

@@ -1,18 +1,19 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Union
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
+from pydantic import BaseModel,ConfigDict
 
 from contentctl.objects.base_test_result import BaseTestResult
 
 
-class TestType(str, Enum):
+class TestType(StrEnum):
     """
     Types of tests
     """
     UNIT = "unit"
     INTEGRATION = "integration"
+    MANUAL = "manual"
 
     def __str__(self) -> str:
         return self.value
@@ -20,6 +21,7 @@ class TestType(str, Enum):
 
 # TODO (#224): enforce distinct test names w/in detections
 class BaseTest(BaseModel, ABC):
+    model_config = ConfigDict(extra="forbid")
     """
     A test case for a detection
     """

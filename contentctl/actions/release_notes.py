@@ -114,9 +114,11 @@ class ReleaseNotes:
             #If a branch name is supplied, compare against develop
             if config.latest_branch not in repo.branches:
                 raise ValueError(f"latest branch {config.latest_branch} does not exist in the repository. Make sure your branch name is correct")
-            compare_against = "develop"
+            if config.compare_against not in repo.branches:
+                raise ValueError(f"compare_against branch {config.compare_against} does not exist in the repository. Make sure your branch name is correct")
+            
             commit1 = repo.commit(config.latest_branch)
-            commit2 = repo.commit(compare_against)    
+            commit2 = repo.commit(config.compare_against)    
             diff_index = commit2.diff(commit1)
         
         modified_files:List[pathlib.Path] = []
@@ -189,7 +191,7 @@ class ReleaseNotes:
 
         if config.latest_branch:
             print(f"Generating release notes       - \033[92m{config.latest_branch}\033[0m")
-            print(f"Compared against               - \033[92m{compare_against}\033[0m")
+            print(f"Compared against               - \033[92m{config.compare_against}\033[0m")
             print("\n## Release notes for ESCU " + config.latest_branch)
 
         notes = [self.create_notes(config.path, stories_added, header="New Analytic Story"),

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.detection import Detection
+from contentctl.objects.data_source import DataSource
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.config import test_common, All, Changes, Selected
 
@@ -67,9 +68,12 @@ class GitService(BaseModel):
 
         #Make a filename to content map
         filepath_to_content_map = { obj.file_path:obj for (_,obj) in self.director.name_to_content_map.items()} 
-        updated_detections:List[Detection] = []
-        updated_macros:List[Macro] = []
-        updated_lookups:List[Lookup] =[]
+
+        updated_detections: set[Detection] = set()
+        updated_macros: set[Macro] = set()
+        updated_lookups: set[Lookup] = set()
+        updated_datasources: set[DataSource] = set()
+
 
         for diff in all_diffs:
             if type(diff) == pygit2.Patch:
@@ -80,16 +84,23 @@ class GitService(BaseModel):
                     if decoded_path.is_relative_to(self.config.path/"detections") and decoded_path.suffix == ".yml":
                         detectionObject = filepath_to_content_map.get(decoded_path, None)
                         if isinstance(detectionObject, Detection):
-                            updated_detections.append(detectionObject)
+                            updated_detections.add(detectionObject)
                         else:
                             raise Exception(f"Error getting detection object for file {str(decoded_path)}")
                         
                     elif decoded_path.is_relative_to(self.config.path/"macros") and decoded_path.suffix == ".yml":
                         macroObject = filepath_to_content_map.get(decoded_path, None)
                         if isinstance(macroObject, Macro):
-                            updated_macros.append(macroObject)
+                            updated_macros.add(macroObject)
                         else:
                             raise Exception(f"Error getting macro object for file {str(decoded_path)}")
+                        
+                    elif decoded_path.is_relative_to(self.config.path/"data_sources") and decoded_path.suffix == ".yml":
+                        datasourceObject = filepath_to_content_map.get(decoded_path, None)
+                        if isinstance(datasourceObject, DataSource):
+                            updated_datasources.add(datasourceObject)
+                        else:
+                            raise Exception(f"Error getting data source object for file {str(decoded_path)}")
 
                     elif decoded_path.is_relative_to(self.config.path/"lookups"):
                         # We need to convert this to a yml. This means we will catch
@@ -98,7 +109,7 @@ class GitService(BaseModel):
                             updatedLookup = filepath_to_content_map.get(decoded_path, None)
                             if not isinstance(updatedLookup,Lookup):
                                 raise Exception(f"Expected {decoded_path} to be type {type(Lookup)}, but instead if was {(type(updatedLookup))}")
-                            updated_lookups.append(updatedLookup)
+                            updated_lookups.add(updatedLookup)
 
                         elif decoded_path.suffix == ".csv":
                             # If the CSV was updated, we want to make sure that we 
@@ -115,7 +126,6 @@ class GitService(BaseModel):
                             # Detected a changed .mlmodel file. However, since we do not have testing for these detections at 
                             # this time, we will ignore this change.
                             updatedLookup = None
-                            
 
                         else:
                             raise Exception(f"Detected a changed file in the lookups/ directory '{str(decoded_path)}'.\n"
@@ -125,7 +135,7 @@ class GitService(BaseModel):
                         if updatedLookup is not None and updatedLookup not in updated_lookups:
                             # It is possible that both the CSV and YML have been modified for the same lookup,
                             # and we do not want to add it twice. 
-                            updated_lookups.append(updatedLookup)
+                            updated_lookups.add(updatedLookup)
 
                     else:
                         pass
@@ -136,7 +146,8 @@ class GitService(BaseModel):
 
         # If a detection has at least one dependency on changed content,
         # then we must test it again
-        changed_macros_and_lookups = updated_macros + updated_lookups
+
+        changed_macros_and_lookups_and_datasources:set[SecurityContentObject] = updated_macros.union(updated_lookups, updated_datasources)
         
         for detection in self.director.detections:
             if detection in updated_detections:
@@ -144,16 +155,16 @@ class GitService(BaseModel):
                 # to add it again
                 continue
 
-            for obj in changed_macros_and_lookups:
+            for obj in changed_macros_and_lookups_and_datasources:
                 if obj in detection.get_content_dependencies():
-                   updated_detections.append(detection)
+                   updated_detections.add(detection)
                    break
 
         #Print out the names of all modified/new content
         modifiedAndNewContentString = "\n - ".join(sorted([d.name for d in updated_detections]))
 
         print(f"[{len(updated_detections)}] Pieces of modifed and new content (this may include experimental/deprecated/manual_test content):\n - {modifiedAndNewContentString}")
-        return updated_detections
+        return sorted(list(updated_detections))
 
     def getSelected(self, detectionFilenames: List[FilePath]) -> List[Detection]:
         filepath_to_content_map: dict[FilePath, SecurityContentObject] = {

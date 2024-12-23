@@ -6,7 +6,7 @@ from enum import Enum
 
 from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 from contentctl.objects.enums import StoryCategory, DataModel, KillChainPhase, SecurityContentProductName
-
+from contentctl.objects.annotated_types import CVE_TYPE,MITRE_ATTACK_ID_TYPE
 
 class StoryUseCase(str,Enum):
    FRAUD_DETECTION = "Fraud Detection"
@@ -17,18 +17,19 @@ class StoryUseCase(str,Enum):
    INSIDER_THREAT = "Insider Threat"
    OTHER = "Other"
 
+
 class StoryTags(BaseModel):
-   model_config = ConfigDict(extra='forbid', use_enum_values=True)
+   model_config = ConfigDict(extra='forbid')
    category: List[StoryCategory] = Field(...,min_length=1)
    product: List[SecurityContentProductName] = Field(...,min_length=1)
    usecase: StoryUseCase = Field(...)
 
    # enrichment
    mitre_attack_enrichments: Optional[List[MitreAttackEnrichment]] = None
-   mitre_attack_tactics: Optional[Set[Annotated[str, Field(pattern=r"^T\d{4}(.\d{3})?$")]]] = None
+   mitre_attack_tactics: Optional[Set[MITRE_ATTACK_ID_TYPE]] = None
    datamodels: Optional[Set[DataModel]] = None
    kill_chain_phases: Optional[Set[KillChainPhase]] = None
-   cve: List[Annotated[str, r"^CVE-[1|2]\d{3}-\d+$"]] = []
+   cve: List[CVE_TYPE] = []
    group: List[str] = Field([], description="A list of groups who leverage the techniques list in this Analytic Story.")
 
    def getCategory_conf(self) -> str:

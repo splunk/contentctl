@@ -1,15 +1,15 @@
 from __future__ import annotations
 from typing import List
-import enum
+from enum import StrEnum, IntEnum
 
 
-class AnalyticsType(str, enum.Enum):
+class AnalyticsType(StrEnum):
     TTP = "TTP"
     Anomaly = "Anomaly"
     Hunting = "Hunting"
     Correlation = "Correlation"
 
-class DeploymentType(str, enum.Enum):
+class DeploymentType(StrEnum):
     TTP = "TTP"
     Anomaly = "Anomaly"
     Hunting = "Hunting"
@@ -18,7 +18,7 @@ class DeploymentType(str, enum.Enum):
     Embedded = "Embedded"
 
 
-class DataModel(str,enum.Enum):
+class DataModel(StrEnum):
     ENDPOINT = "Endpoint"
     NETWORK_TRAFFIC  = "Network_Traffic"
     AUTHENTICATION = "Authentication"
@@ -40,11 +40,11 @@ class DataModel(str,enum.Enum):
     SPLUNK_AUDIT = "Splunk_Audit"
 
 
-class PlaybookType(str, enum.Enum):
+class PlaybookType(StrEnum):
     INVESTIGATION = "Investigation"
     RESPONSE = "Response"
 
-class SecurityContentType(enum.Enum):
+class SecurityContentType(IntEnum):
     detections = 1
     baselines = 2
     stories = 3
@@ -54,8 +54,9 @@ class SecurityContentType(enum.Enum):
     deployments = 7
     investigations = 8
     unit_tests = 9
-    ssa_detections = 10
     data_sources = 11
+    dashboards = 12
+
 
 # Bringing these changes back in line will take some time after
 # the initial merge is complete
@@ -67,21 +68,15 @@ class SecurityContentType(enum.Enum):
 #     json_objects = "json_objects"
 
 
-class SecurityContentProduct(enum.Enum):
-    SPLUNK_APP = 1
-    SSA = 2
-    API = 3
-    CUSTOM = 4
 
-
-class SecurityContentProductName(str, enum.Enum):
+class SecurityContentProductName(StrEnum):
     SPLUNK_ENTERPRISE = "Splunk Enterprise"
     SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
     SPLUNK_CLOUD = "Splunk Cloud"
     SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
     SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
 
-class SecurityContentInvestigationProductName(str, enum.Enum):
+class SecurityContentInvestigationProductName(StrEnum):
     SPLUNK_ENTERPRISE = "Splunk Enterprise"
     SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
     SPLUNK_CLOUD = "Splunk Cloud"
@@ -90,33 +85,20 @@ class SecurityContentInvestigationProductName(str, enum.Enum):
     SPLUNK_PHANTOM = "Splunk Phantom"
     
 
-class DetectionStatus(enum.Enum):
+class DetectionStatus(StrEnum):
     production = "production"
     deprecated = "deprecated"
     experimental = "experimental"
     validation = "validation"
 
 
-class DetectionStatusSSA(enum.Enum):
-    production = "production"
-    deprecated = "deprecated"
-    experimental = "experimental"
-    validation = "validation"
-
-
-class LogLevel(enum.Enum):
+class LogLevel(StrEnum):
     NONE = "NONE"
     ERROR = "ERROR"
     INFO = "INFO"
 
 
-class AlertActions(enum.Enum):
-    notable = "notable"
-    rba = "rba"
-    email = "email"
-
-
-class StoryCategory(str, enum.Enum):
+class StoryCategory(StrEnum):
     ABUSE = "Abuse"
     ADVERSARY_TACTICS = "Adversary Tactics"
     BEST_PRACTICES = "Best Practices"
@@ -139,36 +121,17 @@ class StoryCategory(str, enum.Enum):
     UNAUTHORIZED_SOFTWARE = "Unauthorized Software"
 
 
-class PostTestBehavior(str, enum.Enum):
+class PostTestBehavior(StrEnum):
     always_pause = "always_pause"
     pause_on_failure = "pause_on_failure"
     never_pause = "never_pause"
 
 
-class DetectionTestingMode(str, enum.Enum):
+class DetectionTestingMode(StrEnum):
     selected = "selected"
     all = "all"
     changes = "changes"
 
-
-class DetectionTestingTargetInfrastructure(str, enum.Enum):
-    container = "container"
-    server = "server"
-
-
-class InstanceState(str, enum.Enum):
-    starting = "starting"
-    running = "running"
-    error = "error"
-    stopping = "stopping"
-    stopped = "stopped"
-
-
-class SigmaConverterTarget(enum.Enum):
-    CIM = 1
-    RAW = 2
-    OCSF = 3
-    ALL = 4
 
 # It's unclear why we use a mix of constants and enums. The following list was taken from:
 # contentctl/contentctl/helper/constants.py.
@@ -183,7 +146,7 @@ class SigmaConverterTarget(enum.Enum):
 #     "Command And Control": 6,
 #     "Actions on Objectives": 7
 # }
-class KillChainPhase(str, enum.Enum):
+class KillChainPhase(StrEnum):
     UNKNOWN ="Unknown"
     RECONNAISSANCE = "Reconnaissance"
     WEAPONIZATION = "Weaponization"
@@ -194,24 +157,24 @@ class KillChainPhase(str, enum.Enum):
     ACTIONS_ON_OBJECTIVES = "Actions on Objectives"
 
 
-class DataSource(str,enum.Enum):
+class DataSource(StrEnum):
     OSQUERY_ES_PROCESS_EVENTS = "OSQuery ES Process Events"
     POWERSHELL_4104 = "Powershell 4104"
-    SYSMON_EVENT_ID_1 = "Sysmon Event ID 1"
-    SYSMON_EVENT_ID_10 = "Sysmon Event ID 10"
-    SYSMON_EVENT_ID_11 = "Sysmon Event ID 11"
-    SYSMON_EVENT_ID_13 = "Sysmon Event ID 13"
-    SYSMON_EVENT_ID_15 = "Sysmon Event ID 15"
-    SYSMON_EVENT_ID_20 = "Sysmon Event ID 20"
-    SYSMON_EVENT_ID_21 = "Sysmon Event ID 21"
-    SYSMON_EVENT_ID_22 = "Sysmon Event ID 22"
-    SYSMON_EVENT_ID_23 = "Sysmon Event ID 23"
-    SYSMON_EVENT_ID_3 = "Sysmon Event ID 3"
-    SYSMON_EVENT_ID_5 = "Sysmon Event ID 5"
-    SYSMON_EVENT_ID_6 = "Sysmon Event ID 6"
-    SYSMON_EVENT_ID_7 = "Sysmon Event ID 7"
-    SYSMON_EVENT_ID_8 = "Sysmon Event ID 8"
-    SYSMON_EVENT_ID_9 = "Sysmon Event ID 9"
+    SYSMON_EVENT_ID_1 = "Sysmon EventID 1"
+    SYSMON_EVENT_ID_3 = "Sysmon EventID 3"
+    SYSMON_EVENT_ID_5 = "Sysmon EventID 5"
+    SYSMON_EVENT_ID_6 = "Sysmon EventID 6"
+    SYSMON_EVENT_ID_7 = "Sysmon EventID 7"
+    SYSMON_EVENT_ID_8 = "Sysmon EventID 8"
+    SYSMON_EVENT_ID_9 = "Sysmon EventID 9"
+    SYSMON_EVENT_ID_10 = "Sysmon EventID 10"
+    SYSMON_EVENT_ID_11 = "Sysmon EventID 11"
+    SYSMON_EVENT_ID_13 = "Sysmon EventID 13"
+    SYSMON_EVENT_ID_15 = "Sysmon EventID 15"
+    SYSMON_EVENT_ID_20 = "Sysmon EventID 20"
+    SYSMON_EVENT_ID_21 = "Sysmon EventID 21"
+    SYSMON_EVENT_ID_22 = "Sysmon EventID 22"
+    SYSMON_EVENT_ID_23 = "Sysmon EventID 23"
     WINDOWS_SECURITY_4624 = "Windows Security 4624"
     WINDOWS_SECURITY_4625 = "Windows Security 4625"
     WINDOWS_SECURITY_4648 = "Windows Security 4648"
@@ -234,7 +197,7 @@ class DataSource(str,enum.Enum):
     WINDOWS_SECURITY_5145 = "Windows Security 5145"
     WINDOWS_SYSTEM_7045 = "Windows System 7045"
 
-class ProvidingTechnology(str, enum.Enum):
+class ProvidingTechnology(StrEnum):
     AMAZON_SECURITY_LAKE = "Amazon Security Lake"
     AMAZON_WEB_SERVICES_CLOUDTRAIL = "Amazon Web Services - Cloudtrail"
     AZURE_AD = "Azure AD"
@@ -302,7 +265,7 @@ class ProvidingTechnology(str, enum.Enum):
         return sorted(list(matched_technologies))
 
 
-class Cis18Value(str,enum.Enum):
+class Cis18Value(StrEnum):
     CIS_0 = "CIS 0"
     CIS_1 = "CIS 1"
     CIS_2 = "CIS 2"
@@ -323,16 +286,15 @@ class Cis18Value(str,enum.Enum):
     CIS_17 = "CIS 17"
     CIS_18 = "CIS 18"
 
-class SecurityDomain(str, enum.Enum):
+class SecurityDomain(StrEnum):
     ENDPOINT = "endpoint"
     NETWORK = "network"
     THREAT = "threat"
     IDENTITY = "identity"
     ACCESS = "access"
     AUDIT = "audit"
-    CLOUD = "cloud"
 
-class AssetType(str, enum.Enum):
+class AssetType(StrEnum):
     AWS_ACCOUNT = "AWS Account"
     AWS_EKS_KUBERNETES_CLUSTER = "AWS EKS Kubernetes cluster"
     AWS_FEDERATED_ACCOUNT = "AWS Federated Account"
@@ -383,7 +345,7 @@ class AssetType(str, enum.Enum):
     WEB_APPLICATION = "Web Application"
     WINDOWS = "Windows"
 
-class NistCategory(str, enum.Enum):
+class NistCategory(StrEnum):
     ID_AM = "ID.AM"
     ID_BE = "ID.BE"
     ID_GV = "ID.GV"
@@ -407,14 +369,16 @@ class NistCategory(str, enum.Enum):
     RC_IM = "RC.IM"
     RC_CO = "RC.CO"
 
-class RiskLevel(str,enum.Enum):
-    INFO = "Info"
-    LOW = "Low"
-    MEDIUM = "Medium"
-    HIGH = "High"
-    CRITICAL = "Critical"
-
-class RiskSeverity(str,enum.Enum):
+class RiskSeverity(StrEnum):
+    # Levels taken from the following documentation link
+    # https://docs.splunk.com/Documentation/ES/7.3.2/User/RiskScoring
+    # 20 - info (0-20 for us)
+    # 40 - low (21-40 for us)
+    # 60 - medium (41-60 for us)
+    # 80 - high (61-80 for us)
+    # 100 - critical (81 - 100 for us)
+    INFORMATIONAL = "informational"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+    CRITICAL = "critical"

@@ -1,33 +1,20 @@
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Annotated, Optional, List,Any
-from pydantic import field_validator, ValidationInfo, Field, model_serializer
-if TYPE_CHECKING:
-    from contentctl.input.director import DirectorOutputDto
-
+from typing import Annotated, List,Any
+from pydantic import field_validator, ValidationInfo, Field, model_serializer, computed_field
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import DataModel, AnalyticsType
+from contentctl.objects.enums import DataModel
 from contentctl.objects.baseline_tags import BaselineTags
-from contentctl.objects.enums import DeploymentType
-#from contentctl.objects.deployment import Deployment
 
-# from typing import TYPE_CHECKING
-# if TYPE_CHECKING:
-#     from contentctl.input.director import DirectorOutputDto
+from contentctl.objects.config import CustomApp
 
+
+from contentctl.objects.constants import CONTENTCTL_MAX_SEARCH_NAME_LENGTH,CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE
 
 class Baseline(SecurityContentObject):
-    # baseline spec
-    #name: str
-    #id: str
-    #version: int
-    #date: str
-    #author: str
-    #contentType: SecurityContentType = SecurityContentType.baselines
+    name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     type: Annotated[str,Field(pattern="^Baseline$")] = Field(...)
-    datamodel: Optional[List[DataModel]] = None
-    #description: str
     search: str = Field(..., min_length=4)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
@@ -35,11 +22,21 @@ class Baseline(SecurityContentObject):
 
     # enrichment
     deployment: Deployment = Field({})
+    
+
+    def get_conf_stanza_name(self, app:CustomApp)->str:
+        stanza_name = CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=self.name)
+        self.check_conf_stanza_max_length(stanza_name)
+        return stanza_name
 
     @field_validator("deployment", mode="before")
     def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
         return Deployment.getDeployment(v,info)
     
+    @computed_field
+    @property
+    def datamodel(self) -> List[DataModel]:
+        return [dm for dm in DataModel if dm in self.search]
 
     @model_serializer
     def serialize_model(self):

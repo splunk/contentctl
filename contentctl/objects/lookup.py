@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer, Field, NonNegativeInt, computed_field
+from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer, Field, NonNegativeInt, computed_field, TypeAdapter
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Optional, Any, Union, Literal, Annotated, Self
 import re
@@ -45,6 +45,7 @@ class Lookup(SecurityContentObject, abc.ABC):
     min_matches: None | NonNegativeInt = Field(default=None)
     max_matches: None | Annotated[NonNegativeInt, Field(ge=1, le=1000)] = Field(default=None)    
     case_sensitive_match: None | bool = Field(default=None)
+    
 
     
 
@@ -108,11 +109,10 @@ class Lookup(SecurityContentObject, abc.ABC):
 
 
 
-
-
-class CSVLookup(Lookup):
-    lookup_type: Literal[Lookup_Type.csv]
-    
+class FileBackedLookup(Lookup, abc.ABC):
+    # For purposes of the disciminated union, the child classes which
+    # inherit from this class must declare the typing of lookup_type
+    # themselves, hence it is not defined in the Lookup class
 
     @model_validator(mode="after")
     def ensure_lookup_file_exists(self)->Self:
@@ -124,9 +124,9 @@ class CSVLookup(Lookup):
     @cached_property
     def filename(self)->FilePath:
         if self.file_path is None:
-            raise ValueError("Cannot get the filename of the lookup CSV because the YML file_path attribute is None")
+            raise ValueError(f"Cannot get the filename of the lookup {self.lookup_type} because the YML file_path attribute is None") #type: ignore
         
-        csv_file = self.file_path.parent / f"{self.file_path.stem}.csv"
+        csv_file = self.file_path.parent / f"{self.file_path.stem}.{self.lookup_type}" #type: ignore
         return csv_file
     
     @computed_field
@@ -138,10 +138,11 @@ class CSVLookup(Lookup):
         2. Only apply the datetime stamp if it is version > 1.  This makes the code a small fraction
         more complicated, but preserves longstanding CSV that have not been modified in a long time
         '''
-        return pathlib.Path(f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.csv")
+        return pathlib.Path(f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}") #type: ignore
 
-
-
+class CSVLookup(FileBackedLookup):
+    lookup_type:Literal[Lookup_Type.csv]
+    
     @model_serializer
     def serialize_model(self):
         #Call parent serializer
@@ -158,13 +159,6 @@ class CSVLookup(Lookup):
     
     @model_validator(mode="after")
     def ensure_correct_csv_structure(self)->Self:
-        
-        
-        if self.filename.suffix != ".csv":
-            raise ValueError(f"All Lookup files must be CSV files and end in .csv.  The following file does not: '{self.filename}'")
-        
-    
-
         # https://docs.python.org/3/library/csv.html#csv.DictReader
         # Column Names (fieldnames) determine by the number of columns in the first row.
         # If a row has MORE fields than fieldnames, they will be dumped in a list under the key 'restkey' - this should throw an Exception
@@ -200,7 +194,7 @@ class CSVLookup(Lookup):
 
 class KVStoreLookup(Lookup):
     lookup_type: Literal[Lookup_Type.kvstore]
-    collection: str = Field(description="Name of the KVStore Collection. Note that collection MUST equal the name.")
+    collection: str = Field(description="Name of the KVStore Collection. Note that collection MUST equal the name. This is a duplicate field, so it will be removed eventually.")
     fields: list[str] = Field(description="The names of the fields/headings for the KVStore.", min_length=1)
 
 
@@ -225,9 +219,9 @@ class KVStoreLookup(Lookup):
         model.update(super_fields)
         return model
 
-class MlModel(Lookup):
+class MlModel(FileBackedLookup):
     lookup_type: Literal[Lookup_Type.mlmodel]
     
 
-
+LookupAdapter = TypeAdapter(Annotated[CSVLookup | KVStoreLookup | MlModel, Field(discriminator="lookup_type")])
 

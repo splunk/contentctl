@@ -85,26 +85,19 @@ class Lookup(SecurityContentObject, abc.ABC):
         
     @staticmethod
     def get_lookups(text_field: str, director:DirectorOutputDto, ignore_lookups:set[str]=LOOKUPS_TO_IGNORE)->list[Lookup]:
+        # Comprehensively match all kinds of lookups, including inputlookup and outputlookup
         inputLookupsToGet = set(re.findall(r'inputlookup(?:\s*(?:(?:append|strict|start|max)\s*=\s*(?:true|t|false|f))){0,4}\s+([^\s]+)', text_field))
         outputLookupsToGet = set(re.findall(r'outputlookup(?:\s*(?:(?:append|create_empty|override_if_empty|max|key_field|allow_updates|createinapp|create_context|output_format)\s*=\s*[^\s]*))*\s+([^\s]+)',text_field))
-        # Don't match inputlookup or outputlookup. Allow local=true or update=true or local=t or update=t 
-        lookups_to_get = set(re.findall(r'(?:(?<!output)(?<!input))lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t|false|f))){0,2}\s+([^\s]+)', text_field))
-        #lookups_to_get = set(re.findall(r'[^output]lookup (?:update=true)?(?:append=t)?\s*([^\s]*)', text_field))
-        #lookups_to_get = set(re.findall(r'(?!output)lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t))){0,2}\s+([^\s]+)', text_field))
-        
-        
-        
+        lookupsToGet = set(re.findall(r'(?:(?<!output)(?<!input))lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t|false|f))){0,2}\s+([^\s]+)', text_field))
+
         
         input_lookups = Lookup.mapNamesToSecurityContentObjects(list(inputLookupsToGet-LOOKUPS_TO_IGNORE), director)
         output_lookups = Lookup.mapNamesToSecurityContentObjects(list(outputLookupsToGet-LOOKUPS_TO_IGNORE), director)
-    
-        
-
-        my_lookups = Lookup.mapNamesToSecurityContentObjects(list(lookups_to_get-LOOKUPS_TO_IGNORE), director)
+        lookups = Lookup.mapNamesToSecurityContentObjects(list(lookupsToGet-LOOKUPS_TO_IGNORE), director)
 
 
             
-        return my_lookups
+        return lookups + input_lookups + output_lookups
 
 
 

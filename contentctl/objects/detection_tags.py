@@ -41,12 +41,6 @@ class DetectionTags(BaseModel):
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []
-    confidence: NonNegativeInt = Field(...,le=100)
-    impact: NonNegativeInt = Field(...,le=100)
-    @computed_field
-    @property
-    def risk_score(self) -> int:
-        return round((self.confidence * self.impact)/100)
     
     @computed_field
     @property
@@ -80,9 +74,6 @@ class DetectionTags(BaseModel):
 
     # enrichment
     mitre_attack_enrichments: List[MitreAttackEnrichment] = Field([], validate_default=True)
-    confidence_id: Optional[PositiveInt] = Field(None, ge=1, le=3)
-    impact_id: Optional[PositiveInt] = Field(None, ge=1, le=5)
-    evidence_str: Optional[str] = None
 
     @computed_field
     @property

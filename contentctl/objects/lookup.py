@@ -131,7 +131,10 @@ class FileBackedLookup(Lookup, abc.ABC):
         2. Only apply the datetime stamp if it is version > 1.  This makes the code a small fraction
         more complicated, but preserves longstanding CSV that have not been modified in a long time
         '''
-        return pathlib.Path(f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}") #type: ignore
+        if self.version > 1:
+            return pathlib.Path(f"{self.filename.stem}.{self.lookup_type}") #type: ignore
+        else: 
+            return pathlib.Path(f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}") #type: ignore
 
 class CSVLookup(FileBackedLookup):
     lookup_type:Literal[Lookup_Type.csv]
@@ -187,15 +190,14 @@ class CSVLookup(FileBackedLookup):
 
 class KVStoreLookup(Lookup):
     lookup_type: Literal[Lookup_Type.kvstore]
-    collection: str = Field(description="Name of the KVStore Collection. Note that collection MUST equal the name. This is a duplicate field, so it will be removed eventually.")
     fields: list[str] = Field(description="The names of the fields/headings for the KVStore.", min_length=1)
 
-
-    @model_validator(mode="after")
-    def validate_collection(self)->Self:
-        if self.collection != self.name:
-            raise ValueError("Collection MUST be the same as Name of the lookup, but they do not match")
-        return self
+    @field_validator("fields", mode='after')
+    @classmethod
+    def ensure_key(cls, values: list[str]):
+        if values[0] != "_key":
+            raise ValueError(f"fields MUST begin with '_key', not '{values[0]}'")
+        return values
 
     @model_serializer
     def serialize_model(self):

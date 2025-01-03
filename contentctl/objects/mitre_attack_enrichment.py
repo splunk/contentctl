@@ -84,6 +84,7 @@ class MitreAttackGroup(BaseModel):
         return contributors
 
 class MitreAttackEnrichment(BaseModel):
+
     ConfigDict(extra='forbid')
     mitre_attack_id: MITRE_ATTACK_ID_TYPE = Field(...)
     mitre_attack_technique: str = Field(...)

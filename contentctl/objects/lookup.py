@@ -86,9 +86,9 @@ class Lookup(SecurityContentObject, abc.ABC):
     @staticmethod
     def get_lookups(text_field: str, director:DirectorOutputDto, ignore_lookups:set[str]=LOOKUPS_TO_IGNORE)->list[Lookup]:
         # Comprehensively match all kinds of lookups, including inputlookup and outputlookup
-        inputLookupsToGet = set(re.findall(r'inputlookup(?:\s*(?:(?:append|strict|start|max)\s*=\s*(?:true|t|false|f))){0,4}\s+([^\s]+)', text_field))
-        outputLookupsToGet = set(re.findall(r'outputlookup(?:\s*(?:(?:append|create_empty|override_if_empty|max|key_field|allow_updates|createinapp|create_context|output_format)\s*=\s*[^\s]*))*\s+([^\s]+)',text_field))
-        lookupsToGet = set(re.findall(r'(?:(?<!output)(?<!input))lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t|false|f))){0,2}\s+([^\s]+)', text_field))
+        inputLookupsToGet = set(re.findall(r'inputlookup(?:\s*(?:(?:append|strict|start|max)\s*=\s*(?:true|t|false|f))){0,4}\s+([^\s\|]+)', text_field))
+        outputLookupsToGet = set(re.findall(r'outputlookup(?:\s*(?:(?:append|create_empty|override_if_empty|max|key_field|allow_updates|createinapp|create_context|output_format)\s*=\s*[^\s]*))*\s+([^\s\|]+)',text_field))
+        lookupsToGet = set(re.findall(r'(?:(?<!output)(?<!input))lookup(?:\s*(?:(?:local|update)\s*=\s*(?:true|t|false|f))){0,2}\s+([^\s\|]+)', text_field))
 
         
         input_lookups = Lookup.mapNamesToSecurityContentObjects(list(inputLookupsToGet-LOOKUPS_TO_IGNORE), director)
@@ -131,10 +131,7 @@ class FileBackedLookup(Lookup, abc.ABC):
         2. Only apply the datetime stamp if it is version > 1.  This makes the code a small fraction
         more complicated, but preserves longstanding CSV that have not been modified in a long time
         '''
-        if self.version > 1:
-            return pathlib.Path(f"{self.filename.stem}.{self.lookup_type}") #type: ignore
-        else: 
-            return pathlib.Path(f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}") #type: ignore
+        return pathlib.Path(f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}") #type: ignore
 
 class CSVLookup(FileBackedLookup):
     lookup_type:Literal[Lookup_Type.csv]

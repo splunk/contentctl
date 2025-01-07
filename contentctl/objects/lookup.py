@@ -143,7 +143,7 @@ class CSVLookup(FileBackedLookup):
 
         #All fields custom to this model
         model= {
-            "filename": self.filename.name
+            "filename": self.app_filename.name
         }
         
         #return the model

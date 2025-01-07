@@ -14,7 +14,7 @@ from contentctl.objects.lookup import Lookup
 import pathlib
 import json
 import datetime
-from typing import Union
+
 
 from contentctl.objects.config import build
 
@@ -44,13 +44,13 @@ class Build:
                                                                         name="data_sources"))
 
             updated_conf_files.update(conf_output.writeHeaders())
-            updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.detections, SecurityContentType.detections))
-            updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.stories, SecurityContentType.stories))
-            updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.baselines, SecurityContentType.baselines))
-            updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.investigations, SecurityContentType.investigations))
-            updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.lookups, SecurityContentType.lookups))
-            updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.macros, SecurityContentType.macros))
-            updated_conf_files.update(conf_output.writeObjects(input_dto.director_output_dto.dashboards, SecurityContentType.dashboards))
+            updated_conf_files.update(conf_output.writeDetections(input_dto.director_output_dto.detections))
+            updated_conf_files.update(conf_output.writeStories(input_dto.director_output_dto.stories))
+            updated_conf_files.update(conf_output.writeBaselines(input_dto.director_output_dto.baselines))
+            updated_conf_files.update(conf_output.writeInvestigations(input_dto.director_output_dto.investigations))
+            updated_conf_files.update(conf_output.writeLookups(input_dto.director_output_dto.lookups))
+            updated_conf_files.update(conf_output.writeMacros(input_dto.director_output_dto.macros))
+            updated_conf_files.update(conf_output.writeDashboards(input_dto.director_output_dto.dashboards))
             updated_conf_files.update(conf_output.writeMiscellaneousAppFiles())
             
 
@@ -67,17 +67,15 @@ class Build:
         if input_dto.config.build_api:    
             shutil.rmtree(input_dto.config.getAPIPath(), ignore_errors=True)
             input_dto.config.getAPIPath().mkdir(parents=True)
-            api_json_output = ApiJsonOutput()
-            for output_objects, output_type in [(input_dto.director_output_dto.detections, SecurityContentType.detections),
-                                                (input_dto.director_output_dto.stories, SecurityContentType.stories),
-                                                (input_dto.director_output_dto.baselines, SecurityContentType.baselines),
-                                                (input_dto.director_output_dto.investigations, SecurityContentType.investigations),
-                                                (input_dto.director_output_dto.lookups, SecurityContentType.lookups),
-                                                (input_dto.director_output_dto.macros, SecurityContentType.macros),
-                                                (input_dto.director_output_dto.deployments, SecurityContentType.deployments)]:
-                api_json_output.writeObjects(output_objects, input_dto.config.getAPIPath(), input_dto.config.app.label, output_type )
-            
-           
+            api_json_output = ApiJsonOutput(input_dto.config.getAPIPath(), input_dto.config.app.label)
+            api_json_output.writeDetections(input_dto.director_output_dto.detections)
+            api_json_output.writeStories(input_dto.director_output_dto.stories)
+            api_json_output.writeBaselines(input_dto.director_output_dto.baselines)
+            api_json_output.writeInvestigations(input_dto.director_output_dto.investigations)
+            api_json_output.writeLookups(input_dto.director_output_dto.lookups)
+            api_json_output.writeMacros(input_dto.director_output_dto.macros)
+            api_json_output.writeDeployments(input_dto.director_output_dto.deployments)
+
             
             #create version file for sse api
             version_file = input_dto.config.getAPIPath()/"version.json"

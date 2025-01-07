@@ -1,3 +1,15 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Callable
+if TYPE_CHECKING:
+    from contentctl.objects.security_content_object import SecurityContentObject
+    from contentctl.objects.detection import Detection
+    from contentctl.objects.lookup import Lookup, FileBackedLookup
+    from contentctl.objects.macro import Macro
+    from contentctl.objects.dashboard import Dashboard
+    from contentctl.objects.story import Story
+    from contentctl.objects.baseline import Baseline
+    from contentctl.objects.investigation import Investigation
+
 from dataclasses import dataclass
 import os
 import glob
@@ -80,25 +92,33 @@ class ConfOutput:
         return written_files
 
         
-    def writeObjects(self, objects: list, type: SecurityContentType = None) -> set[pathlib.Path]:
+    def writeDetections(self, objects:list[Detection]) -> set[pathlib.Path]:
         written_files:set[pathlib.Path] = set()
-        if type == SecurityContentType.detections:
-            for output_app_path, template_name in [ ('default/savedsearches.conf', 'savedsearches_detections.j2'),
-                                                    ('default/analyticstories.conf', 'analyticstories_detections.j2')]:
-                written_files.add(ConfWriter.writeConfFile(pathlib.Path(output_app_path),
-                                                           template_name, self.config, objects))
-        
-        elif type == SecurityContentType.stories:
+        for output_app_path, template_name in [ ('default/savedsearches.conf', 'savedsearches_detections.j2'),
+                                                ('default/analyticstories.conf', 'analyticstories_detections.j2')]:
+            written_files.add(ConfWriter.writeConfFile(pathlib.Path(output_app_path),
+                                                        template_name, self.config, objects))
+        return written_files
+
+
+    def writeStories(self, objects:list[Story]) -> set[pathlib.Path]:
+            written_files:set[pathlib.Path] = set()
             written_files.add(ConfWriter.writeConfFile(pathlib.Path('default/analyticstories.conf'), 
                                     'analyticstories_stories.j2',
                                     self.config, objects))
+            return written_files
+    
 
-        elif type == SecurityContentType.baselines:
+    def writeBaselines(self, objects:list[Baseline]) -> set[pathlib.Path]:
+            written_files:set[pathlib.Path] = set()
             written_files.add(ConfWriter.writeConfFile(pathlib.Path('default/savedsearches.conf'),
                                                       'savedsearches_baselines.j2', 
                                                        self.config, objects))
+            return written_files
+    
 
-        elif type == SecurityContentType.investigations:
+    def writeInvestigations(self, objects:list[Investigation]) -> set[pathlib.Path]:
+            written_files:set[pathlib.Path] = set()
             for output_app_path, template_name in [ ('default/savedsearches.conf', 'savedsearches_investigations.j2'),
                                                     ('default/analyticstories.conf', 'analyticstories_investigations.j2')]:
                 ConfWriter.writeConfFile(pathlib.Path(output_app_path),
@@ -106,7 +126,7 @@ class ConfOutput:
                                          self.config,
                                          objects)
                 
-            workbench_panels = []
+            workbench_panels:list[Investigation] = []
             for investigation in objects:
                 if investigation.inputs:
                     response_file_name_xml = investigation.lowercase_name + "___response_task.xml"
@@ -128,8 +148,11 @@ class ConfOutput:
                                                          template_name,
                                                         self.config,
                                                         workbench_panels))
+            return written_files
+    
 
-        elif type == SecurityContentType.lookups:
+    def writeLookups(self, objects:list[Lookup]) -> set[pathlib.Path]:
+            written_files:set[pathlib.Path] = set()
             for output_app_path, template_name in [ ('default/collections.conf', 'collections.j2'),
                                                     ('default/transforms.conf', 'transforms.j2')]:
                 written_files.add(ConfWriter.writeConfFile(pathlib.Path(output_app_path),
@@ -137,9 +160,7 @@ class ConfOutput:
                                             self.config,
                                             objects))
             
-        
-            #we want to copy all *.mlmodel files as well, not just csvs
-            files = list(glob.iglob(str(self.config.path/ 'lookups/*.csv'))) + list(glob.iglob(str(self.config.path / 'lookups/*.mlmodel')))
+            #Get the path to the lookups folder
             lookup_folder = self.config.getPackageDirectoryPath()/"lookups"
             
             # Make the new folder for the lookups 
@@ -147,26 +168,24 @@ class ConfOutput:
             lookup_folder.mkdir(exist_ok=True)
 
             #Copy each lookup into the folder
-            for lookup_name in files:
-                lookup_path = pathlib.Path(lookup_name)
-                if lookup_path.is_file():
-                    shutil.copy(lookup_path, lookup_folder/lookup_path.name)
-                else:
-                    raise(Exception(f"Error copying lookup/mlmodel file.  Path {lookup_path} does not exist or is not a file."))
+            for lookup in objects:
+                if isinstance(lookup, FileBackedLookup):
+                    shutil.copy(lookup.filename, lookup_folder/lookup.app_filename.name)
+            return written_files
+    
 
-        elif type == SecurityContentType.macros:
+    def writeMacros(self, objects:list[Macro]) -> set[pathlib.Path]:
+            written_files:set[pathlib.Path] = set()
             written_files.add(ConfWriter.writeConfFile(pathlib.Path('default/macros.conf'),
                                     'macros.j2',
                                     self.config, objects))
-        
-        elif type == SecurityContentType.dashboards:
+            return written_files
+    
+
+    def writeDashboards(self, objects:list[Dashboard]) -> set[pathlib.Path]:
+            written_files:set[pathlib.Path] = set()
             written_files.update(ConfWriter.writeDashboardFiles(self.config, objects))
-
-
-        return written_files
-            
-
-
+            return written_files
 
     
     def packageAppTar(self) -> None:
@@ -202,7 +221,7 @@ class ConfOutput:
             
         
         
-    def packageApp(self, method=packageAppTar)->None:
+    def packageApp(self, method: Callable[[ConfOutput],None]=packageAppTar)->None:
         return method(self)
 
         

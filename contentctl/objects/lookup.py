@@ -59,7 +59,7 @@ class Lookup(SecurityContentObject, abc.ABC):
         model= {
             
             "default_match": "true" if self.default_match is True else "false",
-            "match_type": self.match_type,
+            "match_type": self.match_type_to_conf_format,
             "min_matches": self.min_matches,
             "max_matches": self.max_matches,
             "case_sensitive_match": "true" if self.case_sensitive_match is True else "false",

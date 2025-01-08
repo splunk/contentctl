@@ -2,9 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
-    from contentctl.objects.lookup import Lookup, FileBackedLookup
+    from contentctl.objects.lookup import Lookup
     from contentctl.objects.macro import Macro
-    from contentctl.objects.dashboard import Dashboard
     from contentctl.objects.story import Story
     from contentctl.objects.baseline import Baseline
     from contentctl.objects.investigation import Investigation
@@ -215,7 +214,7 @@ class ApiJsonOutput:
                         "name",
                         "description",
                         "collection",
-                        "fields_to_fields_list_conf_format",
+                        "fields_list",
                         "filename",
                         "default_match",
                         "match_type",

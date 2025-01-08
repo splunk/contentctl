@@ -3,7 +3,7 @@ from typing import Any
 class JsonWriter():
 
     @staticmethod
-    def writeJsonObject(file_path : str, object_name: str, objs: list[dict[str,Any]],readable_output:bool=False) -> None:
+    def writeJsonObject(file_path : str, object_name: str, objs: list[dict[str,Any]],readable_output:bool=True) -> None:
         try:
             with open(file_path, 'w') as outfile:
                 if readable_output:

@@ -80,7 +80,10 @@ class Lookup(SecurityContentObject, abc.ABC):
         return data
 
 
-    
+    @computed_field
+    @cached_property
+    def match_type_to_conf_format(self)->str:
+        return ', '.join(self.match_type)
     
         
     @staticmethod
@@ -196,6 +199,16 @@ class KVStoreLookup(Lookup):
             raise ValueError(f"fields MUST begin with '_key', not '{values[0]}'")
         return values
 
+    @computed_field
+    @cached_property
+    def collection(self)->str:
+        return self.name
+
+    @computed_field
+    @cached_property
+    def fields_to_fields_list_conf_format(self)->str:
+        return ', '.join(self.fields)
+
     @model_serializer
     def serialize_model(self):
         #Call parent serializer
@@ -204,7 +217,7 @@ class KVStoreLookup(Lookup):
         #All fields custom to this model
         model= {
             "collection": self.collection,
-            "fields_list": ", ".join(self.fields)
+            "fields_list": self.fields_to_fields_list_conf_format
         }
         
         #return the model

@@ -215,7 +215,7 @@ class ApiJsonOutput:
                         "name",
                         "description",
                         "collection",
-                        "fields_list",
+                        "fields_to_fields_list_conf_format",
                         "filename",
                         "default_match",
                         "match_type",

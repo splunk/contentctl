@@ -27,7 +27,6 @@ from contentctl.objects.enums import (
     Cis18Value,
     AssetType,
     SecurityDomain,
-    RiskSeverity,
     KillChainPhase,
     NistCategory,
     SecurityContentProductName
@@ -43,23 +42,6 @@ class DetectionTags(BaseModel):
     asset_type: AssetType = Field(...)
     group: list[str] = []
     
-    @computed_field
-    @property
-    def severity(self)->RiskSeverity:
-        if 0 <= self.risk_score <= 20:
-            return RiskSeverity.INFORMATIONAL
-        elif 20 < self.risk_score <= 40:
-            return RiskSeverity.LOW
-        elif 40 < self.risk_score <= 60:
-            return RiskSeverity.MEDIUM
-        elif 60 < self.risk_score <= 80:
-            return RiskSeverity.HIGH
-        elif 80 < self.risk_score <= 100:
-            return RiskSeverity.CRITICAL
-        else:
-            raise Exception(f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}")
-
-
     mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
 
@@ -144,9 +126,7 @@ class DetectionTags(BaseModel):
             "cis20": self.cis20,
             "kill_chain_phases": self.kill_chain_phases,
             "nist": self.nist,
-            "risk_score": self.risk_score,
             "security_domain": self.security_domain,
-            "risk_severity": self.severity,
             "mitre_attack_id": self.mitre_attack_id,
             "mitre_attack_enrichments": self.mitre_attack_enrichments
         }

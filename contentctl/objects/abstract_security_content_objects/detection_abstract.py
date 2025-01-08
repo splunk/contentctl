@@ -16,7 +16,7 @@ from pydantic import (
 )
 
 from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import Lookup
+from contentctl.objects.lookup import Lookup, FileBackedLookup, KVStoreLookup
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.baseline import Baseline
@@ -285,10 +285,8 @@ class Detection_Abstract(SecurityContentObject):
 
         annotations_dict: dict[str, str | list[str] | int] = {}
         annotations_dict["analytic_story"] = [story.name for story in self.tags.analytic_story]
-        annotations_dict["confidence"] = self.tags.confidence
         if len(self.tags.cve or []) > 0:
             annotations_dict["cve"] = self.tags.cve
-        annotations_dict["impact"] = self.tags.impact
         annotations_dict["type"] = self.type
         annotations_dict["type_list"] = [self.type]
         # annotations_dict["version"] = self.version
@@ -480,6 +478,11 @@ class Detection_Abstract(SecurityContentObject):
             "source": self.source,
             "nes_fields": self.nes_fields,
         }
+        if self.rba is not None:
+            model["risk_severity"] = self.rba.severity
+            model['tags']['risk_score'] = self.rba.risk_score
+        else:
+            model['tags']['risk_score'] = 0
 
         # Only a subset of macro fields are required:
         all_macros: list[dict[str, str | list[str]]] = []
@@ -497,17 +500,17 @@ class Detection_Abstract(SecurityContentObject):
 
         all_lookups: list[dict[str, str | int | None]] = []
         for lookup in self.lookups:
-            if lookup.collection is not None:
+            if isinstance(lookup, KVStoreLookup):
                 all_lookups.append(
                     {
                         "name": lookup.name,
                         "description": lookup.description,
                         "collection": lookup.collection,
                         "case_sensitive_match": None,
-                        "fields_list": lookup.fields_list
+                        "fields_list": lookup.fields_to_fields_list_conf_format
                     }
                 )
-            elif lookup.filename is not None:
+            elif isinstance(lookup, FileBackedLookup):
                 all_lookups.append(
                     {
                         "name": lookup.name,
@@ -515,9 +518,8 @@ class Detection_Abstract(SecurityContentObject):
                         "filename": lookup.filename.name,
                         "default_match": "true" if lookup.default_match else "false",
                         "case_sensitive_match": "true" if lookup.case_sensitive_match else "false",
-                        "match_type": lookup.match_type,
-                        "min_matches": lookup.min_matches,
-                        "fields_list": lookup.fields_list
+                        "match_type": lookup.match_type_to_conf_format,
+                        "min_matches": lookup.min_matches
                     }
                 )
         model['lookups'] = all_lookups                                                              # type: ignore
@@ -790,7 +792,7 @@ class Detection_Abstract(SecurityContentObject):
         """
 
         
-        if self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None:
+        if self.deployment.alert_action.rba is None or self.deployment.alert_action.rba.enabled is False:
             # confirm we don't have an RBA config
             if self.rba is None:
                 return self

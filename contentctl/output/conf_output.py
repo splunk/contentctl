@@ -1,34 +1,22 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 if TYPE_CHECKING:
-    from contentctl.objects.security_content_object import SecurityContentObject
     from contentctl.objects.detection import Detection
-    from contentctl.objects.lookup import Lookup, FileBackedLookup
+    from contentctl.objects.lookup import Lookup
     from contentctl.objects.macro import Macro
     from contentctl.objects.dashboard import Dashboard
     from contentctl.objects.story import Story
     from contentctl.objects.baseline import Baseline
     from contentctl.objects.investigation import Investigation
 
-from dataclasses import dataclass
-import os
-import glob
+from contentctl.objects.lookup import FileBackedLookup
 import shutil
-import sys
 import tarfile
-from typing import Union
-from pathlib import Path
 import pathlib
-import time
 import timeit
 import datetime
-import shutil
-import json
 from contentctl.output.conf_writer import ConfWriter
-from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.config import build
-from requests import Session, post, get
-from requests.auth import HTTPBasicAuth
 
 class ConfOutput:
     config: build    

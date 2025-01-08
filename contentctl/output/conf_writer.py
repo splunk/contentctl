@@ -276,7 +276,13 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         
         template = j2_env.get_template(template_name)
-        output = template.render(objects=objects, app=config.app)
+        try:
+            for obj in objects:
+                output = template.render(objects=[obj], app=config.app)
+        except Exception as e:
+            print(e)
+            import code
+            code.interact(local=locals())
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'a') as f:

@@ -58,13 +58,12 @@ class DirectorOutputDto:
                 f" - {content.file_path}\n"
                 f" - {self.name_to_content_map[content_name].file_path}"
             )
-        
+    
         if content.id in self.uuid_to_content_map:
             raise ValueError(
                 f"Duplicate id '{content.id}' with paths:\n"
                 f" - {content.file_path}\n"
-                f" - {self.uuid_to_content_map[content.id].file_path}"
-            )
+                f" - {self.uuid_to_content_map[content.id].file_path}")
 
         if isinstance(content, Lookup):
             self.lookups.append(content)

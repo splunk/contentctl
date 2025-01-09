@@ -276,17 +276,20 @@ class ConfWriter():
         j2_env = ConfWriter.getJ2Environment()
         
         template = j2_env.get_template(template_name)
-        try:
-            for obj in objects:
-                output = template.render(objects=[obj], app=config.app)
-        except Exception as e:
-            print(e)
-            import code
-            code.interact(local=locals())
+        outputs: list[str] = []
+        for obj in objects:
+            try:
+                outputs.append(template.render(objects=[obj], app=config.app))
+            except Exception as e:
+                raise Exception(f"Failed writing the following object to file:\n"
+                                f"Name:{obj.name if not isinstance(obj, CustomApp) else obj.title}\n"
+                                f"Type {type(obj)}: \n"
+                                f"Output File: {app_output_path}\n"
+                                f"Error: {str(e)}\n")
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'a') as f:
-            output = output.encode('utf-8', 'ignore').decode('utf-8')
+            output = ''.join(outputs).encode('utf-8', 'ignore').decode('utf-8')
             f.write(output)
         return output_path
         

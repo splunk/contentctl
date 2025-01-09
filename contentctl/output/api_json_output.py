@@ -10,14 +10,9 @@ if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment
 
 import os
-import json
 import pathlib
 
 from contentctl.output.json_writer import JsonWriter
-from contentctl.objects.enums import SecurityContentType
-from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
-    SecurityContentObject_Abstract,
-)
 
 
 

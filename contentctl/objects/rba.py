@@ -86,5 +86,5 @@ class rba_object(BaseModel, ABC):
         elif 80 < self.risk_score <= 100:
             return RiskSeverity.CRITICAL
         else:
-            raise Exception(f"Error getting severity - risk_score must be between 0-100, but was actually {max_score}")
+            raise Exception(f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}")
 

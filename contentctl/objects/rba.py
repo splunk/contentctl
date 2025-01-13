@@ -35,6 +35,7 @@ class ThreatObjectType(str, Enum):
     REGISTRY_VALUE_NAME = "registry_value_name"
     REGISTRY_VALUE_TEXT = "registry_value_text"
     SERVICE = "service"
+    SIGNATURE = "signature"
     SYSTEM = "system"
     TLS_HASH = "tls_hash"
     URL = "url"

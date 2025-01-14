@@ -11,6 +11,9 @@ from contentctl.output.conf_writer import ConfWriter
 from contentctl.output.api_json_output import ApiJsonOutput
 from contentctl.output.data_source_writer import DataSourceWriter
 from contentctl.objects.lookup import CSVLookup, Lookup_Type
+from contentctl.objects.detection import Detection
+from contentctl.objects.detection_tags import DetectionTags
+from contentctl.objects.enums import DetectionStatus, AnalyticsType, AssetType, SecurityDomain, SecurityContentProductName  
 import pathlib
 import json
 import datetime
@@ -26,36 +29,80 @@ class BuildInputDto:
 
 class Build:
 
-
-
     def execute(self, input_dto: BuildInputDto) -> DirectorOutputDto:
         if input_dto.config.build_app:
 
             updated_conf_files:set[pathlib.Path] = set()
             conf_output = ConfOutput(input_dto.config)
 
-
             # Construct a path to a YML that does not actually exist.
             # We mock this "fake" path since the YML does not exist.
             # This ensures the checking for the existence of the CSV is correct
             data_sources_fake_yml_path = input_dto.config.getPackageDirectoryPath() / "lookups" / "data_sources.yml"
+            deprecation_lookup_fake_yml_path = input_dto.config.getPackageDirectoryPath() / "lookups" / "deprecated_content.yml"
+            deprecation_search_fake_yml_path = input_dto.config.getPackageDirectoryPath() / "lookups" / "identify_deprecated_content.yml"
 
             # Construct a special lookup whose CSV is created at runtime and
-            # written directly into the lookups folder. We will delete this after a build, 
+            # written directly into the lookups folder. We will delete this after a build,
             # assuming that it is successful.
             data_sources_lookup_csv_path = input_dto.config.getPackageDirectoryPath() / "lookups" / "data_sources.csv"
+            deprecation_lookup_csv_path = input_dto.config.getPackageDirectoryPath() / "lookups" / "deprecated_content.csv"
 
-
-            
             DataSourceWriter.writeDataSourceCsv(input_dto.director_output_dto.data_sources, data_sources_lookup_csv_path)
+            DataSourceWriter.writeDeprecationCsv(input_dto.director_output_dto, input_dto.config.app, deprecation_lookup_csv_path)
+            deprecation_search_fake_yml_path.open("w").close()
             input_dto.director_output_dto.addContentToDictMappings(CSVLookup.model_construct(name="data_sources",
                                                                             id=uuid.UUID("b45c1403-6e09-47b0-824f-cf6e44f15ac8"),
                                                                             version=1,
                                                                             author=input_dto.config.app.author_name,
                                                                             date = datetime.date.today(), 
-                                                                            description= "A lookup file that will contain the data source objects for detections.",
+                                                                            description= "A lookup file that contains the data source objects for detections.",
                                                                             lookup_type=Lookup_Type.csv,
                                                                             file_path=data_sources_fake_yml_path))
+
+            input_dto.director_output_dto.addContentToDictMappings(CSVLookup.model_construct(name="deprecated_content",
+                                                                            id=uuid.UUID("20901a0b-35b6-420a-a781-ea9a2e968103"),
+                                                                            version=1,
+                                                                            author=input_dto.config.app.author_name,
+                                                                            date = datetime.date.today(), 
+                                                                            description= "A lookup file that contains information about content that has been, or will be, deprecated, along with instructions for migrating to supported content (if available).",
+                                                                            lookup_type=Lookup_Type.csv,
+                                                                            file_path=deprecation_lookup_fake_yml_path))
+
+            tags_dict = {
+                "analytic_story": ["3CX Supply Chain Attack"],
+                "asset_type": AssetType.SPLUNK_SERVER,
+                "product": [
+                    SecurityContentProductName.SPLUNK_ENTERPRISE,
+                    SecurityContentProductName.SPLUNK_ENTERPRISE_SECURITY,
+                    SecurityContentProductName.SPLUNK_CLOUD,
+                ],
+                "security_domain": SecurityDomain.AUDIT,
+                "manual_test": "This search is dynamically constructed at runtime, so we will not test it."
+            }
+
+            detection_dict = {
+                "name": "Identify Deprecated Content",
+                "id": uuid.UUID("9759df98-18bf-4ada-b917-2b604cf7d5cc"),
+                "version": 1,
+                "author": input_dto.config.app.author_name,
+                "date": datetime.date.today(),
+                "description": "A search to help identify deprecated content and, if applicable, migrate to appropriate replacments.",
+                "file_path": deprecation_search_fake_yml_path,
+                "type": AnalyticsType.Hunting,
+                "status": DetectionStatus.production,
+                "how_to_implement": "just run it",
+                "known_false_positives": "None yet",
+                "tags": DetectionTags.model_validate(
+                    tags_dict, 
+                    context={"output_dto": input_dto.director_output_dto}
+                ),
+                "search": "| rest /services/saved/searches | where is_scheduled=1 | `identify_deprecated_content_filter`",
+            }
+
+            input_dto.director_output_dto.addContentToDictMappings(Detection.model_validate(detection_dict,
+                                                                                            context={"output_dto":input_dto.director_output_dto}))
+
             updated_conf_files.update(conf_output.writeHeaders())
             updated_conf_files.update(conf_output.writeLookups(input_dto.director_output_dto.lookups))
             updated_conf_files.update(conf_output.writeDetections(input_dto.director_output_dto.detections))
@@ -65,18 +112,14 @@ class Build:
             updated_conf_files.update(conf_output.writeMacros(input_dto.director_output_dto.macros))
             updated_conf_files.update(conf_output.writeDashboards(input_dto.director_output_dto.dashboards))
             updated_conf_files.update(conf_output.writeMiscellaneousAppFiles())
-            
 
-            
-            
-            #Ensure that the conf file we just generated/update is syntactically valid
+            # Ensure that the conf file we just generated/update is syntactically valid
             for conf_file in updated_conf_files:
                 ConfWriter.validateConfFile(conf_file) 
-                
+
             conf_output.packageApp()
 
             print(f"Build of '{input_dto.config.app.title}' APP successful to {input_dto.config.getPackageFilePath()}")
-        
 
         if input_dto.config.build_api:    
             shutil.rmtree(input_dto.config.getAPIPath(), ignore_errors=True)
@@ -90,14 +133,13 @@ class Build:
             api_json_output.writeMacros(input_dto.director_output_dto.macros)
             api_json_output.writeDeployments(input_dto.director_output_dto.deployments)
 
-            
-            #create version file for sse api
+            # create version file for sse api
             version_file = input_dto.config.getAPIPath()/"version.json"
             utc_time = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0,tzinfo=None).isoformat()
             version_dict = {"version":{"name":f"v{input_dto.config.app.version}","published_at": f"{utc_time}Z"  }}
             with open(version_file,"w") as version_f:
                 json.dump(version_dict,version_f)
-            
+
             print(f"Build of '{input_dto.config.app.title}' API successful to {input_dto.config.getAPIPath()}")
 
         return input_dto.director_output_dto

@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING, List, Optional, Union
 from pydantic import (
     BaseModel,
     Field,
-    NonNegativeInt,
-    PositiveInt,
     computed_field,
     UUID4,
     HttpUrl,
@@ -34,6 +32,7 @@ from contentctl.objects.enums import (
 from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
+
 class DetectionTags(BaseModel):
     # detection spec
 
@@ -41,7 +40,7 @@ class DetectionTags(BaseModel):
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []
-    
+
     mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
 
@@ -84,7 +83,7 @@ class DetectionTags(BaseModel):
 
     # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
-    
+
     # The following validator is temporarily disabled pending further discussions
     # @validator('message')
     # def validate_message(cls,v,values):
@@ -117,7 +116,6 @@ class DetectionTags(BaseModel):
     #         )
     #     return v
 
-    # TODO (cmcginley): @ljstella removing risk_score and severity from serialization?
     @model_serializer
     def serialize_model(self):
         # Since this field has no parent, there is no need to call super() serialization function

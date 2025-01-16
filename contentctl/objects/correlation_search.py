@@ -31,8 +31,9 @@ from contentctl.objects.risk_event import RiskEvent
 from contentctl.objects.notable_event import NotableEvent
 
 
+# TODO (cmcginley): disable logging
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
@@ -652,15 +653,8 @@ class CorrelationSearch(BaseModel):
                 f"Unexpected error: Detection '{self.detection.name}' has no RBA objects associated"
                 " with it; cannot validate."
             )
-        risk_object_counts: dict[str, int] = {str(x): 0 for x in self.detection.rba.risk_objects}
 
-        # NOTE: we intentionally want this to be an error state and not a failure state, as
-        #   ultimately this validation should be handled during the build process
-        if len(self.detection.rba.risk_objects) != len(risk_object_counts):
-            raise ClientError(
-                f"At least two risk objects in '{self.detection.name}' have the same name; "
-                "each risk object for a detection should be unique."
-            )
+        risk_object_counts: dict[int, int] = {id(x): 0 for x in self.detection.rba.risk_objects}
 
         # Get the risk events; note that we use the cached risk events, expecting they were
         # saved by a prior call to risk_event_exists
@@ -681,20 +675,20 @@ class CorrelationSearch(BaseModel):
             self.logger.debug(
                 f"Matched risk event (object={event.risk_object}, type={event.risk_object_type}) "
                 f"to detection's risk object (name={matched_risk_object.field}, "
-                f"type={matched_risk_object.type.value} using the source field "
+                f"type={matched_risk_object.type.value}) using the source field "
                 f"'{event.source_field_name}'"
             )
-            risk_object_counts[str(matched_risk_object)] += 1
+            risk_object_counts[id(matched_risk_object)] += 1
 
         # Report any risk objects which did not have at least one match to a risk event
         for risk_object in self.detection.rba.risk_objects:
             self.logger.debug(
                 f"Matched risk object (name={risk_object.field}, type={risk_object.type.value} "
-                f"to {risk_object_counts[str(risk_object)]} risk events."
+                f"to {risk_object_counts[id(risk_object)]} risk events."
             )
-            if risk_object_counts[str(risk_object)] == 0:
+            if risk_object_counts[id(risk_object)] == 0:
                 raise ValidationFailed(
-                    f"Risk object (name={risk_object.field}, type={risk_object.type.value} "
+                    f"Risk object (name={risk_object.field}, type={risk_object.type.value}) "
                     "was not matched to any risk events."
                 )
 
@@ -703,26 +697,26 @@ class CorrelationSearch(BaseModel):
         # relevant risk object, and the total count should match the total number of events
         # individual_count: int | None = None
         # total_count = 0
-        # for risk_object_str in risk_object_counts:
+        # for risk_object_id in risk_object_counts:
         #     self.logger.debug(
-        #         f"Risk object <{risk_object_str}> match count: {risk_object_counts[risk_object_str]}"
+        #         f"Risk object <{risk_object_id}> match count: {risk_object_counts[risk_object_id]}"
         #     )
 
         #     # Grab the first value encountered if not set yet
         #     if individual_count is None:
-        #         individual_count = risk_object_counts[risk_object_str]
+        #         individual_count = risk_object_counts[risk_object_id]
         #     else:
         #         # Confirm that the count for the current risk object matches the count of the
         #         # others
-        #         if risk_object_counts[risk_object_str] != individual_count:
+        #         if risk_object_counts[risk_object_id] != individual_count:
         #             raise ValidationFailed(
-        #                 f"Count of risk events matching detection's risk object <\"{risk_object_str}\"> "
-        #                 f"({risk_object_counts[risk_object_str]}) does not match the count of those "
+        #                 f"Count of risk events matching detection's risk object <\"{risk_object_id}\"> "
+        #                 f"({risk_object_counts[risk_object_id]}) does not match the count of those "
         #                 f"matching other risk objects ({individual_count})."
         #             )
 
         #     # Aggregate total count of events matched to risk objects
-        #     total_count += risk_object_counts[risk_object_str]
+        #     total_count += risk_object_counts[risk_object_id]
 
         # # Raise if the the number of events doesn't match the number of those matched to risk
         # # objects

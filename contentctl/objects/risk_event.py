@@ -137,7 +137,7 @@ class RiskEvent(BaseModel):
         if sorted(self.analyticstories) != sorted(detection_analytic_story):
             raise ValidationFailed(
                 f"Analytic stories in risk event ({self.analyticstories}) do not match those"
-                f" in detection ({detection.tags.analytic_story})."
+                f" in detection ({[x.name for x in detection.tags.analytic_story]})."
             )
 
     # TODO (cmcginley): all of this type checking is a good use case (potentially) for subtyping
@@ -160,6 +160,9 @@ class RiskEvent(BaseModel):
         field_replacement_pattern = re.compile(r"\$\S+\$")
         tokens = field_replacement_pattern.findall(detection.rba.message)
 
+        # TODO (cmcginley): could expand this to get the field values from the raw events and check
+        #   to see that allexpected strings ARE in the risk message (as opposed to checking only
+        #   that unexpected strings aren't)
         # Check for the presence of each token in the message from the risk event
         for token in tokens:
             if token in self.risk_message:
@@ -249,10 +252,12 @@ class RiskEvent(BaseModel):
 
             # Try to match the risk_object against a specific risk object
             if self.source_field_name == risk_object.field:
+                # TODO (cmcginley): this should be enforced as part of build validation
                 if matched_risk_object is not None:
                     raise ValueError(
-                        "Unexpected conditon: we don't expect the source event field "
-                        "corresponding to an risk object's field name to be repeated."
+                        "Unexpected conditon: we don't expect multiple risk objects to use the "
+                        "same field name, so we should not be able match the risk event to "
+                        "multiple risk objects."
                     )
 
                 # TODO (cmcginley): risk objects and threat objects are now in separate sets,

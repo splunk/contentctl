@@ -4,7 +4,7 @@ from functools import cached_property
 from pydantic import ConfigDict, BaseModel, Field, PrivateAttr, field_validator, computed_field
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
-from contentctl.objects.rba import risk_object as RiskObject
+from contentctl.objects.rba import RiskObject
 
 
 class RiskEvent(BaseModel):

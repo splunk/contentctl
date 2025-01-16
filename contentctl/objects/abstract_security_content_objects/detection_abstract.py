@@ -36,7 +36,7 @@ from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.data_source import DataSource
 
-from contentctl.objects.rba import rba_object
+from contentctl.objects.rba import RBAObject
 
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.drilldown import Drilldown, DRILLDOWN_SEARCH_PLACEHOLDER
@@ -68,7 +68,7 @@ class Detection_Abstract(SecurityContentObject):
     search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
-    rba: Optional[rba_object] = Field(default=None)
+    rba: Optional[RBAObject] = Field(default=None)
     explanation: None | str = Field(
         default=None,
         exclude=True, #Don't serialize this value when dumping the object

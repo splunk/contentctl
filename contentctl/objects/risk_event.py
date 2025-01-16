@@ -4,50 +4,10 @@ from functools import cached_property
 from pydantic import ConfigDict, BaseModel, Field, PrivateAttr, field_validator, computed_field
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
-from contentctl.objects.observable import Observable
-
-# TODO (#259): Map our observable types to more than user/system
-# TODO (#247): centralize this mapping w/ usage of SES_OBSERVABLE_TYPE_MAPPING (see
-#   observable.py) and the ad hoc mapping made in detection_abstract.py (see the risk property func)
-TYPE_MAP: dict[str, list[str]] = {
-    "system": [
-        "Hostname",
-        "IP Address",
-        "Endpoint"
-    ],
-    "user": [
-        "User",
-        "User Name",
-        "Email Address",
-        "Email"
-    ],
-    "hash_values": [],
-    "network_artifacts": [],
-    "host_artifacts": [],
-    "tools": [],
-    "other": [
-        "Process",
-        "URL String",
-        "Unknown",
-        "Process Name",
-        "MAC Address",
-        "File Name",
-        "File Hash",
-        "Resource UID",
-        "Uniform Resource Locator",
-        "File",
-        "Geo Location",
-        "Container",
-        "Registry Key",
-        "Registry Value",
-        "Other"
-    ]
-}
-
-# Roles that should not generate risks
-IGNORE_ROLES: list[str] = ["Attacker"]
+from contentctl.objects.rba import risk_object as RiskObject
 
 
+# TODO (cmcginley): the names below now collide a bit with Lou's new class names
 class RiskEvent(BaseModel):
     """Model for risk event in ES"""
 
@@ -79,11 +39,11 @@ class RiskEvent(BaseModel):
     )
 
     # Contributing events search query (we use this to derive the corresponding field from the
-    # observables)
+    # detection's risk object definition)
     contributing_events_search: str
 
-    # Private attribute caching the observable this RiskEvent is mapped to
-    _matched_observable: Observable | None = PrivateAttr(default=None)
+    # Private attribute caching the risk object this RiskEvent is mapped to
+    _matched_risk_object: RiskObject | None = PrivateAttr(default=None)
 
     # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
     # fields vary depending on the SPL which generated them
@@ -108,7 +68,7 @@ class RiskEvent(BaseModel):
     def source_field_name(self) -> str:
         """
         A cached derivation of the source field name the risk event corresponds to in the relevant
-        event(s). Useful for mapping back to an observable in the detection.
+        event(s). Useful for mapping back to a risk object in the detection.
         """
         pattern = re.compile(
             r"\| savedsearch \"" + self.search_name + r"\" \| search (?P<field>[^=]+)=.+"
@@ -128,13 +88,6 @@ class RiskEvent(BaseModel):
         :param detection: the detection associated w/ this risk event
         :raises: ValidationFailed
         """
-        # Check risk_score
-        if self.risk_score != detection.tags.risk_score:
-            raise ValidationFailed(
-                f"Risk score observed in risk event ({self.risk_score}) does not match risk score in "
-                f"detection ({detection.tags.risk_score})."
-            )
-
         # Check analyticstories
         self.validate_analyticstories(detection)
 
@@ -151,8 +104,15 @@ class RiskEvent(BaseModel):
         # Check risk_message
         self.validate_risk_message(detection)
 
-        # Check several conditions against the observables
-        self.validate_risk_against_observables(detection.tags.observable)
+        # Ensure the rba object is defined
+        if detection.rba is None:
+            raise ValidationFailed(
+                f"Unexpected error: Detection '{detection.name}' has no RBA objects associated "
+                "with it; cannot validate."
+            )
+
+        # Check several conditions against the detection's risk objects
+        self.validate_risk_against_risk_objects(detection.rba.risk_objects)
 
     def validate_mitre_ids(self, detection: Detection) -> None:
         """
@@ -180,15 +140,25 @@ class RiskEvent(BaseModel):
                 f" in detection ({detection.tags.analytic_story})."
             )
 
+    # TODO (cmcginley): all of this type checking is a good use case (potentially) for subtyping
+    #   detections by detection type, instead of having types as enums; could have an EBD subtype
+    #   for any detections that should produce risk so that rba is never None
     def validate_risk_message(self, detection: Detection) -> None:
         """
         Given the associated detection, validate the risk event's message
         :param detection: the detection associated w/ this risk event
         :raises: ValidationFailed
         """
+        # Ensure the rba object is defined
+        if detection.rba is None:
+            raise ValidationFailed(
+                f"Unexpected error: Detection '{detection.name}' has no RBA objects associated "
+                "with it; cannot validate."
+            )
+
         # Extract the field replacement tokens ("$...$")
         field_replacement_pattern = re.compile(r"\$\S+\$")
-        tokens = field_replacement_pattern.findall(detection.tags.message)
+        tokens = field_replacement_pattern.findall(detection.rba.message)
 
         # Check for the presence of each token in the message from the risk event
         for token in tokens:
@@ -205,7 +175,7 @@ class RiskEvent(BaseModel):
         escaped_source_message_with_placeholder: str = re.escape(
             field_replacement_pattern.sub(
                 tmp_placeholder,
-                detection.tags.message
+                detection.rba.message
             )
         )
         placeholder_replacement_pattern = re.compile(tmp_placeholder)
@@ -221,114 +191,91 @@ class RiskEvent(BaseModel):
             raise ValidationFailed(
                 "Risk message in event does not match the pattern set by the detection. Message in "
                 f"risk event: \"{self.risk_message}\". Message in detection: "
-                f"\"{detection.tags.message}\"."
+                f"\"{detection.rba.message}\"."
             )
 
-    def validate_risk_against_observables(self, observables: list[Observable]) -> None:
+    def validate_risk_against_risk_objects(self, risk_objects: set[RiskObject]) -> None:
         """
-        Given the observables from the associated detection, validate the risk event against those
-        observables
-        :param observables: the Observable objects from the detection
+        Given the risk objects from the associated detection, validate the risk event against those
+        risk objects
+        :param risk_objects: the risk objects from the detection
         :raises: ValidationFailed
         """
-        # Get the matched observable; will raise validation errors if no match can be made or if
-        # risk is missing values associated w/ observables
-        matched_observable = self.get_matched_observable(observables)
+        # Get the matched risk object; will raise validation errors if no match can be made or if
+        # risk is missing values associated w/ risk objects
+        matched_risk_object = self.get_matched_risk_object(risk_objects)
 
-        # The risk object type should match our mapping of observable types to risk types
-        expected_type = RiskEvent.observable_type_to_risk_type(matched_observable.type)
-        if self.risk_object_type != expected_type:
+        # The risk object type from the risk event should match our mapping of internal risk object
+        # types
+        if self.risk_object_type != matched_risk_object.type.value:
             raise ValidationFailed(
-                f"The risk object type ({self.risk_object_type}) does not match the expected type "
-                f"based on the matched observable ({matched_observable.type}->{expected_type}): "
-                f"risk=(object={self.risk_object}, type={self.risk_object_type}, "
-                f"source_field_name={self.source_field_name}), "
-                f"observable=(name={matched_observable.name}, type={matched_observable.type}, "
-                f"role={matched_observable.role})"
+                f"The risk object type from the risk event ({self.risk_object_type}) does not match"
+                " the expected type based on the matched risk object "
+                f"({matched_risk_object.type.value}): risk event=(object={self.risk_object}, "
+                f"type={self.risk_object_type}, source_field_name={self.source_field_name}), "
+                f"risk object=(name={matched_risk_object.field}, "
+                f"type={matched_risk_object.type.value})"
             )
 
-    @staticmethod
-    def observable_type_to_risk_type(observable_type: str) -> str:
-        """
-        Given a string representing the observable type, use our mapping to convert it to the
-        expected type in the risk event
-        :param observable_type: the type of the observable
-        :returns: a string (the risk object type)
-        :raises ValueError: if the observable type has not yet been mapped to a risk object type
-        """
-        # Iterate over the map and search the lists for a match
-        for risk_type in TYPE_MAP:
-            if observable_type in TYPE_MAP[risk_type]:
-                return risk_type
+        # Check risk_score
+        if self.risk_score != matched_risk_object.score:
+            raise ValidationFailed(
+                f"Risk score observed in risk event ({self.risk_score}) does not match risk score in "
+                f"matched risk object from detection ({matched_risk_object.score})."
+            )
 
-        raise ValueError(
-            f"Observable type {observable_type} does not have a mapping to a risk type in TYPE_MAP"
-        )
-
-    @staticmethod
-    def ignore_observable(observable: Observable) -> bool:
+    def get_matched_risk_object(self, risk_objects: set[RiskObject]) -> RiskObject:
         """
-        Given an observable, determine based on its roles if it should be ignored in risk/observable
-        matching (e.g. Attacker role observables should not generate risk events)
-        :param observable: the Observable object we are checking the roles of
-        :returns: a bool indicating whether this observable should be ignored or not
-        """
-        ignore = False
-        for role in observable.role:
-            if role in IGNORE_ROLES:
-                ignore = True
-                break
-        return ignore
-
-    def get_matched_observable(self, observables: list[Observable]) -> Observable:
-        """
-        Given a list of observables, return the one this risk event matches
-        :param observables: the list of Observable objects we are checking against
-        :returns: the matched Observable object
+        Given a set of risk objects, return the one this risk event matches
+        :param risk_objects: the list of risk objects we are checking against
+        :returns: the matched risk object
         :raises ValidationFailed: if a match could not be made or if an expected field (based on
-            one of the observables) could not be found in the risk event
+            one of the risk objects) could not be found in the risk event
         """
         # Return the cached match if already found
-        if self._matched_observable is not None:
-            return self._matched_observable
+        if self._matched_risk_object is not None:
+            return self._matched_risk_object
 
-        matched_observable: Observable | None = None
+        matched_risk_object: RiskObject | None = None
 
         # Iterate over the obervables and check for a match
-        for observable in observables:
+        for risk_object in risk_objects:
             # TODO (#252): Refactor and re-enable per-field validation of risk events
-            # Each the field name used in each observable shoud be present in the risk event
-            # if not hasattr(self, observable.name):
+            # Each the field name used in each risk object shoud be present in the risk event
+            # if not hasattr(self, risk_object.field):
             #     raise ValidationFailed(
-            #         f"Observable field \"{observable.name}\" not found in risk event."
+            #         f"Risk object field \"{risk_object.field}\" not found in risk event."
             #     )
 
-            # Try to match the risk_object against a specific observable for the obervables with
-            # a valid role (some, like Attacker, shouldn't get converted to risk events)
-            if self.source_field_name == observable.name:
-                if matched_observable is not None:
+            # Try to match the risk_object against a specific risk object
+            if self.source_field_name == risk_object.field:
+                if matched_risk_object is not None:
                     raise ValueError(
                         "Unexpected conditon: we don't expect the source event field "
-                        "corresponding to an observables field name to be repeated."
+                        "corresponding to an risk object's field name to be repeated."
                     )
 
-                # Report any risk events we find that shouldn't be there
-                if RiskEvent.ignore_observable(observable):
-                    raise ValidationFailed(
-                        "Risk event matched an observable with an invalid role: "
-                        f"(name={observable.name}, type={observable.type}, role={observable.role})")
-                # NOTE: we explicitly do not break early as we want to check each observable
-                matched_observable = observable
+                # TODO (cmcginley): risk objects and threat objects are now in separate sets,
+                #   so I think we can safely eliminate this check entirely?
+                # # Report any risk events we find that shouldn't be there
+                # if RiskEvent.ignore_observable(observable):
+                #     raise ValidationFailed(
+                #         "Risk event matched an observable with an invalid role: "
+                #         f"(name={observable.name}, type={observable.type}, role={observable.role})")
 
-        # Ensure we were able to match the risk event to a specific observable
-        if matched_observable is None:
+                # NOTE: we explicitly do not break early as we want to check each risk object
+                matched_risk_object = risk_object
+
+        # Ensure we were able to match the risk event to a specific risk object
+        if matched_risk_object is None:
             raise ValidationFailed(
                 f"Unable to match risk event (object={self.risk_object}, type="
-                f"{self.risk_object_type}, source_field_name={self.source_field_name}) to an "
-                "observable; please check for errors in the observable roles/types for this "
-                "detection, as well as the risk event build process in contentctl."
+                f"{self.risk_object_type}, source_field_name={self.source_field_name}) to a "
+                "risk object in the detection; please check for errors in the risk object types for this "
+                "detection, as well as the risk event build process in contentctl (e.g. threat "
+                "objects aren't being converted to risk objects somehow)."
             )
 
-        # Cache and return the matched observable
-        self._matched_observable = matched_observable
-        return self._matched_observable
+        # Cache and return the matched risk object
+        self._matched_risk_object = matched_risk_object
+        return self._matched_risk_object

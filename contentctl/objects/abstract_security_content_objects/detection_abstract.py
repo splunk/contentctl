@@ -279,6 +279,7 @@ class Detection_Abstract(SecurityContentObject):
 
     deployment: Deployment = Field({})
 
+    # TODO (cmcginley): @ljstella removing the refs to confidence and impact?
     @computed_field
     @property
     def annotations(self) -> dict[str, Union[List[str], int, str]]:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union,TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Optional
 from splunklib.data import Record
 from contentctl.objects.base_test_result import BaseTestResult, TestResultStatus
 
@@ -23,6 +23,7 @@ class UnitTestResult(BaseTestResult):
         status: TestResultStatus,
         exception: Union[Exception, None] = None,
         duration: float = 0,
+        message: Optional[str] = None
     ) -> bool:
         """
         Sets various fields in the result, pulling some fields from the provided search job's
@@ -74,5 +75,9 @@ class UnitTestResult(BaseTestResult):
             else:
                 self.message = f"ERROR with no more specific message available."
             self.sid_link = NO_SID
+
+        if message:
+            # Override the message
+            self.message = message
 
         return self.success

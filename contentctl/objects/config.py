@@ -30,7 +30,8 @@ from contentctl.helper.splunk_app import SplunkApp
 ENTERPRISE_SECURITY_UID = 263
 COMMON_INFORMATION_MODEL_UID = 1621
 
-SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/download"
+SPLUNKBASE_BASE_URL = "https://splunkbase.splunk.com"
+SPLUNKBASE_URL = SPLUNKBASE_BASE_URL + "/app/{uid}/release/{version}/download"
 
 
 # TODO (#266): disable the use_enum_values configuration
@@ -47,7 +48,7 @@ class App_Base(BaseModel,ABC):
     
 
     def getSplunkbasePath(self)->HttpUrl:
-        return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid, release=self.version))
+        return HttpUrl(SPLUNKBASE_URL.format(uid=self.uid, version=self.version))
 
     @abstractmethod
     def getApp(self, config:test, stage_file:bool=False)->str:
@@ -65,7 +66,7 @@ class TestApp(App_Base):
     hardcoded_path: Optional[Union[FilePath,HttpUrl]] = Field(default=None, description="This may be a relative or absolute link to a file OR an HTTP URL linking to your app.")
     
 
-    @field_serializer('hardcoded_path',when_used='always')
+    @field_serializer('hardcoded_path',when_used='unless-none')
     def serialize_path(path: Union[AnyUrl, pathlib.Path])->str:
         return str(path)
 
@@ -93,6 +94,10 @@ class TestApp(App_Base):
             destination = config.getLocalAppDir() / server_path.name
             if stage_file:
                 Utils.download_file_from_http(file_url_string, str(destination))
+        # Needed for `contentctl validate` and `contentctl build` else it fails without the splunkbase creds,
+        # which shouldn't be mandatory for validation or building the app.
+        elif self.version is not None and self.uid is not None:
+            destination = self.getSplunkbasePath()
         else:
             raise Exception(f"Unknown path for app '{self.title}'")
         
@@ -831,10 +836,18 @@ class test(test_common):
     model_config = ConfigDict(use_enum_values=True,validate_default=True, arbitrary_types_allowed=True)
     container_settings:ContainerSettings = ContainerSettings()
     test_instances: List[Container] = Field([], exclude = True, validate_default=True)
-    splunk_api_username: Optional[str] = Field(default=None, exclude = True,description="Splunk API username used for running appinspect or installating apps from Splunkbase")
-    splunk_api_password: Optional[str] = Field(default=None, exclude = True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase")
     
     
+    splunk_api_username: None | str = Field(default=None, exclude = True,description="Splunk API username used for running appinspect or installating apps from Splunkbase. Can be replaced by the 'SPLUNKBASE_USERNAME' environment variable.")
+    splunk_api_password: None | str = Field(default=None, exclude = True, description="Splunk API password used for running appinspect or installaing apps from Splunkbase. Can be replaced by the 'SPLUNKBASE_PASSWORD' environment variable.")
+
+    def __init__(self, **kwargs: Any):
+        if "SPLUNKBASE_USERNAME" in environ:
+            kwargs['splunk_api_username'] = environ["SPLUNKBASE_USERNAME"]
+        if "SPLUNKBASE_PASSWORD" in environ:
+            kwargs['splunk_api_password'] = environ["SPLUNKBASE_PASSWORD"]
+        super().__init__(**kwargs)
+
     def getContainerInfrastructureObjects(self)->Self:
         try:
             self.test_instances = self.container_settings.getContainers()
@@ -879,7 +892,7 @@ class test(test_common):
 
         container_paths = []
         for path in paths:
-            if path.startswith(SPLUNKBASE_URL):
+            if path.startswith(SPLUNKBASE_BASE_URL):
                 container_paths.append(path)
             else:
                 container_paths.append((self.getContainerAppDir()/pathlib.Path(path).name).as_posix())

@@ -1,9 +1,11 @@
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field, Field
 from abc import ABC
-from typing import Set
+from typing import Set, Annotated
+from contentctl.objects.enums import RiskSeverity
 
 
+RiskScoreValue_Type = Annotated[int, Field(ge=1, le=100)]
 
 class RiskObjectType(str, Enum):
     SYSTEM = "system"
@@ -41,7 +43,7 @@ class ThreatObjectType(str, Enum):
 class risk_object(BaseModel):
     field: str
     type: RiskObjectType
-    score: int
+    score: RiskScoreValue_Type
 
     def __hash__(self):
         return hash((self.field, self.type, self.score))
@@ -55,5 +57,34 @@ class threat_object(BaseModel):
 
 class rba_object(BaseModel, ABC):
     message: str
-    risk_objects: Set[risk_object] 
+    risk_objects: Annotated[Set[risk_object], Field(min_length=1)]
     threat_objects: Set[threat_object]
+
+    
+    
+    @computed_field
+    @property
+    def risk_score(self)->RiskScoreValue_Type:
+        # First get the maximum score associated with
+        # a risk object. If there are no objects, then
+        # we should throw an exception.
+        if len(self.risk_objects) == 0:
+            raise Exception("There must be at least one Risk Object present to get Severity.")
+        return max([risk_object.score for risk_object in self.risk_objects])
+    
+    @computed_field
+    @property
+    def severity(self)->RiskSeverity:
+        if 0 <= self.risk_score <= 20:
+            return RiskSeverity.INFORMATIONAL
+        elif 20 < self.risk_score <= 40:
+            return RiskSeverity.LOW
+        elif 40 < self.risk_score <= 60:
+            return RiskSeverity.MEDIUM
+        elif 60 < self.risk_score <= 80:
+            return RiskSeverity.HIGH
+        elif 80 < self.risk_score <= 100:
+            return RiskSeverity.CRITICAL
+        else:
+            raise Exception(f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}")
+

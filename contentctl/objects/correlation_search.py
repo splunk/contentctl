@@ -31,9 +31,8 @@ from contentctl.objects.risk_event import RiskEvent
 from contentctl.objects.notable_event import NotableEvent
 
 
-# TODO (cmcginley): disable logging
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = True
+ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
@@ -665,7 +664,7 @@ class CorrelationSearch(BaseModel):
         for event in events:
             c += 1
             self.logger.debug(
-                f"Validating risk event ({event.risk_object}, {event.risk_object_type}): "
+                f"Validating risk event ({event.es_risk_object}, {event.es_risk_object_type}): "
                 f"{c}/{len(events)}"
             )
             event.validate_against_detection(self.detection)
@@ -673,7 +672,7 @@ class CorrelationSearch(BaseModel):
             # Update risk object count based on match
             matched_risk_object = event.get_matched_risk_object(self.detection.rba.risk_objects)
             self.logger.debug(
-                f"Matched risk event (object={event.risk_object}, type={event.risk_object_type}) "
+                f"Matched risk event (object={event.es_risk_object}, type={event.es_risk_object_type}) "
                 f"to detection's risk object (name={matched_risk_object.field}, "
                 f"type={matched_risk_object.type.value}) using the source field "
                 f"'{event.source_field_name}'"

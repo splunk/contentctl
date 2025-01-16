@@ -40,7 +40,6 @@ class ThreatObjectType(str, Enum):
     TLS_HASH = "tls_hash"
     URL = "url"
 
-# TODO (cmcginley): class names should be capitalized
 class risk_object(BaseModel):
     field: str
     type: RiskObjectType

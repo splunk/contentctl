@@ -7,7 +7,6 @@ from contentctl.objects.detection import Detection
 from contentctl.objects.rba import risk_object as RiskObject
 
 
-# TODO (cmcginley): the names below now collide a bit with Lou's new class names
 class RiskEvent(BaseModel):
     """Model for risk event in ES"""
 
@@ -15,10 +14,12 @@ class RiskEvent(BaseModel):
     search_name: str
 
     # The subject of the risk event (e.g. a username, process name, system name, account ID, etc.)
-    risk_object: int | str
+    # (not to be confused w/ the risk object from the detection)
+    es_risk_object: int | str
 
-    # The type of the risk object (e.g. user, system, or other)
-    risk_object_type: str
+    # The type of the risk object from ES (e.g. user, system, or other) (not to be confused w/
+    # the risk object from the detection)
+    es_risk_object_type: str
 
     # The level of risk associated w/ the risk event
     risk_score: int
@@ -140,9 +141,6 @@ class RiskEvent(BaseModel):
                 f" in detection ({[x.name for x in detection.tags.analytic_story]})."
             )
 
-    # TODO (cmcginley): all of this type checking is a good use case (potentially) for subtyping
-    #   detections by detection type, instead of having types as enums; could have an EBD subtype
-    #   for any detections that should produce risk so that rba is never None
     def validate_risk_message(self, detection: Detection) -> None:
         """
         Given the associated detection, validate the risk event's message
@@ -160,7 +158,7 @@ class RiskEvent(BaseModel):
         field_replacement_pattern = re.compile(r"\$\S+\$")
         tokens = field_replacement_pattern.findall(detection.rba.message)
 
-        # TODO (cmcginley): could expand this to get the field values from the raw events and check
+        # TODO (#346): could expand this to get the field values from the raw events and check
         #   to see that allexpected strings ARE in the risk message (as opposed to checking only
         #   that unexpected strings aren't)
         # Check for the presence of each token in the message from the risk event
@@ -210,12 +208,12 @@ class RiskEvent(BaseModel):
 
         # The risk object type from the risk event should match our mapping of internal risk object
         # types
-        if self.risk_object_type != matched_risk_object.type.value:
+        if self.es_risk_object_type != matched_risk_object.type.value:
             raise ValidationFailed(
-                f"The risk object type from the risk event ({self.risk_object_type}) does not match"
+                f"The risk object type from the risk event ({self.es_risk_object_type}) does not match"
                 " the expected type based on the matched risk object "
-                f"({matched_risk_object.type.value}): risk event=(object={self.risk_object}, "
-                f"type={self.risk_object_type}, source_field_name={self.source_field_name}), "
+                f"({matched_risk_object.type.value}): risk event=(object={self.es_risk_object}, "
+                f"type={self.es_risk_object_type}, source_field_name={self.source_field_name}), "
                 f"risk object=(name={matched_risk_object.field}, "
                 f"type={matched_risk_object.type.value})"
             )
@@ -252,7 +250,8 @@ class RiskEvent(BaseModel):
 
             # Try to match the risk_object against a specific risk object
             if self.source_field_name == risk_object.field:
-                # TODO (cmcginley): this should be enforced as part of build validation
+                # TODO (#347): enforce that field names are not repeated across risk objects as
+                #   part of build/validate
                 if matched_risk_object is not None:
                     raise ValueError(
                         "Unexpected conditon: we don't expect multiple risk objects to use the "
@@ -260,22 +259,14 @@ class RiskEvent(BaseModel):
                         "multiple risk objects."
                     )
 
-                # TODO (cmcginley): risk objects and threat objects are now in separate sets,
-                #   so I think we can safely eliminate this check entirely?
-                # # Report any risk events we find that shouldn't be there
-                # if RiskEvent.ignore_observable(observable):
-                #     raise ValidationFailed(
-                #         "Risk event matched an observable with an invalid role: "
-                #         f"(name={observable.name}, type={observable.type}, role={observable.role})")
-
                 # NOTE: we explicitly do not break early as we want to check each risk object
                 matched_risk_object = risk_object
 
         # Ensure we were able to match the risk event to a specific risk object
         if matched_risk_object is None:
             raise ValidationFailed(
-                f"Unable to match risk event (object={self.risk_object}, type="
-                f"{self.risk_object_type}, source_field_name={self.source_field_name}) to a "
+                f"Unable to match risk event (object={self.es_risk_object}, type="
+                f"{self.es_risk_object_type}, source_field_name={self.source_field_name}) to a "
                 "risk object in the detection; please check for errors in the risk object types for this "
                 "detection, as well as the risk event build process in contentctl (e.g. threat "
                 "objects aren't being converted to risk objects somehow)."

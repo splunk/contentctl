@@ -22,11 +22,13 @@ from pydantic import (
     HttpUrl,
     NonNegativeInt,
     ConfigDict,
-    model_serializer
+    model_serializer,
+    computed_field
 )
 from typing import Tuple, Optional, List, Union
 import pathlib
-
+from functools import cached_property
+from abc import abstractmethod
 
 NO_FILE_NAME = "NO_FILE_NAME"
 
@@ -184,6 +186,13 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
                 f"Found more than 1 ({len(deployments)}) Deployment for type '{converted_type_field}' "
                 f"from  possible {[deployment.type for deployment in director.deployments]}"
             )
+    
+    @computed_field
+    @cached_property
+    @abstractmethod
+    def researchSiteLink(self)->HttpUrl:
+        raise NotImplementedError(f"researchSiteLink has not been implemented for {self.name}")
+
 
     @staticmethod
     def get_objects_by_name(

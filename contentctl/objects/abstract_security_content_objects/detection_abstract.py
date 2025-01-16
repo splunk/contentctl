@@ -12,9 +12,10 @@ from pydantic import (
     computed_field,
     model_serializer,
     ConfigDict,
-    FilePath
+    FilePath,
+    HttpUrl
 )
-
+from functools import cached_property
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup, FileBackedLookup, KVStoreLookup
 if TYPE_CHECKING:
@@ -95,8 +96,18 @@ class Detection_Abstract(SecurityContentObject):
     data_source_objects: list[DataSource] = []
     drilldown_searches: list[Drilldown] = Field(default=[], description="A list of Drilldowns that should be included with this search")
 
+    
+    @staticmethod
+    def static_get_conf_stanza_name(name:str, app:CustomApp)->str:
+        '''
+        This is exposed as a static method since it may need to be used for SecurityContentObject which does not
+        pass all currenty validations - most notable Deprecated content.
+        '''
+        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=name)
+        return stanza_name
+
     def get_conf_stanza_name(self, app:CustomApp)->str:
-        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=self.name)
+        stanza_name = self.static_get_conf_stanza_name(self.name, app)
         self.check_conf_stanza_max_length(stanza_name)
         return stanza_name
     
@@ -221,6 +232,14 @@ class Detection_Abstract(SecurityContentObject):
             self.skip_all_tests(
                 f"TEST SKIPPED: Detection type {self.type} cannot be tested by contentctl"
             )
+
+
+    @cached_property
+    @computed_field
+    def researchSiteLink(self)->HttpUrl:
+        raise HttpUrl(url=f"https://research.splunk.com/{self.source}/{self.id}")
+    
+    
 
     @property
     def test_status(self) -> TestResultStatus | None:

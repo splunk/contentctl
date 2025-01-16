@@ -58,8 +58,6 @@ tags:
   analytic_story:
   - Cobalt Strike
   asset_type: Endpoint
-  confidence: 80
-  impact: 80
   mitre_attack_id:
   - T1560.001
   - T1560

@@ -40,7 +40,7 @@ class ThreatObjectType(str, Enum):
     TLS_HASH = "tls_hash"
     URL = "url"
 
-class risk_object(BaseModel):
+class RiskObject(BaseModel):
     field: str
     type: RiskObjectType
     score: RiskScoreValue_Type
@@ -48,17 +48,17 @@ class risk_object(BaseModel):
     def __hash__(self):
         return hash((self.field, self.type, self.score))
 
-class threat_object(BaseModel):
+class ThreatObject(BaseModel):
     field: str
     type: ThreatObjectType
 
     def __hash__(self):
         return hash((self.field, self.type))
 
-class rba_object(BaseModel, ABC):
+class RBAObject(BaseModel, ABC):
     message: str
-    risk_objects: Annotated[Set[risk_object], Field(min_length=1)]
-    threat_objects: Set[threat_object]
+    risk_objects: Annotated[Set[RiskObject], Field(min_length=1)]
+    threat_objects: Set[ThreatObject]
 
     
     

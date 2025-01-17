@@ -1,8 +1,8 @@
 
 {% for lookup in objects %}
 [{{ lookup.name }}]
-{% if lookup.filename is defined and lookup.filename != None %}
-filename = {{ lookup.filename.name  }}
+{% if lookup.app_filename is defined and lookup.app_filename != None %}
+filename = {{ lookup.app_filename.name  }}
 {% else %}
 collection = {{ lookup.collection }}
 external_type = kvstore

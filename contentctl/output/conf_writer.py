@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Sequence
 import datetime
 import re
 import os
@@ -9,7 +9,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 import pathlib
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.dashboard import Dashboard
-from contentctl.objects.config import build
+from contentctl.objects.config import build, CustomApp
 import xml.etree.ElementTree as ET
 
 # This list is not exhaustive of all default conf files, but should be
@@ -174,7 +174,7 @@ class ConfWriter():
         return output_path
 
     @staticmethod
-    def writeManifestFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list) -> pathlib.Path:
+    def writeManifestFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list[CustomApp]) -> pathlib.Path:
         j2_env = ConfWriter.getJ2Environment()
         template = j2_env.get_template(template_name)
         
@@ -206,7 +206,7 @@ class ConfWriter():
 
 
     @staticmethod
-    def writeXmlFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list) -> None:
+    def writeXmlFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list[str]) -> None:
         
         
         j2_env = ConfWriter.getJ2Environment()
@@ -271,16 +271,25 @@ class ConfWriter():
         return j2_env
 
     @staticmethod
-    def writeConfFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : list) -> pathlib.Path:
+    def writeConfFile(app_output_path:pathlib.Path, template_name : str, config: build, objects : Sequence[SecurityContentObject] | list[CustomApp]) -> pathlib.Path:
         output_path = config.getPackageDirectoryPath()/app_output_path
         j2_env = ConfWriter.getJ2Environment()
         
         template = j2_env.get_template(template_name)
-        output = template.render(objects=objects, app=config.app)
+        outputs: list[str] = []
+        for obj in objects:
+            try:
+                outputs.append(template.render(objects=[obj], app=config.app))
+            except Exception as e:
+                raise Exception(f"Failed writing the following object to file:\n"
+                                f"Name:{obj.name if not isinstance(obj, CustomApp) else obj.title}\n"
+                                f"Type {type(obj)}: \n"
+                                f"Output File: {app_output_path}\n"
+                                f"Error: {str(e)}\n")
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'a') as f:
-            output = output.encode('utf-8', 'ignore').decode('utf-8')
+            output = ''.join(outputs).encode('utf-8', 'ignore').decode('utf-8')
             f.write(output)
         return output_path
         

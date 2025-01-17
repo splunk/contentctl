@@ -23,6 +23,7 @@ class Drilldown(BaseModel):
                               "but it is NOT the default value and must be supplied explicitly.", 
                               min_length= 1)
 
+    # TODO (cmcginley): @ljstella the drilldowns will need to be updated
     @classmethod
     def constructDrilldownsFromDetection(cls, detection: Detection) -> list[Drilldown]:
         victim_observables = [o for o in detection.tags.observable if o.role[0] == "Victim"] 

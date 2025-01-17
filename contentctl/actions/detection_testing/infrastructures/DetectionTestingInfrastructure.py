@@ -1094,6 +1094,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             job = self.get_conn().search(query=search, **kwargs)
             results = JSONResultsReader(job.results(output_mode="json"))
 
+            # TODO (cmcginley): @ljstella you're removing this ultimately, right?
             # Consolidate a set of the distinct observable field names
             observable_fields_set = set([o.name for o in detection.tags.observable]) # keeping this around for later
             risk_object_fields_set = set([o.name for o in detection.tags.observable if "Victim" in o.role ]) # just the "Risk Objects"
@@ -1121,7 +1122,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     missing_risk_objects = risk_object_fields_set - results_fields_set
                     if len(missing_risk_objects) > 0:
                         # Report a failure in such cases
-                        e = Exception(f"The observable field(s) {missing_risk_objects} are missing in the detection results")
+                        e = Exception(
+                            f"The risk object field(s) {missing_risk_objects} are missing in the "
+                            "detection results"
+                        )
                         test.result.set_job_content(
                             job.content,
                             self.infrastructure,
@@ -1137,6 +1141,8 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     # on a field.  In this case, the field will appear but will not contain any values
                     current_empty_fields: set[str] = set()
 
+                    # TODO (cmcginley): @ljstella is this something we're keeping for testing as
+                    #   well?
                     for field in observable_fields_set:
                         if result.get(field, 'null') == 'null':
                             if field in risk_object_fields_set:

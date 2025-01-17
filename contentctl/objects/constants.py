@@ -79,6 +79,7 @@ SES_KILL_CHAIN_MAPPINGS = {
     "Actions on Objectives": 7
 }
 
+# TODO (cmcginley): @ljstella should this be removed? also referenced in new_content.py
 SES_OBSERVABLE_ROLE_MAPPING = {
     "Other": -1,
     "Unknown": 0,
@@ -93,6 +94,7 @@ SES_OBSERVABLE_ROLE_MAPPING = {
     "Observer": 9
 }
 
+# TODO (cmcginley): @ljstella should this be removed? also referenced in new_content.py
 SES_OBSERVABLE_TYPE_MAPPING = {
     "Unknown": 0,
     "Hostname": 1,
@@ -135,6 +137,7 @@ SES_ATTACK_TACTICS_ID_MAPPING = {
     "Impact": "TA0040"
 }
 
+# TODO (cmcginley): is this just for the transition testing?
 RBA_OBSERVABLE_ROLE_MAPPING = {
     "Attacker": 0,
     "Victim": 1

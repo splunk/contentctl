@@ -1,6 +1,7 @@
 from pydantic import BaseModel, field_validator, ConfigDict
 from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, RBA_OBSERVABLE_ROLE_MAPPING
 
+# TODO (cmcginley): should this class be removed?
 
 class Observable(BaseModel):
     model_config = ConfigDict(extra="forbid")

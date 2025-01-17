@@ -1,11 +1,9 @@
 import json
-from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import SecurityContentObject_Abstract
-from typing import List
-from io import TextIOWrapper
+from typing import Any
 class JsonWriter():
 
     @staticmethod
-    def writeJsonObject(file_path : str, object_name: str, objs: List[dict],readable_output=False) -> None:
+    def writeJsonObject(file_path : str, object_name: str, objs: list[dict[str,Any]],readable_output:bool=True) -> None:
         try:
             with open(file_path, 'w') as outfile:
                 if readable_output:

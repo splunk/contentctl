@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING, List, Optional, Union
 from pydantic import (
     BaseModel,
     Field,
-    NonNegativeInt,
-    PositiveInt,
     computed_field,
     UUID4,
     HttpUrl,
@@ -27,7 +25,6 @@ from contentctl.objects.enums import (
     Cis18Value,
     AssetType,
     SecurityDomain,
-    RiskSeverity,
     KillChainPhase,
     NistCategory,
     SecurityContentProductName
@@ -35,54 +32,29 @@ from contentctl.objects.enums import (
 from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
+
 class DetectionTags(BaseModel):
     # detection spec
+
     model_config = ConfigDict(validate_default=False, extra='forbid')
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []
-    confidence: NonNegativeInt = Field(...,le=100)
-    impact: NonNegativeInt = Field(...,le=100)
-    @computed_field
-    @property
-    def risk_score(self) -> int:
-        return round((self.confidence * self.impact)/100)
-    
-    @computed_field
-    @property
-    def severity(self)->RiskSeverity:
-        if 0 <= self.risk_score <= 20:
-            return RiskSeverity.INFORMATIONAL
-        elif 20 < self.risk_score <= 40:
-            return RiskSeverity.LOW
-        elif 40 < self.risk_score <= 60:
-            return RiskSeverity.MEDIUM
-        elif 60 < self.risk_score <= 80:
-            return RiskSeverity.HIGH
-        elif 80 < self.risk_score <= 100:
-            return RiskSeverity.CRITICAL
-        else:
-            raise Exception(f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}")
-
 
     mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
 
+    # TODO (cmcginley): observable should be removed as well, yes?
     # TODO (#249): Add pydantic validator to ensure observables are unique within a detection
     observable: List[Observable] = []
-    message: str = Field(...)
     product: list[SecurityContentProductName] = Field(..., min_length=1)
     throttling: Optional[Throttling] = None
     security_domain: SecurityDomain = Field(...)
     cve: List[CVE_TYPE] = []
     atomic_guid: List[AtomicTest] = []
-    
 
     # enrichment
     mitre_attack_enrichments: List[MitreAttackEnrichment] = Field([], validate_default=True)
-    confidence_id: Optional[PositiveInt] = Field(None, ge=1, le=3)
-    impact_id: Optional[PositiveInt] = Field(None, ge=1, le=5)
-    evidence_str: Optional[str] = None
 
     @computed_field
     @property
@@ -111,7 +83,7 @@ class DetectionTags(BaseModel):
 
     # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
-    
+
     # The following validator is temporarily disabled pending further discussions
     # @validator('message')
     # def validate_message(cls,v,values):
@@ -153,11 +125,7 @@ class DetectionTags(BaseModel):
             "cis20": self.cis20,
             "kill_chain_phases": self.kill_chain_phases,
             "nist": self.nist,
-            "observable": self.observable,
-            "message": self.message,
-            "risk_score": self.risk_score,
             "security_domain": self.security_domain,
-            "risk_severity": self.severity,
             "mitre_attack_id": self.mitre_attack_id,
             "mitre_attack_enrichments": self.mitre_attack_enrichments
         }

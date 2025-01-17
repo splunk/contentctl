@@ -34,6 +34,7 @@ SPLUNKBASE_URL = "https://splunkbase.splunk.com/app/{uid}/release/{version}/down
 
 
 class App_Base(BaseModel,ABC):
+
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True, extra='forbid')
     uid: Optional[int] = Field(default=None)
     title: str = Field(description="Human-readable name used by the app. This can have special characters.")

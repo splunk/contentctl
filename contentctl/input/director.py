@@ -14,7 +14,7 @@ from contentctl.objects.investigation import Investigation
 from contentctl.objects.playbook import Playbook
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import Lookup
+from contentctl.objects.lookup import LookupAdapter, Lookup
 from contentctl.objects.atomic import AtomicEnrichment
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.data_source import DataSource
@@ -58,13 +58,12 @@ class DirectorOutputDto:
                 f" - {content.file_path}\n"
                 f" - {self.name_to_content_map[content_name].file_path}"
             )
-        
+    
         if content.id in self.uuid_to_content_map:
             raise ValueError(
                 f"Duplicate id '{content.id}' with paths:\n"
                 f" - {content.file_path}\n"
-                f" - {self.uuid_to_content_map[content.id].file_path}"
-            )
+                f" - {self.uuid_to_content_map[content.id].file_path}")
 
         if isinstance(content, Lookup):
             self.lookups.append(content)
@@ -157,7 +156,8 @@ class Director():
                 modelDict = YmlReader.load_file(file)
 
                 if contentType == SecurityContentType.lookups:
-                    lookup = Lookup.model_validate(modelDict, context={"output_dto":self.output_dto, "config":self.input_dto})
+                    lookup = LookupAdapter.validate_python(modelDict, context={"output_dto":self.output_dto, "config":self.input_dto})
+                    #lookup = Lookup.model_validate(modelDict, context={"output_dto":self.output_dto, "config":self.input_dto})
                     self.output_dto.addContentToDictMappings(lookup)
                 
                 elif contentType == SecurityContentType.macros:

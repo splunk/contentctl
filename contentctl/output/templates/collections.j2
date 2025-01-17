@@ -1,6 +1,6 @@
 
 {% for lookup in objects %}
-{% if lookup.collection is defined and lookup.collection != None %}
+{% if lookup.collection is defined %}
 [{{ lookup.name }}]
 enforceTypes = false
 replicate = false

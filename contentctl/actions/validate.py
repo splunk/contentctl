@@ -6,6 +6,7 @@ from contentctl.objects.config import validate
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.objects.atomic import AtomicEnrichment
+from contentctl.objects.lookup import FileBackedLookup
 from contentctl.helper.utils import Utils
 from contentctl.objects.data_source import DataSource
 from contentctl.helper.splunk_app import SplunkApp
@@ -64,7 +65,7 @@ class Validate:
         lookupsDirectory = repo_path/"lookups"
         
         # Get all of the files referneced by Lookups
-        usedLookupFiles:list[pathlib.Path] = [lookup.filename for lookup in director_output_dto.lookups if lookup.filename is not None] + [lookup.file_path for lookup in director_output_dto.lookups if lookup.file_path is not None]
+        usedLookupFiles:list[pathlib.Path] = [lookup.filename for lookup in director_output_dto.lookups if isinstance(lookup, FileBackedLookup)] + [lookup.file_path for lookup in director_output_dto.lookups if lookup.file_path is not None]
 
         # Get all of the mlmodel and csv files in the lookups directory
         csvAndMlmodelFiles  = Utils.get_security_content_files_from_directory(lookupsDirectory, allowedFileExtensions=[".yml",".csv",".mlmodel"], fileExtensionsToReturn=[".csv",".mlmodel"])

@@ -4,7 +4,15 @@
     "python.testing.cwd": "${workspaceFolder}",
     "python.languageServer": "Pylance",
     "python.analysis.typeCheckingMode": "strict",
-    "editor.defaultFormatter": "ms-python.black-formatter"
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        },
+        "editor.defaultFormatter": "charliermarsh.ruff",
+  },
+  "ruff.nativeServer": "on"
 
 
 }

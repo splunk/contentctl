@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING, List, Optional, Union
 from pydantic import (
     BaseModel,
     Field,
-    NonNegativeInt,
-    PositiveInt,
     computed_field,
     UUID4,
     HttpUrl,
@@ -34,6 +32,7 @@ from contentctl.objects.enums import (
 from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 
+
 class DetectionTags(BaseModel):
     # detection spec
 
@@ -41,10 +40,11 @@ class DetectionTags(BaseModel):
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []
-    
+
     mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
 
+    # TODO (cmcginley): observable should be removed as well, yes?
     # TODO (#249): Add pydantic validator to ensure observables are unique within a detection
     observable: List[Observable] = []
     product: list[SecurityContentProductName] = Field(..., min_length=1)
@@ -52,7 +52,6 @@ class DetectionTags(BaseModel):
     security_domain: SecurityDomain = Field(...)
     cve: List[CVE_TYPE] = []
     atomic_guid: List[AtomicTest] = []
-    
 
     # enrichment
     mitre_attack_enrichments: List[MitreAttackEnrichment] = Field([], validate_default=True)
@@ -84,7 +83,7 @@ class DetectionTags(BaseModel):
 
     # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
-    
+
     # The following validator is temporarily disabled pending further discussions
     # @validator('message')
     # def validate_message(cls,v,values):

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated
 import re
 import pathlib
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import (
     field_validator,
@@ -16,7 +16,7 @@ from pydantic import (
 )
 
 from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import Lookup
+from contentctl.objects.lookup import Lookup, FileBackedLookup, KVStoreLookup
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.baseline import Baseline
@@ -35,6 +35,9 @@ from contentctl.objects.manual_test import ManualTest
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.data_source import DataSource
+
+from contentctl.objects.rba import RBAObject
+
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.drilldown import Drilldown, DRILLDOWN_SEARCH_PLACEHOLDER
 from contentctl.objects.enums import ProvidingTechnology
@@ -51,13 +54,11 @@ MISSING_SOURCES: set[str] = set()
 
 # Those AnalyticsTypes that we do not test via contentctl
 SKIPPED_ANALYTICS_TYPES: set[str] = {
-    AnalyticsType.Correlation.value
+    AnalyticsType.Correlation
 }
 
 
-# TODO (#266): disable the use_enum_values configuration
 class Detection_Abstract(SecurityContentObject):
-    model_config = ConfigDict(use_enum_values=True)
     name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     #contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
@@ -67,6 +68,7 @@ class Detection_Abstract(SecurityContentObject):
     search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
+    rba: Optional[RBAObject] = Field(default=None)
     explanation: None | str = Field(
         default=None,
         exclude=True, #Don't serialize this value when dumping the object
@@ -77,6 +79,7 @@ class Detection_Abstract(SecurityContentObject):
         "value of the 'description' field when " 
         "serialized in analyticstories_detections.j2",
     )
+
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -101,7 +104,7 @@ class Detection_Abstract(SecurityContentObject):
     def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=ES_MAX_STANZA_LENGTH)->str:
         stanza_name = self.get_conf_stanza_name(app)
         stanza_name_after_saving_in_es = ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE.format(
-            security_domain_value = self.tags.security_domain.value, 
+            security_domain_value = self.tags.security_domain, 
             search_name = stanza_name
             )
         
@@ -210,7 +213,7 @@ class Detection_Abstract(SecurityContentObject):
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
 
         # Skip tests for non-production detections
-        if self.status != DetectionStatus.production.value:                                         # type: ignore
+        if self.status != DetectionStatus.production:                                         
             self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
 
         # Skip tests for detecton types like Correlation which are not supported via contentctl
@@ -263,7 +266,7 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def datamodel(self) -> List[DataModel]:
-        return [dm for dm in DataModel if dm.value in self.search]
+        return [dm for dm in DataModel if dm in self.search]
         
             
     
@@ -282,10 +285,8 @@ class Detection_Abstract(SecurityContentObject):
 
         annotations_dict: dict[str, str | list[str] | int] = {}
         annotations_dict["analytic_story"] = [story.name for story in self.tags.analytic_story]
-        annotations_dict["confidence"] = self.tags.confidence
         if len(self.tags.cve or []) > 0:
             annotations_dict["cve"] = self.tags.cve
-        annotations_dict["impact"] = self.tags.impact
         annotations_dict["type"] = self.type
         annotations_dict["type_list"] = [self.type]
         # annotations_dict["version"] = self.version
@@ -308,13 +309,13 @@ class Detection_Abstract(SecurityContentObject):
     def mappings(self) -> dict[str, List[str]]:
         mappings: dict[str, Any] = {}
         if len(self.tags.cis20) > 0:
-            mappings["cis20"] = [tag.value for tag in self.tags.cis20]
+            mappings["cis20"] = [tag for tag in self.tags.cis20]
         if len(self.tags.kill_chain_phases) > 0:
-            mappings['kill_chain_phases'] = [phase.value for phase in self.tags.kill_chain_phases]
+            mappings['kill_chain_phases'] = [phase for phase in self.tags.kill_chain_phases]
         if len(self.tags.mitre_attack_id) > 0:
             mappings['mitre_attack'] = self.tags.mitre_attack_id
         if len(self.tags.nist) > 0:
-            mappings['nist'] = [category.value for category in self.tags.nist]
+            mappings['nist'] = [category for category in self.tags.nist]
 
         # No need to sort the dict! It has been constructed in-order.
         # However, if this logic is changed, then consider reordering or
@@ -361,66 +362,87 @@ class Detection_Abstract(SecurityContentObject):
     def providing_technologies(self) -> List[ProvidingTechnology]:
         return ProvidingTechnology.getProvidingTechFromSearch(self.search)
 
-    # TODO (#247): Refactor the risk property of detection_abstract
+
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
         risk_objects: list[dict[str, str | int]] = []
-        # TODO (#246): "User Name" type should map to a "user" risk object and not "other"
-        risk_object_user_types = {'user', 'username', 'email address'}
-        risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
-        process_threat_object_types = {'process name', 'process'}
-        file_threat_object_types = {'file name', 'file', 'file hash'}
-        url_threat_object_types = {'url string', 'url'}
-        ip_threat_object_types = {'ip address'}
 
-        for entity in self.tags.observable:
+        for entity in self.rba.risk_objects:
             risk_object: dict[str, str | int] = dict()
-            if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
-                risk_object['risk_object_type'] = 'user'
-                risk_object['risk_object_field'] = entity.name
-                risk_object['risk_score'] = self.tags.risk_score
-                risk_objects.append(risk_object)
-
-            elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
-                risk_object['risk_object_type'] = 'system'
-                risk_object['risk_object_field'] = entity.name
-                risk_object['risk_score'] = self.tags.risk_score
-                risk_objects.append(risk_object)
-
-            elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = "process"
-                risk_objects.append(risk_object)
-
-            elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = "file_name"
-                risk_objects.append(risk_object)
-
-            elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = "ip_address"
-                risk_objects.append(risk_object)
-
-            elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = "url"
-                risk_objects.append(risk_object)
-            
-            elif 'Attacker' in entity.role:
-                risk_object['threat_object_field'] = entity.name
-                risk_object['threat_object_type'] = entity.type.lower()
-                risk_objects.append(risk_object)
-
-            else:
-                risk_object['risk_object_type'] = 'other'
-                risk_object['risk_object_field'] = entity.name
-                risk_object['risk_score'] = self.tags.risk_score
-                risk_objects.append(risk_object)
-                continue
-
+            risk_object['risk_object_type'] = entity.type
+            risk_object['risk_object_field'] = entity.field
+            risk_object['risk_score'] = entity.score
+            risk_objects.append(risk_object)
+        
+        for entity in self.rba.threat_objects:
+            threat_object: dict[str, str] = dict()
+            threat_object['threat_object_field'] = entity.field
+            threat_object['threat_object_type'] = entity.type
+            risk_objects.append(threat_object)
         return risk_objects
+
+
+    # TODO Remove observable code
+    # @computed_field
+    # @property
+    # def risk(self) -> list[dict[str, Any]]:
+    #     risk_objects: list[dict[str, str | int]] = []
+    #     # TODO (#246): "User Name" type should map to a "user" risk object and not "other"
+    #     risk_object_user_types = {'user', 'username', 'email address'}
+    #     risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
+    #     process_threat_object_types = {'process name', 'process'}
+    #     file_threat_object_types = {'file name', 'file', 'file hash'}
+    #     url_threat_object_types = {'url string', 'url'}
+    #     ip_threat_object_types = {'ip address'}
+
+    #     for entity in self.tags.observable:
+    #         risk_object: dict[str, str | int] = dict()
+    #         if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
+    #             risk_object['risk_object_type'] = 'user'
+    #             risk_object['risk_object_field'] = entity.name
+    #             risk_object['risk_score'] = self.tags.risk_score
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
+    #             risk_object['risk_object_type'] = 'system'
+    #             risk_object['risk_object_field'] = entity.name
+    #             risk_object['risk_score'] = self.tags.risk_score
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = "process"
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = "file_name"
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = "ip_address"
+    #             risk_objects.append(risk_object)
+
+    #         elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = "url"
+    #             risk_objects.append(risk_object)
+            
+    #         elif 'Attacker' in entity.role:
+    #             risk_object['threat_object_field'] = entity.name
+    #             risk_object['threat_object_type'] = entity.type.lower()
+    #             risk_objects.append(risk_object)
+
+    #         else:
+    #             risk_object['risk_object_type'] = 'other'
+    #             risk_object['risk_object_field'] = entity.name
+    #             risk_object['risk_score'] = self.tags.risk_score
+    #             risk_objects.append(risk_object)
+    #             continue
+
+    #     return risk_objects
 
     @computed_field
     @property
@@ -435,7 +457,7 @@ class Detection_Abstract(SecurityContentObject):
         # break the `inspect` action.
         return {
             'detection_id': str(self.id),
-            'deprecated': '1' if self.status == DetectionStatus.deprecated.value else '0',          # type: ignore
+            'deprecated': '1' if self.status == DetectionStatus.deprecated else '0',          # type: ignore
             'detection_version': str(self.version),
             'publish_time': datetime.datetime(self.date.year,self.date.month,self.date.day,0,0,0,0,tzinfo=datetime.timezone.utc).timestamp()
         }
@@ -456,6 +478,11 @@ class Detection_Abstract(SecurityContentObject):
             "source": self.source,
             "nes_fields": self.nes_fields,
         }
+        if self.rba is not None:
+            model["risk_severity"] = self.rba.severity
+            model['tags']['risk_score'] = self.rba.risk_score
+        else:
+            model['tags']['risk_score'] = 0
 
         # Only a subset of macro fields are required:
         all_macros: list[dict[str, str | list[str]]] = []
@@ -473,17 +500,17 @@ class Detection_Abstract(SecurityContentObject):
 
         all_lookups: list[dict[str, str | int | None]] = []
         for lookup in self.lookups:
-            if lookup.collection is not None:
+            if isinstance(lookup, KVStoreLookup):
                 all_lookups.append(
                     {
                         "name": lookup.name,
                         "description": lookup.description,
                         "collection": lookup.collection,
                         "case_sensitive_match": None,
-                        "fields_list": lookup.fields_list
+                        "fields_list": lookup.fields_to_fields_list_conf_format
                     }
                 )
-            elif lookup.filename is not None:
+            elif isinstance(lookup, FileBackedLookup):
                 all_lookups.append(
                     {
                         "name": lookup.name,
@@ -491,9 +518,8 @@ class Detection_Abstract(SecurityContentObject):
                         "filename": lookup.filename.name,
                         "default_match": "true" if lookup.default_match else "false",
                         "case_sensitive_match": "true" if lookup.case_sensitive_match else "false",
-                        "match_type": lookup.match_type,
-                        "min_matches": lookup.min_matches,
-                        "fields_list": lookup.fields_list
+                        "match_type": lookup.match_type_to_conf_format,
+                        "min_matches": lookup.min_matches
                     }
                 )
         model['lookups'] = all_lookups                                                              # type: ignore
@@ -570,7 +596,7 @@ class Detection_Abstract(SecurityContentObject):
         # This is presently a requirement when 1 or more drilldowns are added to a detection.
         # Note that this is only required for production searches that are not hunting
             
-        if self.type == AnalyticsType.Hunting.value or self.status != DetectionStatus.production.value:
+        if self.type == AnalyticsType.Hunting or self.status != DetectionStatus.production:
             #No additional check need to happen on the potential drilldowns.
             pass
         else:
@@ -713,14 +739,14 @@ class Detection_Abstract(SecurityContentObject):
         if status != DetectionStatus.production:
             errors.append(
                 f"status is '{status.name}'. Detections that are enabled by default MUST be "
-                f"'{DetectionStatus.production.value}'"
+                f"'{DetectionStatus.production}'"
                 )
 
         if searchType not in [AnalyticsType.Anomaly, AnalyticsType.Correlation, AnalyticsType.TTP]:
             errors.append(
-                f"type is '{searchType.value}'. Detections that are enabled by default MUST be one"
+                f"type is '{searchType}'. Detections that are enabled by default MUST be one"
                 " of the following types: "
-                f"{[AnalyticsType.Anomaly.value, AnalyticsType.Correlation.value, AnalyticsType.TTP.value]}")
+                f"{[AnalyticsType.Anomaly, AnalyticsType.Correlation, AnalyticsType.TTP]}")
         if len(errors) > 0:
             error_message = "\n  - ".join(errors)
             raise ValueError(f"Detection is 'enabled_by_default: true' however \n  - {error_message}")
@@ -729,7 +755,7 @@ class Detection_Abstract(SecurityContentObject):
 
     @model_validator(mode="after")
     def addTags_nist(self):
-        if self.type == AnalyticsType.TTP.value:
+        if self.type == AnalyticsType.TTP:
             self.tags.nist = [NistCategory.DE_CM]
         else:
             self.tags.nist = [NistCategory.DE_AE]
@@ -757,50 +783,93 @@ class Detection_Abstract(SecurityContentObject):
 
 
     @model_validator(mode="after")
-    def ensureProperObservablesExist(self):
+    def ensureProperRBAConfig(self):
         """
-        If a detections is PRODUCTION and either TTP or ANOMALY, then it MUST have an Observable with the VICTIM role.
-
+        If a detection has an RBA deployment and is PRODUCTION, then it must have an RBA config, with at least one risk object
+        
         Returns:
-            self: Returns itself if the valdiation passes
+            self: Returns itself if the validation passes
         """
-        # NOTE: we ignore the type error around self.status because we are using Pydantic's
-        # use_enum_values configuration
-        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        if self.status not in [DetectionStatus.production.value]:                                   # type: ignore
-            # Only perform this validation on production detections
-            return self
 
-        if self.type not in [AnalyticsType.TTP.value, AnalyticsType.Anomaly.value]:
-            # Only perform this validation on TTP and Anomaly detections
-            return self
+        
+        if self.deployment.alert_action.rba is None or self.deployment.alert_action.rba.enabled is False:
+            # confirm we don't have an RBA config
+            if self.rba is None:
+                return self
+            else:
+                raise ValueError(
+                    "Detection does not have a matching RBA deployment config, the RBA portion should be omitted."
+                )
+        else:
+            if self.rba is None:
+                raise ValueError(
+                    "Detection is expected to have an RBA object based on its deployment config"
+                )
+            else:
+                if len(self.rba.risk_objects) > 0: # type: ignore
+                    return self
+                else:
+                    raise ValueError(
+                        "Detection expects an RBA config with at least one risk object."
+                    )
 
-        # Detection is required to have a victim
-        roles: list[str] = []
-        for observable in self.tags.observable:
-            roles.extend(observable.role)
 
-        if roles.count("Victim") == 0:
-            raise ValueError(
-                "Error, there must be AT LEAST 1 Observable with the role 'Victim' declared in "
-                "Detection.tags.observables. However, none were found."
-            )
+    # TODO - Remove old observable code
+    # @model_validator(mode="after")
+    # def ensureProperObservablesExist(self):
+    #     """
+    #     If a detections is PRODUCTION and either TTP or ANOMALY, then it MUST have an Observable with the VICTIM role.
 
-        # Exactly one victim was found
-        return self
+    #     Returns:
+    #         self: Returns itself if the valdiation passes
+    #     """
+    #     # NOTE: we ignore the type error around self.status because we are using Pydantic's
+    #     # use_enum_values configuration
+    #     # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
+    #     if self.status not in [DetectionStatus.production.value]:                                   # type: ignore
+    #         # Only perform this validation on production detections
+    #         return self
+
+    #     if self.type not in [AnalyticsType.TTP.value, AnalyticsType.Anomaly.value]:
+    #         # Only perform this validation on TTP and Anomaly detections
+    #         return self
+
+    #     # Detection is required to have a victim
+    #     roles: list[str] = []
+    #     for observable in self.tags.observable:
+    #         roles.extend(observable.role)
+
+    #     if roles.count("Victim") == 0:
+    #         raise ValueError(
+    #             "Error, there must be AT LEAST 1 Observable with the role 'Victim' declared in "
+    #             "Detection.tags.observables. However, none were found."
+    #         )
+
+    #     # Exactly one victim was found
+    #     return self
 
     @model_validator(mode="after")
-    def search_observables_exist_validate(self):
-        observable_fields = [ob.name.lower() for ob in self.tags.observable]
+    def search_rba_fields_exist_validate(self):
+        # Return immediately if RBA isn't required
+        if (self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None) and self.rba is None: #type: ignore
+            return self
+        
+        # Raise error if RBA isn't present 
+        if self.rba is None:
+            raise ValueError(
+                "RBA is required for this detection based on its deployment config"
+            )
+        risk_fields = [ob.field.lower() for ob in self.rba.risk_objects]
+        threat_fields = [ob.field.lower() for ob in self.rba.threat_objects]
+        rba_fields = risk_fields + threat_fields
 
-        # All $field$ fields from the message must appear in the search
         field_match_regex = r"\$([^\s.]*)\$"
 
         missing_fields: set[str]
-        if self.tags.message:
-            matches = re.findall(field_match_regex, self.tags.message.lower())
+        if self.rba.message:
+            matches = re.findall(field_match_regex, self.rba.message.lower())
             message_fields = [match.replace("$", "").lower() for match in matches]
-            missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
+            missing_fields = set([field for field in rba_fields if field not in self.search.lower()])
         else:
             message_fields = []
             missing_fields = set()
@@ -808,10 +877,9 @@ class Detection_Abstract(SecurityContentObject):
         error_messages: list[str] = []
         if len(missing_fields) > 0:
             error_messages.append(
-                "The following fields are declared as observables, but do not exist in the "
+                "The following fields are declared in the rba config, but do not exist in the "
                 f"search: {missing_fields}"
             )
-
         missing_fields = set([field for field in message_fields if field not in self.search.lower()])
         if len(missing_fields) > 0:
             error_messages.append(
@@ -819,18 +887,58 @@ class Detection_Abstract(SecurityContentObject):
                 f"the search: {missing_fields}"
             )
 
-        # NOTE: we ignore the type error around self.status because we are using Pydantic's
-        # use_enum_values configuration
-        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-        if len(error_messages) > 0 and self.status == DetectionStatus.production.value:         # type: ignore
+        if len(error_messages) > 0 and self.status == DetectionStatus.production: 
+
             msg = (
-                "Use of fields in observables/messages that do not appear in search:\n\t- "
+                "Use of fields in rba/messages that do not appear in search:\n\t- "
                 "\n\t- ".join(error_messages)
             )
             raise ValueError(msg)
-
-        # Found everything
         return self
+
+    # TODO: Remove old observable code
+    # @model_validator(mode="after")
+    # def search_observables_exist_validate(self):
+    #     observable_fields = [ob.name.lower() for ob in self.tags.observable]
+
+    #     # All $field$ fields from the message must appear in the search
+    #     field_match_regex = r"\$([^\s.]*)\$"
+
+    #     missing_fields: set[str]
+    #     if self.tags.message:
+    #         matches = re.findall(field_match_regex, self.tags.message.lower())
+    #         message_fields = [match.replace("$", "").lower() for match in matches]
+    #         missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
+    #     else:
+    #         message_fields = []
+    #         missing_fields = set()
+
+    #     error_messages: list[str] = []
+    #     if len(missing_fields) > 0:
+    #         error_messages.append(
+    #             "The following fields are declared as observables, but do not exist in the "
+    #             f"search: {missing_fields}"
+    #         )
+
+    #     missing_fields = set([field for field in message_fields if field not in self.search.lower()])
+    #     if len(missing_fields) > 0:
+    #         error_messages.append(
+    #             "The following fields are used as fields in the message, but do not exist in "
+    #             f"the search: {missing_fields}"
+    #         )
+
+    #     # NOTE: we ignore the type error around self.status because we are using Pydantic's
+    #     # use_enum_values configuration
+    #     # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
+    #     if len(error_messages) > 0 and self.status == DetectionStatus.production.value:         # type: ignore
+    #         msg = (
+    #             "Use of fields in observables/messages that do not appear in search:\n\t- "
+    #             "\n\t- ".join(error_messages)
+    #         )
+    #         raise ValueError(msg)
+
+    #     # Found everything
+    #     return self
 
     @field_validator("tests", mode="before")
     def ensure_yml_test_is_unittest(cls, v:list[dict]):
@@ -878,7 +986,7 @@ class Detection_Abstract(SecurityContentObject):
         info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest | ManualTest]:
         # Only production analytics require tests
-        if info.data.get("status", "") != DetectionStatus.production.value:
+        if info.data.get("status", "") != DetectionStatus.production:
             return v
 
         # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined
@@ -991,7 +1099,7 @@ class Detection_Abstract(SecurityContentObject):
             value = getattr(self, field)
 
             # Enums and Path objects cannot be serialized directly, so we convert it to a string
-            if isinstance(value, Enum) or isinstance(value, pathlib.Path):
+            if isinstance(value, StrEnum) or isinstance(value, pathlib.Path):
                 value = str(value)
 
             # Alias any fields as needed
@@ -1013,7 +1121,7 @@ class Detection_Abstract(SecurityContentObject):
             # Initialize the dict as a mapping of strings to str/bool
             result: dict[str, Union[str, bool]] = {
                 "name": test.name,
-                "test_type": test.test_type.value
+                "test_type": test.test_type
             }
 
             # If result is not None, get a summary of the test result w/ the requested fields

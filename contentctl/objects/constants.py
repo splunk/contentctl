@@ -79,6 +79,7 @@ SES_KILL_CHAIN_MAPPINGS = {
     "Actions on Objectives": 7
 }
 
+# TODO (cmcginley): @ljstella should this be removed? also referenced in new_content.py
 SES_OBSERVABLE_ROLE_MAPPING = {
     "Other": -1,
     "Unknown": 0,
@@ -93,6 +94,7 @@ SES_OBSERVABLE_ROLE_MAPPING = {
     "Observer": 9
 }
 
+# TODO (cmcginley): @ljstella should this be removed? also referenced in new_content.py
 SES_OBSERVABLE_TYPE_MAPPING = {
     "Unknown": 0,
     "Hostname": 1,
@@ -135,6 +137,7 @@ SES_ATTACK_TACTICS_ID_MAPPING = {
     "Impact": "TA0040"
 }
 
+# TODO (cmcginley): is this just for the transition testing?
 RBA_OBSERVABLE_ROLE_MAPPING = {
     "Attacker": 0,
     "Victim": 1
@@ -149,7 +152,7 @@ DOWNLOADS_DIRECTORY = "downloads"
 # errors, if its name is longer than 99 characters.
 # When an saved search is cloned in Enterprise Security User Interface,
 # it is wrapped in the following: 
-# {Detection.tags.security_domain.value} - {SEARCH_STANZA_NAME} - Rule
+# {Detection.tags.security_domain} - {SEARCH_STANZA_NAME} - Rule
 # Similarly, when we generate the search stanza name in contentctl, it
 # is app.label - detection.name - Rule
 # However, in product the search name is:

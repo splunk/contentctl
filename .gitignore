@@ -3,6 +3,7 @@ poetry.lock
 # usual mac files
 .DS_Store
 */.DS_Store
+.ruff_cache
 
 # custom
 dist/*

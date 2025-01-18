@@ -1,7 +1,10 @@
 
 from __future__ import annotations
-from typing import Annotated, Optional, List,Any
-from pydantic import field_validator, ValidationInfo, Field, model_serializer
+from typing import Annotated, List,Any, TYPE_CHECKING
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
+
+from pydantic import field_validator, ValidationInfo, Field, model_serializer, computed_field
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
@@ -9,21 +12,34 @@ from contentctl.objects.baseline_tags import BaselineTags
 
 from contentctl.objects.config import CustomApp
 
-
+from contentctl.objects.lookup import Lookup
 from contentctl.objects.constants import CONTENTCTL_MAX_SEARCH_NAME_LENGTH,CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE
 
 class Baseline(SecurityContentObject):
     name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     type: Annotated[str,Field(pattern="^Baseline$")] = Field(...)
-    datamodel: Optional[List[DataModel]] = None
     search: str = Field(..., min_length=4)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     tags: BaselineTags = Field(...)
-
+    lookups: list[Lookup] = Field([], validate_default=True)
     # enrichment
     deployment: Deployment = Field({})
-    
+
+
+    @field_validator('lookups', mode="before")
+    @classmethod
+    def getBaselineLookups(cls, v:list[str], info:ValidationInfo) -> list[Lookup]:
+        '''
+        This function has been copied and renamed from the Detection_Abstract class
+        '''
+        director:DirectorOutputDto = info.context.get("output_dto",None)
+        search: str | None = info.data.get("search",None)
+        if search is None:
+            raise ValueError("Search was None - is this file missing the search field?")
+        
+        lookups = Lookup.get_lookups(search, director)
+        return lookups
 
     def get_conf_stanza_name(self, app:CustomApp)->str:
         stanza_name = CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=self.name)
@@ -34,6 +50,10 @@ class Baseline(SecurityContentObject):
     def getDeployment(cls, v:Any, info:ValidationInfo)->Deployment:
         return Deployment.getDeployment(v,info)
     
+    @computed_field
+    @property
+    def datamodel(self) -> List[DataModel]:
+        return [dm for dm in DataModel if dm in self.search]
 
     @model_serializer
     def serialize_model(self):

@@ -44,7 +44,7 @@ action.escu.providing_technologies = null
 action.escu.analytic_story = {{ objectListToNameList(detection.tags.analytic_story) | tojson }}
 {% if detection.deployment.alert_action.rba.enabled%}
 action.risk = 1
-action.risk.param._risk_message = {{ detection.tags.message | escapeNewlines() }}
+action.risk.param._risk_message = {{ detection.rba.message | escapeNewlines() }}
 action.risk.param._risk = {{ detection.risk | tojson }}
 action.risk.param._risk_score = 0
 action.risk.param.verbose = 0
@@ -70,8 +70,13 @@ action.notable.param.nes_fields = {{ detection.nes_fields }}
 {% endif %}
 action.notable.param.rule_description = {{ detection.deployment.alert_action.notable.rule_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines()}}
 action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
-action.notable.param.security_domain = {{ detection.tags.security_domain.value }}
-action.notable.param.severity = {{ detection.tags.severity.value }}
+action.notable.param.security_domain = {{ detection.tags.security_domain }}
+{% if detection.rba %}
+action.notable.param.severity = {{ detection.rba.severity }}
+{% else %}
+{# Correlations do not have detection.rba defined, but should get a default severity #} 
+action.notable.param.severity = high 
+{% endif %}
 {% endif %}
 {% if detection.deployment.alert_action.email %}
 action.email.subject.alert = {{ detection.deployment.alert_action.email.subject | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}

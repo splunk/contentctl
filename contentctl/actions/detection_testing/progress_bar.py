@@ -8,6 +8,7 @@ class TestReportingType(StrEnum):
     """
     5-char identifiers for the type of testing being reported on
     """
+
     # Reporting around general testing setup (e.g. infra, role configuration)
     SETUP = "SETUP"
 
@@ -25,6 +26,7 @@ class TestingStates(StrEnum):
     """
     Defined testing states
     """
+
     BEGINNING_GROUP = "Beginning Test Group"
     BEGINNING_TEST = "Beginning Test"
     DOWNLOADING = "Downloading Data"
@@ -47,6 +49,7 @@ class FinalTestingStates(StrEnum):
     """
     The possible final states for a test (for pbar reporting)
     """
+
     FAIL = "\x1b[0;30;41m" + "FAIL ".ljust(LONGEST_STATE) + "\x1b[0m"
     ERROR = "\x1b[0;30;41m" + "ERROR".ljust(LONGEST_STATE) + "\x1b[0m"
     PASS = "\x1b[0;30;42m" + "PASS ".ljust(LONGEST_STATE) + "\x1b[0m"

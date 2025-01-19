@@ -29,7 +29,7 @@ from contentctl.helper.utils import Utils
 
 @dataclass
 class DirectorOutputDto:
-    # Atomic Tests are first because parsing them 
+    # Atomic Tests are first because parsing them
     # is far quicker than attack_enrichment
     atomic_enrichment: AtomicEnrichment
     attack_enrichment: AttackEnrichment
@@ -50,20 +50,20 @@ class DirectorOutputDto:
 
     def addContentToDictMappings(self, content: SecurityContentObject):
         content_name = content.name
-        
-        
+
         if content_name in self.name_to_content_map:
             raise ValueError(
                 f"Duplicate name '{content_name}' with paths:\n"
                 f" - {content.file_path}\n"
                 f" - {self.name_to_content_map[content_name].file_path}"
             )
-    
+
         if content.id in self.uuid_to_content_map:
             raise ValueError(
                 f"Duplicate id '{content.id}' with paths:\n"
                 f" - {content.file_path}\n"
-                f" - {self.uuid_to_content_map[content.id].file_path}")
+                f" - {self.uuid_to_content_map[content.id].file_path}"
+            )
 
         if isinstance(content, Lookup):
             self.lookups.append(content)
@@ -82,7 +82,7 @@ class DirectorOutputDto:
         elif isinstance(content, Detection):
             self.detections.append(content)
         elif isinstance(content, Dashboard):
-            self.dashboards.append(content)            
+            self.dashboards.append(content)
 
         elif isinstance(content, DataSource):
             self.data_sources.append(content)
@@ -93,7 +93,7 @@ class DirectorOutputDto:
         self.uuid_to_content_map[content.id] = content
 
 
-class Director():
+class Director:
     input_dto: validate
     output_dto: DirectorOutputDto
 
@@ -112,13 +112,18 @@ class Director():
         self.createSecurityContent(SecurityContentType.playbooks)
         self.createSecurityContent(SecurityContentType.detections)
         self.createSecurityContent(SecurityContentType.dashboards)
-        
-        from contentctl.objects.abstract_security_content_objects.detection_abstract import MISSING_SOURCES
+
+        from contentctl.objects.abstract_security_content_objects.detection_abstract import (
+            MISSING_SOURCES,
+        )
+
         if len(MISSING_SOURCES) > 0:
             missing_sources_string = "\n 🟡 ".join(sorted(list(MISSING_SOURCES)))
-            print("WARNING: The following data_sources have been used in detections, but are not yet defined.\n"
-                  "This is not yet an error since not all data_sources have been defined, but will be convered to an error soon:\n 🟡 "
-                  f"{missing_sources_string}")
+            print(
+                "WARNING: The following data_sources have been used in detections, but are not yet defined.\n"
+                "This is not yet an error since not all data_sources have been defined, but will be convered to an error soon:\n 🟡 "
+                f"{missing_sources_string}"
+            )
         else:
             print("No missing data_sources!")
 
@@ -133,18 +138,20 @@ class Director():
             SecurityContentType.playbooks,
             SecurityContentType.detections,
             SecurityContentType.data_sources,
-            SecurityContentType.dashboards
+            SecurityContentType.dashboards,
         ]:
             files = Utils.get_all_yml_files_from_directory(
                 os.path.join(self.input_dto.path, str(contentType.name))
             )
-            security_content_files = [
-                f for f in files 
-            ]
+            security_content_files = [f for f in files]
         else:
-            raise (Exception(f"Cannot createSecurityContent for unknown product {contentType}."))
+            raise (
+                Exception(
+                    f"Cannot createSecurityContent for unknown product {contentType}."
+                )
+            )
 
-        validation_errors:list[tuple[Path,ValueError]] = []
+        validation_errors: list[tuple[Path, ValueError]] = []
 
         already_ran = False
         progress_percent = 0
@@ -156,41 +163,67 @@ class Director():
                 modelDict = YmlReader.load_file(file)
 
                 if contentType == SecurityContentType.lookups:
-                    lookup = LookupAdapter.validate_python(modelDict, context={"output_dto":self.output_dto, "config":self.input_dto})
-                    #lookup = Lookup.model_validate(modelDict, context={"output_dto":self.output_dto, "config":self.input_dto})
+                    lookup = LookupAdapter.validate_python(
+                        modelDict,
+                        context={
+                            "output_dto": self.output_dto,
+                            "config": self.input_dto,
+                        },
+                    )
+                    # lookup = Lookup.model_validate(modelDict, context={"output_dto":self.output_dto, "config":self.input_dto})
                     self.output_dto.addContentToDictMappings(lookup)
-                
+
                 elif contentType == SecurityContentType.macros:
-                    macro = Macro.model_validate(modelDict, context={"output_dto":self.output_dto})
+                    macro = Macro.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
                     self.output_dto.addContentToDictMappings(macro)
-                
+
                 elif contentType == SecurityContentType.deployments:
-                    deployment = Deployment.model_validate(modelDict, context={"output_dto":self.output_dto})
+                    deployment = Deployment.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
                     self.output_dto.addContentToDictMappings(deployment)
 
                 elif contentType == SecurityContentType.playbooks:
-                    playbook = Playbook.model_validate(modelDict, context={"output_dto":self.output_dto})
-                    self.output_dto.addContentToDictMappings(playbook)                  
-                
+                    playbook = Playbook.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
+                    self.output_dto.addContentToDictMappings(playbook)
+
                 elif contentType == SecurityContentType.baselines:
-                    baseline = Baseline.model_validate(modelDict, context={"output_dto":self.output_dto})
+                    baseline = Baseline.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
                     self.output_dto.addContentToDictMappings(baseline)
-                
+
                 elif contentType == SecurityContentType.investigations:
-                    investigation = Investigation.model_validate(modelDict, context={"output_dto":self.output_dto})
+                    investigation = Investigation.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
                     self.output_dto.addContentToDictMappings(investigation)
 
                 elif contentType == SecurityContentType.stories:
-                    story = Story.model_validate(modelDict, context={"output_dto":self.output_dto})
+                    story = Story.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
                     self.output_dto.addContentToDictMappings(story)
-            
+
                 elif contentType == SecurityContentType.detections:
-                    detection = Detection.model_validate(modelDict, context={"output_dto":self.output_dto, "app":self.input_dto.app})
+                    detection = Detection.model_validate(
+                        modelDict,
+                        context={
+                            "output_dto": self.output_dto,
+                            "app": self.input_dto.app,
+                        },
+                    )
                     self.output_dto.addContentToDictMappings(detection)
-                
+
                 elif contentType == SecurityContentType.dashboards:
-                        dashboard = Dashboard.model_validate(modelDict,context={"output_dto":self.output_dto})
-                        self.output_dto.addContentToDictMappings(dashboard)
+                    dashboard = Dashboard.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
+                    self.output_dto.addContentToDictMappings(dashboard)
 
                 elif contentType == SecurityContentType.data_sources:
                     data_source = DataSource.model_validate(
@@ -237,4 +270,3 @@ class Director():
             raise Exception(
                 f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED"
             )
-

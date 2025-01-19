@@ -11,5 +11,6 @@ class ThreatObject(BaseModel):
     :param field: the name of the field from which the risk object will get it's name
     :param type_: the type of the risk object (e.g. "system")
     """
+
     field: str
     type: str

@@ -11,17 +11,17 @@ from pydantic import (
     Field,
     computed_field,
     model_serializer,
-    ConfigDict,
-    FilePath
+    FilePath,
 )
 
 from contentctl.objects.macro import Macro
 from contentctl.objects.lookup import Lookup, FileBackedLookup, KVStoreLookup
+
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.baseline import Baseline
     from contentctl.objects.config import CustomApp
-    
+
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.enums import DataModel
@@ -47,20 +47,18 @@ from contentctl.objects.constants import (
     ES_MAX_STANZA_LENGTH,
     ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE,
     CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
-    CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE
+    CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE,
 )
 
 MISSING_SOURCES: set[str] = set()
 
 # Those AnalyticsTypes that we do not test via contentctl
-SKIPPED_ANALYTICS_TYPES: set[str] = {
-    AnalyticsType.Correlation
-}
+SKIPPED_ANALYTICS_TYPES: set[str] = {AnalyticsType.Correlation}
 
 
 class Detection_Abstract(SecurityContentObject):
-    name:str = Field(...,max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
-    #contentType: SecurityContentType = SecurityContentType.detections
+    name: str = Field(..., max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
+    # contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
     status: DetectionStatus = Field(...)
     data_source: list[str] = []
@@ -71,15 +69,14 @@ class Detection_Abstract(SecurityContentObject):
     rba: Optional[RBAObject] = Field(default=None)
     explanation: None | str = Field(
         default=None,
-        exclude=True, #Don't serialize this value when dumping the object
+        exclude=True,  # Don't serialize this value when dumping the object
         description="Provide an explanation to be included "
         "in the 'Explanation' field of the Detection in "
         "the Use Case Library. If this field is not "
         "defined in the YML, it will default to the "
-        "value of the 'description' field when " 
+        "value of the 'description' field when "
         "serialized in analyticstories_detections.j2",
     )
-
 
     enabled_by_default: bool = False
     file_path: FilePath = Field(...)
@@ -88,36 +85,49 @@ class Detection_Abstract(SecurityContentObject):
     # default mode, 'smart'
     # https://docs.pydantic.dev/latest/concepts/unions/#left-to-right-mode
     # https://github.com/pydantic/pydantic/issues/9101#issuecomment-2019032541
-    tests: List[Annotated[Union[UnitTest, IntegrationTest, ManualTest], Field(union_mode='left_to_right')]] = []
+    tests: List[
+        Annotated[
+            Union[UnitTest, IntegrationTest, ManualTest],
+            Field(union_mode="left_to_right"),
+        ]
+    ] = []
     # A list of groups of tests, relying on the same data
     test_groups: list[TestGroup] = []
 
     data_source_objects: list[DataSource] = []
-    drilldown_searches: list[Drilldown] = Field(default=[], description="A list of Drilldowns that should be included with this search")
+    drilldown_searches: list[Drilldown] = Field(
+        default=[],
+        description="A list of Drilldowns that should be included with this search",
+    )
 
-    def get_conf_stanza_name(self, app:CustomApp)->str:
-        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(app_label=app.label, detection_name=self.name)
+    def get_conf_stanza_name(self, app: CustomApp) -> str:
+        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(
+            app_label=app.label, detection_name=self.name
+        )
         self.check_conf_stanza_max_length(stanza_name)
         return stanza_name
-    
 
-    def get_action_dot_correlationsearch_dot_label(self, app:CustomApp, max_stanza_length:int=ES_MAX_STANZA_LENGTH)->str:
+    def get_action_dot_correlationsearch_dot_label(
+        self, app: CustomApp, max_stanza_length: int = ES_MAX_STANZA_LENGTH
+    ) -> str:
         stanza_name = self.get_conf_stanza_name(app)
-        stanza_name_after_saving_in_es = ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE.format(
-            security_domain_value = self.tags.security_domain, 
-            search_name = stanza_name
+        stanza_name_after_saving_in_es = (
+            ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE.format(
+                security_domain_value=self.tags.security_domain, search_name=stanza_name
             )
-        
-    
+        )
+
         if len(stanza_name_after_saving_in_es) > max_stanza_length:
-            raise ValueError(f"label may only be {max_stanza_length} characters to allow updating in-product, "
-                             f"but stanza was actually {len(stanza_name_after_saving_in_es)} characters: '{stanza_name_after_saving_in_es}' ")
-        
-        return stanza_name    
+            raise ValueError(
+                f"label may only be {max_stanza_length} characters to allow updating in-product, "
+                f"but stanza was actually {len(stanza_name_after_saving_in_es)} characters: '{stanza_name_after_saving_in_es}' "
+            )
+
+        return stanza_name
 
     @field_validator("search", mode="before")
     @classmethod
-    def validate_presence_of_filter_macro(cls, value:str, info:ValidationInfo)->str:
+    def validate_presence_of_filter_macro(cls, value: str, info: ValidationInfo) -> str:
         """
         Validates that, if required to be present, the filter macro is present with the proper name.
         The filter macro MUST be derived from the name of the detection
@@ -131,7 +141,7 @@ class Detection_Abstract(SecurityContentObject):
         Returns:
             str: The search, as an SPL formatted string.
         """
-        
+
         # Otherwise, the search is SPL.
 
         # In the future, we will may add support that makes the inclusion of the
@@ -171,7 +181,7 @@ class Detection_Abstract(SecurityContentObject):
         the model from the list of unit tests. Also, preemptively skips all manual tests, as well as
         tests for experimental/deprecated detections and Correlation type detections.
         """
-        
+
         # Since ManualTest and UnitTest are not differentiable without looking at the manual_test
         # tag, Pydantic builds all tests as UnitTest objects. If we see the manual_test flag, we
         # convert these to ManualTest
@@ -184,10 +194,7 @@ class Detection_Abstract(SecurityContentObject):
                         f"but encountered a {type(test)}."
                     )
                 # Create the manual test and skip it upon creation (cannot test via contentctl)
-                manual_test = ManualTest(
-                    name=test.name,
-                    attack_data=test.attack_data
-                )
+                manual_test = ManualTest(name=test.name, attack_data=test.attack_data)
                 tmp.append(manual_test)
             self.tests = tmp
 
@@ -213,8 +220,10 @@ class Detection_Abstract(SecurityContentObject):
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
 
         # Skip tests for non-production detections
-        if self.status != DetectionStatus.production:                                         
-            self.skip_all_tests(f"TEST SKIPPED: Detection is non-production ({self.status})")
+        if self.status != DetectionStatus.production:
+            self.skip_all_tests(
+                f"TEST SKIPPED: Detection is non-production ({self.status})"
+            )
 
         # Skip tests for detecton types like Correlation which are not supported via contentctl
         if self.type in SKIPPED_ANALYTICS_TYPES:
@@ -241,7 +250,10 @@ class Detection_Abstract(SecurityContentObject):
             # If the result/status of any test has not yet been set, return None
             if test.result is None or test.result.status is None:
                 return None
-            elif test.result.status == TestResultStatus.ERROR or test.result.status == TestResultStatus.FAIL:
+            elif (
+                test.result.status == TestResultStatus.ERROR
+                or test.result.status == TestResultStatus.FAIL
+            ):
                 # If any test failed or errored, return fail (we don't return the error state at
                 # the aggregate detection level)
                 return TestResultStatus.FAIL
@@ -267,24 +279,21 @@ class Detection_Abstract(SecurityContentObject):
     @property
     def datamodel(self) -> List[DataModel]:
         return [dm for dm in DataModel if dm in self.search]
-        
-            
-    
 
     @computed_field
     @property
     def source(self) -> str:
         return self.file_path.absolute().parent.name
-        
 
     deployment: Deployment = Field({})
 
     @computed_field
     @property
     def annotations(self) -> dict[str, Union[List[str], int, str]]:
-
         annotations_dict: dict[str, str | list[str] | int] = {}
-        annotations_dict["analytic_story"] = [story.name for story in self.tags.analytic_story]
+        annotations_dict["analytic_story"] = [
+            story.name for story in self.tags.analytic_story
+        ]
         if len(self.tags.cve or []) > 0:
             annotations_dict["cve"] = self.tags.cve
         annotations_dict["type"] = self.type
@@ -311,11 +320,13 @@ class Detection_Abstract(SecurityContentObject):
         if len(self.tags.cis20) > 0:
             mappings["cis20"] = [tag for tag in self.tags.cis20]
         if len(self.tags.kill_chain_phases) > 0:
-            mappings['kill_chain_phases'] = [phase for phase in self.tags.kill_chain_phases]
+            mappings["kill_chain_phases"] = [
+                phase for phase in self.tags.kill_chain_phases
+            ]
         if len(self.tags.mitre_attack_id) > 0:
-            mappings['mitre_attack'] = self.tags.mitre_attack_id
+            mappings["mitre_attack"] = self.tags.mitre_attack_id
         if len(self.tags.nist) > 0:
-            mappings['nist'] = [category for category in self.tags.nist]
+            mappings["nist"] = [category for category in self.tags.nist]
 
         # No need to sort the dict! It has been constructed in-order.
         # However, if this logic is changed, then consider reordering or
@@ -330,8 +341,10 @@ class Detection_Abstract(SecurityContentObject):
 
     def cve_enrichment_func(self, __context: Any):
         if len(self.cve_enrichment) > 0:
-            raise ValueError(f"Error, field 'cve_enrichment' should be empty and "
-                             f"dynamically populated at runtime. Instead, this field contained: {self.cve_enrichment}")
+            raise ValueError(
+                f"Error, field 'cve_enrichment' should be empty and "
+                f"dynamically populated at runtime. Instead, this field contained: {self.cve_enrichment}"
+            )
 
         output_dto: Union[DirectorOutputDto, None] = __context.get("output_dto", None)
         if output_dto is None:
@@ -341,7 +354,11 @@ class Detection_Abstract(SecurityContentObject):
 
         for cve_id in self.tags.cve:
             try:
-                enriched_cves.append(output_dto.cve_enrichment.enrich_cve(cve_id, raise_exception_on_failure=False))
+                enriched_cves.append(
+                    output_dto.cve_enrichment.enrich_cve(
+                        cve_id, raise_exception_on_failure=False
+                    )
+                )
             except Exception as e:
                 raise ValueError(f"{e}")
         self.cve_enrichment = enriched_cves
@@ -353,7 +370,7 @@ class Detection_Abstract(SecurityContentObject):
     @property
     def nes_fields(self) -> Optional[str]:
         if self.deployment.alert_action.notable is not None:
-            return ','.join(self.deployment.alert_action.notable.nes_fields)
+            return ",".join(self.deployment.alert_action.notable.nes_fields)
         else:
             return None
 
@@ -362,7 +379,6 @@ class Detection_Abstract(SecurityContentObject):
     def providing_technologies(self) -> List[ProvidingTechnology]:
         return ProvidingTechnology.getProvidingTechFromSearch(self.search)
 
-
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
@@ -370,18 +386,17 @@ class Detection_Abstract(SecurityContentObject):
 
         for entity in self.rba.risk_objects:
             risk_object: dict[str, str | int] = dict()
-            risk_object['risk_object_type'] = entity.type
-            risk_object['risk_object_field'] = entity.field
-            risk_object['risk_score'] = entity.score
+            risk_object["risk_object_type"] = entity.type
+            risk_object["risk_object_field"] = entity.field
+            risk_object["risk_score"] = entity.score
             risk_objects.append(risk_object)
-        
+
         for entity in self.rba.threat_objects:
             threat_object: dict[str, str] = dict()
-            threat_object['threat_object_field'] = entity.field
-            threat_object['threat_object_type'] = entity.type
+            threat_object["threat_object_field"] = entity.field
+            threat_object["threat_object_type"] = entity.type
             risk_objects.append(threat_object)
         return risk_objects
-
 
     # TODO Remove observable code
     # @computed_field
@@ -429,7 +444,7 @@ class Detection_Abstract(SecurityContentObject):
     #             risk_object['threat_object_field'] = entity.name
     #             risk_object['threat_object_type'] = "url"
     #             risk_objects.append(risk_object)
-            
+
     #         elif 'Attacker' in entity.role:
     #             risk_object['threat_object_field'] = entity.name
     #             risk_object['threat_object_type'] = entity.type.lower()
@@ -446,7 +461,7 @@ class Detection_Abstract(SecurityContentObject):
 
     @computed_field
     @property
-    def metadata(self) -> dict[str, str|float]:
+    def metadata(self) -> dict[str, str | float]:
         # NOTE: we ignore the type error around self.status because we are using Pydantic's
         # use_enum_values configuration
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
@@ -456,10 +471,19 @@ class Detection_Abstract(SecurityContentObject):
         # dict below) should not have any impact, but renaming or removing any of these fields will
         # break the `inspect` action.
         return {
-            'detection_id': str(self.id),
-            'deprecated': '1' if self.status == DetectionStatus.deprecated else '0',          # type: ignore
-            'detection_version': str(self.version),
-            'publish_time': datetime.datetime(self.date.year,self.date.month,self.date.day,0,0,0,0,tzinfo=datetime.timezone.utc).timestamp()
+            "detection_id": str(self.id),
+            "deprecated": "1" if self.status == DetectionStatus.deprecated else "0",  # type: ignore
+            "detection_version": str(self.version),
+            "publish_time": datetime.datetime(
+                self.date.year,
+                self.date.month,
+                self.date.day,
+                0,
+                0,
+                0,
+                0,
+                tzinfo=datetime.timezone.utc,
+            ).timestamp(),
         }
 
     @model_serializer
@@ -480,9 +504,9 @@ class Detection_Abstract(SecurityContentObject):
         }
         if self.rba is not None:
             model["risk_severity"] = self.rba.severity
-            model['tags']['risk_score'] = self.rba.risk_score
+            model["tags"]["risk_score"] = self.rba.risk_score
         else:
-            model['tags']['risk_score'] = 0
+            model["tags"]["risk_score"] = 0
 
         # Only a subset of macro fields are required:
         all_macros: list[dict[str, str | list[str]]] = []
@@ -490,13 +514,13 @@ class Detection_Abstract(SecurityContentObject):
             macro_dump: dict[str, str | list[str]] = {
                 "name": macro.name,
                 "definition": macro.definition,
-                "description": macro.description
+                "description": macro.description,
             }
             if len(macro.arguments) > 0:
-                macro_dump['arguments'] = macro.arguments
+                macro_dump["arguments"] = macro.arguments
 
             all_macros.append(macro_dump)
-        model['macros'] = all_macros                                                                # type: ignore
+        model["macros"] = all_macros  # type: ignore
 
         all_lookups: list[dict[str, str | int | None]] = []
         for lookup in self.lookups:
@@ -507,7 +531,7 @@ class Detection_Abstract(SecurityContentObject):
                         "description": lookup.description,
                         "collection": lookup.collection,
                         "case_sensitive_match": None,
-                        "fields_list": lookup.fields_to_fields_list_conf_format
+                        "fields_list": lookup.fields_to_fields_list_conf_format,
                     }
                 )
             elif isinstance(lookup, FileBackedLookup):
@@ -517,15 +541,17 @@ class Detection_Abstract(SecurityContentObject):
                         "description": lookup.description,
                         "filename": lookup.filename.name,
                         "default_match": "true" if lookup.default_match else "false",
-                        "case_sensitive_match": "true" if lookup.case_sensitive_match else "false",
+                        "case_sensitive_match": "true"
+                        if lookup.case_sensitive_match
+                        else "false",
                         "match_type": lookup.match_type_to_conf_format,
-                        "min_matches": lookup.min_matches
+                        "min_matches": lookup.min_matches,
                     }
                 )
-        model['lookups'] = all_lookups                                                              # type: ignore
+        model["lookups"] = all_lookups  # type: ignore
 
         # Combine fields from this model with fields from parent
-        super_fields.update(model)                                                                  # type: ignore
+        super_fields.update(model)  # type: ignore
 
         # return the model
         return super_fields
@@ -558,7 +584,7 @@ class Detection_Abstract(SecurityContentObject):
         updated_data_source_names: set[str] = set()
 
         for ds in self.data_source:
-            split_data_sources = {d.strip() for d in ds.split('AND')}
+            split_data_sources = {d.strip() for d in ds.split("AND")}
             updated_data_source_names.update(split_data_sources)
 
         sources = sorted(list(updated_data_source_names))
@@ -567,7 +593,9 @@ class Detection_Abstract(SecurityContentObject):
         missing_sources: list[str] = []
         for source in sources:
             try:
-                matched_data_sources += DataSource.mapNamesToSecurityContentObjects([source], director)
+                matched_data_sources += DataSource.mapNamesToSecurityContentObjects(
+                    [source], director
+                )
             except Exception:
                 # We gobble this up and add it to a global set so that we
                 # can print it ONCE at the end of the build of datasources.
@@ -584,7 +612,7 @@ class Detection_Abstract(SecurityContentObject):
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
-            story.detections.append(self)     
+            story.detections.append(self)
 
         self.cve_enrichment_func(__context)
 
@@ -595,32 +623,39 @@ class Detection_Abstract(SecurityContentObject):
         # 1 of the drilldowns contains the string Drilldown.SEARCH_PLACEHOLDER.
         # This is presently a requirement when 1 or more drilldowns are added to a detection.
         # Note that this is only required for production searches that are not hunting
-            
-        if self.type == AnalyticsType.Hunting or self.status != DetectionStatus.production:
-            #No additional check need to happen on the potential drilldowns.
+
+        if (
+            self.type == AnalyticsType.Hunting
+            or self.status != DetectionStatus.production
+        ):
+            # No additional check need to happen on the potential drilldowns.
             pass
         else:
             found_placeholder = False
             if len(self.drilldown_searches) < 2:
-                raise ValueError(f"This detection is required to have 2 drilldown_searches, but only has [{len(self.drilldown_searches)}]")
+                raise ValueError(
+                    f"This detection is required to have 2 drilldown_searches, but only has [{len(self.drilldown_searches)}]"
+                )
             for drilldown in self.drilldown_searches:
                 if DRILLDOWN_SEARCH_PLACEHOLDER in drilldown.search:
                     found_placeholder = True
             if not found_placeholder:
-                raise ValueError("Detection has one or more drilldown_searches, but none of them "
-                                 f"contained '{DRILLDOWN_SEARCH_PLACEHOLDER}. This is a requirement "
-                                 "if drilldown_searches are defined.'")
-            
+                raise ValueError(
+                    "Detection has one or more drilldown_searches, but none of them "
+                    f"contained '{DRILLDOWN_SEARCH_PLACEHOLDER}. This is a requirement "
+                    "if drilldown_searches are defined.'"
+                )
+
         # Update the search fields with the original search, if required
         for drilldown in self.drilldown_searches:
             drilldown.perform_search_substitutions(self)
 
-        #For experimental purposes, add the default drilldowns
-        #self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))
+        # For experimental purposes, add the default drilldowns
+        # self.drilldown_searches.extend(Drilldown.constructDrilldownsFromDetection(self))
 
     @property
-    def drilldowns_in_JSON(self) -> list[dict[str,str]]:
-        """This function is required for proper JSON 
+    def drilldowns_in_JSON(self) -> list[dict[str, str]]:
+        """This function is required for proper JSON
         serializiation of drilldowns to occur in savedsearches.conf.
         It returns the list[Drilldown] as a list[dict].
         Without this function, the jinja template is unable
@@ -628,24 +663,26 @@ class Detection_Abstract(SecurityContentObject):
 
         Returns:
             list[dict[str,str]]: List of Drilldowns dumped to dict format
-        """        
+        """
         return [drilldown.model_dump() for drilldown in self.drilldown_searches]
 
-    @field_validator('lookups', mode="before")
+    @field_validator("lookups", mode="before")
     @classmethod
-    def getDetectionLookups(cls, v:list[str], info:ValidationInfo) -> list[Lookup]:
-        director:DirectorOutputDto = info.context.get("output_dto",None)
-        
-        search:Union[str,None] = info.data.get("search",None)
+    def getDetectionLookups(cls, v: list[str], info: ValidationInfo) -> list[Lookup]:
+        director: DirectorOutputDto = info.context.get("output_dto", None)
+
+        search: Union[str, None] = info.data.get("search", None)
         if search is None:
             raise ValueError("Search was None - is this file missing the search field?")
-        
+
         lookups = Lookup.get_lookups(search, director)
         return lookups
 
-    @field_validator('baselines', mode="before")
+    @field_validator("baselines", mode="before")
     @classmethod
-    def mapDetectionNamesToBaselineObjects(cls, v: list[str], info: ValidationInfo) -> List[Baseline]:
+    def mapDetectionNamesToBaselineObjects(
+        cls, v: list[str], info: ValidationInfo
+    ) -> List[Baseline]:
         if len(v) > 0:
             raise ValueError(
                 "Error, baselines are constructed automatically at runtime.  Please do not include this field."
@@ -653,7 +690,9 @@ class Detection_Abstract(SecurityContentObject):
 
         name: Union[str, None] = info.data.get("name", None)
         if name is None:
-            raise ValueError("Error, cannot get Baselines because the Detection does not have a 'name' defined.")
+            raise ValueError(
+                "Error, cannot get Baselines because the Detection does not have a 'name' defined."
+            )
 
         if info.context is None:
             raise ValueError("ValidationInfo.context unexpectedly null")
@@ -664,14 +703,16 @@ class Detection_Abstract(SecurityContentObject):
             # This matching is a bit strange, because baseline.tags.detections starts as a list of strings, but
             # is eventually updated to a list of Detections as we construct all of the detection objects.
             detection_names = [
-                detection_name for detection_name in baseline.tags.detections if isinstance(detection_name, str)
+                detection_name
+                for detection_name in baseline.tags.detections
+                if isinstance(detection_name, str)
             ]
             if name in detection_names:
                 baselines.append(baseline)
 
         return baselines
 
-    @field_validator('macros', mode="before")
+    @field_validator("macros", mode="before")
     @classmethod
     def getDetectionMacros(cls, v: list[str], info: ValidationInfo) -> list[Macro]:
         if info.context is None:
@@ -687,21 +728,25 @@ class Detection_Abstract(SecurityContentObject):
         message = f"Expected 'search_name' to be a string, instead it was [{type(search_name)}]"
         assert isinstance(search_name, str), message
 
-        filter_macro_name = search_name.replace(' ', '_')\
-            .replace('-', '_')\
-            .replace('.', '_')\
-            .replace('/', '_')\
-            .lower()\
-            + '_filter'
+        filter_macro_name = (
+            search_name.replace(" ", "_")
+            .replace("-", "_")
+            .replace(".", "_")
+            .replace("/", "_")
+            .lower()
+            + "_filter"
+        )
         try:
-            filter_macro = Macro.mapNamesToSecurityContentObjects([filter_macro_name], director)[0]
+            filter_macro = Macro.mapNamesToSecurityContentObjects(
+                [filter_macro_name], director
+            )[0]
         except Exception:
             # Filter macro did not exist, so create one at runtime
             filter_macro = Macro.model_validate(
                 {
                     "name": filter_macro_name,
-                    "definition": 'search *',
-                    "description": 'Update this macro to limit the output results to filter out false positives.'
+                    "definition": "search *",
+                    "description": "Update this macro to limit the output results to filter out false positives.",
                 }
             )
             director.addContentToDictMappings(filter_macro)
@@ -724,12 +769,12 @@ class Detection_Abstract(SecurityContentObject):
 
     @field_validator("enabled_by_default", mode="before")
     def only_enabled_if_production_status(cls, v: Any, info: ValidationInfo) -> bool:
-        '''
+        """
         A detection can ONLY be enabled by default if it is a PRODUCTION detection.
         If not (for example, it is EXPERIMENTAL or DEPRECATED) then we will throw an exception.
         Similarly, a detection MUST be schedulable, meaning that it must be Anomaly, Correleation, or TTP.
         We will not allow Hunting searches to be enabled by default.
-        '''
+        """
         if v is False:
             return v
 
@@ -740,16 +785,23 @@ class Detection_Abstract(SecurityContentObject):
             errors.append(
                 f"status is '{status.name}'. Detections that are enabled by default MUST be "
                 f"'{DetectionStatus.production}'"
-                )
+            )
 
-        if searchType not in [AnalyticsType.Anomaly, AnalyticsType.Correlation, AnalyticsType.TTP]:
+        if searchType not in [
+            AnalyticsType.Anomaly,
+            AnalyticsType.Correlation,
+            AnalyticsType.TTP,
+        ]:
             errors.append(
                 f"type is '{searchType}'. Detections that are enabled by default MUST be one"
                 " of the following types: "
-                f"{[AnalyticsType.Anomaly, AnalyticsType.Correlation, AnalyticsType.TTP]}")
+                f"{[AnalyticsType.Anomaly, AnalyticsType.Correlation, AnalyticsType.TTP]}"
+            )
         if len(errors) > 0:
             error_message = "\n  - ".join(errors)
-            raise ValueError(f"Detection is 'enabled_by_default: true' however \n  - {error_message}")
+            raise ValueError(
+                f"Detection is 'enabled_by_default: true' however \n  - {error_message}"
+            )
 
         return v
 
@@ -760,39 +812,42 @@ class Detection_Abstract(SecurityContentObject):
         else:
             self.tags.nist = [NistCategory.DE_AE]
         return self
-        
 
     @model_validator(mode="after")
     def ensureThrottlingFieldsExist(self):
-        '''
+        """
         For throttling to work properly, the fields to throttle on MUST
         exist in the search itself.  If not, then we cannot apply the throttling
-        '''
+        """
         if self.tags.throttling is None:
             # No throttling configured for this detection
             return self
 
-        missing_fields:list[str] = [field for field in self.tags.throttling.fields if field not in self.search]
+        missing_fields: list[str] = [
+            field for field in self.tags.throttling.fields if field not in self.search
+        ]
         if len(missing_fields) > 0:
-            raise ValueError(f"The following throttle fields were missing from the search: {missing_fields}")
+            raise ValueError(
+                f"The following throttle fields were missing from the search: {missing_fields}"
+            )
 
         else:
             # All throttling fields present in search
             return self
-            
-
 
     @model_validator(mode="after")
     def ensureProperRBAConfig(self):
         """
         If a detection has an RBA deployment and is PRODUCTION, then it must have an RBA config, with at least one risk object
-        
+
         Returns:
             self: Returns itself if the validation passes
         """
 
-        
-        if self.deployment.alert_action.rba is None or self.deployment.alert_action.rba.enabled is False:
+        if (
+            self.deployment.alert_action.rba is None
+            or self.deployment.alert_action.rba.enabled is False
+        ):
             # confirm we don't have an RBA config
             if self.rba is None:
                 return self
@@ -806,13 +861,12 @@ class Detection_Abstract(SecurityContentObject):
                     "Detection is expected to have an RBA object based on its deployment config"
                 )
             else:
-                if len(self.rba.risk_objects) > 0: # type: ignore
+                if len(self.rba.risk_objects) > 0:  # type: ignore
                     return self
                 else:
                     raise ValueError(
                         "Detection expects an RBA config with at least one risk object."
                     )
-
 
     # TODO - Remove old observable code
     # @model_validator(mode="after")
@@ -851,10 +905,13 @@ class Detection_Abstract(SecurityContentObject):
     @model_validator(mode="after")
     def search_rba_fields_exist_validate(self):
         # Return immediately if RBA isn't required
-        if (self.deployment.alert_action.rba.enabled is False or self.deployment.alert_action.rba is None) and self.rba is None: #type: ignore
+        if (
+            self.deployment.alert_action.rba.enabled is False
+            or self.deployment.alert_action.rba is None
+        ) and self.rba is None:  # type: ignore
             return self
-        
-        # Raise error if RBA isn't present 
+
+        # Raise error if RBA isn't present
         if self.rba is None:
             raise ValueError(
                 "RBA is required for this detection based on its deployment config"
@@ -869,7 +926,9 @@ class Detection_Abstract(SecurityContentObject):
         if self.rba.message:
             matches = re.findall(field_match_regex, self.rba.message.lower())
             message_fields = [match.replace("$", "").lower() for match in matches]
-            missing_fields = set([field for field in rba_fields if field not in self.search.lower()])
+            missing_fields = set(
+                [field for field in rba_fields if field not in self.search.lower()]
+            )
         else:
             message_fields = []
             missing_fields = set()
@@ -880,15 +939,16 @@ class Detection_Abstract(SecurityContentObject):
                 "The following fields are declared in the rba config, but do not exist in the "
                 f"search: {missing_fields}"
             )
-        missing_fields = set([field for field in message_fields if field not in self.search.lower()])
+        missing_fields = set(
+            [field for field in message_fields if field not in self.search.lower()]
+        )
         if len(missing_fields) > 0:
             error_messages.append(
                 "The following fields are used as fields in the message, but do not exist in "
                 f"the search: {missing_fields}"
             )
 
-        if len(error_messages) > 0 and self.status == DetectionStatus.production: 
-
+        if len(error_messages) > 0 and self.status == DetectionStatus.production:
             msg = (
                 "Use of fields in rba/messages that do not appear in search:\n\t- "
                 "\n\t- ".join(error_messages)
@@ -941,7 +1001,7 @@ class Detection_Abstract(SecurityContentObject):
     #     return self
 
     @field_validator("tests", mode="before")
-    def ensure_yml_test_is_unittest(cls, v:list[dict]):
+    def ensure_yml_test_is_unittest(cls, v: list[dict]):
         """The typing for the tests field allows it to be one of
         a number of different types of tests. However, ONLY
         UnitTest should be allowed to be defined in the YML
@@ -957,17 +1017,17 @@ class Detection_Abstract(SecurityContentObject):
         it into a different type of test
 
         Args:
-            v (list[dict]): list of dicts read from the yml. 
+            v (list[dict]): list of dicts read from the yml.
             Each one SHOULD be a valid UnitTest. If we cannot
             construct a valid unitTest from it, a ValueError should be raised
 
         Returns:
-            _type_: The input of the function, assuming no 
+            _type_: The input of the function, assuming no
             ValueError is raised.
-        """        
-        valueErrors:list[ValueError] = []
+        """
+        valueErrors: list[ValueError] = []
         for unitTest in v:
-            #This raises a ValueError on a failed UnitTest.
+            # This raises a ValueError on a failed UnitTest.
             try:
                 UnitTest.model_validate(unitTest)
             except ValueError as e:
@@ -977,13 +1037,10 @@ class Detection_Abstract(SecurityContentObject):
         # All of these can be constructred as UnitTests with no
         # Exceptions, so let the normal flow continue
         return v
-        
 
     @field_validator("tests")
     def tests_validate(
-        cls,
-        v: list[UnitTest | IntegrationTest | ManualTest],
-        info: ValidationInfo
+        cls, v: list[UnitTest | IntegrationTest | ManualTest], info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest | ManualTest]:
         # Only production analytics require tests
         if info.data.get("status", "") != DetectionStatus.production:
@@ -1003,7 +1060,8 @@ class Detection_Abstract(SecurityContentObject):
         # Ensure that there is at least 1 test
         if len(v) == 0:
             raise ValueError(
-                "At least one test is REQUIRED for production detection: " + info.data.get("name", "NO NAME FOUND")
+                "At least one test is REQUIRED for production detection: "
+                + info.data.get("name", "NO NAME FOUND")
             )
 
         # No issues - at least one test provided for production type requiring testing
@@ -1075,13 +1133,29 @@ class Detection_Abstract(SecurityContentObject):
     def get_summary(
         self,
         detection_fields: list[str] = [
-            "name", "type", "status", "test_status", "source", "data_source", "search", "file_path"
+            "name",
+            "type",
+            "status",
+            "test_status",
+            "source",
+            "data_source",
+            "search",
+            "file_path",
         ],
         detection_field_aliases: dict[str, str] = {
-            "status": "production_status", "test_status": "status", "source": "source_category"
+            "status": "production_status",
+            "test_status": "status",
+            "source": "source_category",
         },
         tags_fields: list[str] = ["manual_test"],
-        test_result_fields: list[str] = ["success", "message", "exception", "status", "duration", "wait_duration"],
+        test_result_fields: list[str] = [
+            "success",
+            "message",
+            "exception",
+            "status",
+            "duration",
+            "wait_duration",
+        ],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict[str, Any]:
         """
@@ -1121,7 +1195,7 @@ class Detection_Abstract(SecurityContentObject):
             # Initialize the dict as a mapping of strings to str/bool
             result: dict[str, Union[str, bool]] = {
                 "name": test.name,
-                "test_type": test.test_type
+                "test_type": test.test_type,
             }
 
             # If result is not None, get a summary of the test result w/ the requested fields
@@ -1138,7 +1212,7 @@ class Detection_Abstract(SecurityContentObject):
                 result["message"] = "NO RESULT - Test not run"
 
             # Add the result to our list
-            summary_dict["tests"].append(result)                                                    # type: ignore
+            summary_dict["tests"].append(result)  # type: ignore
 
         # Return the summary
 

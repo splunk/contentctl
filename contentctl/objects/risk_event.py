@@ -1,7 +1,14 @@
 import re
 from functools import cached_property
 
-from pydantic import ConfigDict, BaseModel, Field, PrivateAttr, field_validator, computed_field
+from pydantic import (
+    ConfigDict,
+    BaseModel,
+    Field,
+    PrivateAttr,
+    field_validator,
+    computed_field,
+)
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.detection import Detection
 from contentctl.objects.rba import RiskObject
@@ -35,8 +42,7 @@ class RiskEvent(BaseModel):
 
     # The MITRE ATT&CK IDs
     annotations_mitre_attack: list[str] = Field(
-        alias="annotations.mitre_attack",
-        default=[]
+        alias="annotations.mitre_attack", default=[]
     )
 
     # Contributing events search query (we use this to derive the corresponding field from the
@@ -48,9 +54,7 @@ class RiskEvent(BaseModel):
 
     # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
     # fields vary depending on the SPL which generated them
-    model_config = ConfigDict(
-        extra="allow"
-    )
+    model_config = ConfigDict(extra="allow")
 
     @field_validator("annotations_mitre_attack", "analyticstories", mode="before")
     @classmethod
@@ -72,7 +76,9 @@ class RiskEvent(BaseModel):
         event(s). Useful for mapping back to a risk object in the detection.
         """
         pattern = re.compile(
-            r"\| savedsearch \"" + self.search_name + r"\" \| search (?P<field>[^=]+)=.+"
+            r"\| savedsearch \""
+            + self.search_name
+            + r"\" \| search (?P<field>[^=]+)=.+"
         )
         match = pattern.search(self.contributing_events_search)
         if match is None:
@@ -121,7 +127,9 @@ class RiskEvent(BaseModel):
         :param detection: the detection associated w/ this risk event
         :raises: ValidationFailed
         """
-        if sorted(self.annotations_mitre_attack) != sorted(detection.tags.mitre_attack_id):
+        if sorted(self.annotations_mitre_attack) != sorted(
+            detection.tags.mitre_attack_id
+        ):
             raise ValidationFailed(
                 f"MITRE ATT&CK IDs in risk event ({self.annotations_mitre_attack}) do not match those"
                 f" in detection ({detection.tags.mitre_attack_id})."
@@ -134,7 +142,9 @@ class RiskEvent(BaseModel):
         :raises: ValidationFailed
         """
         # Render the detection analytic_story to a list of strings before comparing
-        detection_analytic_story = [story.name for story in detection.tags.analytic_story]
+        detection_analytic_story = [
+            story.name for story in detection.tags.analytic_story
+        ]
         if sorted(self.analyticstories) != sorted(detection_analytic_story):
             raise ValidationFailed(
                 f"Analytic stories in risk event ({self.analyticstories}) do not match those"
@@ -174,16 +184,12 @@ class RiskEvent(BaseModel):
         # placeholder
         tmp_placeholder = "PLACEHOLDERPATTERNFORESCAPING"
         escaped_source_message_with_placeholder: str = re.escape(
-            field_replacement_pattern.sub(
-                tmp_placeholder,
-                detection.rba.message
-            )
+            field_replacement_pattern.sub(tmp_placeholder, detection.rba.message)
         )
         placeholder_replacement_pattern = re.compile(tmp_placeholder)
         final_risk_message_pattern = re.compile(
             placeholder_replacement_pattern.sub(
-                r"[\\s\\S]*\\S[\\s\\S]*",
-                escaped_source_message_with_placeholder
+                r"[\\s\\S]*\\S[\\s\\S]*", escaped_source_message_with_placeholder
             )
         )
 
@@ -191,8 +197,8 @@ class RiskEvent(BaseModel):
         if final_risk_message_pattern.match(self.risk_message) is None:
             raise ValidationFailed(
                 "Risk message in event does not match the pattern set by the detection. Message in "
-                f"risk event: \"{self.risk_message}\". Message in detection: "
-                f"\"{detection.rba.message}\"."
+                f'risk event: "{self.risk_message}". Message in detection: '
+                f'"{detection.rba.message}".'
             )
 
     def validate_risk_against_risk_objects(self, risk_objects: set[RiskObject]) -> None:

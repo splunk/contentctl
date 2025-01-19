@@ -1,7 +1,11 @@
 from pydantic import BaseModel, field_validator, ConfigDict
-from contentctl.objects.constants import SES_OBSERVABLE_TYPE_MAPPING, RBA_OBSERVABLE_ROLE_MAPPING
+from contentctl.objects.constants import (
+    SES_OBSERVABLE_TYPE_MAPPING,
+    RBA_OBSERVABLE_ROLE_MAPPING,
+)
 
 # TODO (cmcginley): should this class be removed?
+
 
 class Observable(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -9,13 +13,13 @@ class Observable(BaseModel):
     type: str
     role: list[str]
 
-    @field_validator('name')
+    @field_validator("name")
     def check_name(cls, v: str):
         if v == "":
             raise ValueError("No name provided for observable")
         return v
 
-    @field_validator('type')
+    @field_validator("type")
     def check_type(cls, v: str):
         if v not in SES_OBSERVABLE_TYPE_MAPPING.keys():
             raise ValueError(
@@ -24,7 +28,7 @@ class Observable(BaseModel):
             )
         return v
 
-    @field_validator('role')
+    @field_validator("role")
     def check_roles(cls, v: list[str]):
         if len(v) == 0:
             raise ValueError("Error, at least 1 role must be listed for Observable.")

@@ -11,10 +11,11 @@ from pydantic import (
     field_validator,
     ValidationInfo,
     model_serializer,
-    model_validator
+    model_validator,
 )
 from contentctl.objects.story import Story
 from contentctl.objects.throttling import Throttling
+
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
@@ -27,7 +28,7 @@ from contentctl.objects.enums import (
     SecurityDomain,
     KillChainPhase,
     NistCategory,
-    SecurityContentProductName
+    SecurityContentProductName,
 )
 from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
@@ -36,7 +37,7 @@ from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
 class DetectionTags(BaseModel):
     # detection spec
 
-    model_config = ConfigDict(validate_default=False, extra='forbid')
+    model_config = ConfigDict(validate_default=False, extra="forbid")
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []
@@ -54,7 +55,9 @@ class DetectionTags(BaseModel):
     atomic_guid: List[AtomicTest] = []
 
     # enrichment
-    mitre_attack_enrichments: List[MitreAttackEnrichment] = Field([], validate_default=True)
+    mitre_attack_enrichments: List[MitreAttackEnrichment] = Field(
+        [], validate_default=True
+    )
 
     @computed_field
     @property
@@ -127,7 +130,7 @@ class DetectionTags(BaseModel):
             "nist": self.nist,
             "security_domain": self.security_domain,
             "mitre_attack_id": self.mitre_attack_id,
-            "mitre_attack_enrichments": self.mitre_attack_enrichments
+            "mitre_attack_enrichments": self.mitre_attack_enrichments,
         }
 
     @model_validator(mode="after")
@@ -141,9 +144,13 @@ class DetectionTags(BaseModel):
                 f" at runtime. Instead, this field contained: {self.mitre_attack_enrichments}"
             )
 
-        output_dto: Union[DirectorOutputDto, None] = info.context.get("output_dto", None)
+        output_dto: Union[DirectorOutputDto, None] = info.context.get(
+            "output_dto", None
+        )
         if output_dto is None:
-            raise ValueError("Context not provided to detection.detection_tags model post validator")
+            raise ValueError(
+                "Context not provided to detection.detection_tags model post validator"
+            )
 
         if output_dto.attack_enrichment.use_enrichment is False:
             return self
@@ -152,7 +159,9 @@ class DetectionTags(BaseModel):
         missing_tactics: list[str] = []
         for mitre_attack_id in self.mitre_attack_id:
             try:
-                mitre_enrichments.append(output_dto.attack_enrichment.getEnrichmentByMitreID(mitre_attack_id))
+                mitre_enrichments.append(
+                    output_dto.attack_enrichment.getEnrichmentByMitreID(mitre_attack_id)
+                )
             except Exception:
                 missing_tactics.append(mitre_attack_id)
 
@@ -163,7 +172,7 @@ class DetectionTags(BaseModel):
 
         return self
 
-    '''
+    """
     @field_validator('mitre_attack_enrichments', mode="before")
     @classmethod
     def addAttackEnrichments(cls, v:list[MitreAttackEnrichment], info:ValidationInfo)->list[MitreAttackEnrichment]:
@@ -181,31 +190,43 @@ class DetectionTags(BaseModel):
         enrichments = []
 
         return enrichments
-    '''
+    """
 
-    @field_validator('analytic_story', mode="before")
+    @field_validator("analytic_story", mode="before")
     @classmethod
-    def mapStoryNamesToStoryObjects(cls, v: list[str], info: ValidationInfo) -> list[Story]:
+    def mapStoryNamesToStoryObjects(
+        cls, v: list[str], info: ValidationInfo
+    ) -> list[Story]:
         if info.context is None:
             raise ValueError("ValidationInfo.context unexpectedly null")
 
-        return Story.mapNamesToSecurityContentObjects(v, info.context.get("output_dto", None))
+        return Story.mapNamesToSecurityContentObjects(
+            v, info.context.get("output_dto", None)
+        )
 
     def getAtomicGuidStringArray(self) -> List[str]:
-        return [str(atomic_guid.auto_generated_guid) for atomic_guid in self.atomic_guid]
+        return [
+            str(atomic_guid.auto_generated_guid) for atomic_guid in self.atomic_guid
+        ]
 
-    @field_validator('atomic_guid', mode="before")
+    @field_validator("atomic_guid", mode="before")
     @classmethod
-    def mapAtomicGuidsToAtomicTests(cls, v: List[UUID4], info: ValidationInfo) -> List[AtomicTest]:
+    def mapAtomicGuidsToAtomicTests(
+        cls, v: List[UUID4], info: ValidationInfo
+    ) -> List[AtomicTest]:
         if len(v) == 0:
             return []
 
         if info.context is None:
             raise ValueError("ValidationInfo.context unexpectedly null")
 
-        output_dto: Union[DirectorOutputDto, None] = info.context.get("output_dto", None)
+        output_dto: Union[DirectorOutputDto, None] = info.context.get(
+            "output_dto", None
+        )
         if output_dto is None:
-            raise ValueError("Context not provided to detection.detection_tags.atomic_guid validator")
+            raise ValueError(
+                "Context not provided to detection.detection_tags.atomic_guid validator"
+            )
 
         atomic_enrichment: AtomicEnrichment = output_dto.atomic_enrichment
 
@@ -247,4 +268,6 @@ class DetectionTags(BaseModel):
         elif len(missing_tests) > 0:
             raise ValueError(missing_tests_string)
 
-        return matched_tests + [AtomicTest.AtomicTestWhenTestIsMissing(test) for test in missing_tests]
+        return matched_tests + [
+            AtomicTest.AtomicTestWhenTestIsMissing(test) for test in missing_tests
+        ]

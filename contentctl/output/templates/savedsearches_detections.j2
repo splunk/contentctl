@@ -74,7 +74,7 @@ action.notable.param.security_domain = {{ detection.tags.security_domain }}
 {% if detection.rba %}
 action.notable.param.severity = {{ detection.rba.severity }}
 {% else %}
-{# Correlations do not have detection.rba defined, but should get a default severity #} 
+{# Correlations do not have detection.rba defined, but should get a default severity #}
 action.notable.param.severity = high 
 {% endif %}
 {% endif %}

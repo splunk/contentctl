@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from typing import Any, ClassVar
 import re
@@ -17,6 +16,7 @@ class SavedsearchesConf(BaseModel):
     NOTE: At present, this model only parses the detections themselves from the .conf; thing like
     baselines or response tasks are left alone currently
     """
+
     # The path to the conf file
     path: Path = Field(...)
 
@@ -112,8 +112,7 @@ class SavedsearchesConf(BaseModel):
 
         # Build the stanza model from the accumulated lines and adjust the state to end this section
         self.detection_stanzas[self._current_section_name] = DetectionStanza(
-            name=self._current_section_name,
-            lines=self._current_section_lines
+            name=self._current_section_name, lines=self._current_section_lines
         )
         self._in_section = False
 
@@ -170,7 +169,9 @@ class SavedsearchesConf(BaseModel):
                     self._in_detections = True
 
     @staticmethod
-    def init_from_package(package_path: Path, app_name: str, appid: str) -> "SavedsearchesConf":
+    def init_from_package(
+        package_path: Path, app_name: str, appid: str
+    ) -> "SavedsearchesConf":
         """
         Alternate constructor which can take an app package, and extract the savedsearches.conf from
         a temporary file.
@@ -188,9 +189,10 @@ class SavedsearchesConf(BaseModel):
             # Open the tar/gzip archive
             with tarfile.open(package_path) as package:
                 # Extract the savedsearches.conf and use it to init the model
-                package_conf_path = SavedsearchesConf.PACKAGE_CONF_PATH_FMT_STR.format(appid=appid)
+                package_conf_path = SavedsearchesConf.PACKAGE_CONF_PATH_FMT_STR.format(
+                    appid=appid
+                )
                 package.extract(package_conf_path, path=tmpdir)
                 return SavedsearchesConf(
-                    path=Path(tmpdir, package_conf_path),
-                    app_label=app_name
+                    path=Path(tmpdir, package_conf_path), app_label=app_name
                 )

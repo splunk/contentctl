@@ -4,21 +4,25 @@ from uuid import UUID
 
 class ValidationFailed(Exception):
     """Indicates not an error in execution, but a validation failure"""
+
     pass
 
 
 class IntegrationTestingError(Exception):
     """Base exception class for integration testing"""
+
     pass
 
 
 class ServerError(IntegrationTestingError):
     """An error encounterd during integration testing, as provided by the server (Splunk instance)"""
+
     pass
 
 
 class ClientError(IntegrationTestingError):
     """An error encounterd during integration testing, on the client's side (locally)"""
+
     pass
 
 
@@ -26,6 +30,7 @@ class MetadataValidationError(Exception, ABC):
     """
     Base class for any errors arising from savedsearches.conf detection metadata validation
     """
+
     # The name of the rule the error relates to
     rule_name: str
 
@@ -52,11 +57,8 @@ class DetectionMissingError(MetadataValidationError):
     """
     An error indicating a detection in the prior build could not be found in the current build
     """
-    def __init__(
-            self,
-            rule_name: str,
-            *args: object
-    ) -> None:
+
+    def __init__(self, rule_name: str, *args: object) -> None:
         self.rule_name = rule_name
         super().__init__(self.long_message, *args)
 
@@ -77,15 +79,14 @@ class DetectionMissingError(MetadataValidationError):
         A short-form error message
         :returns: a str, the message
         """
-        return (
-            "Detection from previous build not found in current build."
-        )
+        return "Detection from previous build not found in current build."
 
 
 class DetectionIDError(MetadataValidationError):
     """
     An error indicating the detection ID may have changed between builds
     """
+
     # The ID from the current build
     current_id: UUID
 
@@ -93,11 +94,7 @@ class DetectionIDError(MetadataValidationError):
     previous_id: UUID
 
     def __init__(
-            self,
-            rule_name: str,
-            current_id: UUID,
-            previous_id: UUID,
-            *args: object
+        self, rule_name: str, current_id: UUID, previous_id: UUID, *args: object
     ) -> None:
         self.rule_name = rule_name
         self.current_id = current_id
@@ -122,15 +119,14 @@ class DetectionIDError(MetadataValidationError):
         A short-form error message
         :returns: a str, the message
         """
-        return (
-            f"Detection ID {self.current_id} in current build does not match ID {self.previous_id} in previous build."
-        )
+        return f"Detection ID {self.current_id} in current build does not match ID {self.previous_id} in previous build."
 
 
 class VersioningError(MetadataValidationError, ABC):
     """
     A base class for any metadata validation errors relating to detection versioning
     """
+
     # The version in the current build
     current_version: int
 
@@ -138,11 +134,7 @@ class VersioningError(MetadataValidationError, ABC):
     previous_version: int
 
     def __init__(
-            self,
-            rule_name: str,
-            current_version: int,
-            previous_version: int,
-            *args: object
+        self, rule_name: str, current_version: int, previous_version: int, *args: object
     ) -> None:
         self.rule_name = rule_name
         self.current_version = current_version
@@ -154,6 +146,7 @@ class VersionDecrementedError(VersioningError):
     """
     An error indicating the version number went down between builds
     """
+
     @property
     def long_message(self) -> str:
         """
@@ -182,6 +175,7 @@ class VersionBumpingError(VersioningError):
     """
     An error indicating the detection changed but its version wasn't bumped appropriately
     """
+
     @property
     def long_message(self) -> str:
         """
@@ -200,6 +194,4 @@ class VersionBumpingError(VersioningError):
         A short-form error message
         :returns: a str, the message
         """
-        return (
-            f"Detection version in current build should be bumped to at least {self.previous_version + 1}."
-        )
+        return f"Detection version in current build should be bumped to at least {self.previous_version + 1}."

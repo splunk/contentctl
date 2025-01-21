@@ -1,12 +1,20 @@
-from typing import List,Union
-from contentctl.objects.config import test, test_servers, Container,Infrastructure
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import DetectionTestingInfrastructure
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import DetectionTestingInfrastructureContainer
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import DetectionTestingInfrastructureServer
+from typing import List, Union
+from contentctl.objects.config import test, test_servers, Container, Infrastructure
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
+    DetectionTestingInfrastructure,
+)
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import (
+    DetectionTestingInfrastructureContainer,
+)
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import (
+    DetectionTestingInfrastructureServer,
+)
 import signal
 import datetime
+
 # from queue import Queue
 from dataclasses import dataclass
+
 # import threading
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
@@ -23,7 +31,7 @@ import docker
 
 @dataclass(frozen=False)
 class DetectionTestingManagerInputDto:
-    config: Union[test,test_servers]
+    config: Union[test, test_servers]
     detections: List[Detection]
     views: list[DetectionTestingView]
 
@@ -60,15 +68,18 @@ class DetectionTestingManager(BaseModel):
                 print("*******************************")
 
         signal.signal(signal.SIGINT, sigint_handler)
-        
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self.input_dto.config.test_instances),
-        ) as instance_pool, concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self.input_dto.views)
-        ) as view_runner, concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self.input_dto.config.test_instances),
-        ) as view_shutdowner:
 
+        with (
+            concurrent.futures.ThreadPoolExecutor(
+                max_workers=len(self.input_dto.config.test_instances),
+            ) as instance_pool,
+            concurrent.futures.ThreadPoolExecutor(
+                max_workers=len(self.input_dto.views)
+            ) as view_runner,
+            concurrent.futures.ThreadPoolExecutor(
+                max_workers=len(self.input_dto.config.test_instances),
+            ) as view_shutdowner,
+        ):
             # Start all the views
             future_views = {
                 view_runner.submit(view.setup): view for view in self.input_dto.views
@@ -124,20 +135,29 @@ class DetectionTestingManager(BaseModel):
         return self.output_dto
 
     def create_DetectionTestingInfrastructureObjects(self):
-        #Make sure that, if we need to, we pull the appropriate container
+        # Make sure that, if we need to, we pull the appropriate container
         for infrastructure in self.input_dto.config.test_instances:
-            if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
+            if isinstance(self.input_dto.config, test) and isinstance(
+                infrastructure, Container
+            ):
                 try:
                     client = docker.from_env()
                 except Exception:
-                    raise Exception("Unable to connect to docker.  Are you sure that docker is running on this host?")
+                    raise Exception(
+                        "Unable to connect to docker.  Are you sure that docker is running on this host?"
+                    )
                 try:
-                    
-                    parts = self.input_dto.config.container_settings.full_image_path.split(':')
+                    parts = (
+                        self.input_dto.config.container_settings.full_image_path.split(
+                            ":"
+                        )
+                    )
                     if len(parts) != 2:
-                        raise Exception(f"Expected to find a name:tag in {self.input_dto.config.container_settings.full_image_path}, "
-                                        f"but instead found {parts}. Note that this path MUST include the tag, which is separated by ':'")
-                    
+                        raise Exception(
+                            f"Expected to find a name:tag in {self.input_dto.config.container_settings.full_image_path}, "
+                            f"but instead found {parts}. Note that this path MUST include the tag, which is separated by ':'"
+                        )
+
                     print(
                         f"Getting the latest version of the container image [{self.input_dto.config.container_settings.full_image_path}]...",
                         end="",
@@ -147,12 +167,15 @@ class DetectionTestingManager(BaseModel):
                     print("done!")
                     break
                 except Exception as e:
-                    raise Exception(f"Failed to pull docker container image [{self.input_dto.config.container_settings.full_image_path}]: {str(e)}")
+                    raise Exception(
+                        f"Failed to pull docker container image [{self.input_dto.config.container_settings.full_image_path}]: {str(e)}"
+                    )
 
         already_staged_container_files = False
         for infrastructure in self.input_dto.config.test_instances:
-
-            if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
+            if isinstance(self.input_dto.config, test) and isinstance(
+                infrastructure, Container
+            ):
                 # Stage the files in the apps dir so that they can be passed directly to
                 # subsequent containers. Do this here, instead of inside each container, to
                 # avoid duplicate downloads/moves/copies
@@ -162,18 +185,24 @@ class DetectionTestingManager(BaseModel):
 
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureContainer(
-                        global_config=self.input_dto.config, infrastructure=infrastructure, sync_obj=self.output_dto
+                        global_config=self.input_dto.config,
+                        infrastructure=infrastructure,
+                        sync_obj=self.output_dto,
                     )
                 )
 
-            elif (isinstance(self.input_dto.config, test_servers) and isinstance(infrastructure, Infrastructure)):
+            elif isinstance(self.input_dto.config, test_servers) and isinstance(
+                infrastructure, Infrastructure
+            ):
                 self.detectionTestingInfrastructureObjects.append(
                     DetectionTestingInfrastructureServer(
-                        global_config=self.input_dto.config, infrastructure=infrastructure, sync_obj=self.output_dto
+                        global_config=self.input_dto.config,
+                        infrastructure=infrastructure,
+                        sync_obj=self.output_dto,
                     )
                 )
 
             else:
-
-                raise Exception(f"Unsupported target infrastructure '{infrastructure}' and config type {self.input_dto.config}")
-                
+                raise Exception(
+                    f"Unsupported target infrastructure '{infrastructure}' and config type {self.input_dto.config}"
+                )

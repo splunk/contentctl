@@ -12,6 +12,7 @@ class UnitTest(BaseTest):
     """
     A unit test for a detection
     """
+
     # contentType: SecurityContentType = SecurityContentType.unit_tests
 
     # The test type (unit)
@@ -28,7 +29,6 @@ class UnitTest(BaseTest):
         Skip the test by setting its result status
         :param message: the reason for skipping
         """
-        self.result = UnitTestResult(                                                               # type: ignore
-            message=message,
-            status=TestResultStatus.SKIP
+        self.result = UnitTestResult(  # type: ignore
+            message=message, status=TestResultStatus.SKIP
         )

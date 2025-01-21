@@ -2,7 +2,7 @@ from enum import StrEnum
 from typing import Union
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel,ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 from contentctl.objects.base_test_result import BaseTestResult
 
@@ -11,6 +11,7 @@ class TestType(StrEnum):
     """
     Types of tests
     """
+
     UNIT = "unit"
     INTEGRATION = "integration"
     MANUAL = "manual"

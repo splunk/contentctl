@@ -38,15 +38,12 @@ class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True
             miniters=0,
             mininterval=0,
         )
-        self.format_pbar(
-            len(self.sync_obj.outputQueue), len(self.sync_obj.inputQueue)
-        )
+        self.format_pbar(len(self.sync_obj.outputQueue), len(self.sync_obj.inputQueue))
 
         self.showStatus()
 
     # TODO (#267): Align test reporting more closely w/ status enums (as it relates to "untested")
     def showStatus(self, interval: int = 1):
-
         while True:
             summary = self.getSummaryObject()
 

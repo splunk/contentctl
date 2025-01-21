@@ -3,9 +3,8 @@ from contentctl.objects.enums import DataSource
 
 
 class NewContentQuestions:
-
     @classmethod
-    def get_questions_detection(cls) -> list[dict[str,Any]]:
+    def get_questions_detection(cls) -> list[dict[str, Any]]:
         questions = [
             {
                 "type": "text",
@@ -14,22 +13,16 @@ class NewContentQuestions:
                 "default": "Powershell Encoded Command",
             },
             {
-                'type': 'select',
-                'message': 'what kind of detection is this',
-                'name': 'detection_kind',
-                'choices': [
-                    'endpoint',
-                    'cloud',
-                    'application',
-                    'network',
-                    'web'
-                ],
-                'default': 'endpoint'
+                "type": "select",
+                "message": "what kind of detection is this",
+                "name": "detection_kind",
+                "choices": ["endpoint", "cloud", "application", "network", "web"],
+                "default": "endpoint",
             },
             {
-                'type': 'text',
-                'message': 'enter author name',
-                'name': 'detection_author',
+                "type": "text",
+                "message": "enter author name",
+                "name": "detection_author",
             },
             {
                 "type": "select",
@@ -46,12 +39,11 @@ class NewContentQuestions:
                 "default": "TTP",
             },
             {
-                'type': 'checkbox',
-                'message': 'Your data source',
-                'name': 'data_sources',
-                #In the future, we should dynamically populate this from the DataSource Objects we have parsed from the data_sources directory
-                'choices': sorted(DataSource._value2member_map_ )
-                
+                "type": "checkbox",
+                "message": "Your data source",
+                "name": "data_sources",
+                # In the future, we should dynamically populate this from the DataSource Objects we have parsed from the data_sources directory
+                "choices": sorted(DataSource._value2member_map_),
             },
             {
                 "type": "text",
@@ -66,24 +58,24 @@ class NewContentQuestions:
                 "default": "T1003.002",
             },
             {
-                'type': 'select',
-                'message': 'security_domain for detection',
-                'name': 'security_domain',
-                'choices': [
-                    'access',
-                    'endpoint',
-                    'network',
-                    'threat',
-                    'identity',
-                    'audit'
+                "type": "select",
+                "message": "security_domain for detection",
+                "name": "security_domain",
+                "choices": [
+                    "access",
+                    "endpoint",
+                    "network",
+                    "threat",
+                    "identity",
+                    "audit",
                 ],
-                'default': 'endpoint'
+                "default": "endpoint",
             },
         ]
         return questions
 
     @classmethod
-    def get_questions_story(cls)-> list[dict[str,Any]]:
+    def get_questions_story(cls) -> list[dict[str, Any]]:
         questions = [
             {
                 "type": "text",

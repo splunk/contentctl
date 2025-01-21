@@ -23,9 +23,6 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)
 
 
-
-
-
 class GitService(BaseModel):
     director: DirectorOutputDto
     config: test_common

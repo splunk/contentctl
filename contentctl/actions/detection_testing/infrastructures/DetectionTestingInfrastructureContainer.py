@@ -17,10 +17,12 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             # If we are configured to use the persistent container, then check and see if it's already
             # running. If so, just use it without additional configuration.
             try:
-                self.container = self.get_docker_client().containers.get(self.get_name())
+                self.container = self.get_docker_client().containers.get(
+                    self.get_name()
+                )
                 return
             except Exception:
-                #We did not find the container running, we will set it up
+                # We did not find the container running, we will set it up
                 pass
 
         self.container = self.make_container()
@@ -47,9 +49,10 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             raise (Exception(f"Failed to get docker client: {str(e)}"))
 
     def check_for_teardown(self):
-
         try:
-            container: docker.models.containers.Container = self.get_docker_client().containers.get(self.get_name())
+            container: docker.models.containers.Container = (
+                self.get_docker_client().containers.get(self.get_name())
+            )
         except Exception as e:
             if self.sync_obj.terminate is not True:
                 self.pbar.write(
@@ -57,7 +60,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
                 )
                 self.sync_obj.terminate = True
         else:
-            if container.status != 'running':
+            if container.status != "running":
                 self.sync_obj.terminate = True
                 self.container = None
 
@@ -90,28 +93,33 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         environment["SPLUNK_PASSWORD"] = self.infrastructure.splunk_app_password
         # Files have already been staged by the time that we call this. Files must only be staged
         # once, not staged by every container
-        environment["SPLUNK_APPS_URL"] = self.global_config.getContainerEnvironmentString(stage_file=False)
+        environment["SPLUNK_APPS_URL"] = (
+            self.global_config.getContainerEnvironmentString(stage_file=False)
+        )
         if (
             self.global_config.splunk_api_username is not None
             and self.global_config.splunk_api_password is not None
         ):
             environment["SPLUNKBASE_USERNAME"] = self.global_config.splunk_api_username
             environment["SPLUNKBASE_PASSWORD"] = self.global_config.splunk_api_password
-        
-
 
         def emit_docker_run_equivalent():
-            environment_string = " ".join([f'-e "{k}={environment.get(k)}"' for k in environment.keys()])
-            print(f"\n\ndocker run -d "\
-                  f"-p {self.infrastructure.web_ui_port}:8000 "
-                  f"-p {self.infrastructure.hec_port}:8088 "
-                  f"-p {self.infrastructure.api_port}:8089 "
-                  f"{environment_string} "            
-                  f" --name {self.get_name()} "
-                  f"--platform linux/amd64 "
-                  f"{self.global_config.container_settings.full_image_path}\n\n")
-        #emit_docker_run_equivalent()
-        
+            environment_string = " ".join(
+                [f'-e "{k}={environment.get(k)}"' for k in environment.keys()]
+            )
+            print(
+                f"\n\ndocker run -d "
+                f"-p {self.infrastructure.web_ui_port}:8000 "
+                f"-p {self.infrastructure.hec_port}:8088 "
+                f"-p {self.infrastructure.api_port}:8089 "
+                f"{environment_string} "
+                f" --name {self.get_name()} "
+                f"--platform linux/amd64 "
+                f"{self.global_config.container_settings.full_image_path}\n\n"
+            )
+
+        # emit_docker_run_equivalent()
+
         container = self.get_docker_client().containers.create(
             self.global_config.container_settings.full_image_path,
             ports=ports_dict,
@@ -119,20 +127,21 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             name=self.get_name(),
             mounts=mounts,
             detach=True,
-            platform="linux/amd64"
+            platform="linux/amd64",
         )
-        
+
         if self.global_config.enterpriseSecurityInApps():
-            #ES sets up https, so make sure it is included in the link
+            # ES sets up https, so make sure it is included in the link
             address = f"https://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
         else:
             address = f"http://{self.infrastructure.instance_address}:{self.infrastructure.web_ui_port}"
-        print(f"\nStarted container with the following information:\n"
-              f"\tname    : [{self.get_name()}]\n"
-              f"\taddress : [{address}]\n"
-              f"\tusername: [{self.infrastructure.splunk_app_username}]\n"
-              f"\tpassword: [{self.infrastructure.splunk_app_password}]\n"
-              )
+        print(
+            f"\nStarted container with the following information:\n"
+            f"\tname    : [{self.get_name()}]\n"
+            f"\taddress : [{address}]\n"
+            f"\tusername: [{self.infrastructure.splunk_app_username}]\n"
+            f"\tpassword: [{self.infrastructure.splunk_app_password}]\n"
+        )
 
         return container
 
@@ -146,10 +155,14 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
             return
         try:
             # If the user wants to persist the container (or use a previously configured container), then DO NOT remove it.
-            # Emit the following message, which they will see on initial setup and teardown at the end of the test. 
+            # Emit the following message, which they will see on initial setup and teardown at the end of the test.
             if self.global_config.container_settings.leave_running:
-                print(f"\nContainer [{self.get_name()}] has NOT been terminated because 'contentctl_test.yml ---> infrastructure_config ---> persist_and_reuse_container = True'")
-                print(f"To remove it, please manually run the following at the command line: `docker container rm -fv {self.get_name()}`\n")
+                print(
+                    f"\nContainer [{self.get_name()}] has NOT been terminated because 'contentctl_test.yml ---> infrastructure_config ---> persist_and_reuse_container = True'"
+                )
+                print(
+                    f"To remove it, please manually run the following at the command line: `docker container rm -fv {self.get_name()}`\n"
+                )
                 return
             # container was found, so now we try to remove it
             # v also removes volumes linked to the container

@@ -12,6 +12,7 @@ import tqdm
 from math import ceil
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -24,26 +25,29 @@ ALWAYS_PULL = True
 class Utils:
     @staticmethod
     def get_all_yml_files_from_directory(path: str) -> list[pathlib.Path]:
-        listOfFiles:list[pathlib.Path] = []
+        listOfFiles: list[pathlib.Path] = []
         base_path = pathlib.Path(path)
         if not base_path.exists():
             return listOfFiles
-        for (dirpath, dirnames, filenames) in os.walk(path):
+        for dirpath, dirnames, filenames in os.walk(path):
             for file in filenames:
                 if file.endswith(".yml"):
                     listOfFiles.append(pathlib.Path(os.path.join(dirpath, file)))
-    
+
         return sorted(listOfFiles)
-    
+
     @staticmethod
-    def get_security_content_files_from_directory(path: pathlib.Path, allowedFileExtensions:list[str]=[".yml"], fileExtensionsToReturn:list[str]=[".yml"]) -> list[pathlib.Path]:
-    
+    def get_security_content_files_from_directory(
+        path: pathlib.Path,
+        allowedFileExtensions: list[str] = [".yml"],
+        fileExtensionsToReturn: list[str] = [".yml"],
+    ) -> list[pathlib.Path]:
         """
         Get all of the Security Content Object Files rooted in a given directory.  These will almost
         certain be YML files, but could be other file types as specified by the user
 
         Args:
-            path (pathlib.Path): The root path at which to enumerate all Security Content Files. All directories will be traversed. 
+            path (pathlib.Path): The root path at which to enumerate all Security Content Files. All directories will be traversed.
             allowedFileExtensions (set[str], optional): File extensions which are allowed to be  present in this directory.  In most cases, we do not want to allow the presence of non-YML files. Defaults to [".yml"].
             fileExtensionsToReturn (set[str], optional): Filenames with extensions that should be returned from this function. For example, the lookups/ directory contains YML, CSV, and MLMODEL directories, but only the YMLs are Security Content Objects for constructing Lookyps. Defaults to[".yml"].
 
@@ -56,14 +60,18 @@ class Utils:
             list[pathlib.Path]: list of files with an extension in fileExtensionsToReturn found in path
         """
         if not set(fileExtensionsToReturn).issubset(set(allowedFileExtensions)):
-            raise Exception(f"allowedFileExtensions {allowedFileExtensions} MUST be a subset of fileExtensionsToReturn {fileExtensionsToReturn}, but it is not")
-        
+            raise Exception(
+                f"allowedFileExtensions {allowedFileExtensions} MUST be a subset of fileExtensionsToReturn {fileExtensionsToReturn}, but it is not"
+            )
+
         if not path.exists() or not path.is_dir():
-            raise Exception(f"Unable to get security_content files, required directory '{str(path)}' does not exist or is not a directory")
-        
-        allowedFiles:list[pathlib.Path] = []
-        erroneousFiles:list[pathlib.Path] = []
-        #Get every single file extension 
+            raise Exception(
+                f"Unable to get security_content files, required directory '{str(path)}' does not exist or is not a directory"
+            )
+
+        allowedFiles: list[pathlib.Path] = []
+        erroneousFiles: list[pathlib.Path] = []
+        # Get every single file extension
         for filePath in path.glob("**/*.*"):
             if filePath.suffix in allowedFileExtensions:
                 # Yes these are allowed
@@ -73,58 +81,75 @@ class Utils:
                 erroneousFiles.append(filePath)
 
         if len(erroneousFiles):
-            raise Exception(f"The following files are not allowed in the directory '{path}'. Only files with the extensions {allowedFileExtensions} are allowed:{[str(filePath) for filePath in erroneousFiles]}")
-        
+            raise Exception(
+                f"The following files are not allowed in the directory '{path}'. Only files with the extensions {allowedFileExtensions} are allowed:{[str(filePath) for filePath in erroneousFiles]}"
+            )
+
         # There were no errorneous files, so return the requested files
-        return sorted([filePath for filePath in allowedFiles if filePath.suffix in fileExtensionsToReturn])
+        return sorted(
+            [
+                filePath
+                for filePath in allowedFiles
+                if filePath.suffix in fileExtensionsToReturn
+            ]
+        )
 
     @staticmethod
-    def get_all_yml_files_from_directory_one_layer_deep(path: str) -> list[pathlib.Path]:
+    def get_all_yml_files_from_directory_one_layer_deep(
+        path: str,
+    ) -> list[pathlib.Path]:
         listOfFiles: list[pathlib.Path] = []
         base_path = pathlib.Path(path)
         if not base_path.exists():
             return listOfFiles
         # Check the base directory
         for item in base_path.iterdir():
-            if item.is_file() and item.suffix == '.yml':
+            if item.is_file() and item.suffix == ".yml":
                 listOfFiles.append(item)
         # Check one subfolder level deep
         for subfolder in base_path.iterdir():
             if subfolder.is_dir() and subfolder.name != "cim":
                 for item in subfolder.iterdir():
-                    if item.is_file() and item.suffix == '.yml':
+                    if item.is_file() and item.suffix == ".yml":
                         listOfFiles.append(item)
         return sorted(listOfFiles)
 
-
     @staticmethod
-    def add_id(id_dict:dict[str, list[pathlib.Path]], obj:SecurityContentObject, path:pathlib.Path) -> None:     
+    def add_id(
+        id_dict: dict[str, list[pathlib.Path]],
+        obj: SecurityContentObject,
+        path: pathlib.Path,
+    ) -> None:
         if hasattr(obj, "id"):
             obj_id = obj.id
             if obj_id in id_dict:
                 id_dict[obj_id].append(path)
             else:
                 id_dict[obj_id] = [path]
+
     # Otherwise, no ID so nothing to add....
 
     @staticmethod
-    def check_ids_for_duplicates(id_dict:dict[str, list[pathlib.Path]])->list[Tuple[pathlib.Path,  ValueError]]:
-        validation_errors:list[Tuple[pathlib.Path,  ValueError]] = []
-        
+    def check_ids_for_duplicates(
+        id_dict: dict[str, list[pathlib.Path]],
+    ) -> list[Tuple[pathlib.Path, ValueError]]:
+        validation_errors: list[Tuple[pathlib.Path, ValueError]] = []
+
         for key, values in id_dict.items():
             if len(values) > 1:
                 error_file_path = pathlib.Path("MULTIPLE")
-                all_files = '\n\t'.join(str(pathlib.Path(p)) for p in values)
-                exception = ValueError(f"Error validating id [{key}] - duplicate ID was used in the following files: \n\t{all_files}")
+                all_files = "\n\t".join(str(pathlib.Path(p)) for p in values)
+                exception = ValueError(
+                    f"Error validating id [{key}] - duplicate ID was used in the following files: \n\t{all_files}"
+                )
                 validation_errors.append((error_file_path, exception))
-                
+
         return validation_errors
 
     @staticmethod
     def validate_git_hash(
         repo_path: str, repo_url: str, commit_hash: str, branch_name: Union[str, None]
     ) -> bool:
-
         # Get a list of all branches
         repo = git.Repo(repo_path)
         if commit_hash is None:
@@ -251,7 +276,6 @@ class Utils:
     def verify_file_exists(
         file_path: str, verbose_print=False, timeout_seconds: int = 10
     ) -> None:
-
         try:
             if pathlib.Path(file_path).is_file():
                 # This is a file and we know it exists
@@ -261,18 +285,13 @@ class Utils:
 
         # Try to make a head request to verify existence of the file
         try:
-            
             req = requests.head(
                 file_path, timeout=timeout_seconds, verify=True, allow_redirects=True
             )
             if req.status_code > 400:
                 raise (Exception(f"Return code={req.status_code}"))
         except Exception as e:
-            raise (
-                Exception(
-                    f"HTTP Resolution Failed: {str(e)}"
-                )
-            )
+            raise (Exception(f"HTTP Resolution Failed: {str(e)}"))
 
     @staticmethod
     def copy_local_file(

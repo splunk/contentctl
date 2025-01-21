@@ -9,6 +9,7 @@ class AnalyticsType(StrEnum):
     Hunting = "Hunting"
     Correlation = "Correlation"
 
+
 class DeploymentType(StrEnum):
     TTP = "TTP"
     Anomaly = "Anomaly"
@@ -20,7 +21,7 @@ class DeploymentType(StrEnum):
 
 class DataModel(StrEnum):
     ENDPOINT = "Endpoint"
-    NETWORK_TRAFFIC  = "Network_Traffic"
+    NETWORK_TRAFFIC = "Network_Traffic"
     AUTHENTICATION = "Authentication"
     CHANGE = "Change"
     CHANGE_ANALYSIS = "Change_Analysis"
@@ -31,11 +32,11 @@ class DataModel(StrEnum):
     UPDATES = "Updates"
     VULNERABILITIES = "Vulnerabilities"
     WEB = "Web"
-    #Should the following more specific DMs be added? 
-    #Or should they just fall under endpoint?
-    #ENDPOINT_PROCESSES = "Endpoint_Processes"
-    #ENDPOINT_FILESYSTEM = "Endpoint_Filesystem"
-    #ENDPOINT_REGISTRY = "Endpoint_Registry"
+    # Should the following more specific DMs be added?
+    # Or should they just fall under endpoint?
+    # ENDPOINT_PROCESSES = "Endpoint_Processes"
+    # ENDPOINT_FILESYSTEM = "Endpoint_Filesystem"
+    # ENDPOINT_REGISTRY = "Endpoint_Registry"
     RISK = "Risk"
     SPLUNK_AUDIT = "Splunk_Audit"
 
@@ -43,6 +44,7 @@ class DataModel(StrEnum):
 class PlaybookType(StrEnum):
     INVESTIGATION = "Investigation"
     RESPONSE = "Response"
+
 
 class SecurityContentType(IntEnum):
     detections = 1
@@ -68,13 +70,13 @@ class SecurityContentType(IntEnum):
 #     json_objects = "json_objects"
 
 
-
 class SecurityContentProductName(StrEnum):
     SPLUNK_ENTERPRISE = "Splunk Enterprise"
     SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
     SPLUNK_CLOUD = "Splunk Cloud"
     SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
     SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
+
 
 class SecurityContentInvestigationProductName(StrEnum):
     SPLUNK_ENTERPRISE = "Splunk Enterprise"
@@ -83,7 +85,7 @@ class SecurityContentInvestigationProductName(StrEnum):
     SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
     SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
     SPLUNK_PHANTOM = "Splunk Phantom"
-    
+
 
 class DetectionStatus(StrEnum):
     production = "production"
@@ -147,7 +149,7 @@ class DetectionTestingMode(StrEnum):
 #     "Actions on Objectives": 7
 # }
 class KillChainPhase(StrEnum):
-    UNKNOWN ="Unknown"
+    UNKNOWN = "Unknown"
     RECONNAISSANCE = "Reconnaissance"
     WEAPONIZATION = "Weaponization"
     DELIVERY = "Delivery"
@@ -197,6 +199,7 @@ class DataSource(StrEnum):
     WINDOWS_SECURITY_5145 = "Windows Security 5145"
     WINDOWS_SYSTEM_7045 = "Windows System 7045"
 
+
 class ProvidingTechnology(StrEnum):
     AMAZON_SECURITY_LAKE = "Amazon Security Lake"
     AMAZON_WEB_SERVICES_CLOUDTRAIL = "Amazon Web Services - Cloudtrail"
@@ -216,9 +219,9 @@ class ProvidingTechnology(StrEnum):
     SPLUNK_INTERNAL_LOGS = "Splunk Internal Logs"
     SYMANTEC_ENDPOINT_PROTECTION = "Symantec Endpoint Protection"
     ZEEK = "Zeek"
-    
+
     @staticmethod
-    def getProvidingTechFromSearch(search_string:str)->List[ProvidingTechnology]:
+    def getProvidingTechFromSearch(search_string: str) -> List[ProvidingTechnology]:
         """_summary_
 
         Args:
@@ -230,34 +233,45 @@ class ProvidingTechnology(StrEnum):
         Returns:
             List[ProvidingTechnology]: List of providing technologies (with no duplicates because
             it is derived from a set) calculated from the search string.
-        """        
-        matched_technologies:set[ProvidingTechnology] = set()
-        #As there are many different sources that use google logs, we define the set once
-        google_logs = set([ProvidingTechnology.GOOGLE_WORKSPACE, ProvidingTechnology.GOOGLE_CLOUD_PLATFORM])
+        """
+        matched_technologies: set[ProvidingTechnology] = set()
+        # As there are many different sources that use google logs, we define the set once
+        google_logs = set(
+            [
+                ProvidingTechnology.GOOGLE_WORKSPACE,
+                ProvidingTechnology.GOOGLE_CLOUD_PLATFORM,
+            ]
+        )
         providing_technologies_mapping = {
-            '`amazon_security_lake`': set([ProvidingTechnology.AMAZON_SECURITY_LAKE]),
-            'audit_searches': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
-            '`azure_monitor_aad`': set([ProvidingTechnology.AZURE_AD, ProvidingTechnology.ENTRA_ID]),
-            '`cloudtrail`': set([ProvidingTechnology.AMAZON_WEB_SERVICES_CLOUDTRAIL]),
-            #Endpoint is NOT a Macro (and this is intentional since it is to capture Endpoint Datamodel usage)
-            'Endpoint': set([ProvidingTechnology.MICROSOFT_SYSMON, 
-                             ProvidingTechnology.MICROSOFT_WINDOWS,
-                             ProvidingTechnology.CARBON_BLACK_RESPONSE,
-                             ProvidingTechnology.CROWDSTRIKE_FALCON, 
-                             ProvidingTechnology.SYMANTEC_ENDPOINT_PROTECTION]),
-            '`google_': google_logs,
-            '`gsuite': google_logs,
-            '`gws_': google_logs,
-            '`kube': set([ProvidingTechnology.KUBERNETES]),
-            '`ms_defender`': set([ProvidingTechnology.MICROSOFT_DEFENDER]),
-            '`o365_': set([ProvidingTechnology.MICROSOFT_OFFICE_365]),
-            '`okta': set([ProvidingTechnology.OKTA]),
-            '`pingid`': set([ProvidingTechnology.PING_ID]),
-            '`powershell`': set(set([ProvidingTechnology.MICROSOFT_WINDOWS])),
-            '`splunkd_': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
-            '`sysmon`': set([ProvidingTechnology.MICROSOFT_SYSMON]),
-            '`wineventlog_security`': set([ProvidingTechnology.MICROSOFT_WINDOWS]),
-            '`zeek_': set([ProvidingTechnology.ZEEK]),
+            "`amazon_security_lake`": set([ProvidingTechnology.AMAZON_SECURITY_LAKE]),
+            "audit_searches": set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
+            "`azure_monitor_aad`": set(
+                [ProvidingTechnology.AZURE_AD, ProvidingTechnology.ENTRA_ID]
+            ),
+            "`cloudtrail`": set([ProvidingTechnology.AMAZON_WEB_SERVICES_CLOUDTRAIL]),
+            # Endpoint is NOT a Macro (and this is intentional since it is to capture Endpoint Datamodel usage)
+            "Endpoint": set(
+                [
+                    ProvidingTechnology.MICROSOFT_SYSMON,
+                    ProvidingTechnology.MICROSOFT_WINDOWS,
+                    ProvidingTechnology.CARBON_BLACK_RESPONSE,
+                    ProvidingTechnology.CROWDSTRIKE_FALCON,
+                    ProvidingTechnology.SYMANTEC_ENDPOINT_PROTECTION,
+                ]
+            ),
+            "`google_": google_logs,
+            "`gsuite": google_logs,
+            "`gws_": google_logs,
+            "`kube": set([ProvidingTechnology.KUBERNETES]),
+            "`ms_defender`": set([ProvidingTechnology.MICROSOFT_DEFENDER]),
+            "`o365_": set([ProvidingTechnology.MICROSOFT_OFFICE_365]),
+            "`okta": set([ProvidingTechnology.OKTA]),
+            "`pingid`": set([ProvidingTechnology.PING_ID]),
+            "`powershell`": set(set([ProvidingTechnology.MICROSOFT_WINDOWS])),
+            "`splunkd_": set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
+            "`sysmon`": set([ProvidingTechnology.MICROSOFT_SYSMON]),
+            "`wineventlog_security`": set([ProvidingTechnology.MICROSOFT_WINDOWS]),
+            "`zeek_": set([ProvidingTechnology.ZEEK]),
         }
         for key in providing_technologies_mapping:
             if key in search_string:
@@ -286,6 +300,7 @@ class Cis18Value(StrEnum):
     CIS_17 = "CIS 17"
     CIS_18 = "CIS 18"
 
+
 class SecurityDomain(StrEnum):
     ENDPOINT = "endpoint"
     NETWORK = "network"
@@ -293,6 +308,7 @@ class SecurityDomain(StrEnum):
     IDENTITY = "identity"
     ACCESS = "access"
     AUDIT = "audit"
+
 
 class AssetType(StrEnum):
     AWS_ACCOUNT = "AWS Account"
@@ -303,9 +319,9 @@ class AssetType(StrEnum):
     AMAZON_EKS_KUBERNETES_CLUSTER = "Amazon EKS Kubernetes cluster"
     AMAZON_EKS_KUBERNETES_CLUSTER_POD = "Amazon EKS Kubernetes cluster Pod"
     AMAZON_ELASTIC_CONTAINER_REGISTRY = "Amazon Elastic Container Registry"
-    #AZURE = "Azure"
-    #AZURE_AD = "Azure AD"
-    #AZURE_AD_TENANT = "Azure AD Tenant"
+    # AZURE = "Azure"
+    # AZURE_AD = "Azure AD"
+    # AZURE_AD_TENANT = "Azure AD Tenant"
     AZURE_TENANT = "Azure Tenant"
     AZURE_AKS_KUBERNETES_CLUSTER = "Azure AKS Kubernetes cluster"
     AZURE_ACTIVE_DIRECTORY = "Azure Active Directory"
@@ -332,8 +348,8 @@ class AssetType(StrEnum):
     INSTANCE = "Instance"
     KUBERNETES = "Kubernetes"
     NETWORK = "Network"
-    #OFFICE_365 = "Office 365"
-    #OFFICE_365_Tenant = "Office 365 Tenant"
+    # OFFICE_365 = "Office 365"
+    # OFFICE_365_Tenant = "Office 365 Tenant"
     O365_TENANT = "O365 Tenant"
     OKTA_TENANT = "Okta Tenant"
     PROXY = "Proxy"
@@ -344,6 +360,7 @@ class AssetType(StrEnum):
     WEB_PROXY = "Web Proxy"
     WEB_APPLICATION = "Web Application"
     WINDOWS = "Windows"
+
 
 class NistCategory(StrEnum):
     ID_AM = "ID.AM"
@@ -368,6 +385,7 @@ class NistCategory(StrEnum):
     RC_RP = "RC.RP"
     RC_IM = "RC.IM"
     RC_CO = "RC.CO"
+
 
 class RiskSeverity(StrEnum):
     # Levels taken from the following documentation link

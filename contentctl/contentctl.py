@@ -246,8 +246,6 @@ def main():
         print(e)
         sys.exit(1)
     except Exception as e:
-        print(CONTENTCTL_5_WARNING)
-
         if config is None:
             print(
                 "There was a serious issue where the config file could not be created.\n"
@@ -265,8 +263,9 @@ def main():
                 "Verbose error logging is DISABLED.\n"
                 "Please use the --verbose command line argument if you need more context for your error or file a bug report."
             )
-            print(e)
 
+        print(e)
+        print(CONTENTCTL_5_WARNING)
         sys.exit(1)
 
 

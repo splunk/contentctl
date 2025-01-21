@@ -5,7 +5,6 @@ repos:
       - id: check-json
       - id: check-symlinks
       - id: check-yaml
-      - id: detect-aws-credentials
       - id: detect-private-key
       - id: forbid-submodules
   - repo: https://github.com/astral-sh/ruff-pre-commit

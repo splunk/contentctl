@@ -104,7 +104,7 @@ class LinkValidator(abc.ABC):
         
         try:
             LinkValidator.cache = shelve.open(LinkValidator.reference_cache_file, flag='c', writeback=True)
-        except:
+        except Exception:
             print(f"Failed to create the cache file {LinkValidator.reference_cache_file}.  Reference info will not be cached.")
             LinkValidator.cache = {}
 

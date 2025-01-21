@@ -10,6 +10,7 @@ from pygit2.enums import DeltaStatus
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
+from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.config import All, Changes, Selected, test_common
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.detection import Detection
@@ -22,7 +23,7 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)
 
 
-from contentctl.input.director import DirectorOutputDto
+
 
 
 class GitService(BaseModel):

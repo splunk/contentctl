@@ -35,7 +35,6 @@ jobs:
         with: 
           path: security_content
           repository: splunk/security_content
-          ref: rba_migration
 
       #Install the given version of Python we will test against
       - name: Install Required Python Version

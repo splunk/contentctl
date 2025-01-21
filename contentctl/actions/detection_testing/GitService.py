@@ -10,11 +10,10 @@ from pygit2.enums import DeltaStatus
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
-
 from contentctl.objects.config import All, Changes, Selected, test_common
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.detection import Detection
-from contentctl.objects.lookup import Lookup, Lookup_Type
+from contentctl.objects.lookup import CSVLookup, Lookup
 from contentctl.objects.macro import Macro
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -150,8 +149,7 @@ class GitService(BaseModel):
                             # Filter to find the Lookup Object the references this CSV
                             matched = list(
                                 filter(
-                                    lambda x: x.lookup_type == Lookup_Type.csv
-                                    and x.filename is not None
+                                    lambda x: isinstance(x, CSVLookup)
                                     and x.filename == decoded_path,
                                     self.director.lookups,
                                 )
@@ -162,7 +160,7 @@ class GitService(BaseModel):
                                 )
                             elif len(matched) > 1:
                                 raise Exception(
-                                    f"More than 1 Lookup reference the modified CSV file '{decoded_path}': {[l.file_path for l in matched]}"
+                                    f"More than 1 Lookup reference the modified CSV file '{decoded_path}': {[match.file_path for match in matched]}"
                                 )
                             else:
                                 updatedLookup = matched[0]
@@ -195,7 +193,7 @@ class GitService(BaseModel):
         # If a detection has at least one dependency on changed content,
         # then we must test it again
 
-        changed_macros_and_lookups_and_datasources: set[SecurityContentObject] = (
+        changed_macros_and_lookups_and_datasources: set[Macro | Lookup | DataSource] = (
             updated_macros.union(updated_lookups, updated_datasources)
         )
 

@@ -1162,7 +1162,7 @@ class release_notes(Config_Base):
         p = self.path / "dist"
         try:
             p.mkdir(exist_ok=True, parents=True)
-        except Exception:
+        except Exception as e:
             raise Exception(
                 f"Error making the directory '{p}' to hold release_notes: {str(e)}"
             )

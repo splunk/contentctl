@@ -10,6 +10,7 @@ class IntegrationTest(BaseTest):
     """
     An integration test for a detection against ES
     """
+
     # The test type (integration)
     test_type: TestType = Field(default=TestType.INTEGRATION)
 
@@ -34,7 +35,6 @@ class IntegrationTest(BaseTest):
         Skip the test by setting its result status
         :param message: the reason for skipping
         """
-        self.result = IntegrationTestResult(                                                        # type: ignore
-            message=message,
-            status=TestResultStatus.SKIP
+        self.result = IntegrationTestResult(  # type: ignore
+            message=message, status=TestResultStatus.SKIP
         )

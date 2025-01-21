@@ -8,6 +8,7 @@ from contentctl.objects.deployment_rba import DeploymentRBA
 from contentctl.objects.deployment_slack import DeploymentSlack
 from contentctl.objects.deployment_phantom import DeploymentPhantom
 
+
 class AlertAction(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email: Optional[DeploymentEmail] = None
@@ -16,26 +17,25 @@ class AlertAction(BaseModel):
     slack: Optional[DeploymentSlack] = None
     phantom: Optional[DeploymentPhantom] = None
 
-    
     @model_serializer
     def serialize_model(self):
-        #Call serializer for parent
+        # Call serializer for parent
         model = {}
 
         if self.email is not None:
             raise Exception("Email not implemented")
 
         if self.notable is not None:
-            model['notable'] = self.notable
+            model["notable"] = self.notable
 
         if self.rba is not None and self.rba.enabled:
-            model['rba'] = {'enabled': "true"}
+            model["rba"] = {"enabled": "true"}
 
         if self.slack is not None:
             raise Exception("Slack not implemented")
-        
+
         if self.phantom is not None:
             raise Exception("Phantom not implemented")
-        
-        #return the model
+
+        # return the model
         return model

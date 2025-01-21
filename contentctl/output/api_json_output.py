@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.lookup import Lookup
@@ -15,12 +16,11 @@ import pathlib
 from contentctl.output.json_writer import JsonWriter
 
 
-
 class ApiJsonOutput:
     output_path: pathlib.Path
     app_label: str
 
-    def __init__(self, output_path:pathlib.Path, app_label: str):
+    def __init__(self, output_path: pathlib.Path, app_label: str):
         self.output_path = output_path
         self.app_label = app_label
 
@@ -53,7 +53,7 @@ class ApiJsonOutput:
             )
             for detection in objects
         ]
-        #Only a subset of macro fields are required:
+        # Only a subset of macro fields are required:
         # for detection in detections:
         #     new_macros = []
         #     for macro in detection.get("macros",[]):
@@ -62,16 +62,15 @@ class ApiJsonOutput:
         #         new_macro_fields["definition"] = macro.get("definition")
         #         new_macro_fields["description"] = macro.get("description")
         #         if len(macro.get("arguments", [])) > 0:
-        #             new_macro_fields["arguments"] = macro.get("arguments") 
+        #             new_macro_fields["arguments"] = macro.get("arguments")
         #         new_macros.append(new_macro_fields)
         #     detection["macros"] = new_macros
         #     del()
-                
-        
+
         JsonWriter.writeJsonObject(
             os.path.join(self.output_path, "detections.json"), "detections", detections
         )
-    
+
     def writeMacros(
         self,
         objects: list[Macro],
@@ -81,13 +80,13 @@ class ApiJsonOutput:
             for macro in objects
         ]
         for macro in macros:
-            for k in ["author", "date","version","id","references"]:
+            for k in ["author", "date", "version", "id", "references"]:
                 if k in macro:
-                    del(macro[k])
+                    del macro[k]
         JsonWriter.writeJsonObject(
             os.path.join(self.output_path, "macros.json"), "macros", macros
         )
-    
+
     def writeStories(
         self,
         objects: list[Story],
@@ -126,8 +125,9 @@ class ApiJsonOutput:
                 }
                 for detection in story["detections"]
             ]
-            story["detection_names"] = [f"{self.app_label} - {name} - Rule" for name in story["detection_names"]]
-            
+            story["detection_names"] = [
+                f"{self.app_label} - {name} - Rule" for name in story["detection_names"]
+            ]
 
         JsonWriter.writeJsonObject(
             os.path.join(self.output_path, "stories.json"), "stories", stories
@@ -159,10 +159,10 @@ class ApiJsonOutput:
             )
             for baseline in objects
         ]
-        
+
         JsonWriter.writeJsonObject(
-                os.path.join(self.output_path, "baselines.json"), "baselines", baselines
-            )
+            os.path.join(self.output_path, "baselines.json"), "baselines", baselines
+        )
 
     def writeInvestigations(
         self,
@@ -221,9 +221,9 @@ class ApiJsonOutput:
             for lookup in objects
         ]
         for lookup in lookups:
-            for k in ["author","date","version","id","references"]:
+            for k in ["author", "date", "version", "id", "references"]:
                 if k in lookup:
-                    del(lookup[k]) 
+                    del lookup[k]
         JsonWriter.writeJsonObject(
             os.path.join(self.output_path, "lookups.json"), "lookups", lookups
         )
@@ -244,14 +244,14 @@ class ApiJsonOutput:
                         "description",
                         "scheduling",
                         "rba",
-                        "tags"
-                    ] 
+                        "tags",
+                    ]
                 )
             )
             for deployment in objects
         ]
-        #references are not to be included, but have been deleted in the
-        #model_serialization logic
+        # references are not to be included, but have been deleted in the
+        # model_serialization logic
         JsonWriter.writeJsonObject(
             os.path.join(self.output_path, "deployments.json"),
             "deployments",

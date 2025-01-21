@@ -5,4 +5,5 @@ class ManualTestResult(BaseTestResult):
     """
     A manual test result
     """
+
     pass

@@ -10,6 +10,7 @@ from pygit2.enums import DeltaStatus
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
+from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.config import All, Changes, Selected, test_common
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.detection import Detection
@@ -20,9 +21,6 @@ from contentctl.objects.security_content_object import SecurityContentObject
 # Logger
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 LOGGER = logging.getLogger(__name__)
-
-
-from contentctl.input.director import DirectorOutputDto
 
 
 class GitService(BaseModel):
@@ -79,7 +77,7 @@ class GitService(BaseModel):
         updated_datasources: set[DataSource] = set()
 
         for diff in all_diffs:
-            if type(diff) == pygit2.Patch:
+            if type(diff) is pygit2.Patch:
                 if diff.delta.status in (
                     DeltaStatus.ADDED,
                     DeltaStatus.MODIFIED,

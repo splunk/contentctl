@@ -80,7 +80,7 @@ class GitService(BaseModel):
         updated_datasources: set[DataSource] = set()
 
         for diff in all_diffs:
-            if type(diff) == pygit2.Patch:
+            if type(diff) is pygit2.Patch:
                 if diff.delta.status in (
                     DeltaStatus.ADDED,
                     DeltaStatus.MODIFIED,

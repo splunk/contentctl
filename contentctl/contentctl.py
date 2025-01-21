@@ -113,7 +113,7 @@ def deploy_acs_func(config: deploy_acs):
 
 
 def test_common_func(config: test_common):
-    if type(config) == test:
+    if type(config) is test:
         # construct the container Infrastructure objects
         config.getContainerInfrastructureObjects()
         # otherwise, they have already been passed as servers
@@ -220,25 +220,25 @@ def main():
         with warnings.catch_warnings(action="ignore"):
             config = tyro.cli(models)
 
-        if type(config) == init:
+        if type(config) is init:
             t.__dict__.update(config.__dict__)
             init_func(t)
-        elif type(config) == validate:
+        elif type(config) is validate:
             validate_func(config)
-        elif type(config) == report:
+        elif type(config) is report:
             report_func(config)
-        elif type(config) == build:
+        elif type(config) is build:
             build_func(config)
-        elif type(config) == new:
+        elif type(config) is new:
             new_func(config)
-        elif type(config) == inspect:
+        elif type(config) is inspect:
             inspect_func(config)
-        elif type(config) == release_notes:
+        elif type(config) is release_notes:
             release_notes_func(config)
-        elif type(config) == deploy_acs:
+        elif type(config) is deploy_acs:
             updated_config = deploy_acs.model_validate(config)
             deploy_acs_func(updated_config)
-        elif type(config) == test or type(config) == test_servers:
+        elif type(config) is test or type(config) is test_servers:
             test_common_func(config)
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")

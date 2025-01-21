@@ -3,23 +3,19 @@ from contentctl.objects.config import test, test_servers, Container,Infrastructu
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import DetectionTestingInfrastructure
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import DetectionTestingInfrastructureContainer
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import DetectionTestingInfrastructureServer
-from urllib.parse import urlparse
-from copy import deepcopy
 import signal
 import datetime
 # from queue import Queue
 from dataclasses import dataclass
 # import threading
-import ctypes
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
-    DetectionTestingInfrastructure,
     DetectionTestingManagerOutputDto,
 )
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
 from contentctl.objects.enums import PostTestBehavior
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from contentctl.objects.detection import Detection
 import concurrent.futures
 import docker
@@ -133,7 +129,7 @@ class DetectionTestingManager(BaseModel):
             if (isinstance(self.input_dto.config, test) and isinstance(infrastructure, Container)):
                 try:
                     client = docker.from_env()
-                except Exception as e:
+                except Exception:
                     raise Exception("Unable to connect to docker.  Are you sure that docker is running on this host?")
                 try:
                     

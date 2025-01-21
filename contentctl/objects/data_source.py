@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional, Any
-from pydantic import Field, HttpUrl, model_serializer, BaseModel, ConfigDict
+from pydantic import Field, HttpUrl, model_serializer, BaseModel
 from contentctl.objects.security_content_object import SecurityContentObject
 
 

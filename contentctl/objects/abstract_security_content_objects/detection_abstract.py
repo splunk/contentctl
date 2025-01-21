@@ -11,7 +11,6 @@ from pydantic import (
     Field,
     computed_field,
     model_serializer,
-    ConfigDict,
     FilePath
 )
 

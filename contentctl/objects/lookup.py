@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import field_validator, ValidationInfo, model_validator, FilePath, model_serializer, Field, NonNegativeInt, computed_field, TypeAdapter
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Optional, Any, Union, Literal, Annotated, Self
+from typing import TYPE_CHECKING, Optional, Any, Literal, Annotated, Self
 import re
 import csv
 import abc

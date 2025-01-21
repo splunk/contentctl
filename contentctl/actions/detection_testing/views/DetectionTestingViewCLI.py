@@ -3,7 +3,6 @@ from contentctl.actions.detection_testing.views.DetectionTestingView import (
 )
 
 import time
-import datetime
 import tqdm
 
 

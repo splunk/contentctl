@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field, ConfigDict, HttpUrl, field_validator
-from typing import List, Annotated
+from typing import List
 from enum import StrEnum
 import datetime
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE

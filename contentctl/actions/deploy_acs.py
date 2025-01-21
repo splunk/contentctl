@@ -42,10 +42,10 @@ class Deploy:
             # This likely includes a more verbose response describing the error
             res.raise_for_status()
             print(res.json())
-        except Exception as e:
+        except Exception:
             try:
                 error_text = res.json()
-            except Exception as e:
+            except Exception:
                 error_text = "No error text - request failed"
             formatted_error_text = pprint.pformat(error_text)
             print("While this may not be the cause of your error, ensure that the uid and appid of your Private App does not exist in Splunkbase\n"

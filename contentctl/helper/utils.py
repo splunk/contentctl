@@ -148,7 +148,7 @@ class Utils:
             # If we get here, it does not exist in the given branch
             raise (Exception("Does not exist in branch"))
 
-        except Exception as e:
+        except Exception:
             if branch_name is None:
                 branch_name = "ANY_BRANCH"
             if ALWAYS_PULL:

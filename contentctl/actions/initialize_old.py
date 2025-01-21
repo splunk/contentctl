@@ -7,12 +7,8 @@ import yaml
 import sys
 import questionary
 import os
-from contentctl.objects.enums import LogLevel
 
-import abc
-from pydantic import BaseModel, Field
 
-from contentctl.objects.config import Config
 
 DEFAULT_FOLDERS = ['detections', 'stories', 'lookups', 'macros', 'baselines', 'dist']
 

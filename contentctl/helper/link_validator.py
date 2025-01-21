@@ -1,7 +1,8 @@
 from pydantic import BaseModel, model_validator
 from typing import Union, Callable, Any
 import requests
-import urllib3, urllib3.exceptions
+import urllib3
+import urllib3.exceptions
 import time
 import abc
 
@@ -74,7 +75,7 @@ class LinkStats(BaseModel):
                 data['valid'] = False
             return data    
 
-        except Exception as e:
+        except Exception:
             resolution_time = time.time() - start_time
             #print(f"Reference {reference} was not reachable after {resolution_time:.2f} seconds")
             data['status_code'] = 0

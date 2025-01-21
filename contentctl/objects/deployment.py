@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import Field, computed_field,ValidationInfo, model_serializer, NonNegativeInt, ConfigDict
+from pydantic import Field, computed_field,ValidationInfo, model_serializer, NonNegativeInt
 from typing import Any
 import uuid
 import datetime

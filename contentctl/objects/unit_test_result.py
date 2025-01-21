@@ -72,7 +72,7 @@ class UnitTestResult(BaseTestResult):
             if self.exception is not None:
                 self.message = f"EXCEPTION: {str(self.exception)}"
             else:
-                self.message = f"ERROR with no more specific message available."
+                self.message = "ERROR with no more specific message available."
             self.sid_link = NO_SID
 
         return self.success

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import questionary
 from typing import Any
 from contentctl.input.new_content_questions import NewContentQuestions

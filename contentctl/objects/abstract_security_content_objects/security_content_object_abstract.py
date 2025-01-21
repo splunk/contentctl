@@ -5,7 +5,6 @@ if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment
     from contentctl.objects.security_content_object import SecurityContentObject
     from contentctl.input.director import DirectorOutputDto
-    from contentctl.objects.config import CustomApp
 
 from contentctl.objects.enums import AnalyticsType
 from contentctl.objects.constants import CONTENTCTL_MAX_STANZA_LENGTH

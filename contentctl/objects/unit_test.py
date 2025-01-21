@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pydantic import Field
 
-from contentctl.objects.unit_test_baseline import UnitTestBaseline
 from contentctl.objects.test_attack_data import TestAttackData
 from contentctl.objects.unit_test_result import UnitTestResult
 from contentctl.objects.base_test import BaseTest, TestType

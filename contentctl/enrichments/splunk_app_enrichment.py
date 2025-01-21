@@ -1,11 +1,8 @@
 import requests
 import xmltodict
-import json
 import functools
-import pickle
 import shelve
 import os
-import time
 
 SPLUNKBASE_API_URL = "https://apps.splunk.com/api/apps/entriesbyid/"
 
@@ -29,7 +26,7 @@ def requests_get_helper(url:str, force_cached_or_offline:bool = False)->bytes:
             req = requests.get(url)
             req_content = req.content
             cache[url] = req_content
-        except Exception as e:
+        except Exception:
             raise(Exception(f"ERROR - Failed to get Splunk App Enrichment at {SPLUNKBASE_API_URL}"))
     
     if isinstance(cache, shelve.Shelf):

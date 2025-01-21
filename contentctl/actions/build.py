@@ -1,11 +1,8 @@
-import sys
 import shutil
-import os
 
 from dataclasses import dataclass
 
-from contentctl.objects.enums import SecurityContentType
-from contentctl.input.director import Director, DirectorOutputDto
+from contentctl.input.director import DirectorOutputDto
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.conf_writer import ConfWriter
 from contentctl.output.api_json_output import ApiJsonOutput

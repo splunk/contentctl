@@ -1,6 +1,5 @@
 
 from __future__ import annotations
-import sys
 from attackcti import attack_client
 import logging
 from pydantic import BaseModel

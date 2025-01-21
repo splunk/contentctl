@@ -82,7 +82,7 @@ class DetectionTestingManager(BaseModel):
             # Wait for all instances to be set up
             for future in concurrent.futures.as_completed(future_instances_setup):
                 try:
-                    result = future.result()
+                    future.result()
                 except Exception as e:
                     self.output_dto.terminate = True
                     print(f"Error setting up container: {str(e)}")
@@ -97,7 +97,7 @@ class DetectionTestingManager(BaseModel):
                 # Wait for execution to finish
                 for future in concurrent.futures.as_completed(future_instances_execute):
                     try:
-                        result = future.result()
+                        future.result()
                     except Exception as e:
                         self.output_dto.terminate = True
                         print(f"Error running in container: {str(e)}")
@@ -110,14 +110,14 @@ class DetectionTestingManager(BaseModel):
             }
             for future in concurrent.futures.as_completed(future_views_shutdowner):
                 try:
-                    result = future.result()
+                    future.result()
                 except Exception as e:
                     print(f"Error stopping view: {str(e)}")
 
             # Wait for original view-related threads to complete
             for future in concurrent.futures.as_completed(future_views):
                 try:
-                    result = future.result()
+                    future.result()
                 except Exception as e:
                     print(f"Error running container: {str(e)}")
 

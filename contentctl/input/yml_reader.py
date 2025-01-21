@@ -42,7 +42,7 @@ class YmlReader():
             print(exc)
             sys.exit(1)
         
-        if add_fields == False:
+        if add_fields is False:
             return yml_obj
         
         

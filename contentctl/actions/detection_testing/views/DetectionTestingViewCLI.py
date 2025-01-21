@@ -38,7 +38,7 @@ class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True
             miniters=0,
             mininterval=0,
         )
-        fmt = self.format_pbar(
+        self.format_pbar(
             len(self.sync_obj.outputQueue), len(self.sync_obj.inputQueue)
         )
 

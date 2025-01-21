@@ -53,7 +53,7 @@ class ConfOutput:
         
         #The contents of app.manifest are not a conf file, but json.
         #DO NOT write a header for this file type, simply create the file
-        with open(self.config.getPackageDirectoryPath() / pathlib.Path('app.manifest'), 'w') as f:
+        with open(self.config.getPackageDirectoryPath() / pathlib.Path('app.manifest'), 'w'):
             pass
             
 

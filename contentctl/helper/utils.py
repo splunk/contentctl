@@ -141,7 +141,7 @@ class Utils:
             # Note, of course, that a hash can be in 0, 1, more branches!
             for branch_string in all_branches_containing_hash:
                 if branch_string.split(" ")[0] == "*" and (
-                    branch_string.split(" ")[-1] == branch_name or branch_name == None
+                    branch_string.split(" ")[-1] == branch_name or branch_name is None
                 ):
                     # Yes, the hash exists in the branch (or branch_name was None and it existed in at least one branch)!
                     return True
@@ -376,7 +376,7 @@ class Utils:
             )
 
         try:
-            download_start_time = default_timer()
+            default_timer()
             bytes_written = 0
             file_to_download = requests.get(file_path, stream=True)
             file_to_download.raise_for_status()

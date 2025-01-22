@@ -1,6 +1,8 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, model_serializer
+
 from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, Field, model_serializer
 
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
@@ -34,20 +36,17 @@ class Drilldown(BaseModel):
         min_length=1,
     )
 
-    # TODO (cmcginley): @ljstella the drilldowns will need to be updated
     @classmethod
     def constructDrilldownsFromDetection(cls, detection: Detection) -> list[Drilldown]:
-        victim_observables = [
-            o for o in detection.tags.observable if o.role[0] == "Victim"
-        ]
+        victim_observables = [o for o in detection.rba.risk_objects]
         if len(victim_observables) == 0 or detection.type == AnalyticsType.Hunting:
             # No victims, so no drilldowns
             return []
         print(f"Adding default drilldowns for [{detection.name}]")
-        variableNamesString = " and ".join([f"${o.name}$" for o in victim_observables])
+        variableNamesString = " and ".join([f"${o.field}$" for o in victim_observables])
         nameField = f"View the detection results for {variableNamesString}"
         appendedSearch = " | search " + " ".join(
-            [f"{o.name} = ${o.name}$" for o in victim_observables]
+            [f"{o.field} = ${o.field}$" for o in victim_observables]
         )
         search_field = f"{detection.search}{appendedSearch}"
         detection_results = cls(
@@ -58,7 +57,7 @@ class Drilldown(BaseModel):
         )
 
         nameField = f"View risk events for the last 7 days for {variableNamesString}"
-        fieldNamesListString = ", ".join([o.name for o in victim_observables])
+        fieldNamesListString = ", ".join([o.field for o in victim_observables])
         search_field = f"{RISK_SEARCH}by {fieldNamesListString} {appendedSearch}"
         risk_events_last_7_days = cls(
             name=nameField,

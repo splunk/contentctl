@@ -2,15 +2,16 @@ import re
 from functools import cached_property
 
 from pydantic import (
-    ConfigDict,
     BaseModel,
+    ConfigDict,
     Field,
     PrivateAttr,
-    field_validator,
     computed_field,
+    field_validator,
 )
-from contentctl.objects.errors import ValidationFailed
+
 from contentctl.objects.detection import Detection
+from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.rba import RiskObject
 
 
@@ -22,11 +23,11 @@ class RiskEvent(BaseModel):
 
     # The subject of the risk event (e.g. a username, process name, system name, account ID, etc.)
     # (not to be confused w/ the risk object from the detection)
-    es_risk_object: int | str
+    es_risk_object: int | str = Field(alias="risk_object")
 
     # The type of the risk object from ES (e.g. user, system, or other) (not to be confused w/
     # the risk object from the detection)
-    es_risk_object_type: str
+    es_risk_object_type: str = Field(alias="risk_object_type")
 
     # The level of risk associated w/ the risk event
     risk_score: int

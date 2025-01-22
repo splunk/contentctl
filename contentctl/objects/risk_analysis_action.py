@@ -18,6 +18,7 @@ class RiskAnalysisAction(BaseModel):
     :param message: the message associated w/ the risk event (NOTE: may contain macros of the form
         $...$ which should be replaced with real values in the resulting risk events)
     """
+
     risk_objects: list[RiskObject]
     message: str
 
@@ -80,21 +81,24 @@ class RiskAnalysisAction(BaseModel):
         # TODO (#231): add validation ensuring at least 1 risk objects
         for entry in object_dicts:
             if "risk_object_field" in entry:
-                risk_objects.append(RiskObject(
-                    field=entry["risk_object_field"],
-                    type=entry["risk_object_type"],
-                    score=int(entry["risk_score"])
-                ))
+                risk_objects.append(
+                    RiskObject(
+                        field=entry["risk_object_field"],
+                        type=entry["risk_object_type"],
+                        score=int(entry["risk_score"]),
+                    )
+                )
             elif "threat_object_field" in entry:
-                threat_objects.append(ThreatObject(
-                    field=entry["threat_object_field"],
-                    type=entry["threat_object_type"]
-                ))
+                threat_objects.append(
+                    ThreatObject(
+                        field=entry["threat_object_field"],
+                        type=entry["threat_object_type"],
+                    )
+                )
             else:
                 raise ValueError(
                     f"Unexpected object within 'action.risk.param._risk': {entry}"
                 )
         return cls(
-            risk_objects=risk_objects,
-            message=dict_["action.risk.param._risk_message"]
+            risk_objects=risk_objects, message=dict_["action.risk.param._risk_message"]
         )

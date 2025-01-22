@@ -13,6 +13,7 @@ class RiskObject(BaseModel):
     :param type_: the type of the risk object (e.g. "system")
     :param score: the risk score associated with the obersevable (e.g. 64)
     """
+
     field: str
     type: str
     score: int

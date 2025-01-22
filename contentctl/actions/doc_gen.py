@@ -10,17 +10,21 @@ from contentctl.output.doc_md_output import DocMdOutput
 class DocGenInputDto:
     director_input_dto: DirectorInputDto
 
-class DocGen:
 
+class DocGen:
     def execute(self, input_dto: DocGenInputDto) -> None:
-        director_output_dto = DirectorOutputDto([],[],[],[],[],[],[],[],[],[])
+        director_output_dto = DirectorOutputDto([], [], [], [], [], [], [], [], [], [])
         director = Director(director_output_dto)
         director.execute(input_dto.director_input_dto)
 
         doc_md_output = DocMdOutput()
         doc_md_output.writeObjects(
-            [director_output_dto.stories, director_output_dto.detections, director_output_dto.playbooks], 
-            os.path.join(input_dto.director_input_dto.input_path, "docs")
+            [
+                director_output_dto.stories,
+                director_output_dto.detections,
+                director_output_dto.playbooks,
+            ],
+            os.path.join(input_dto.director_input_dto.input_path, "docs"),
         )
 
-        print('Generating Docs of security content successful.')
+        print("Generating Docs of security content successful.")

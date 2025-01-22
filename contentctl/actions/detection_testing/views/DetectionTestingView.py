@@ -64,7 +64,7 @@ class DetectionTestingView(BaseModel, abc.ABC):
         try:
             runtime = self.getRuntime()
             time_per_detection = runtime / num_tested
-            remaining_time = (num_untested+.5) * time_per_detection
+            remaining_time = (num_untested + 0.5) * time_per_detection
             remaining_time -= datetime.timedelta(
                 microseconds=remaining_time.microseconds
             )
@@ -74,7 +74,14 @@ class DetectionTestingView(BaseModel, abc.ABC):
 
     def getSummaryObject(
         self,
-        test_result_fields: list[str] = ["success", "message", "exception", "status", "duration", "wait_duration"],
+        test_result_fields: list[str] = [
+            "success",
+            "message",
+            "exception",
+            "status",
+            "duration",
+            "wait_duration",
+        ],
         test_job_fields: list[str] = ["resultCount", "runDuration"],
     ) -> dict[str, dict[str, Any] | list[dict[str, Any]] | str]:
         """
@@ -110,11 +117,11 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 total_skipped += 1
 
             # Aggregate production status metrics
-            if detection.status == DetectionStatus.production.value:                                # type: ignore
+            if detection.status == DetectionStatus.production:
                 total_production += 1
-            elif detection.status == DetectionStatus.experimental.value:                            # type: ignore
+            elif detection.status == DetectionStatus.experimental:
                 total_experimental += 1
-            elif detection.status == DetectionStatus.deprecated.value:                              # type: ignore
+            elif detection.status == DetectionStatus.deprecated:
                 total_deprecated += 1
 
             # Check if the detection is manual_test
@@ -128,19 +135,11 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 tested_detections.append(summary)
 
         # Sort tested detections s.t. all failures appear first, then by name
-        tested_detections.sort(
-            key=lambda x: (
-                x["success"],
-                x["name"]
-            )
-        )
+        tested_detections.sort(key=lambda x: (x["success"], x["name"]))
 
         # Sort skipped detections s.t. detections w/ tests appear before those w/o, then by name
         skipped_detections.sort(
-            key=lambda x: (
-                0 if len(x["tests"]) > 0 else 1,
-                x["name"]
-            )
+            key=lambda x: (0 if len(x["tests"]) > 0 else 1, x["name"])
         )
 
         # TODO (#267): Align test reporting more closely w/ status enums (as it relates to
@@ -170,15 +169,13 @@ class DetectionTestingView(BaseModel, abc.ABC):
         percent_complete = Utils.getPercent(
             len(tested_detections), len(untested_detections), 1
         )
-        success_rate = Utils.getPercent(
-            total_pass, total_tested_detections, 1
-        )
+        success_rate = Utils.getPercent(total_pass, total_tested_detections, 1)
 
         # TODO (#230): expand testing metrics reported (and make nested)
         # Construct and return the larger results dict
         result_dict = {
             "summary": {
-                "mode": self.config.getModeName(),
+                "mode": self.config.mode.mode_name,
                 "enable_integration_testing": self.config.enable_integration_testing,
                 "success": overall_success,
                 "total_detections": total_detections,

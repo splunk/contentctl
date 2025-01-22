@@ -12,6 +12,7 @@ class ManualTest(BaseTest):
     """
     A manual test for a detection
     """
+
     # The test type (manual)
     test_type: TestType = Field(default=TestType.MANUAL)
 
@@ -26,7 +27,6 @@ class ManualTest(BaseTest):
         Skip the test by setting its result status
         :param message: the reason for skipping
         """
-        self.result = ManualTestResult(                                                             # type: ignore
-            message=message,
-            status=TestResultStatus.SKIP
+        self.result = ManualTestResult(  # type: ignore
+            message=message, status=TestResultStatus.SKIP
         )

@@ -2,32 +2,32 @@ from __future__ import annotations
 from typing import Optional, Any
 from pydantic import Field, HttpUrl, model_serializer, BaseModel
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.event_source import EventSource
 
 
 class TA(BaseModel):
     name: str
     url: HttpUrl | None = None
     version: str
+
+
 class DataSource(SecurityContentObject):
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None
     configuration: Optional[str] = None
     supported_TA: list[TA] = []
-    fields: Optional[list] = None
-    field_mappings: Optional[list] = None
-    convert_to_log_source: Optional[list] = None
-    example_log: Optional[str] = None
-
+    fields: None | list = None
+    field_mappings: None | list = None
+    convert_to_log_source: None | list = None
+    example_log: None | str = None
 
     @model_serializer
     def serialize_model(self):
-        #Call serializer for parent
+        # Call serializer for parent
         super_fields = super().serialize_model()
-        
-        #All fields custom to this model
-        model:dict[str,Any] = {
+
+        # All fields custom to this model
+        model: dict[str, Any] = {
             "source": self.source,
             "sourcetype": self.sourcetype,
             "separator": self.separator,
@@ -36,12 +36,11 @@ class DataSource(SecurityContentObject):
             "fields": self.fields,
             "field_mappings": self.field_mappings,
             "convert_to_log_source": self.convert_to_log_source,
-            "example_log":self.example_log
+            "example_log": self.example_log,
         }
-        
-        
-        #Combine fields from this model with fields from parent
+
+        # Combine fields from this model with fields from parent
         super_fields.update(model)
-        
-        #return the model
+
+        # return the model
         return super_fields

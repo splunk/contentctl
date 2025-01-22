@@ -14,6 +14,7 @@ class NotableAction(BaseModel):
     :param security_domain: the domain associated with the notable action and related rule (detection/search)
     :param severity: severity (e.g. "high") associated with the notable action and related rule (detection/search)
     """
+
     rule_name: str
     rule_description: str
     security_domain: str
@@ -32,5 +33,5 @@ class NotableAction(BaseModel):
             rule_name=dict_["action.notable.param.rule_title"],
             rule_description=dict_["action.notable.param.rule_description"],
             security_domain=dict_["action.notable.param.security_domain"],
-            severity=dict_["action.notable.param.severity"]
+            severity=dict_["action.notable.param.severity"],
         )

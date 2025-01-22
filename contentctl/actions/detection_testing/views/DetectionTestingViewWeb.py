@@ -102,9 +102,7 @@ class SimpleWebServer(ServerAdapter):
 class DetectionTestingViewWeb(DetectionTestingView):
     bottleApp: Bottle = Bottle()
     server: SimpleWebServer = SimpleWebServer(host="0.0.0.0", port=DEFAULT_WEB_UI_PORT)
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def setup(self):
         self.bottleApp.route("/", callback=self.showStatus)
@@ -123,7 +121,6 @@ class DetectionTestingViewWeb(DetectionTestingView):
             print(f"Could not open webbrowser for status page: {str(e)}")
 
     def stop(self):
-
         if self.server.server is None:
             print("Web Server is not running anyway - nothing to shut down")
             return

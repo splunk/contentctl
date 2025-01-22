@@ -11,6 +11,7 @@ class DetectionStanza(BaseModel):
     """
     A model representing a stanza for a detection in savedsearches.conf
     """
+
     # The lines that comprise this stanza, in the order they appear in the conf
     lines: list[str] = Field(...)
 
@@ -47,7 +48,9 @@ class DetectionStanza(BaseModel):
             raise Exception(f"No metadata for detection '{self.name}' found in stanza.")
 
         # Parse the metadata JSON into a model
-        return DetectionMetadata.model_validate_json(meta_line[len(DetectionStanza.METADATA_LINE_PREFIX):])
+        return DetectionMetadata.model_validate_json(
+            meta_line[len(DetectionStanza.METADATA_LINE_PREFIX) :]
+        )
 
     @computed_field
     @cached_property
@@ -76,4 +79,6 @@ class DetectionStanza(BaseModel):
         :returns: True if the version still needs to be bumped
         :rtype: bool
         """
-        return (self.hash != previous.hash) and (self.metadata.detection_version <= previous.metadata.detection_version)
+        return (self.hash != previous.hash) and (
+            self.metadata.detection_version <= previous.metadata.detection_version
+        )

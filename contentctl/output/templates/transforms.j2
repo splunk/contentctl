@@ -1,8 +1,8 @@
 
 {% for lookup in objects %}
 [{{ lookup.name }}]
-{% if lookup.filename is defined and lookup.filename != None %}
-filename = {{ lookup.filename.name  }}
+{% if lookup.app_filename is defined and lookup.app_filename != None %}
+filename = {{ lookup.app_filename.name  }}
 {% else %}
 collection = {{ lookup.collection }}
 external_type = kvstore
@@ -25,8 +25,8 @@ max_matches = {{ lookup.max_matches }}
 {% if lookup.min_matches is defined and lookup.min_matches != None %}
 min_matches = {{ lookup.min_matches }}
 {% endif %}
-{% if lookup.fields_list is defined and lookup.fields_list != None %}
-fields_list = {{ lookup.fields_list }}
+{% if lookup.fields_to_fields_list_conf_format is defined %}
+fields_list = {{ lookup.fields_to_fields_list_conf_format }}
 {% endif %}
 {% if lookup.filter is defined and lookup.filter != None %}
 filter = {{ lookup.filter }}

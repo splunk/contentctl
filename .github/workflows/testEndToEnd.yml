@@ -1,8 +1,7 @@
 name: testEndToEnd
 on:
-  push:
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
   schedule:
     - cron: "44 4 * * *"
 
@@ -11,8 +10,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python_version: ["3.11", "3.12"]
-        operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest", "macos-14", "windows-2022"]
+        python_version: ["3.11", "3.12", "3.13"]
+        operating_system: ["ubuntu-24.04", "macos-15", "windows-2022"]
         #operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
 
 

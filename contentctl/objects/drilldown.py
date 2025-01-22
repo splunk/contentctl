@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_serializer
 
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
+
 from contentctl.objects.enums import AnalyticsType
 
 DRILLDOWN_SEARCH_PLACEHOLDER = "%original_detection_search%"
@@ -38,6 +39,13 @@ class Drilldown(BaseModel):
 
     @classmethod
     def constructDrilldownsFromDetection(cls, detection: Detection) -> list[Drilldown]:
+        # Ensure the rba object is defined
+        if detection.rba is None:
+            raise NotImplementedError(
+                f"Unexpected error: Detection '{detection.name}' has no RBA objects associated "
+                "with it; cannot construct drilldowns."
+            )
+
         victim_observables = [o for o in detection.rba.risk_objects]
         if len(victim_observables) == 0 or detection.type == AnalyticsType.Hunting:
             # No victims, so no drilldowns

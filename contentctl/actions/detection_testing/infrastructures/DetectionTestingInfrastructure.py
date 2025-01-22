@@ -1109,13 +1109,25 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             job = self.get_conn().search(query=search, **kwargs)
             results = JSONResultsReader(job.results(output_mode="json"))
 
-            risk_object_fields_set = set(
-                [o.field for o in detection.rba.risk_objects]
-            )  # just the "Risk Objects"
-            threat_object_fields_set = set(
-                [o.field for o in detection.rba.threat_objects]
-            )  # just the "threat objects"
-            full_rba_field_set = risk_object_fields_set.union(threat_object_fields_set)
+            if detection.rba is not None:
+                risk_object_fields_set = set(
+                    [o.field for o in detection.rba.risk_objects]
+                )  # just the "Risk Objects"
+                threat_object_fields_set = set(
+                    [o.field for o in detection.rba.threat_objects]
+                )  # just the "threat objects"
+            else:
+                # For some searches, like Hunting Searches, there should
+                # not be any risk or threat objects.
+                risk_object_fields_set: set[str] = (
+                    set()
+                )  # just the "Risk Objects" (of which there are none)
+                threat_object_fields_set: set[str] = (
+                    set()
+                )  # just the "threat objects" (of which there are none)
+            full_rba_field_set: set[str] = risk_object_fields_set.union(
+                threat_object_fields_set
+            )
 
             # Ensure the search had at least one result
             if int(job.content.get("resultCount", "0")) > 0:

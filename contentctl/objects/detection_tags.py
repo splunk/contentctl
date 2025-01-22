@@ -1,37 +1,39 @@
 from __future__ import annotations
+
 import uuid
 from typing import TYPE_CHECKING, List, Optional, Union
+
 from pydantic import (
-    BaseModel,
-    Field,
-    computed_field,
     UUID4,
-    HttpUrl,
+    BaseModel,
     ConfigDict,
-    field_validator,
+    Field,
+    HttpUrl,
     ValidationInfo,
+    computed_field,
+    field_validator,
     model_serializer,
     model_validator,
 )
+
 from contentctl.objects.story import Story
 from contentctl.objects.throttling import Throttling
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
+from contentctl.objects.annotated_types import CVE_TYPE, MITRE_ATTACK_ID_TYPE
+from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
-from contentctl.objects.observable import Observable
 from contentctl.objects.enums import (
-    Cis18Value,
     AssetType,
-    SecurityDomain,
+    Cis18Value,
     KillChainPhase,
     NistCategory,
     SecurityContentProductName,
+    SecurityDomain,
 )
-from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
-from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE, CVE_TYPE
+from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 
 
 class DetectionTags(BaseModel):
@@ -45,9 +47,6 @@ class DetectionTags(BaseModel):
     mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
 
-    # TODO (cmcginley): observable should be removed as well, yes?
-    # TODO (#249): Add pydantic validator to ensure observables are unique within a detection
-    observable: List[Observable] = []
     product: list[SecurityContentProductName] = Field(..., min_length=1)
     throttling: Optional[Throttling] = None
     security_domain: SecurityDomain = Field(...)
@@ -86,38 +85,6 @@ class DetectionTags(BaseModel):
 
     # TODO (#268): Validate manual_test has length > 0 if not None
     manual_test: Optional[str] = None
-
-    # The following validator is temporarily disabled pending further discussions
-    # @validator('message')
-    # def validate_message(cls,v,values):
-
-    #     observables:list[Observable] = values.get("observable",[])
-    #     observable_names = set([o.name for o in observables])
-    #     #find all of the observables used in the message by name
-    #     name_match_regex = r"\$([^\s.]*)\$"
-
-    #     message_observables = set()
-
-    #     #Make sure that all observable names in
-    #     for match in re.findall(name_match_regex, v):
-    #         #Remove
-    #         match_without_dollars = match.replace("$", "")
-    #         message_observables.add(match_without_dollars)
-
-    #     missing_observables = message_observables - observable_names
-    #     unused_observables = observable_names - message_observables
-    #     if len(missing_observables) > 0:
-    #         raise ValueError(
-    #             "The following observables are referenced in the message, but were not declared as"
-    #             f" observables: {missing_observables}"
-    #         )
-
-    #     if len(unused_observables) > 0:
-    #         raise ValueError(
-    #             "The following observables were declared, but are not referenced in the message:"
-    #             f" {unused_observables}"
-    #         )
-    #     return v
 
     @model_serializer
     def serialize_model(self):

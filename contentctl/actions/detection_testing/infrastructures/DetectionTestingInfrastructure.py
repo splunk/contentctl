@@ -1,46 +1,46 @@
-import time
-import uuid
 import abc
-import os.path
 import configparser
-import json
 import datetime
-import tqdm  # type: ignore
+import json
+import os.path
 import pathlib
-from tempfile import TemporaryDirectory, mktemp
+import time
+import urllib.parse
+import uuid
+from shutil import copyfile
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
-from shutil import copyfile
-from typing import Union, Optional
+from tempfile import TemporaryDirectory, mktemp
+from typing import Optional, Union
 
-from pydantic import ConfigDict, BaseModel, PrivateAttr, Field, dataclasses
 import requests  # type: ignore
 import splunklib.client as client  # type: ignore
+import splunklib.results
+import tqdm  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, dataclasses
 from splunklib.binding import HTTPError  # type: ignore
 from splunklib.results import JSONResultsReader, Message  # type: ignore
-import splunklib.results
 from urllib3 import disable_warnings
-import urllib.parse
 
-from contentctl.objects.config import test_common, Infrastructure
-from contentctl.objects.enums import PostTestBehavior, AnalyticsType
-from contentctl.objects.detection import Detection
-from contentctl.objects.base_test import BaseTest
-from contentctl.objects.unit_test import UnitTest
-from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.test_attack_data import TestAttackData
-from contentctl.objects.unit_test_result import UnitTestResult
-from contentctl.objects.integration_test_result import IntegrationTestResult
-from contentctl.objects.test_group import TestGroup
-from contentctl.objects.base_test_result import TestResultStatus
-from contentctl.objects.correlation_search import CorrelationSearch, PbarData
-from contentctl.helper.utils import Utils
 from contentctl.actions.detection_testing.progress_bar import (
-    format_pbar_string,
-    TestReportingType,
     FinalTestingStates,
     TestingStates,
+    TestReportingType,
+    format_pbar_string,
 )
+from contentctl.helper.utils import Utils
+from contentctl.objects.base_test import BaseTest
+from contentctl.objects.base_test_result import TestResultStatus
+from contentctl.objects.config import Infrastructure, test_common
+from contentctl.objects.correlation_search import CorrelationSearch, PbarData
+from contentctl.objects.detection import Detection
+from contentctl.objects.enums import AnalyticsType, PostTestBehavior
+from contentctl.objects.integration_test import IntegrationTest
+from contentctl.objects.integration_test_result import IntegrationTestResult
+from contentctl.objects.test_attack_data import TestAttackData
+from contentctl.objects.test_group import TestGroup
+from contentctl.objects.unit_test import UnitTest
+from contentctl.objects.unit_test_result import UnitTestResult
 
 
 class SetupTestGroupResults(BaseModel):
@@ -1109,17 +1109,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             job = self.get_conn().search(query=search, **kwargs)
             results = JSONResultsReader(job.results(output_mode="json"))
 
-            # TODO (cmcginley): @ljstella you're removing this ultimately, right?
-            # Consolidate a set of the distinct observable field names
-            observable_fields_set = set(
-                [o.name for o in detection.tags.observable]
-            )  # keeping this around for later
             risk_object_fields_set = set(
-                [o.name for o in detection.tags.observable if "Victim" in o.role]
+                [o.field for o in detection.rba.risk_objects]
             )  # just the "Risk Objects"
             threat_object_fields_set = set(
-                [o.name for o in detection.tags.observable if "Attacker" in o.role]
+                [o.field for o in detection.rba.threat_objects]
             )  # just the "threat objects"
+            full_rba_field_set = risk_object_fields_set.union(threat_object_fields_set)
 
             # Ensure the search had at least one result
             if int(job.content.get("resultCount", "0")) > 0:
@@ -1164,7 +1160,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                     # TODO (cmcginley): @ljstella is this something we're keeping for testing as
                     #   well?
-                    for field in observable_fields_set:
+                    for field in full_rba_field_set:
                         if result.get(field, "null") == "null":
                             if field in risk_object_fields_set:
                                 e = Exception(

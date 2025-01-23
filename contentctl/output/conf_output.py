@@ -1,23 +1,28 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
+    from contentctl.objects.baseline import Baseline
+    from contentctl.objects.dashboard import Dashboard
     from contentctl.objects.detection import Detection
+    from contentctl.objects.investigation import Investigation
     from contentctl.objects.lookup import Lookup
     from contentctl.objects.macro import Macro
-    from contentctl.objects.dashboard import Dashboard
     from contentctl.objects.story import Story
-    from contentctl.objects.baseline import Baseline
-    from contentctl.objects.investigation import Investigation
 
-from contentctl.objects.lookup import FileBackedLookup
+import datetime
+import pathlib
 import shutil
 import tarfile
-import pathlib
 import timeit
-import datetime
-from contentctl.output.conf_writer import ConfWriter
+
 from contentctl.objects.config import build
+
+# These must be imported separately because they are not just used for typing,
+# they are used in isinstance (which requires the object to be imported)
+from contentctl.objects.lookup import FileBackedLookup, MlModel
+from contentctl.output.conf_writer import ConfWriter
 
 
 class ConfOutput:
@@ -183,9 +188,15 @@ class ConfOutput:
             ("default/collections.conf", "collections.j2"),
             ("default/transforms.conf", "transforms.j2"),
         ]:
+            # DO NOT write MlModels to transforms.conf.  The enumeration of
+            # those files happens in the MLTK app by enumerating the __mlspl_*
+            # files in the lookups/ directory of the app
             written_files.add(
                 ConfWriter.writeConfFile(
-                    pathlib.Path(output_app_path), template_name, self.config, objects
+                    pathlib.Path(output_app_path),
+                    template_name,
+                    self.config,
+                    [lookup for lookup in objects if not isinstance(lookup, MlModel)],
                 )
             )
 
@@ -198,6 +209,9 @@ class ConfOutput:
 
         # Copy each lookup into the folder
         for lookup in objects:
+            # All File backed lookups, including __mlspl_ files, should be copied here,
+            # even though the MLModel info was intentionally not written to the
+            # transforms.conf file as noted above.
             if isinstance(lookup, FileBackedLookup):
                 shutil.copy(lookup.filename, lookup_folder / lookup.app_filename.name)
         return written_files
@@ -237,9 +251,10 @@ class ConfOutput:
             "Please raise an issue in the contentctl GitHub if you encounter this exception."
         )
         try:
+            import logging
+
             import slim
             from slim.utils import SlimLogger
-            import logging
 
             # In order to avoid significant output, only emit FATAL log messages
             SlimLogger.set_level(logging.ERROR)
@@ -261,6 +276,9 @@ class ConfOutput:
 
     def packageApp(self, method: Callable[[ConfOutput], None] = packageAppTar) -> None:
         return method(self)
+
+    def getElapsedTime(self, startTime: float) -> datetime.timedelta:
+        return datetime.timedelta(seconds=round(timeit.default_timer() - startTime))
 
     def getElapsedTime(self, startTime: float) -> datetime.timedelta:
         return datetime.timedelta(seconds=round(timeit.default_timer() - startTime))

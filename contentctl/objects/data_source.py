@@ -1,6 +1,9 @@
 from __future__ import annotations
-from typing import Optional, Any
-from pydantic import Field, HttpUrl, model_serializer, BaseModel
+
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field, HttpUrl, model_serializer
+
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
@@ -14,10 +17,12 @@ class DataSource(SecurityContentObject):
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None
+    separator_value: Optional[str] = None
     configuration: Optional[str] = None
     supported_TA: list[TA] = []
     fields: None | list = None
     field_mappings: None | list = None
+    mitre_components: list[str] = []
     convert_to_log_source: None | list = None
     example_log: None | str = None
 

@@ -1,8 +1,12 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, List
-from contentctl.objects.story_tags import StoryTags
-from pydantic import Field, model_serializer, computed_field, model_validator
+
 import re
+from functools import cached_property
+from typing import TYPE_CHECKING, List
+
+from pydantic import Field, HttpUrl, computed_field, model_serializer, model_validator
+
+from contentctl.objects.story_tags import StoryTags
 
 if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
@@ -23,6 +27,11 @@ class Story(SecurityContentObject):
     detections: List[Detection] = []
     investigations: List[Investigation] = []
     baselines: List[Baseline] = []
+
+    @computed_field
+    @cached_property
+    def researchSiteLink(self) -> HttpUrl:
+        return HttpUrl(url=f"https://research.splunk.com/detections/{self.id}")  # type: ignore
 
     @computed_field
     @property
@@ -138,6 +147,10 @@ class Story(SecurityContentObject):
         return [investigation.name for investigation in self.investigations]
 
     @computed_field
+    @property
+    def baseline_names(self) -> List[str]:
+        return [baseline.name for baseline in self.baselines]
+
     @property
     def baseline_names(self) -> List[str]:
         return [baseline.name for baseline in self.baselines]

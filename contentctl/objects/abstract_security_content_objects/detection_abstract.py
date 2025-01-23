@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any, List, Optional, Union
 from pydantic import (
     Field,
     FilePath,
+    HttpUrl,
     ValidationInfo,
     computed_field,
     field_validator,
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from contentctl.objects.config import CustomApp
 
 import datetime
+from functools import cached_property
 
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 from contentctl.objects.base_test_result import TestResultStatus
@@ -101,10 +103,24 @@ class Detection_Abstract(SecurityContentObject):
         description="A list of Drilldowns that should be included with this search",
     )
 
-    def get_conf_stanza_name(self, app: CustomApp) -> str:
+    @computed_field
+    @cached_property
+    def researchSiteLink(self) -> HttpUrl:
+        return HttpUrl(url=f"https://research.splunk.com/detections/{self.id}")  # type: ignore
+
+    @staticmethod
+    def static_get_conf_stanza_name(name: str, app: CustomApp) -> str:
+        """
+        This is exposed as a static method since it may need to be used for SecurityContentObject which does not
+        pass all currenty validations - most notable Deprecated content.
+        """
         stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(
-            app_label=app.label, detection_name=self.name
+            app_label=app.label, detection_name=name
         )
+        return stanza_name
+
+    def get_conf_stanza_name(self, app: CustomApp) -> str:
+        stanza_name = self.static_get_conf_stanza_name(self.name, app)
         self.check_conf_stanza_max_length(stanza_name)
         return stanza_name
 

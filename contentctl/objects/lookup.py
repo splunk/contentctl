@@ -1,27 +1,29 @@
 from __future__ import annotations
 
-from pydantic import (
-    field_validator,
-    ValidationInfo,
-    model_validator,
-    FilePath,
-    model_serializer,
-    Field,
-    NonNegativeInt,
-    computed_field,
-    TypeAdapter,
-)
-from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Optional, Any, Literal, Annotated, Self
-import re
-import csv
 import abc
-from functools import cached_property
+import csv
 import pathlib
+import re
+from enum import StrEnum, auto
+from functools import cached_property
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional, Self
+
+from pydantic import (
+    Field,
+    FilePath,
+    NonNegativeInt,
+    TypeAdapter,
+    ValidationInfo,
+    computed_field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import validate
+
 from contentctl.objects.security_content_object import SecurityContentObject
 
 # This section is used to ignore lookups that are NOT  shipped with ESCU app but are used in the detections. Adding exclusions here will so that contentctl builds will not fail.
@@ -173,27 +175,23 @@ class FileBackedLookup(Lookup, abc.ABC):
 
     @computed_field
     @cached_property
+    @abc.abstractmethod
     def filename(self) -> FilePath:
-        if self.file_path is None:
-            raise ValueError(
-                f"Cannot get the filename of the lookup {self.lookup_type} because the YML file_path attribute is None"
-            )  # type: ignore
-
-        csv_file = self.file_path.parent / f"{self.file_path.stem}.{self.lookup_type}"  # type: ignore
-        return csv_file
+        """
+        This function computes the backing file for the lookup. It is abstract because different types of lookups
+        (CSV for MlModel) backing files have different name format.
+        """
+        pass
 
     @computed_field
     @cached_property
+    @abc.abstractmethod
     def app_filename(self) -> FilePath:
         """
-        We may consider two options:
-        1. Always apply the datetime stamp to the end of the file. This makes the code easier
-        2. Only apply the datetime stamp if it is version > 1.  This makes the code a small fraction
-        more complicated, but preserves longstanding CSV that have not been modified in a long time
+        This function computes the filenames to write into the app itself.  This is abstract because
+        CSV and MLmodel requirements are different.
         """
-        return pathlib.Path(
-            f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}"
-        )  # type: ignore
+        pass
 
 
 class CSVLookup(FileBackedLookup):
@@ -210,6 +208,33 @@ class CSVLookup(FileBackedLookup):
         # return the model
         model.update(super_fields)
         return model
+
+    @computed_field
+    @cached_property
+    def filename(self) -> FilePath:
+        """
+        This function computes the backing file for the lookup. The names of CSV files must EXACTLY match the
+        names of their lookup definitions except with the CSV file extension rather than the YML file extension.
+        """
+        if self.file_path is None:
+            raise ValueError(
+                f"Cannot get the filename of the lookup {self.lookup_type} because the YML file_path attribute is None"
+            )  # type: ignore
+
+        csv_file = self.file_path.parent / f"{self.file_path.stem}.{self.lookup_type}"  # type: ignore
+
+        return csv_file
+
+    @computed_field
+    @cached_property
+    def app_filename(self) -> FilePath:
+        """
+        This function computes the filenames to write into the app itself.  This is abstract because
+        CSV and MLmodel requirements are different.
+        """
+        return pathlib.Path(
+            f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}"
+        )
 
     @model_validator(mode="after")
     def ensure_correct_csv_structure(self) -> Self:
@@ -294,6 +319,36 @@ class KVStoreLookup(Lookup):
 
 class MlModel(FileBackedLookup):
     lookup_type: Literal[Lookup_Type.mlmodel]
+
+    @computed_field
+    @cached_property
+    def filename(self) -> FilePath:
+        """
+        This function computes the backing file for the lookup. The names of mlmodel files must EXACTLY match the
+        names of their lookup definitions except with:
+        - __mlspl_ prefix
+        - .mlmodel file extension rather than the YML file extension.
+        """
+        if self.file_path is None:
+            raise ValueError(
+                f"Cannot get the filename of the lookup {self.lookup_type} because the YML file_path attribute is None"
+            )  # type: ignore
+
+        if not self.file_path.stem.startswith("__mlspl_"):
+            raise ValueError(
+                f"The file_path for ML Model {self.name} MUST start with '__mlspl_', but it does not."
+            )
+
+        return self.file_path.parent / f"{self.file_path.stem}.{self.lookup_type}"
+
+    @computed_field
+    @cached_property
+    def app_filename(self) -> FilePath:
+        """
+        This function computes the filenames to write into the app itself.  This is abstract because
+        CSV and MLmodel requirements are different.
+        """
+        return pathlib.Path(f"{self.filename.stem}.{self.lookup_type}")
 
 
 LookupAdapter = TypeAdapter(

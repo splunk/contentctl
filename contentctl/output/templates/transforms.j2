@@ -16,8 +16,8 @@ case_sensitive_match = {{ lookup.case_sensitive_match | lower }}
 {% if lookup.description is defined and lookup.description != None %}
 # description = {{ lookup.description | escapeNewlines() }}
 {% endif %}
-{% if lookup.match_type is defined and lookup.match_type != None %}
-match_type = {{ lookup.match_type }}
+{% if lookup.match_type | length > 0 %}
+match_type = {{ lookup.match_type_to_conf_format }}
 {% endif %}
 {% if lookup.max_matches is defined and lookup.max_matches != None %}
 max_matches = {{ lookup.max_matches }}

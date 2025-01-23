@@ -11,11 +11,9 @@ if TYPE_CHECKING:
     from contentctl.objects.macro import Macro
     from contentctl.objects.story import Story
 
-import datetime
 import pathlib
 import shutil
 import tarfile
-import timeit
 
 from contentctl.objects.config import build
 
@@ -276,9 +274,3 @@ class ConfOutput:
 
     def packageApp(self, method: Callable[[ConfOutput], None] = packageAppTar) -> None:
         return method(self)
-
-    def getElapsedTime(self, startTime: float) -> datetime.timedelta:
-        return datetime.timedelta(seconds=round(timeit.default_timer() - startTime))
-
-    def getElapsedTime(self, startTime: float) -> datetime.timedelta:
-        return datetime.timedelta(seconds=round(timeit.default_timer() - startTime))

@@ -42,7 +42,11 @@ tags:
   risk_score: 64
 ```
 
-In this example, `tags.confidence` and `tags.impact` are integers between 0 and 100 that are then multiplied together and divided by 100 to produce a risk score (64, in this case). The `tags.message` field became the risk message.  The `tags.observable` field is where things got really tricky. This was a list of objects that became either risk objects or threat objects. The `name` field for each of these objects was the field in your search results, and the `type` took a lot of different options and for risk objects would translate them to `system` or `user`, generally, while there were LOTS of options for threat objects. Depending on the `role` - objects with a role of `Victim` became risk objects, while the role of `Attacker` became threat objects. All of the risk objects received the same risk score based on the math described above.  Your detections may have had a `tags.risk_score` field as well, but that has been a computed field that was not necessary to put in the YAML for several releases now. 
+Let's break down this example:
+- `tags.confidence` and `tags.impact` are integers between 0 and 100 that are then multiplied together and divided by 100 to produce a risk score (64, in this case). 
+- The `tags.message` field became the risk message.  
+- The `tags.observable` field is where things got really tricky. This was a list of objects that became either risk objects or threat objects. The `name` field for each of these objects was the field in your search results, and the `type` took a lot of different options and for risk objects would translate them to `system` or `user`, generally, while there were LOTS of options for threat objects as ES does not enforce any options for this. Depending on the `role` - objects with a role of `Victim` became risk objects, while the role of `Attacker` became threat objects. All of the risk objects received the same risk score based on the math described above.  
+- Your detections may have had a `tags.risk_score` field as well, but that has been a computed field that was not necessary to put in the YAML for several releases now. 
 
 This has been replaced with:
 

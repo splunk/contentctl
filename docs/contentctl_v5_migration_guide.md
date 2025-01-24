@@ -10,9 +10,11 @@ Over the years, the YAML files we track our content in have had a lot of differe
 
 ### RBA Changes
 
-Historically, there have been a lot of different fields involved in setting up the Risk Based Alerting configuration for a specific detection. And not all of them used terminology common with Splunk Enterprise Security, or any other Splunk product. We'll use the sample detection from this repository as an example: 
+Historically, there have been a lot of different fields involved in setting up the Risk Based Alerting configuration for a specific detection. And not all of them used terminology common with Splunk Enterprise Security, or any other Splunk product. We'll use the sample detection from this repository as an example. You can view the v4.x version of the file [here](https://github.com/splunk/contentctl/blob/v4.4.7/contentctl/templates/detections/endpoint/anomalous_usage_of_7zip.yml) or the new v5 version of the file [here](https://github.com/splunk/contentctl/blob/v5.0.0-alpha.3/contentctl/templates/detections/endpoint/anomalous_usage_of_7zip.yml). 
+
 
 ```YAML
+#v4.x
 tags:
 ...
   confidence: 80
@@ -45,6 +47,7 @@ In this example, `tags.confidence` and `tags.impact` are integers between 0 and 
 This has been replaced with:
 
 ```YAML
+# v5.0
 rba:
   message: An instance of $parent_process_name$ spawning $process_name$ was identified
     on endpoint $dest$ by user $user$. This behavior is indicative of suspicious loading
@@ -72,6 +75,6 @@ Depending on how much content you have to migrate, you may consider writing some
 
 ### Managed Lookup Filenames
 
-Depending on where your Splunk deployment lives (SplunkCloud's Victoria Experience, Classic Experience, or in your own datacenter, or your own public cloud tenant), you may have experienced some significant pains with deploying lookups as part of your app. If you're not already aware of this odd behavior, you can read more about it [here](https://docs.splunk.com/Documentation/SplunkCloud/9.3.2408/Admin/PrivateApps#Manage_lookups_in_Splunk_Cloud_Platform). Essentially, depending on what your Splunk deployment looks like, updating an app that has changes to lookup files may cause those files to be entirely ignored, with the previously used versions staying in use.
+Depending on where your Splunk deployment lives (SplunkCloud's Victoria Experience, Classic Experience, or in your own datacenter, or your own public cloud tenant), you may have experienced some significant pains with deploying lookups as part of your app. If you're not already familiar with the peculiar behaviors of lookup file updating, you can read more about it [here](https://docs.splunk.com/Documentation/SplunkCloud/9.3.2408/Admin/PrivateApps#Manage_lookups_in_Splunk_Cloud_Platform). Essentially, depending on what your Splunk deployment looks like, updating an app that has changes to lookup files may cause those files to be entirely ignored, with the previously used versions staying in use.
 
 We've come up with a solution for this that should generally work for folks, no matter their deployment, that will allow you to use new lookups when you update an app without manually editing them. CSV Lookups in `contentctl` built apps now have a datestamp added to the end of the filename automatically, as derived from the date in the lookup file. This means updating an app adds a new file instead of one that would be ignored during the update process. The lookup definition that gets written to `transforms.conf` also gets this new filename. Our searches leverage the lookup definitions instead of the raw filenames, so when a new version of a lookup appears, it will seamlessly be used in favor of the old one. There are some changes to the lookup YAML files to support this, which will also throw errors (likely, the first errors you'll see as part of migration). You can review the configs used in ESCU for these files [here](https://github.com/splunk/security_content/tree/develop/lookups) if you'd like to see how we're using some of the fields.

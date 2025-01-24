@@ -150,7 +150,3 @@ class Story(SecurityContentObject):
     @property
     def baseline_names(self) -> List[str]:
         return [baseline.name for baseline in self.baselines]
-
-    @property
-    def baseline_names(self) -> List[str]:
-        return [baseline.name for baseline in self.baselines]

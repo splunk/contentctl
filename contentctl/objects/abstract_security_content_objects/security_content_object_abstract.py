@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from contentctl.objects.deployment import Deployment
     from contentctl.objects.security_content_object import SecurityContentObject
     from contentctl.input.director import DirectorOutputDto
+    from contentctl.objects.deprecation_info import DeprecationInfo
 
 import abc
 import datetime
@@ -27,10 +28,12 @@ from pydantic import (
     computed_field,
     field_validator,
     model_serializer,
+    model_validator,
 )
 
 from contentctl.objects.constants import CONTENTCTL_MAX_STANZA_LENGTH
-from contentctl.objects.enums import AnalyticsType
+
+# from contentctl.objects.enums import AnalyticsType, DetectionStatus
 
 NO_FILE_NAME = "NO_FILE_NAME"
 
@@ -45,9 +48,34 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     description: str = Field(..., max_length=10000)
     file_path: Optional[FilePath] = None
     references: Optional[List[HttpUrl]] = None
+    deprecation_info: DeprecationInfo | None = None
 
     def model_post_init(self, __context: Any) -> None:
         self.ensureFileNameMatchesSearchName()
+
+    @model_validator(mode="after")
+    def validate_deprecation_info(self) -> Self:
+        # Ensure that if the object has a "status" field AND
+        # that field is set to deprecated that the deprecation_info
+        # field is not None.
+        status: None | DetectionStatus = getattr(self, "status", None)
+        if status == DetectionStatus.deprecated:
+            # This is a detection and the status was defined.
+            if self.deprecation_info is None:
+                raise ValueError(
+                    f"[{self.name}] has 'status: deprecated' set in the yml, but does not have 'deprecation_info' defined: {self.file_path}"
+                )
+        elif status is None:
+            # Status wasn't defined in the file
+            pass
+        else:
+            # Status was defined but a different value, so deprecation_info should not exist
+            if self.deprecation_info is not None:
+                raise ValueError(
+                    f"[{self.name}] has deprecation_info defined, but does not have 'status: deprecated' set in the yml at {self.file_path}"
+                )
+
+        return self
 
     @computed_field
     @cached_property
@@ -287,4 +315,6 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         return id(self)
 
     def __hash__(self) -> NonNegativeInt:
+        return id(self)
+        return id(self)
         return id(self)

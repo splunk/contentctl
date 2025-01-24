@@ -1,28 +1,28 @@
 from __future__ import annotations
-from typing import Annotated, List, Any, TYPE_CHECKING
+
+from typing import TYPE_CHECKING, Annotated, Any, List
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
 from pydantic import (
-    field_validator,
-    ValidationInfo,
     Field,
-    model_serializer,
+    ValidationInfo,
     computed_field,
+    field_validator,
+    model_serializer,
+)
+
+from contentctl.objects.baseline_tags import BaselineTags
+from contentctl.objects.config import CustomApp
+from contentctl.objects.constants import (
+    CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE,
+    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
 )
 from contentctl.objects.deployment import Deployment
-from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.enums import DataModel
-from contentctl.objects.baseline_tags import BaselineTags
-
-from contentctl.objects.config import CustomApp
-
 from contentctl.objects.lookup import Lookup
-from contentctl.objects.constants import (
-    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
-    CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE,
-)
+from contentctl.objects.security_content_object import SecurityContentObject
 
 
 class Baseline(SecurityContentObject):
@@ -50,10 +50,19 @@ class Baseline(SecurityContentObject):
         lookups = Lookup.get_lookups(search, director)
         return lookups
 
-    def get_conf_stanza_name(self, app: CustomApp) -> str:
+    @staticmethod
+    def static_get_conf_stanza_name(name: str, app: CustomApp) -> str:
+        """
+        This is exposed as a static method since it may need to be used for SecurityContentObject which does not
+        pass all currenty validations - most notable Deprecated content.
+        """
         stanza_name = CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE.format(
-            app_label=app.label, detection_name=self.name
+            app_label=app.label, detection_name=name
         )
+        return stanza_name
+
+    def get_conf_stanza_name(self, app: CustomApp) -> str:
+        stanza_name = self.static_get_conf_stanza_name(self.name, app)
         self.check_conf_stanza_max_length(stanza_name)
         return stanza_name
 

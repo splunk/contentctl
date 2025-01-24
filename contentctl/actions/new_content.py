@@ -32,6 +32,14 @@ class NewContent:
         },
     ]
 
+    DEFAULT_RBA = {
+        "message": "Risk Message goes here",
+        "risk_objects": [{"field": "dest", "type": "system", "score": 10}],
+        "threat_objects": [
+            {"field": "parent_process_name", "type": "parent_process_name"}
+        ],
+    }
+
     def buildDetection(self) -> tuple[dict[str, Any], str]:
         questions = NewContentQuestions.get_questions_detection()
         answers: dict[str, str] = questionary.prompt(
@@ -42,8 +50,8 @@ class NewContent:
             raise ValueError("User didn't answer one or more questions!")
 
         data_source_field = (
-            answers["data_source"]
-            if len(answers["data_source"]) > 0
+            answers["data_sources"]
+            if len(answers["data_sources"]) > 0
             else [f"{NewContent.UPDATE_PREFIX} zero or more data_sources"]
         )
         file_name = (
@@ -83,19 +91,12 @@ class NewContent:
                 f"{NewContent.UPDATE_PREFIX} zero or more http references to provide more information about your search"
             ],
             "drilldown_searches": NewContent.DEFAULT_DRILLDOWN_DEF,
-            "rba": {
-                "message": "Risk Messages goes here",
-                "risk_objects": [],
-                "threat_objects": [],
-            },
+            "rba": NewContent.DEFAULT_RBA,
             "tags": {
                 "analytic_story": [
                     f"{NewContent.UPDATE_PREFIX} by providing zero or more analytic stories"
                 ],
                 "asset_type": f"{NewContent.UPDATE_PREFIX} by providing and asset type from {list(AssetType._value2member_map_)}",
-                "confidence": f"{NewContent.UPDATE_PREFIX} by providing a value between 1-100",
-                "impact": f"{NewContent.UPDATE_PREFIX} by providing a value between 1-100",
-                "message": f"{NewContent.UPDATE_PREFIX} by providing a risk message. Fields in your search results can be referenced using $fieldName$",
                 "mitre_attack_id": mitre_attack_ids,
                 "product": [
                     "Splunk Enterprise",

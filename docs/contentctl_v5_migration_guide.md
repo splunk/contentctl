@@ -1,6 +1,6 @@
 # Time to upgrade!
 
-There's some BIG changes with the v5.0 release of `contentctl` that we think you're going to love. Here's some details about the biggest ones and some tips to help you migrate your own content repos from using v4.x to v5!
+There are some BIG changes with the v5.0 release of `contentctl` that we think you're going to love. Here are some details about the biggest ones and some tips to help you migrate your own content repos from using v4.x to v5!
 
 ### Strict Fields
 
@@ -10,7 +10,7 @@ Over the years, the YAML files we track our content in have had a lot of differe
 
 ### RBA Changes
 
-Historically, there have been a lot of different fields involved in setting up the Risk Based Alerting configuration for a specific detection. And not all of them used terminology common with Splunk Enterprise Security, or any other Splunk product. We'll use the sample detection from this repository as an example. You can view the v4.x version of the file [here](https://github.com/splunk/contentctl/blob/v4.4.7/contentctl/templates/detections/endpoint/anomalous_usage_of_7zip.yml) or the new v5 version of the file [here](https://github.com/splunk/contentctl/blob/v5.0.0-alpha.3/contentctl/templates/detections/endpoint/anomalous_usage_of_7zip.yml). 
+Historically, there have been a lot of different fields involved in setting up the Risk Based Alerting configuration for a specific detection. And not all of them used terminology common with Splunk Enterprise Security, or any other Splunk product. We'll use the sample detection from this repository as an example. You can view the v4.x version of the file in full [here](https://github.com/splunk/contentctl/blob/v4.4.7/contentctl/templates/detections/endpoint/anomalous_usage_of_7zip.yml) or the new v5 version of the file in full [here](https://github.com/splunk/contentctl/blob/v5.0.0-alpha.3/contentctl/templates/detections/endpoint/anomalous_usage_of_7zip.yml). 
 
 
 ```YAML

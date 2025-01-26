@@ -144,3 +144,6 @@ CONTENTCTL_MAX_SEARCH_NAME_LENGTH = CONTENTCTL_MAX_STANZA_LENGTH - len(
         app_label="ESCU", detection_name=""
     )
 )
+
+DEPRECATED_TEMPLATE = "**WARNING**, this {content_type} has been marked **DEPRECATED** by the Splunk Threat Research Team. This means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {description}"
+EXPERIMENTAL_TEMPLATE = "**WARNING**, this {content_type} is marked **EXPERIMENTAL** by the Splunk Threat Research Team. This means that the {content_type} has been manually tested but we do not have the associated attack data to perform automated testing or cannot share this attack dataset due to its sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {description}"

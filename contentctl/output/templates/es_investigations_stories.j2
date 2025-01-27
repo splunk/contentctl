@@ -2,7 +2,7 @@
 {% for story in objects %}
 [panel_group://workbench_panel_group_{{ story.lowercase_name}}]
 label = {{ story.name }}
-description = {{ story.description | escapeNewlines() }}
+description = {{ story.status_aware_description | escapeNewlines() }}
 disabled = 0
 
 {% if story.workbench_panels is defined %}

@@ -140,6 +140,7 @@ class NewContent:
         del answers["story_name"]
         answers["id"] = str(uuid.uuid4())
         answers["version"] = 1
+        answers["status"] = "production"
         answers["date"] = datetime.today().strftime("%Y-%m-%d")
         answers["author"] = answers["story_author"]
         del answers["story_author"]

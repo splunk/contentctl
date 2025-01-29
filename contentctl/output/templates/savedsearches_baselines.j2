@@ -8,7 +8,7 @@
 action.escu = 0
 action.escu.enabled = 1
 action.escu.search_type = support
-description = {{ detection.description | escapeNewlines() }}
+description = {{ detection.status_aware_description | escapeNewlines() }}
 action.escu.creation_date = {{ detection.date }}
 action.escu.modification_date = {{ detection.date }}
 {% if detection.tags.analytic_story is defined %}
@@ -29,7 +29,7 @@ action.escu.providing_technologies = {{ detection.providing_technologies | tojso
 {% else %}
 action.escu.providing_technologies = []
 {% endif %}
-action.escu.eli5 = {{ detection.description | escapeNewlines() }}
+action.escu.eli5 = {{ detection.status_aware_description | escapeNewlines() }}
 {% if detection.how_to_implement is defined %}
 action.escu.how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}

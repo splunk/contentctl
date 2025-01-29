@@ -13,9 +13,7 @@ default_match = {{ lookup.default_match | lower }}
 {% if lookup.case_sensitive_match is defined and lookup.case_sensitive_match != None %}
 case_sensitive_match = {{ lookup.case_sensitive_match | lower }}
 {% endif %}
-{% if lookup.description is defined and lookup.description != None %}
 # description = {{ lookup.description | escapeNewlines() }}
-{% endif %}
 {% if lookup.match_type | length > 0 %}
 match_type = {{ lookup.match_type_to_conf_format }}
 {% endif %}

@@ -9,7 +9,7 @@
 action.escu = 0
 action.escu.enabled = 1
 action.escu.search_type = investigative
-description = {{ detection.description | escapeNewlines() }}
+description = {{ detection.status_aware_description | escapeNewlines() }}
 action.escu.creation_date = {{ detection.date }}
 action.escu.modification_date = {{ detection.date }}
 {% if detection.tags.analytic_story is defined %}
@@ -21,7 +21,7 @@ action.escu.earliest_time_offset = 3600
 action.escu.latest_time_offset = 86400
 action.escu.providing_technologies = []
 action.escu.data_models = {{ detection.datamodel | tojson }}
-action.escu.eli5 = {{ detection.description | escapeNewlines() }}
+action.escu.eli5 = {{ detection.status_aware_description | escapeNewlines() }}
 action.escu.how_to_implement = none
 action.escu.known_false_positives = None at this time
 disabled = true

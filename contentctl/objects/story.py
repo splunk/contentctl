@@ -2,26 +2,27 @@ from __future__ import annotations
 
 import re
 from functools import cached_property
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Literal
 
 from pydantic import Field, HttpUrl, computed_field, model_serializer, model_validator
 
 from contentctl.objects.story_tags import StoryTags
 
 if TYPE_CHECKING:
+    from contentctl.objects.baseline import Baseline
+    from contentctl.objects.config import CustomApp
+    from contentctl.objects.data_source import DataSource
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
-    from contentctl.objects.baseline import Baseline
-    from contentctl.objects.data_source import DataSource
-    from contentctl.objects.config import CustomApp
 
+from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
 class Story(SecurityContentObject):
     narrative: str = Field(...)
     tags: StoryTags = Field(...)
-
+    status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
     # These are updated when detection and investigation objects are created.
     # Specifically in the model_post_init functions
     detections: List[Detection] = []
@@ -149,4 +150,5 @@ class Story(SecurityContentObject):
     @computed_field
     @property
     def baseline_names(self) -> List[str]:
+        return [baseline.name for baseline in self.baselines]
         return [baseline.name for baseline in self.baselines]

@@ -1,6 +1,6 @@
 # contentctl
 <p align="center">
-<img src="docs/contentctl_logo_white.png" title="In case you're wondering, it's a capybara" alt="contentctl logo" width="250" height="250"></p>
+<img src="docs/contentctl_logo_white.png" title="In case you're wondering, it's a capybara" alt="the logo for the contentctl project, which depicts a doodled 4 legged animal that is supposed to represent a capybara, with the name of the project below it" width="250" height="250"></p>
 
 > [!NOTE]
 > Looking to migrate from an earlier release to the new contentctl v5+ ? Check out our migration guide [here](docs/contentctl_v5_migration_guide.md). 
@@ -9,11 +9,13 @@
 `contentctl` is a tool developed by the Splunk Threat Research Team to help with managing the content living in [splunk/security_content](https://github.com/splunk/security_content) and producing the Enterprise Security Content Update app for Splunk. While its development is largely driven by STRT's needs, it has been somewhat genericized and can be used by customers and partners to package their own content. Simply put, `contentctl` is the workhorse that packages detections, macros, lookups, dashboards into a Splunk app that you can use, and that understands the YAML structure and project layout we've selected to keep development clean.
 
 ## Quick Start Guide
-Check out our [User Guide](docs/UserGuide.md) to get started
+Check out our [User Guide](docs/UserGuide.md) to get started!
 
 ## Content Testing
-Read more about how `contentctl` can help test and validate your content in a real Splunk instance [here](docs/ContentTestingGuide.md)
+Read more about how `contentctl` can help test and validate your content in a real Splunk instance [here](docs/ContentTestingGuide.md).
 
+## Contribution Guide
+[Contribution Guidelines for this project are here](CONTRIBUTING.md)
 
 ## Ecosystem
 | Project               | Description                                             |
@@ -25,9 +27,6 @@ Read more about how `contentctl` can help test and validate your content in a re
 | [SigmaHQ Sigma Rules](https://github.com/SigmaHQ/sigma) | Official Repository for Sigma Rules. These rules are an excellent starting point for new content. |
 | [PurpleSharp Attack Simulation](https://github.com/mvelazc0/PurpleSharp) | Open source adversary simulation tool for Windows Active Directory environments (integrated into Attack Range)|
 | [Red Canary Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)          | Library of attack simulations mapped to the MITRE ATT&CK® framework (integrated into Attack Range)|
-
-## Contribution Guide
-[Contribution Guidelines for this project are here](CONTRIBUTING.md)
 
 ## License
 Copyright 2023 Splunk Inc.

@@ -6,6 +6,8 @@ our community. Read through this document before submitting any issues or pull
 requests to ensure we have all the necessary information to effectively respond
 to your bug report or contribution.
 
+Please open an issue before opening a pull request, and have a discussion with a maintainer so we can validate that the feature you're interested in aligns with our plans and can be maintained. This also allows for realistic timeline setting and ranking against other priorities. 
+
 In addition to this document, review our [Code of Conduct](CODE_OF_CONDUCT.md). 
 For any code of conduct questions or comments, send an email to oss@splunk.com.
 

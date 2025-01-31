@@ -15,7 +15,7 @@ Check out our [User Guide](docs/UserGuide.md) to get started!
 Read more about how `contentctl` can help test and validate your content in a real Splunk instance [here](docs/ContentTestingGuide.md).
 
 ## Contribution Guide
-[Contribution Guidelines for this project are here](CONTRIBUTING.md)
+Read [the Contribution Guidelines](CONTRIBUTING.md) for this project before opening a Pull Request.
 
 ## Ecosystem
 | Project               | Description                                             |

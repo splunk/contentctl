@@ -9,3 +9,20 @@ contentctl test's default mode allows it to quickly test all content with requir
 - --behavior never_pause - The default behavior.  If a test does not pass, the tool begins the next test immediately
 - --behavior pause_on_failure - If a test fails, then additional information about that test, and the raw SPL of the test, is printed to the terminal.  A user may then click (or CMD+Click) the "LINK" to begin interactively debugging the failed test on the Splunk Server.  Note that the credentials for the server are printed out at the very beginning of the test.  After you have finished debugging the failure, hit "Return" in the terminal to move on to the next test. The attack_data for this test remains loaded on the server for debugging until the user moves on to the next test.
 - --behavior always_pause - Similar to pause_on_failure, but this pauses after every test regardless of whether it passes or fails.  
+
+
+## Advanced Usage
+
+The following sections may not work without additional setup. The documentation of these features is not yet complete. These will be updated as the features become stabilized and ready to use by a larger audience.
+
+### Test Dry Run
+
+When setting up testing or when using the `test_servers` mode, you can utilize a `--plan-only` flag like
+```shell
+contentctl test --plan-only mode:changes --mode.target-branch develop
+```
+in order to generate a test plan. This can be saved and then used at a later time.
+
+### Test Server command
+
+Contentctl also has a `test_servers` mode that allows for the full test run against a preconfigured Splunk server, rather than the ephemeral Docker containers that `test` spins up. 

@@ -1,6 +1,6 @@
 # contentctl
 <p align="center">
-<img src="docs/contentctl_logo_white.png" title="In case you're wondering, it's a capybara" alt="the logo for the contentctl project, which depicts a doodled 4 legged animal that is supposed to represent a capybara, with the name of the project below it" width="250" height="250"></p>
+<img src="https://raw.githubusercontent.com/splunk/contentctl/refs/heads/main/docs/contentctl_logo_white.png" title="In case you're wondering, it's a capybara" alt="the logo for the contentctl project, which depicts a doodled 4 legged animal that is supposed to represent a capybara, with the name of the project below it" width="250" height="250"></p>
 
 > [!NOTE]
 > Looking to migrate from an earlier release to the new contentctl v5+ ? Check out our migration guide [here](docs/contentctl_v5_migration_guide.md). 

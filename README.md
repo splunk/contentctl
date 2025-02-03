@@ -14,6 +14,9 @@ Check out our [User Guide](docs/UserGuide.md) to get started!
 ## Content Testing
 Read more about how `contentctl` can help test and validate your content in a real Splunk instance [here](docs/ContentTestingGuide.md).
 
+## Sample CICD Workflows
+Already using `contentctl`, or looking to get started with it already configured in GitHub Actions? [Our guide](docs/Sample_CICD_Templates.md) includes workflows to help you build and test your app.
+
 ## Contribution Guide
 Read [the Contribution Guidelines](CONTRIBUTING.md) for this project before opening a Pull Request.
 

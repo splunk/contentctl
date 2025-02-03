@@ -5,9 +5,9 @@
 {% if (detection.type == 'TTP' or detection.type == 'Anomaly' or detection.type == 'Hunting' or detection.type == 'Correlation') %}
 [savedsearch://{{ detection.get_conf_stanza_name(app) }}]
 type = detection
-asset_type = {{ detection.tags.asset_type.value }}
+asset_type = {{ detection.tags.asset_type }}
 confidence = medium
-explanation = {{ (detection.explanation if detection.explanation else detection.description) | escapeNewlines() }}
+explanation = {{ detection.status_aware_description | escapeNewlines() }}
 {% if detection.how_to_implement is defined %}
 how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}

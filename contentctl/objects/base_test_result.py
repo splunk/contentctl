@@ -1,8 +1,8 @@
 from typing import Union, Any
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import ConfigDict, BaseModel
-from splunklib.data import Record                                                                   # type: ignore
+from splunklib.data import Record  # type: ignore
 
 from contentctl.helper.utils import Utils
 
@@ -10,8 +10,9 @@ from contentctl.helper.utils import Utils
 # TODO (#267): Align test reporting more closely w/ status enums (as it relates to "untested")
 # TODO (PEX-432): add status "UNSET" so that we can make sure the result is always of this enum
 #   type; remove mypy ignores associated w/ these typing issues once we do
-class TestResultStatus(str, Enum):
+class TestResultStatus(StrEnum):
     """Enum for test status (e.g. pass/fail)"""
+
     # Test failed (detection did NOT fire appropriately)
     FAIL = "fail"
 
@@ -35,6 +36,7 @@ class BaseTestResult(BaseModel):
     """
     Base class for test results
     """
+
     # Message for the result
     message: Union[None, str] = None
 
@@ -54,10 +56,7 @@ class BaseTestResult(BaseModel):
     sid_link: Union[None, str] = None
 
     # Needed to allow for embedding of Exceptions in the model
-    model_config = ConfigDict(
-        validate_assignment=True,
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 
     @property
     def passed(self) -> bool:
@@ -81,7 +80,10 @@ class BaseTestResult(BaseModel):
         Property returning True if status is FAIL or ERROR; False otherwise (PASS, SKIP)
         :returns: bool indicating fialure if True
         """
-        return self.status == TestResultStatus.FAIL or self.status == TestResultStatus.ERROR
+        return (
+            self.status == TestResultStatus.FAIL
+            or self.status == TestResultStatus.ERROR
+        )
 
     @property
     def complete(self) -> bool:
@@ -94,7 +96,13 @@ class BaseTestResult(BaseModel):
     def get_summary_dict(
         self,
         model_fields: list[str] = [
-            "success", "exception", "message", "sid_link", "status", "duration", "wait_duration"
+            "success",
+            "exception",
+            "message",
+            "sid_link",
+            "status",
+            "duration",
+            "wait_duration",
         ],
         job_fields: list[str] = ["search", "resultCount", "runDuration"],
     ) -> dict[str, Any]:
@@ -113,7 +121,7 @@ class BaseTestResult(BaseModel):
                 # Exceptions and enums cannot be serialized, so convert to str
                 if isinstance(getattr(self, field), Exception):
                     summary_dict[field] = str(getattr(self, field))
-                elif isinstance(getattr(self, field), Enum):
+                elif isinstance(getattr(self, field), StrEnum):
                     summary_dict[field] = str(getattr(self, field))
                 else:
                     summary_dict[field] = getattr(self, field)
@@ -125,7 +133,7 @@ class BaseTestResult(BaseModel):
         # Grab the job content fields required
         for field in job_fields:
             if self.job_content is not None:
-                value: Any = self.job_content.get(field, None)                                      # type: ignore
+                value: Any = self.job_content.get(field, None)  # type: ignore
 
                 # convert runDuration to a fixed width string representation of a float
                 if field == "runDuration":

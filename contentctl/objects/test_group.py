@@ -15,13 +15,16 @@ class TestGroup(BaseModel):
     :param integration_test: an IntegrationTest
     :param attack_data: the attack data associated with tests in the TestGroup
     """
+
     name: str
     unit_test: UnitTest
     integration_test: IntegrationTest
     attack_data: list[TestAttackData]
 
     @classmethod
-    def derive_from_unit_test(cls, unit_test: UnitTest, name_prefix: str) -> "TestGroup":
+    def derive_from_unit_test(
+        cls, unit_test: UnitTest, name_prefix: str
+    ) -> "TestGroup":
         """
         Given a UnitTest and a prefix, construct a TestGroup, with in IntegrationTest corresponding to the UnitTest
         :param unit_test: the UnitTest
@@ -36,7 +39,7 @@ class TestGroup(BaseModel):
             name=f"{name_prefix}:{unit_test.name}",
             unit_test=unit_test,
             integration_test=integration_test,
-            attack_data=unit_test.attack_data
+            attack_data=unit_test.attack_data,
         )
 
     def unit_test_skipped(self) -> bool:

@@ -8,6 +8,7 @@ class DetectionMetadata(BaseModel):
     """
     A model of the metadata line in a detection stanza in savedsearches.conf
     """
+
     # A bool indicating whether the detection is deprecated (serialized as an int, 1 or 0)
     deprecated: bool = Field(...)
 

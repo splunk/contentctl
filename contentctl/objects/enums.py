@@ -1,15 +1,16 @@
 from __future__ import annotations
 from typing import List
-import enum
+from enum import StrEnum, IntEnum
 
 
-class AnalyticsType(str, enum.Enum):
+class AnalyticsType(StrEnum):
     TTP = "TTP"
     Anomaly = "Anomaly"
     Hunting = "Hunting"
     Correlation = "Correlation"
 
-class DeploymentType(str, enum.Enum):
+
+class DeploymentType(StrEnum):
     TTP = "TTP"
     Anomaly = "Anomaly"
     Hunting = "Hunting"
@@ -18,9 +19,9 @@ class DeploymentType(str, enum.Enum):
     Embedded = "Embedded"
 
 
-class DataModel(str,enum.Enum):
+class DataModel(StrEnum):
     ENDPOINT = "Endpoint"
-    NETWORK_TRAFFIC  = "Network_Traffic"
+    NETWORK_TRAFFIC = "Network_Traffic"
     AUTHENTICATION = "Authentication"
     CHANGE = "Change"
     CHANGE_ANALYSIS = "Change_Analysis"
@@ -31,20 +32,21 @@ class DataModel(str,enum.Enum):
     UPDATES = "Updates"
     VULNERABILITIES = "Vulnerabilities"
     WEB = "Web"
-    #Should the following more specific DMs be added? 
-    #Or should they just fall under endpoint?
-    #ENDPOINT_PROCESSES = "Endpoint_Processes"
-    #ENDPOINT_FILESYSTEM = "Endpoint_Filesystem"
-    #ENDPOINT_REGISTRY = "Endpoint_Registry"
+    # Should the following more specific DMs be added?
+    # Or should they just fall under endpoint?
+    # ENDPOINT_PROCESSES = "Endpoint_Processes"
+    # ENDPOINT_FILESYSTEM = "Endpoint_Filesystem"
+    # ENDPOINT_REGISTRY = "Endpoint_Registry"
     RISK = "Risk"
     SPLUNK_AUDIT = "Splunk_Audit"
 
 
-class PlaybookType(str, enum.Enum):
+class PlaybookType(StrEnum):
     INVESTIGATION = "Investigation"
     RESPONSE = "Response"
 
-class SecurityContentType(enum.Enum):
+
+class SecurityContentType(IntEnum):
     detections = 1
     baselines = 2
     stories = 3
@@ -68,55 +70,37 @@ class SecurityContentType(enum.Enum):
 #     json_objects = "json_objects"
 
 
-class SecurityContentProduct(enum.Enum):
-    SPLUNK_APP = 1
-    API = 3
-    CUSTOM = 4
-
-
-class SecurityContentProductName(str, enum.Enum):
+class SecurityContentProductName(StrEnum):
     SPLUNK_ENTERPRISE = "Splunk Enterprise"
     SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
     SPLUNK_CLOUD = "Splunk Cloud"
     SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
     SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
 
-class SecurityContentInvestigationProductName(str, enum.Enum):
+
+class SecurityContentInvestigationProductName(StrEnum):
     SPLUNK_ENTERPRISE = "Splunk Enterprise"
     SPLUNK_ENTERPRISE_SECURITY = "Splunk Enterprise Security"
     SPLUNK_CLOUD = "Splunk Cloud"
     SPLUNK_SECURITY_ANALYTICS_FOR_AWS = "Splunk Security Analytics for AWS"
     SPLUNK_BEHAVIORAL_ANALYTICS = "Splunk Behavioral Analytics"
     SPLUNK_PHANTOM = "Splunk Phantom"
-    
 
-class DetectionStatus(enum.Enum):
+
+class DetectionStatus(StrEnum):
     production = "production"
     deprecated = "deprecated"
     experimental = "experimental"
     validation = "validation"
 
 
-class DetectionStatusSSA(enum.Enum):
-    production = "production"
-    deprecated = "deprecated"
-    experimental = "experimental"
-    validation = "validation"
-
-
-class LogLevel(enum.Enum):
+class LogLevel(StrEnum):
     NONE = "NONE"
     ERROR = "ERROR"
     INFO = "INFO"
 
 
-class AlertActions(enum.Enum):
-    notable = "notable"
-    rba = "rba"
-    email = "email"
-
-
-class StoryCategory(str, enum.Enum):
+class StoryCategory(StrEnum):
     ABUSE = "Abuse"
     ADVERSARY_TACTICS = "Adversary Tactics"
     BEST_PRACTICES = "Best Practices"
@@ -139,36 +123,17 @@ class StoryCategory(str, enum.Enum):
     UNAUTHORIZED_SOFTWARE = "Unauthorized Software"
 
 
-class PostTestBehavior(str, enum.Enum):
+class PostTestBehavior(StrEnum):
     always_pause = "always_pause"
     pause_on_failure = "pause_on_failure"
     never_pause = "never_pause"
 
 
-class DetectionTestingMode(str, enum.Enum):
+class DetectionTestingMode(StrEnum):
     selected = "selected"
     all = "all"
     changes = "changes"
 
-
-class DetectionTestingTargetInfrastructure(str, enum.Enum):
-    container = "container"
-    server = "server"
-
-
-class InstanceState(str, enum.Enum):
-    starting = "starting"
-    running = "running"
-    error = "error"
-    stopping = "stopping"
-    stopped = "stopped"
-
-
-class SigmaConverterTarget(enum.Enum):
-    CIM = 1
-    RAW = 2
-    OCSF = 3
-    ALL = 4
 
 # It's unclear why we use a mix of constants and enums. The following list was taken from:
 # contentctl/contentctl/helper/constants.py.
@@ -183,8 +148,8 @@ class SigmaConverterTarget(enum.Enum):
 #     "Command And Control": 6,
 #     "Actions on Objectives": 7
 # }
-class KillChainPhase(str, enum.Enum):
-    UNKNOWN ="Unknown"
+class KillChainPhase(StrEnum):
+    UNKNOWN = "Unknown"
     RECONNAISSANCE = "Reconnaissance"
     WEAPONIZATION = "Weaponization"
     DELIVERY = "Delivery"
@@ -194,7 +159,7 @@ class KillChainPhase(str, enum.Enum):
     ACTIONS_ON_OBJECTIVES = "Actions on Objectives"
 
 
-class DataSource(str,enum.Enum):
+class DataSource(StrEnum):
     OSQUERY_ES_PROCESS_EVENTS = "OSQuery ES Process Events"
     POWERSHELL_4104 = "Powershell 4104"
     SYSMON_EVENT_ID_1 = "Sysmon EventID 1"
@@ -234,7 +199,8 @@ class DataSource(str,enum.Enum):
     WINDOWS_SECURITY_5145 = "Windows Security 5145"
     WINDOWS_SYSTEM_7045 = "Windows System 7045"
 
-class ProvidingTechnology(str, enum.Enum):
+
+class ProvidingTechnology(StrEnum):
     AMAZON_SECURITY_LAKE = "Amazon Security Lake"
     AMAZON_WEB_SERVICES_CLOUDTRAIL = "Amazon Web Services - Cloudtrail"
     AZURE_AD = "Azure AD"
@@ -253,9 +219,9 @@ class ProvidingTechnology(str, enum.Enum):
     SPLUNK_INTERNAL_LOGS = "Splunk Internal Logs"
     SYMANTEC_ENDPOINT_PROTECTION = "Symantec Endpoint Protection"
     ZEEK = "Zeek"
-    
+
     @staticmethod
-    def getProvidingTechFromSearch(search_string:str)->List[ProvidingTechnology]:
+    def getProvidingTechFromSearch(search_string: str) -> List[ProvidingTechnology]:
         """_summary_
 
         Args:
@@ -267,34 +233,45 @@ class ProvidingTechnology(str, enum.Enum):
         Returns:
             List[ProvidingTechnology]: List of providing technologies (with no duplicates because
             it is derived from a set) calculated from the search string.
-        """        
-        matched_technologies:set[ProvidingTechnology] = set()
-        #As there are many different sources that use google logs, we define the set once
-        google_logs = set([ProvidingTechnology.GOOGLE_WORKSPACE, ProvidingTechnology.GOOGLE_CLOUD_PLATFORM])
+        """
+        matched_technologies: set[ProvidingTechnology] = set()
+        # As there are many different sources that use google logs, we define the set once
+        google_logs = set(
+            [
+                ProvidingTechnology.GOOGLE_WORKSPACE,
+                ProvidingTechnology.GOOGLE_CLOUD_PLATFORM,
+            ]
+        )
         providing_technologies_mapping = {
-            '`amazon_security_lake`': set([ProvidingTechnology.AMAZON_SECURITY_LAKE]),
-            'audit_searches': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
-            '`azure_monitor_aad`': set([ProvidingTechnology.AZURE_AD, ProvidingTechnology.ENTRA_ID]),
-            '`cloudtrail`': set([ProvidingTechnology.AMAZON_WEB_SERVICES_CLOUDTRAIL]),
-            #Endpoint is NOT a Macro (and this is intentional since it is to capture Endpoint Datamodel usage)
-            'Endpoint': set([ProvidingTechnology.MICROSOFT_SYSMON, 
-                             ProvidingTechnology.MICROSOFT_WINDOWS,
-                             ProvidingTechnology.CARBON_BLACK_RESPONSE,
-                             ProvidingTechnology.CROWDSTRIKE_FALCON, 
-                             ProvidingTechnology.SYMANTEC_ENDPOINT_PROTECTION]),
-            '`google_': google_logs,
-            '`gsuite': google_logs,
-            '`gws_': google_logs,
-            '`kube': set([ProvidingTechnology.KUBERNETES]),
-            '`ms_defender`': set([ProvidingTechnology.MICROSOFT_DEFENDER]),
-            '`o365_': set([ProvidingTechnology.MICROSOFT_OFFICE_365]),
-            '`okta': set([ProvidingTechnology.OKTA]),
-            '`pingid`': set([ProvidingTechnology.PING_ID]),
-            '`powershell`': set(set([ProvidingTechnology.MICROSOFT_WINDOWS])),
-            '`splunkd_': set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
-            '`sysmon`': set([ProvidingTechnology.MICROSOFT_SYSMON]),
-            '`wineventlog_security`': set([ProvidingTechnology.MICROSOFT_WINDOWS]),
-            '`zeek_': set([ProvidingTechnology.ZEEK]),
+            "`amazon_security_lake`": set([ProvidingTechnology.AMAZON_SECURITY_LAKE]),
+            "audit_searches": set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
+            "`azure_monitor_aad`": set(
+                [ProvidingTechnology.AZURE_AD, ProvidingTechnology.ENTRA_ID]
+            ),
+            "`cloudtrail`": set([ProvidingTechnology.AMAZON_WEB_SERVICES_CLOUDTRAIL]),
+            # Endpoint is NOT a Macro (and this is intentional since it is to capture Endpoint Datamodel usage)
+            "Endpoint": set(
+                [
+                    ProvidingTechnology.MICROSOFT_SYSMON,
+                    ProvidingTechnology.MICROSOFT_WINDOWS,
+                    ProvidingTechnology.CARBON_BLACK_RESPONSE,
+                    ProvidingTechnology.CROWDSTRIKE_FALCON,
+                    ProvidingTechnology.SYMANTEC_ENDPOINT_PROTECTION,
+                ]
+            ),
+            "`google_": google_logs,
+            "`gsuite": google_logs,
+            "`gws_": google_logs,
+            "`kube": set([ProvidingTechnology.KUBERNETES]),
+            "`ms_defender`": set([ProvidingTechnology.MICROSOFT_DEFENDER]),
+            "`o365_": set([ProvidingTechnology.MICROSOFT_OFFICE_365]),
+            "`okta": set([ProvidingTechnology.OKTA]),
+            "`pingid`": set([ProvidingTechnology.PING_ID]),
+            "`powershell`": set(set([ProvidingTechnology.MICROSOFT_WINDOWS])),
+            "`splunkd_": set([ProvidingTechnology.SPLUNK_INTERNAL_LOGS]),
+            "`sysmon`": set([ProvidingTechnology.MICROSOFT_SYSMON]),
+            "`wineventlog_security`": set([ProvidingTechnology.MICROSOFT_WINDOWS]),
+            "`zeek_": set([ProvidingTechnology.ZEEK]),
         }
         for key in providing_technologies_mapping:
             if key in search_string:
@@ -302,7 +279,7 @@ class ProvidingTechnology(str, enum.Enum):
         return sorted(list(matched_technologies))
 
 
-class Cis18Value(str,enum.Enum):
+class Cis18Value(StrEnum):
     CIS_0 = "CIS 0"
     CIS_1 = "CIS 1"
     CIS_2 = "CIS 2"
@@ -323,7 +300,8 @@ class Cis18Value(str,enum.Enum):
     CIS_17 = "CIS 17"
     CIS_18 = "CIS 18"
 
-class SecurityDomain(str, enum.Enum):
+
+class SecurityDomain(StrEnum):
     ENDPOINT = "endpoint"
     NETWORK = "network"
     THREAT = "threat"
@@ -331,7 +309,8 @@ class SecurityDomain(str, enum.Enum):
     ACCESS = "access"
     AUDIT = "audit"
 
-class AssetType(str, enum.Enum):
+
+class AssetType(StrEnum):
     AWS_ACCOUNT = "AWS Account"
     AWS_EKS_KUBERNETES_CLUSTER = "AWS EKS Kubernetes cluster"
     AWS_FEDERATED_ACCOUNT = "AWS Federated Account"
@@ -340,9 +319,9 @@ class AssetType(str, enum.Enum):
     AMAZON_EKS_KUBERNETES_CLUSTER = "Amazon EKS Kubernetes cluster"
     AMAZON_EKS_KUBERNETES_CLUSTER_POD = "Amazon EKS Kubernetes cluster Pod"
     AMAZON_ELASTIC_CONTAINER_REGISTRY = "Amazon Elastic Container Registry"
-    #AZURE = "Azure"
-    #AZURE_AD = "Azure AD"
-    #AZURE_AD_TENANT = "Azure AD Tenant"
+    # AZURE = "Azure"
+    # AZURE_AD = "Azure AD"
+    # AZURE_AD_TENANT = "Azure AD Tenant"
     AZURE_TENANT = "Azure Tenant"
     AZURE_AKS_KUBERNETES_CLUSTER = "Azure AKS Kubernetes cluster"
     AZURE_ACTIVE_DIRECTORY = "Azure Active Directory"
@@ -369,8 +348,8 @@ class AssetType(str, enum.Enum):
     INSTANCE = "Instance"
     KUBERNETES = "Kubernetes"
     NETWORK = "Network"
-    #OFFICE_365 = "Office 365"
-    #OFFICE_365_Tenant = "Office 365 Tenant"
+    # OFFICE_365 = "Office 365"
+    # OFFICE_365_Tenant = "Office 365 Tenant"
     O365_TENANT = "O365 Tenant"
     OKTA_TENANT = "Okta Tenant"
     PROXY = "Proxy"
@@ -382,7 +361,8 @@ class AssetType(str, enum.Enum):
     WEB_APPLICATION = "Web Application"
     WINDOWS = "Windows"
 
-class NistCategory(str, enum.Enum):
+
+class NistCategory(StrEnum):
     ID_AM = "ID.AM"
     ID_BE = "ID.BE"
     ID_GV = "ID.GV"
@@ -406,7 +386,8 @@ class NistCategory(str, enum.Enum):
     RC_IM = "RC.IM"
     RC_CO = "RC.CO"
 
-class RiskSeverity(str,enum.Enum):
+
+class RiskSeverity(StrEnum):
     # Levels taken from the following documentation link
     # https://docs.splunk.com/Documentation/ES/7.3.2/User/RiskScoring
     # 20 - info (0-20 for us)

@@ -1,38 +1,31 @@
-import logging
-import time
 import json
+import logging
 import re
-from typing import Any
-from enum import Enum
+import time
+from enum import IntEnum, StrEnum
 from functools import cached_property
+from typing import Any
 
-from pydantic import ConfigDict, BaseModel, computed_field, Field, PrivateAttr
-from splunklib.results import JSONResultsReader, Message                                            # type: ignore
-from splunklib.binding import HTTPError, ResponseReader                                             # type: ignore
-import splunklib.client as splunklib                                                                # type: ignore
-from tqdm import tqdm                                                                               # type: ignore
+import splunklib.client as splunklib  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field
+from splunklib.binding import HTTPError, ResponseReader  # type: ignore
+from splunklib.results import JSONResultsReader, Message  # type: ignore
+from tqdm import tqdm  # type: ignore
 
-from contentctl.objects.risk_analysis_action import RiskAnalysisAction
-from contentctl.objects.notable_action import NotableAction
-from contentctl.objects.base_test_result import TestResultStatus
-from contentctl.objects.integration_test_result import IntegrationTestResult
+from contentctl.actions.detection_testing.progress_bar import \
+    format_pbar_string  # type: ignore
 from contentctl.actions.detection_testing.progress_bar import (
-    format_pbar_string,                                                                             # type: ignore
-    TestReportingType,
-    TestingStates
-)
-from contentctl.objects.errors import (
-    IntegrationTestingError,
-    ServerError,
-    ClientError,
-    ValidationFailed
-)
-from contentctl.objects.detection import Detection
-from contentctl.objects.risk_event import RiskEvent
-from contentctl.objects.notable_event import NotableEvent
-from contentctl.objects.observable import Observable
+    TestingStates, TestReportingType)
 from contentctl.helper.utils import Utils
-
+from contentctl.objects.base_test_result import TestResultStatus
+from contentctl.objects.detection import Detection
+from contentctl.objects.errors import (ClientError, IntegrationTestingError,
+                                       ServerError, ValidationFailed)
+from contentctl.objects.integration_test_result import IntegrationTestResult
+from contentctl.objects.notable_action import NotableAction
+from contentctl.objects.notable_event import NotableEvent
+from contentctl.objects.risk_analysis_action import RiskAnalysisAction
+from contentctl.objects.risk_event import RiskEvent
 
 # Suppress logging by default; enable for local testing
 ENABLE_LOGGING = True
@@ -40,10 +33,11 @@ LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
 
-class SavedSearchKeys(str, Enum):
+class SavedSearchKeys(StrEnum):
     """
     Various keys into the SavedSearch content
     """
+
     # setup the names of the keys we expect to access in content
     EARLIEST_TIME_KEY = "dispatch.earliest_time"
     LATEST_TIME_KEY = "dispatch.latest_time"
@@ -53,19 +47,21 @@ class SavedSearchKeys(str, Enum):
     DISBALED_KEY = "disabled"
 
 
-class Indexes(str, Enum):
+class Indexes(StrEnum):
     """
     Indexes we search against
     """
+
     # setup the names of the risk and notable indexes
     RISK_INDEX = "risk"
     NOTABLE_INDEX = "notable"
 
 
-class TimeoutConfig(int, Enum):
+class TimeoutConfig(IntEnum):
     """
     Configuration values for the exponential backoff timer
     """
+
     # base amount to sleep for before beginning exponential backoff during testing
     BASE_SLEEP = 60
 
@@ -79,10 +75,11 @@ class TimeoutConfig(int, Enum):
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good
 #   now, but maybe not always...); maybe set latest/earliest to None?
-class ScheduleConfig(str, Enum):
+class ScheduleConfig(StrEnum):
     """
     Configuraton values for the saved search schedule
     """
+
     EARLIEST_TIME = "-5y@y"
     LATEST_TIME = "-1m@m"
     CRON_SCHEDULE = "*/1 * * * *"
@@ -106,9 +103,7 @@ class ResultIterator:
             error_filters: list[re.Pattern[str]] = []
     ) -> None:
         # init the results reader
-        self.results_reader: JSONResultsReader = JSONResultsReader(
-            response_reader
-        )
+        self.results_reader: JSONResultsReader = JSONResultsReader(response_reader)
 
         # the list of patterns for errors to ignore
         self.error_filters: list[re.Pattern[str]] = error_filters
@@ -135,7 +130,7 @@ class ResultIterator:
                 level: int = logging.getLevelName(level_name)
 
                 # log message at appropriate level and raise if needed
-                message = f"SPLUNK: {result.message}"
+                message = f"SPLUNK: {result.message}"  # type: ignore
                 self.logger.log(level, message)
                 filtered = False
                 if level == logging.ERROR:
@@ -170,14 +165,13 @@ class PbarData(BaseModel):
     :param fq_test_name: the fully qualifed (fq) test name ("<detection_name>:<test_name>") used for logging
     :param start_time: the start time used for logging
     """
-    pbar: tqdm                                                                                      # type: ignore
+
+    pbar: tqdm  # type: ignore
     fq_test_name: str
     start_time: float
 
     # needed to support the tqdm type
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class CorrelationSearch(BaseModel):
@@ -190,6 +184,7 @@ class CorrelationSearch(BaseModel):
     :param pbar_data: the encapsulated info needed for logging w/ pbar
     :param test_index: the index attack data is forwarded to for testing (optionally used in cleanup)
     """
+
     # the detection associated with the correlation search (e.g. "Windows Modify Registry EnableLinkedConnections")
     detection: Detection = Field(...)
 
@@ -231,10 +226,7 @@ class CorrelationSearch(BaseModel):
 
     # Need arbitrary types to allow fields w/ types like SavedSearch; we also want to forbid
     # unexpected fields
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        extra='forbid'
-    )
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
@@ -308,9 +300,11 @@ class CorrelationSearch(BaseModel):
         The earliest time configured for the saved search
         """
         if self.saved_search is not None:
-            return self.saved_search.content[SavedSearchKeys.EARLIEST_TIME_KEY.value]
+            return self.saved_search.content[SavedSearchKeys.EARLIEST_TIME_KEY]  # type: ignore
         else:
-            raise ClientError("Something unexpected went wrong in initialization; saved_search was not populated")
+            raise ClientError(
+                "Something unexpected went wrong in initialization; saved_search was not populated"
+            )
 
     @property
     def latest_time(self) -> str:
@@ -318,9 +312,11 @@ class CorrelationSearch(BaseModel):
         The latest time configured for the saved search
         """
         if self.saved_search is not None:
-            return self.saved_search.content[SavedSearchKeys.LATEST_TIME_KEY.value]
+            return self.saved_search.content[SavedSearchKeys.LATEST_TIME_KEY]  # type: ignore
         else:
-            raise ClientError("Something unexpected went wrong in initialization; saved_search was not populated")
+            raise ClientError(
+                "Something unexpected went wrong in initialization; saved_search was not populated"
+            )
 
     @property
     def cron_schedule(self) -> str:
@@ -328,9 +324,11 @@ class CorrelationSearch(BaseModel):
         The cron schedule configured for the saved search
         """
         if self.saved_search is not None:
-            return self.saved_search.content[SavedSearchKeys.CRON_SCHEDULE_KEY.value]
+            return self.saved_search.content[SavedSearchKeys.CRON_SCHEDULE_KEY]  # type: ignore
         else:
-            raise ClientError("Something unexpected went wrong in initialization; saved_search was not populated")
+            raise ClientError(
+                "Something unexpected went wrong in initialization; saved_search was not populated"
+            )
 
     @property
     def enabled(self) -> bool:
@@ -338,14 +336,16 @@ class CorrelationSearch(BaseModel):
         Whether the saved search is enabled
         """
         if self.saved_search is not None:
-            if int(self.saved_search.content[SavedSearchKeys.DISBALED_KEY.value]):
+            if int(self.saved_search.content[SavedSearchKeys.DISBALED_KEY]):  # type: ignore
                 return False
             else:
                 return True
         else:
-            raise ClientError("Something unexpected went wrong in initialization; saved_search was not populated")
+            raise ClientError(
+                "Something unexpected went wrong in initialization; saved_search was not populated"
+            )
 
-    @ property
+    @property
     def has_risk_analysis_action(self) -> bool:
         """Whether the correlation search has an associated risk analysis Adaptive Response Action
         :return: a boolean indicating whether it has a risk analysis Adaptive Response Action
@@ -366,7 +366,7 @@ class CorrelationSearch(BaseModel):
         :param content: a dict of strings to values
         :returns: a RiskAnalysisAction, or None if none exists
         """
-        if int(content[SavedSearchKeys.RISK_ACTION_KEY.value]):
+        if int(content[SavedSearchKeys.RISK_ACTION_KEY]):
             try:
                 return RiskAnalysisAction.parse_from_dict(content)
             except ValueError as e:
@@ -381,22 +381,9 @@ class CorrelationSearch(BaseModel):
         :returns: a NotableAction, or None if none exists
         """
         # grab notable details if present
-        if int(content[SavedSearchKeys.NOTABLE_ACTION_KEY.value]):
+        if int(content[SavedSearchKeys.NOTABLE_ACTION_KEY]):
             return NotableAction.parse_from_dict(content)
         return None
-
-    @staticmethod
-    def _get_relevant_observables(observables: list[Observable]) -> list[Observable]:
-        """
-        Given a list of observables, identify the subset of those relevant for risk matching
-        :param observables: the Observable objects to filter
-        :returns: the filtered list of relevant observables
-        """
-        relevant = []
-        for observable in observables:
-            if not RiskEvent.ignore_observable(observable):
-                relevant.append(observable)
-        return relevant
 
     def _parse_risk_and_notable_actions(self) -> None:
         """Parses the risk/notable metadata we care about from self.saved_search.content
@@ -409,7 +396,7 @@ class CorrelationSearch(BaseModel):
         """
         # grab risk details if present
         self._risk_analysis_action = CorrelationSearch._get_risk_analysis_action(
-            self.saved_search.content                                                               # type: ignore
+            self.saved_search.content  # type: ignore
         )
 
         # grab notable details if present
@@ -421,10 +408,9 @@ class CorrelationSearch(BaseModel):
         After operations we expect to alter the state of the SavedSearch, we call refresh so that we have a local
         representation of the new state; then we extrat what we care about into this instance
         """
-        self.logger.debug(
-            f"Refreshing SavedSearch metadata for {self.name}...")
+        self.logger.debug(f"Refreshing SavedSearch metadata for {self.name}...")
         try:
-            self.saved_search.refresh()                                                             # type: ignore
+            self.saved_search.refresh()  # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered during refresh: {e}")
         self._parse_risk_and_notable_actions()
@@ -438,7 +424,7 @@ class CorrelationSearch(BaseModel):
         """
         self.logger.debug(f"Enabling {self.name}...")
         try:
-            self.saved_search.enable()                                                              # type: ignore
+            self.saved_search.enable()  # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered while enabling detection: {e}")
         if refresh:
@@ -453,7 +439,7 @@ class CorrelationSearch(BaseModel):
         """
         self.logger.debug(f"Disabling {self.name}...")
         try:
-            self.saved_search.disable()                                                             # type: ignore
+            self.saved_search.disable()  # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered while disabling detection: {e}")
         if refresh:
@@ -461,10 +447,10 @@ class CorrelationSearch(BaseModel):
 
     def update_timeframe(
         self,
-        earliest_time: str = ScheduleConfig.EARLIEST_TIME.value,
-        latest_time: str = ScheduleConfig.LATEST_TIME.value,
-        cron_schedule: str = ScheduleConfig.CRON_SCHEDULE.value,
-        refresh: bool = True
+        earliest_time: str = ScheduleConfig.EARLIEST_TIME,
+        latest_time: str = ScheduleConfig.LATEST_TIME,
+        cron_schedule: str = ScheduleConfig.CRON_SCHEDULE,
+        refresh: bool = True,
     ) -> None:
         """Updates the correlation search timeframe to work with test data
 
@@ -479,21 +465,21 @@ class CorrelationSearch(BaseModel):
         """
         # update the SavedSearch accordingly
         data = {
-            SavedSearchKeys.EARLIEST_TIME_KEY.value: earliest_time,
-            SavedSearchKeys.LATEST_TIME_KEY.value: latest_time,
-            SavedSearchKeys.CRON_SCHEDULE_KEY.value: cron_schedule
+            SavedSearchKeys.EARLIEST_TIME_KEY: earliest_time,
+            SavedSearchKeys.LATEST_TIME_KEY: latest_time,
+            SavedSearchKeys.CRON_SCHEDULE_KEY: cron_schedule,
         }
         self.logger.info(data)
         self.logger.info(f"Updating timeframe for '{self.name}': {data}")
         try:
-            self.saved_search.update(**data)                                                        # type: ignore
+            self.saved_search.update(**data)  # type: ignore
         except HTTPError as e:
             raise ServerError(f"HTTP error encountered while updating timeframe: {e}")
 
         if refresh:
             self.refresh()
 
-    def force_run(self, refresh=True) -> None:
+    def force_run(self, refresh: bool = True) -> None:
         """Forces a detection run
 
         Enables the detection, adjusts the cron schedule to run every 1 minute, and widens the earliest/latest window
@@ -504,7 +490,7 @@ class CorrelationSearch(BaseModel):
         if not self.enabled:
             self.enable(refresh=False)
         else:
-            self.logger.warn(f"Detection '{self.name}' was already enabled")
+            self.logger.warning(f"Detection '{self.name}' was already enabled")
 
         if refresh:
             self.refresh()
@@ -535,7 +521,9 @@ class CorrelationSearch(BaseModel):
 
         # Use the cached risk_events unless we're forcing an update
         if self._risk_events is not None:
-            self.logger.debug(f"Using cached risk events ({len(self._risk_events)} total).")
+            self.logger.debug(
+                f"Using cached risk events ({len(self._risk_events)} total)."
+            )
             return self._risk_events
 
         # TODO (#248): Refactor risk/notable querying to pin to a single savedsearch ID
@@ -552,12 +540,14 @@ class CorrelationSearch(BaseModel):
             for result in result_iterator:
                 # sanity check that this result from the iterator is a risk event and not some
                 # other metadata
-                if result["index"] == Indexes.RISK_INDEX.value:
+                if result["index"] == Indexes.RISK_INDEX:
                     try:
                         parsed_raw = json.loads(result["_raw"])
-                        event = RiskEvent.parse_obj(parsed_raw)
+                        event = RiskEvent.model_validate(parsed_raw)
                     except Exception:
-                        self.logger.error(f"Failed to parse RiskEvent from search result: {result}")
+                        self.logger.error(
+                            f"Failed to parse RiskEvent from search result: {result}"
+                        )
                         raise
                     events.append(event)
                     self.logger.debug(f"Found risk event for '{self.name}': {event}")
@@ -601,7 +591,9 @@ class CorrelationSearch(BaseModel):
 
         # Use the cached notable_events unless we're forcing an update
         if self._notable_events is not None:
-            self.logger.debug(f"Using cached notable events ({len(self._notable_events)} total).")
+            self.logger.debug(
+                f"Using cached notable events ({len(self._notable_events)} total)."
+            )
             return self._notable_events
 
         # Search for all notable events from a single scheduled search (indicated by orig_sid)
@@ -617,12 +609,14 @@ class CorrelationSearch(BaseModel):
             for result in result_iterator:
                 # sanity check that this result from the iterator is a notable event and not some
                 # other metadata
-                if result["index"] == Indexes.NOTABLE_INDEX.value:
+                if result["index"] == Indexes.NOTABLE_INDEX:
                     try:
                         parsed_raw = json.loads(result["_raw"])
-                        event = NotableEvent.parse_obj(parsed_raw)
+                        event = NotableEvent.model_validate(parsed_raw)
                     except Exception:
-                        self.logger.error(f"Failed to parse NotableEvent from search result: {result}")
+                        self.logger.error(
+                            f"Failed to parse NotableEvent from search result: {result}"
+                        )
                         raise
                     events.append(event)
                     self.logger.debug(f"Found notable event for '{self.name}': {event}")
@@ -644,23 +638,22 @@ class CorrelationSearch(BaseModel):
         """Validates the existence of any expected risk events
 
         First ensure the risk event exists, and if it does validate its risk message and make sure
-        any events align with the specified observables. Also adds the risk index to the purge list
+        any events align with the specified risk object. Also adds the risk index to the purge list
         if risk events existed
         :param elapsed_sleep_time: an int representing the amount of time slept thus far waiting to
             check the risks/notables
         :returns: an IntegrationTestResult on failure; None on success
         """
-        # Create a mapping of the relevant observables to counters
-        observables = CorrelationSearch._get_relevant_observables(self.detection.tags.observable)
-        observable_counts: dict[str, int] = {str(x): 0 for x in observables}
-
-        # NOTE: we intentionally want this to be an error state and not a failure state, as
-        #   ultimately this validation should be handled during the build process
-        if len(observables) != len(observable_counts):
-            raise ClientError(
-                f"At least two observables in '{self.detection.name}' have the same name; "
-                "each observable for a detection should be unique."
+        # Ensure the rba object is defined
+        if self.detection.rba is None:
+            raise ValidationFailed(
+                f"Unexpected error: Detection '{self.detection.name}' has no RBA objects associated"
+                " with it; cannot validate."
             )
+
+        risk_object_counts: dict[int, int] = {
+            id(x): 0 for x in self.detection.rba.risk_objects
+        }
 
         # Get the risk events; note that we use the cached risk events, expecting they were
         # saved by a prior call to risk_event_exists
@@ -671,63 +664,68 @@ class CorrelationSearch(BaseModel):
         for event in events:
             c += 1
             self.logger.debug(
-                f"Validating risk event ({event.risk_object}, {event.risk_object_type}): "
+                f"Validating risk event ({event.es_risk_object}, {event.es_risk_object_type}): "
                 f"{c}/{len(events)}"
             )
             event.validate_against_detection(self.detection)
 
-            # Update observable count based on match
-            matched_observable = event.get_matched_observable(self.detection.tags.observable)
+            # Update risk object count based on match
+            matched_risk_object = event.get_matched_risk_object(
+                self.detection.rba.risk_objects
+            )
             self.logger.debug(
-                f"Matched risk event (object={event.risk_object}, type={event.risk_object_type}) "
-                f"to observable (name={matched_observable.name}, type={matched_observable.type}, "
-                f"role={matched_observable.role}) using the source field "
+                f"Matched risk event (object={event.es_risk_object}, type={event.es_risk_object_type}) "
+                f"to detection's risk object (name={matched_risk_object.field}, "
+                f"type={matched_risk_object.type.value}) using the source field "
                 f"'{event.source_field_name}'"
             )
-            observable_counts[str(matched_observable)] += 1
+            risk_object_counts[id(matched_risk_object)] += 1
 
-        # Report any observables which did not have at least one match to a risk event
-        for observable in observables:
+        # Report any risk objects which did not have at least one match to a risk event
+        for risk_object in self.detection.rba.risk_objects:
             self.logger.debug(
-                f"Matched observable (name={observable.name}, type={observable.type}, "
-                f"role={observable.role}) to {observable_counts[str(observable)]} risk events."
+                f"Matched risk object (name={risk_object.field}, type={risk_object.type.value} "
+                f"to {risk_object_counts[id(risk_object)]} risk events."
             )
-            if observable_counts[str(observable)] == 0:
+            if risk_object_counts[id(risk_object)] == 0:
                 raise ValidationFailed(
-                    f"Observable (name={observable.name}, type={observable.type}, "
-                    f"role={observable.role}) was not matched to any risk events."
+                    f"Risk object (name={risk_object.field}, type={risk_object.type.value}) "
+                    "was not matched to any risk events."
                 )
 
         # TODO (#250): Re-enable and refactor code that validates the specific risk counts
         # Validate risk events in aggregate; we should have an equal amount of risk events for each
-        # relevant observable, and the total count should match the total number of events
+        # relevant risk object, and the total count should match the total number of events
         # individual_count: int | None = None
         # total_count = 0
-        # for observable_str in observable_counts:
+        # for risk_object_id in risk_object_counts:
         #     self.logger.debug(
-        #         f"Observable <{observable_str}> match count: {observable_counts[observable_str]}"
+        #         f"Risk object <{risk_object_id}> match count: {risk_object_counts[risk_object_id]}"
         #     )
 
         #     # Grab the first value encountered if not set yet
         #     if individual_count is None:
-        #         individual_count = observable_counts[observable_str]
+        #         individual_count = risk_object_counts[risk_object_id]
         #     else:
-        #         # Confirm that the count for the current observable matches the count of the others
-        #         if observable_counts[observable_str] != individual_count:
+        #         # Confirm that the count for the current risk object matches the count of the
+        #         # others
+        #         if risk_object_counts[risk_object_id] != individual_count:
         #             raise ValidationFailed(
-        #                 f"Count of risk events matching observable <\"{observable_str}\"> "
-        #                 f"({observable_counts[observable_str]}) does not match the count of those "
-        #                 f"matching other observables ({individual_count})."
+        #                 f"Count of risk events matching detection's risk object <\"{risk_object_id}\"> "
+        #                 f"({risk_object_counts[risk_object_id]}) does not match the count of those "
+        #                 f"matching other risk objects ({individual_count})."
         #             )
 
-        #     # Aggregate total count of events matched to observables
-        #     total_count += observable_counts[observable_str]
+        #     # Aggregate total count of events matched to risk objects
+        #     total_count += risk_object_counts[risk_object_id]
 
-        # # Raise if the the number of events doesn't match the number of those matched to observables
+        # # Raise if the the number of events doesn't match the number of those matched to risk
+        # # objects
         # if len(events) != total_count:
         #     raise ValidationFailed(
         #         f"The total number of risk events {len(events)} does not match the number of "
-        #         f"risk events we were able to match against observables ({total_count})."
+        #         "risk events we were able to match against risk objects from the detection "
+        #         f"({total_count})."
         #     )
 
     # TODO (PEX-434): implement deeper notable validation
@@ -744,7 +742,9 @@ class CorrelationSearch(BaseModel):
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
     #   it for completion, but that seems more tricky
-    def test(self, max_sleep: int = TimeoutConfig.MAX_SLEEP.value, raise_on_exc: bool = False) -> IntegrationTestResult:
+    def test(
+        self, max_sleep: int = TimeoutConfig.MAX_SLEEP, raise_on_exc: bool = False
+    ) -> IntegrationTestResult:
         """Execute the integration test
 
         Executes an integration test for this CorrelationSearch. First, ensures no matching risk/notables already exist
@@ -758,10 +758,10 @@ class CorrelationSearch(BaseModel):
         """
         # max_sleep must be greater than the base value we must wait for the scheduled searchjob to run (jobs run every
         # 60s)
-        if max_sleep < TimeoutConfig.BASE_SLEEP.value:
+        if max_sleep < TimeoutConfig.BASE_SLEEP:
             raise ClientError(
                 f"max_sleep value of {max_sleep} is less than the base sleep required "
-                f"({TimeoutConfig.BASE_SLEEP.value})"
+                f"({TimeoutConfig.BASE_SLEEP})"
             )
 
         # initialize result as None
@@ -772,20 +772,18 @@ class CorrelationSearch(BaseModel):
         num_tries = 0
 
         # set the initial base sleep time
-        time_to_sleep = TimeoutConfig.BASE_SLEEP.value
+        time_to_sleep = TimeoutConfig.BASE_SLEEP
 
         try:
             # first make sure the indexes are currently empty and the detection is starting from a disabled state
-            self.logger.debug(
-                "Cleaning up any pre-existing risk/notable events..."
-            )
+            self.logger.debug("Cleaning up any pre-existing risk/notable events...")
             self.update_pbar(TestingStates.PRE_CLEANUP)
             if self.risk_event_exists():
-                self.logger.warn(
+                self.logger.warning(
                     f"Risk events matching '{self.name}' already exist; marking for deletion"
                 )
             if self.notable_event_exists():
-                self.logger.warn(
+                self.logger.warning(
                     f"Notable events matching '{self.name}' already exist; marking for deletion"
                 )
             self.cleanup()
@@ -810,7 +808,9 @@ class CorrelationSearch(BaseModel):
                 # loop so long as the elapsed time is less than max_sleep
                 while elapsed_sleep_time < max_sleep:
                     # sleep so the detection job can finish
-                    self.logger.info(f"Waiting {time_to_sleep} for {self.name} so it can finish")
+                    self.logger.info(
+                        f"Waiting {time_to_sleep} for {self.name} so it can finish"
+                    )
                     self.update_pbar(TestingStates.VALIDATING)
                     time.sleep(time_to_sleep)
                     elapsed_sleep_time += time_to_sleep
@@ -899,7 +899,7 @@ class CorrelationSearch(BaseModel):
                     wait_duration=elapsed_sleep_time,
                     exception=e,
                 )
-                self.logger.exception(result.message)                    # type: ignore
+                self.logger.exception(result.message)  # type: ignore
             else:
                 raise e
         except Exception as e:
@@ -909,7 +909,10 @@ class CorrelationSearch(BaseModel):
 
         # log based on result status
         if result is not None:
-            if result.status == TestResultStatus.PASS or result.status == TestResultStatus.SKIP:
+            if (
+                result.status == TestResultStatus.PASS
+                or result.status == TestResultStatus.SKIP
+            ):
                 self.logger.info(f"{result.status.name}: {result.message}")
             elif result.status == TestResultStatus.FAIL:
                 self.logger.error(f"{result.status.name}: {result.message}")
@@ -932,11 +935,11 @@ class CorrelationSearch(BaseModel):
         :param query: the SPL string to run
         """
         self.logger.debug(f"Executing query: `{query}`")
-        job = self.service.search(query, exec_mode="blocking")
+        job = self.service.search(query, exec_mode="blocking")  # type: ignore
 
         # query the results, catching any HTTP status code errors
         try:
-            response_reader: ResponseReader = job.results(output_mode="json")
+            response_reader: ResponseReader = job.results(output_mode="json")  # type: ignore
         except HTTPError as e:
             # e.g. ->  HTTP 400 Bad Request -- b'{"messages":[{"type":"FATAL","text":"Error in \'delete\' command: You
             #   have insufficient privileges to delete events."}]}'
@@ -944,7 +947,7 @@ class CorrelationSearch(BaseModel):
             self.logger.error(message)
             raise ServerError(message)
 
-        return ResultIterator(response_reader)
+        return ResultIterator(response_reader)  # type: ignore
 
     def _delete_index(self, index: str) -> None:
         """Deletes events in a given index
@@ -977,7 +980,7 @@ class CorrelationSearch(BaseModel):
             message = f"No result returned showing deletion in index {index}"
             raise ServerError(message)
 
-    def cleanup(self, delete_test_index=False) -> None:
+    def cleanup(self, delete_test_index: bool = False) -> None:
         """Cleans up after an integration test
 
         First, disable the detection; then dump the risk, notable, and (optionally) test indexes. The test index is
@@ -995,11 +998,11 @@ class CorrelationSearch(BaseModel):
 
         # Add indexes to purge
         if delete_test_index:
-            self.indexes_to_purge.add(self.test_index)                                              # type: ignore
+            self.indexes_to_purge.add(self.test_index)  # type: ignore
         if self._risk_events is not None:
-            self.indexes_to_purge.add(Indexes.RISK_INDEX.value)
+            self.indexes_to_purge.add(Indexes.RISK_INDEX)
         if self._notable_events is not None:
-            self.indexes_to_purge.add(Indexes.NOTABLE_INDEX.value)
+            self.indexes_to_purge.add(Indexes.NOTABLE_INDEX)
 
         # delete the indexes
         for index in self.indexes_to_purge:
@@ -1023,5 +1026,5 @@ class CorrelationSearch(BaseModel):
             self.pbar_data.fq_test_name,
             state,
             self.pbar_data.start_time,
-            True
+            True,
         )

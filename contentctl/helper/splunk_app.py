@@ -39,6 +39,7 @@ class RetryConstant:
 
 class SplunkBaseError(requests.HTTPError):
     """An error raise in communicating with Splunkbase"""
+
     pass
 
 
@@ -50,6 +51,7 @@ class SplunkApp:
 
     class InitializationError(Exception):
         """An initialization error during SplunkApp setup"""
+
         pass
 
     @staticmethod
@@ -68,16 +70,16 @@ class SplunkApp:
             status_forcelist=status_forcelist,
         )
         adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
         return session
 
     def __init__(
-            self,
-            app_uid: Optional[int] = None,
-            app_name_id: Optional[str] = None,
-            manual_setup: bool = False,
-            ) -> None:
+        self,
+        app_uid: Optional[int] = None,
+        app_name_id: Optional[str] = None,
+        manual_setup: bool = False,
+    ) -> None:
         if app_uid is None and app_name_id is None:
             raise SplunkApp.InitializationError(
                 "Either app_uid (the numeric app UID e.g. 742) or app_name_id (the app name "
@@ -123,18 +125,22 @@ class SplunkApp:
         if self._app_info_cache is not None:
             return self._app_info_cache
         elif self.app_uid is None:
-            raise SplunkApp.InitializationError("app_uid must be set in order to fetch app info")
+            raise SplunkApp.InitializationError(
+                "app_uid must be set in order to fetch app info"
+            )
 
         # NOTE: auth not required
         # Get app info by uid
         try:
             response = self.requests_retry_session().get(
                 APIEndPoint.SPLUNK_BASE_APP_INFO.format(app_uid=self.app_uid),
-                timeout=RetryConstant.RETRY_INTERVAL
+                timeout=RetryConstant.RETRY_INTERVAL,
             )
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            raise SplunkBaseError(f"Error fetching app info for app_uid {self.app_uid}: {str(e)}")
+            raise SplunkBaseError(
+                f"Error fetching app info for app_uid {self.app_uid}: {str(e)}"
+            )
 
         # parse JSON and set cache
         self._app_info_cache: dict = json.loads(response.content)
@@ -156,7 +162,9 @@ class SplunkApp:
         if "appid" in app_info:
             self.app_name_id = app_info["appid"]
         else:
-            raise SplunkBaseError(f"Invalid response from Splunkbase; missing key 'appid': {app_info}")
+            raise SplunkBaseError(
+                f"Invalid response from Splunkbase; missing key 'appid': {app_info}"
+            )
 
     def set_app_uid(self) -> None:
         """
@@ -166,19 +174,25 @@ class SplunkApp:
         if self.app_uid is not None:
             return
         elif self.app_name_id is None:
-            raise SplunkApp.InitializationError("app_name_id must be set in order to fetch app_uid")
+            raise SplunkApp.InitializationError(
+                "app_name_id must be set in order to fetch app_uid"
+            )
 
         # NOTE: auth not required
         # Get app_uid by app_name_id via a redirect
         try:
             response = self.requests_retry_session().get(
-                APIEndPoint.SPLUNK_BASE_GET_UID_REDIRECT.format(app_name_id=self.app_name_id),
+                APIEndPoint.SPLUNK_BASE_GET_UID_REDIRECT.format(
+                    app_name_id=self.app_name_id
+                ),
                 allow_redirects=False,
-                timeout=RetryConstant.RETRY_INTERVAL
+                timeout=RetryConstant.RETRY_INTERVAL,
             )
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            raise SplunkBaseError(f"Error fetching app_uid for app_name_id '{self.app_name_id}': {str(e)}")
+            raise SplunkBaseError(
+                f"Error fetching app_uid for app_name_id '{self.app_name_id}': {str(e)}"
+            )
 
         # Extract the app_uid from the redirect path
         if "Location" in response.headers:
@@ -199,7 +213,9 @@ class SplunkApp:
         if "title" in app_info:
             self.app_title = app_info["title"]
         else:
-            raise SplunkBaseError(f"Invalid response from Splunkbase; missing key 'title': {app_info}")
+            raise SplunkBaseError(
+                f"Invalid response from Splunkbase; missing key 'title': {app_info}"
+            )
 
     def __fetch_url_latest_version_info(self) -> str:
         """
@@ -209,12 +225,16 @@ class SplunkApp:
         # retrieve app entries using the app_name_id
         try:
             response = self.requests_retry_session().get(
-                APIEndPoint.SPLUNK_BASE_FETCH_APP_BY_ENTRY_ID.format(app_name_id=self.app_name_id),
-                timeout=RetryConstant.RETRY_INTERVAL
+                APIEndPoint.SPLUNK_BASE_FETCH_APP_BY_ENTRY_ID.format(
+                    app_name_id=self.app_name_id
+                ),
+                timeout=RetryConstant.RETRY_INTERVAL,
             )
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            raise SplunkBaseError(f"Error fetching app entries for app_name_id '{self.app_name_id}': {str(e)}")
+            raise SplunkBaseError(
+                f"Error fetching app entries for app_name_id '{self.app_name_id}': {str(e)}"
+            )
 
         # parse xml
         app_xml = xmltodict.parse(response.content)
@@ -231,7 +251,9 @@ class SplunkApp:
                     return entry.get("link").get("@href")
 
         # raise if no entry was found
-        raise SplunkBaseError(f"No app entry found with 'islatest' tag set to True: {self.app_name_id}")
+        raise SplunkBaseError(
+            f"No app entry found with 'islatest' tag set to True: {self.app_name_id}"
+        )
 
     def __fetch_url_latest_version_download(self, info_url: str) -> str:
         """
@@ -241,10 +263,14 @@ class SplunkApp:
         """
         # fetch download info
         try:
-            response = self.requests_retry_session().get(info_url, timeout=RetryConstant.RETRY_INTERVAL)
+            response = self.requests_retry_session().get(
+                info_url, timeout=RetryConstant.RETRY_INTERVAL
+            )
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            raise SplunkBaseError(f"Error fetching download info for app_name_id '{self.app_name_id}': {str(e)}")
+            raise SplunkBaseError(
+                f"Error fetching download info for app_name_id '{self.app_name_id}': {str(e)}"
+            )
 
         # parse XML and extract download URL
         build_xml = xmltodict.parse(response.content)
@@ -254,14 +280,18 @@ class SplunkApp:
     def set_latest_version_info(self) -> None:
         # raise if app_name_id not set
         if self.app_name_id is None:
-            raise SplunkApp.InitializationError("app_name_id must be set in order to fetch latest version info")
+            raise SplunkApp.InitializationError(
+                "app_name_id must be set in order to fetch latest version info"
+            )
 
         # fetch the info URL
         info_url = self.__fetch_url_latest_version_info()
 
         # parse out the version number and fetch the download URL
         self.latest_version = info_url.split("/")[-1]
-        self.latest_version_download_url = self.__fetch_url_latest_version_download(info_url)
+        self.latest_version_download_url = self.__fetch_url_latest_version_download(
+            info_url
+        )
 
     def __get_splunk_base_session_token(self, username: str, password: str) -> str:
         """
@@ -309,12 +339,12 @@ class SplunkApp:
         return token_value
 
     def download(
-            self,
-            out: Path,
-            username: str,
-            password: str,
-            is_dir: bool = False,
-            overwrite: bool = False
+        self,
+        out: Path,
+        username: str,
+        password: str,
+        is_dir: bool = False,
+        overwrite: bool = False,
     ) -> Path:
         """
         Given an output path, download the app to the specified location
@@ -336,11 +366,7 @@ class SplunkApp:
         # Get the Splunkbase session token
         token = self.__get_splunk_base_session_token(username, password)
         response = requests.request(
-            "GET",
-            self.latest_version_download_url,
-            cookies={
-                "sessionid": token
-            }
+            "GET", self.latest_version_download_url, cookies={"sessionid": token}
         )
 
         # If the provided output path was a directory we need to try and pull the filename from the
@@ -348,17 +374,21 @@ class SplunkApp:
         if is_dir:
             try:
                 # Pull 'Content-Disposition' from the headers
-                content_disposition: str = response.headers['Content-Disposition']
+                content_disposition: str = response.headers["Content-Disposition"]
 
                 # Attempt to parse the filename as a KV
                 key, value = content_disposition.strip().split("=")
                 if key != "attachment;filename":
-                    raise ValueError(f"Unexpected key in 'Content-Disposition' KV pair: {key}")
+                    raise ValueError(
+                        f"Unexpected key in 'Content-Disposition' KV pair: {key}"
+                    )
 
                 # Validate the filename is the expected .tgz file
                 filename = Path(value.strip().strip('"'))
                 if filename.suffixes != [".tgz"]:
-                    raise ValueError(f"Filename has unexpected extension(s): {filename.suffixes}")
+                    raise ValueError(
+                        f"Filename has unexpected extension(s): {filename.suffixes}"
+                    )
                 out = Path(out, filename)
             except KeyError as e:
                 raise KeyError(
@@ -371,9 +401,7 @@ class SplunkApp:
 
         # Ensure the output path is not already occupied
         if out.exists() and not overwrite:
-            msg = (
-                f"File already exists at {out}, cannot download the app."
-            )
+            msg = f"File already exists at {out}, cannot download the app."
             raise Exception(msg)
 
         # Make any parent directories as needed

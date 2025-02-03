@@ -1,21 +1,20 @@
+import json
+import logging
+import re
 import time
 import uuid
-import json
-import re
-import logging
-from typing import Any, Callable
 from functools import cached_property
+from typing import Any, Callable
 
-from pydantic import BaseModel, PrivateAttr, computed_field, Field
 import splunklib.client as splunklib  # type: ignore
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
 from splunklib.binding import HTTPError, ResponseReader  # type: ignore
 from splunklib.data import Record  # type: ignore
 
-from contentctl.objects.config import test_common, Infrastructure
-from contentctl.objects.detection import Detection
-from contentctl.objects.correlation_search import ResultIterator
 from contentctl.helper.utils import Utils
-
+from contentctl.objects.config import Infrastructure, test_common
+from contentctl.objects.correlation_search import ResultIterator
+from contentctl.objects.detection import Detection
 
 # TODO (cmcginley): suppress logging
 # Suppress logging by default; enable for local testing
@@ -151,8 +150,8 @@ class ContentVersioningService(BaseModel):
                     return bool(int(entry["content"]["versioning_activated"]))
         except KeyError as e:
             raise KeyError(
-                "Cannot retrieve versioning status, unable to versioning status using the expected "
-                f"keys: {e}"
+                "Cannot retrieve versioning status, unable to determine versioning status using "
+                f"the expected keys: {e}"
             ) from e
         raise ValueError(
             "Cannot retrieve versioning status, unable to find an entry matching 'general' in the "
@@ -211,7 +210,7 @@ class ContentVersioningService(BaseModel):
 
     def force_cms_parser(self) -> None:
         """
-        Force the cms_parser to being it's run being disabling and re-enabling it.
+        Force the cms_parser to run by disabling and re-enabling it.
         """
         # Get the data input entity
         cms_parser = self.service.input("data/inputs/cms_parser/main")  # type: ignore
@@ -355,7 +354,9 @@ class ContentVersioningService(BaseModel):
         # Init some counters and a mapping of detections to their names
         count = 100
         offset = 0
-        remaining_detections = {x.name: x for x in self.detections}
+        remaining_detections = {
+            x.get_action_dot_correlationsearch_dot_label(self.global_config.app): x for x in self.detections
+        }
         matched_detections: dict[str, Detection] = {}
 
         # Create a filter for a specific memory error we're ok ignoring
@@ -377,40 +378,18 @@ class ContentVersioningService(BaseModel):
                 # Increment the offset for each result
                 offset += 1
 
-                # Get the name of the search in the CMS event and attempt to use pattern matching
-                # to strip the prefix and suffix used for the savedsearches.conf name so we can
-                # compare to the detection
+                # Get the name of the search in the CMS event
                 cms_entry_name = cms_event["action.correlationsearch.label"]
                 self.logger.info(
                     f"[{self.infrastructure.instance_name}] {offset}: Matching cms_main entry "
                     f"'{cms_entry_name}' against detections"
                 )
-                ptrn = re.compile(
-                    r"^"
-                    + self.global_config.app.label
-                    + r" - (?P<stripped_cms_entry_name>.+) - Rule$"
-                )
-                match = ptrn.match(cms_event["action.correlationsearch.label"])
-
-                # Report any errors extracting the detection name from the longer rule name
-                if match is None:
-                    msg = (
-                        f"[{self.infrastructure.instance_name}] [{cms_entry_name}]: Entry in "
-                        "cms_main did not match the expected naming scheme; cannot compare to our "
-                        "detections."
-                    )
-                    self.logger.error(msg)
-                    exceptions.append(Exception(msg))
-                    continue
-
-                # Extract the detection name if matching was successful
-                stripped_cms_entry_name = match.group("stripped_cms_entry_name")
 
                 # If CMS entry name matches one of the detections already matched, we've got an
                 # unexpected repeated entry
-                if stripped_cms_entry_name in matched_detections:
+                if cms_entry_name in matched_detections:
                     msg = (
-                        f"[{self.infrastructure.instance_name}] [{stripped_cms_entry_name}]: Detection "
+                        f"[{self.infrastructure.instance_name}] [{cms_entry_name}]: Detection "
                         f"appears more than once in the cms_main index."
                     )
                     self.logger.error(msg)
@@ -419,18 +398,18 @@ class ContentVersioningService(BaseModel):
 
                 # Iterate over the detections and compare the CMS entry name against each
                 result_matches_detection = False
-                for detection_name in remaining_detections:
+                for detection_cs_label in remaining_detections:
                     # If we find a match, break this loop, set the found flag and move the detection
                     # from those that still need to matched to those already matched
-                    if stripped_cms_entry_name == detection_name:
+                    if cms_entry_name == detection_cs_label:
                         self.logger.info(
                             f"[{self.infrastructure.instance_name}] {offset}: Succesfully matched "
-                            f"cms_main entry against detection ('{detection_name}')!"
+                            f"cms_main entry against detection ('{detection_cs_label}')!"
                         )
 
                         # Validate other fields of the cms_event against the detection
                         exception = self.validate_detection_against_cms_event(
-                            cms_event, remaining_detections[detection_name]
+                            cms_event, remaining_detections[detection_cs_label]
                         )
 
                         # Save the exception if validation failed
@@ -439,16 +418,16 @@ class ContentVersioningService(BaseModel):
 
                         # Delete the matched detection and move it to the matched list
                         result_matches_detection = True
-                        matched_detections[detection_name] = remaining_detections[
-                            detection_name
+                        matched_detections[detection_cs_label] = remaining_detections[
+                            detection_cs_label
                         ]
-                        del remaining_detections[detection_name]
+                        del remaining_detections[detection_cs_label]
                         break
 
                 # Generate an exception if we couldn't match the CMS main entry to a detection
                 if result_matches_detection is False:
                     msg = (
-                        f"[{self.infrastructure.instance_name}] [{stripped_cms_entry_name}]: Could not "
+                        f"[{self.infrastructure.instance_name}] [{cms_entry_name}]: Could not "
                         "match entry in cms_main against any of the expected detections."
                     )
                     self.logger.error(msg)
@@ -458,9 +437,9 @@ class ContentVersioningService(BaseModel):
         # cms_main and there may have been a parsing issue with savedsearches.conf
         if len(remaining_detections) > 0:
             # Generate exceptions for the unmatched detections
-            for detection_name in remaining_detections:
+            for detection_cs_label in remaining_detections:
                 msg = (
-                    f"[{self.infrastructure.instance_name}] [{detection_name}]: Detection not "
+                    f"[{self.infrastructure.instance_name}] [{detection_cs_label}]: Detection not "
                     "found in cms_main; there may be an issue with savedsearches.conf"
                 )
                 self.logger.error(msg)
@@ -497,8 +476,8 @@ class ContentVersioningService(BaseModel):
         # TODO (PEX-509): validate additional fields between the cms_event and the detection
 
         cms_uuid = uuid.UUID(cms_event["detection_id"])
-        rule_name_from_detection = (
-            f"{self.global_config.app.label} - {detection.name} - Rule"
+        rule_name_from_detection = detection.get_action_dot_correlationsearch_dot_label(
+            self.global_config.app
         )
 
         # Compare the UUIDs

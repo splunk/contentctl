@@ -16,6 +16,7 @@ import shutil
 import tarfile
 
 from contentctl.objects.config import build
+
 # These must be imported separately because they are not just used for typing,
 # they are used in isinstance (which requires the object to be imported)
 from contentctl.objects.lookup import FileBackedLookup, MlModel

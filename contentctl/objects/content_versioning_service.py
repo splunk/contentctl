@@ -7,9 +7,9 @@ from typing import Any, Callable
 from functools import cached_property
 
 from pydantic import BaseModel, PrivateAttr, computed_field, Field
-import splunklib.client as splunklib                                                                # type: ignore
-from splunklib.binding import HTTPError, ResponseReader                                             # type: ignore
-from splunklib.data import Record                                                                   # type: ignore
+import splunklib.client as splunklib  # type: ignore
+from splunklib.binding import HTTPError, ResponseReader  # type: ignore
+from splunklib.data import Record  # type: ignore
 
 from contentctl.objects.config import test_common, Infrastructure
 from contentctl.objects.detection import Detection
@@ -48,11 +48,9 @@ class ContentVersioningService(BaseModel):
 
     # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
     # to conflict w/ tqdm)
-    logger: logging.Logger = Field(default_factory=lambda: Utils.get_logger(
-            __name__,
-            LOG_LEVEL,
-            LOG_PATH,
-            ENABLE_LOGGING
+    logger: logging.Logger = Field(
+        default_factory=lambda: Utils.get_logger(
+            __name__, LOG_LEVEL, LOG_PATH, ENABLE_LOGGING
         )
     )
 
@@ -84,7 +82,9 @@ class ContentVersioningService(BaseModel):
             (self.validate_content_against_cms, "Validating Against CMS"),
         ]
 
-    def _query_content_versioning_service(self, method: str, body: dict[str, Any] = {}) -> Record:
+    def _query_content_versioning_service(
+        self, method: str, body: dict[str, Any] = {}
+    ) -> Record:
         """
         Queries the SA-ContentVersioning service. Output mode defaults to JSON.
 
@@ -102,17 +102,15 @@ class ContentVersioningService(BaseModel):
 
         # Query the content versioning service
         try:
-            response = self.service.request(                                                        # type: ignore
+            response = self.service.request(  # type: ignore
                 method=method,
                 path_segment="configs/conf-feature_flags/general",
                 body=body,
-                app="SA-ContentVersioning"
+                app="SA-ContentVersioning",
             )
         except HTTPError as e:
             # Raise on any HTTP errors
-            raise HTTPError(
-                f"Error querying content versioning service: {e}"
-            ) from e
+            raise HTTPError(f"Error querying content versioning service: {e}") from e
 
         return response
 
@@ -132,7 +130,7 @@ class ContentVersioningService(BaseModel):
             raise KeyError(
                 f"Cannot retrieve versioning status, 'body' was not found in JSON response: {response}"
             )
-        body: Any = response["body"]                                                             # type: ignore
+        body: Any = response["body"]  # type: ignore
         if not isinstance(body, ResponseReader):
             raise ValueError(
                 "Cannot retrieve versioning status, value at 'body' in JSON response had an unexpected"
@@ -167,15 +165,14 @@ class ContentVersioningService(BaseModel):
         """
         # Post to the SA-ContentVersioning service to set versioning status
         self._query_content_versioning_service(
-            method="POST",
-            body={
-                "versioning_activated": True
-            }
+            method="POST", body={"versioning_activated": True}
         )
 
         # Confirm versioning has been enabled
         if not self.is_versioning_activated:
-            raise Exception("Something went wrong, content versioning is still disabled.")
+            raise Exception(
+                "Something went wrong, content versioning is still disabled."
+            )
 
         self.logger.info(
             f"[{self.infrastructure.instance_name}] Versioning service successfully activated"
@@ -195,7 +192,7 @@ class ContentVersioningService(BaseModel):
             "detection_id",
             "version",
             "action.correlationsearch.label",
-            "sourcetype"
+            "sourcetype",
         ]
 
     @property
@@ -207,17 +204,17 @@ class ContentVersioningService(BaseModel):
         :rtype: bool
         """
         # Get the data input entity
-        cms_parser = self.service.input("data/inputs/cms_parser/main")                              # type: ignore
+        cms_parser = self.service.input("data/inputs/cms_parser/main")  # type: ignore
 
         # Convert the 'disabled' field to an int, then a bool, and then invert to be 'enabled'
-        return not bool(int(cms_parser.content["disabled"]))                                        # type: ignore
+        return not bool(int(cms_parser.content["disabled"]))  # type: ignore
 
     def force_cms_parser(self) -> None:
         """
         Force the cms_parser to being it's run being disabling and re-enabling it.
         """
         # Get the data input entity
-        cms_parser = self.service.input("data/inputs/cms_parser/main")                              # type: ignore
+        cms_parser = self.service.input("data/inputs/cms_parser/main")  # type: ignore
 
         # Disable and re-enable
         cms_parser.disable()
@@ -302,12 +299,14 @@ class ContentVersioningService(BaseModel):
         # Construct the query looking for CMS events matching the content app name
         query = (
             f"search index=cms_main sourcetype=stash_common_detection_model "
-            f"app_name=\"{self.global_config.app.appid}\" | fields {', '.join(self.cms_fields)}"
+            f'app_name="{self.global_config.app.appid}" | fields {", ".join(self.cms_fields)}'
         )
-        self.logger.debug(f"[{self.infrastructure.instance_name}] Query on cms_main: {query}")
+        self.logger.debug(
+            f"[{self.infrastructure.instance_name}] Query on cms_main: {query}"
+        )
 
         # Get the job as a blocking operation, set the cache, and return
-        self._cms_main_job = self.service.search(query, exec_mode="blocking")                       # type: ignore
+        self._cms_main_job = self.service.search(query, exec_mode="blocking")  # type: ignore
         return self._cms_main_job
 
     def get_num_cms_events(self, use_cache: bool = False) -> int:
@@ -367,12 +366,10 @@ class ContentVersioningService(BaseModel):
         # Iterate over the results until we've gone through them all
         while offset < result_count:
             iterator = ResultIterator(
-                response_reader=job.results(                                                        # type: ignore
-                    output_mode="json",
-                    count=count,
-                    offset=offset
+                response_reader=job.results(  # type: ignore
+                    output_mode="json", count=count, offset=offset
                 ),
-                error_filters=[sub_second_order_pattern]
+                error_filters=[sub_second_order_pattern],
             )
 
             # Iterate over the currently fetched results
@@ -388,7 +385,11 @@ class ContentVersioningService(BaseModel):
                     f"[{self.infrastructure.instance_name}] {offset}: Matching cms_main entry "
                     f"'{cms_entry_name}' against detections"
                 )
-                ptrn = re.compile(r"^" + self.global_config.app.label + r" - (?P<stripped_cms_entry_name>.+) - Rule$")
+                ptrn = re.compile(
+                    r"^"
+                    + self.global_config.app.label
+                    + r" - (?P<stripped_cms_entry_name>.+) - Rule$"
+                )
                 match = ptrn.match(cms_event["action.correlationsearch.label"])
 
                 # Report any errors extracting the detection name from the longer rule name
@@ -429,8 +430,7 @@ class ContentVersioningService(BaseModel):
 
                         # Validate other fields of the cms_event against the detection
                         exception = self.validate_detection_against_cms_event(
-                            cms_event,
-                            remaining_detections[detection_name]
+                            cms_event, remaining_detections[detection_name]
                         )
 
                         # Save the exception if validation failed
@@ -439,7 +439,9 @@ class ContentVersioningService(BaseModel):
 
                         # Delete the matched detection and move it to the matched list
                         result_matches_detection = True
-                        matched_detections[detection_name] = remaining_detections[detection_name]
+                        matched_detections[detection_name] = remaining_detections[
+                            detection_name
+                        ]
                         del remaining_detections[detection_name]
                         break
 
@@ -458,9 +460,9 @@ class ContentVersioningService(BaseModel):
             # Generate exceptions for the unmatched detections
             for detection_name in remaining_detections:
                 msg = (
-                        f"[{self.infrastructure.instance_name}] [{detection_name}]: Detection not "
-                        "found in cms_main; there may be an issue with savedsearches.conf"
-                    )
+                    f"[{self.infrastructure.instance_name}] [{detection_name}]: Detection not "
+                    "found in cms_main; there may be an issue with savedsearches.conf"
+                )
                 self.logger.error(msg)
                 exceptions.append(Exception(msg))
 
@@ -468,7 +470,7 @@ class ContentVersioningService(BaseModel):
         if len(exceptions) > 0:
             raise ExceptionGroup(
                 "1 or more issues validating our detections against the cms_main index",
-                exceptions
+                exceptions,
             )
 
         # Else, we've matched/validated all detections against cms_main
@@ -478,9 +480,7 @@ class ContentVersioningService(BaseModel):
         )
 
     def validate_detection_against_cms_event(
-            self,
-            cms_event: dict[str, Any],
-            detection: Detection
+        self, cms_event: dict[str, Any], detection: Detection
     ) -> Exception | None:
         """
         Given an event from the cms_main index and the matched detection, compare fields and look
@@ -497,7 +497,9 @@ class ContentVersioningService(BaseModel):
         # TODO (PEX-509): validate additional fields between the cms_event and the detection
 
         cms_uuid = uuid.UUID(cms_event["detection_id"])
-        rule_name_from_detection = f"{self.global_config.app.label} - {detection.name} - Rule"
+        rule_name_from_detection = (
+            f"{self.global_config.app.label} - {detection.name} - Rule"
+        )
 
         # Compare the UUIDs
         if cms_uuid != detection.id:

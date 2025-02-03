@@ -12,9 +12,20 @@ from urllib.parse import urlparse
 
 import semantic_version
 import tqdm
-from pydantic import (AnyUrl, BaseModel, ConfigDict, DirectoryPath, Field,
-                      FilePath, HttpUrl, PositiveInt, ValidationInfo,
-                      field_serializer, field_validator, model_validator)
+from pydantic import (
+    AnyUrl,
+    BaseModel,
+    ConfigDict,
+    DirectoryPath,
+    Field,
+    FilePath,
+    HttpUrl,
+    PositiveInt,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from contentctl.helper.splunk_app import SplunkApp
 from contentctl.helper.utils import Utils
@@ -408,8 +419,8 @@ class inspect(build):
         description=(
             "[NOTE: enrichments must be ENABLED for inspect to run. Please adjust your config "
             f"or CLI invocation appropriately] {validate.model_fields['enrichments'].description}"
-            )
-        )
+        ),
+    )
     previous_build: str | None = Field(
         default=None,
         description=(

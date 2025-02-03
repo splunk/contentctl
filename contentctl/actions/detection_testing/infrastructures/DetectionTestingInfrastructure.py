@@ -16,21 +16,30 @@ from typing import Callable, Optional, Union
 import requests  # type: ignore
 import splunklib.client as client  # type: ignore
 import tqdm  # type: ignore
-from pydantic import (BaseModel, ConfigDict, Field, PrivateAttr,
-                      computed_field, dataclasses)
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    computed_field,
+    dataclasses,
+)
 from semantic_version import Version
 from splunklib.binding import HTTPError  # type: ignore
 from splunklib.results import JSONResultsReader, Message  # type: ignore
 from urllib3 import disable_warnings
 
 from contentctl.actions.detection_testing.progress_bar import (
-    FinalTestingStates, TestingStates, TestReportingType, format_pbar_string)
+    FinalTestingStates,
+    TestingStates,
+    TestReportingType,
+    format_pbar_string,
+)
 from contentctl.helper.utils import Utils
 from contentctl.objects.base_test import BaseTest
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.config import All, Infrastructure, test_common
-from contentctl.objects.content_versioning_service import \
-    ContentVersioningService
+from contentctl.objects.content_versioning_service import ContentVersioningService
 from contentctl.objects.correlation_search import CorrelationSearch, PbarData
 from contentctl.objects.detection import Detection
 from contentctl.objects.enums import AnalyticsType, PostTestBehavior
@@ -140,7 +149,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         self.start_time = time.time()
 
         # Init the list of setup functions we always need
-        primary_setup_functions: list[tuple[Callable[[], None | client.Service], str]] = [
+        primary_setup_functions: list[
+            tuple[Callable[[], None | client.Service], str]
+        ] = [
             (self.start, "Starting"),
             (self.get_conn, "Waiting for App Installation"),
             (self.configure_conf_file_datamodels, "Configuring Datamodels"),
@@ -150,7 +161,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             (self.configure_imported_roles, "Configuring Roles"),
             (self.configure_delete_indexes, "Configuring Indexes"),
             (self.configure_hec, "Configuring HEC"),
-            (self.wait_for_ui_ready, "Finishing Primary Setup")
+            (self.wait_for_ui_ready, "Finishing Primary Setup"),
         ]
 
         # Execute and report on each setup function
@@ -173,7 +184,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         TestReportingType.SETUP,
                         self.get_name(),
                         "Beginning Content Versioning Validation...",
-                        set_pbar=False
+                        set_pbar=False,
                     )
                 )
                 for func, msg in self.content_versioning_service.setup_functions:
@@ -190,7 +201,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             msg = f"[{self.get_name()}]: {str(e)}"
             self.finish()
             if isinstance(e, ExceptionGroup):
-                raise ExceptionGroup(msg, e.exceptions) from e                                      # type: ignore
+                raise ExceptionGroup(msg, e.exceptions) from e  # type: ignore
             raise Exception(msg) from e
 
         self.pbar.write(
@@ -198,7 +209,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 TestReportingType.SETUP,
                 self.get_name(),
                 "Finished Setup!",
-                set_pbar=False
+                set_pbar=False,
             )
         )
 
@@ -220,7 +231,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             global_config=self.global_config,
             infrastructure=self.infrastructure,
             service=self.get_conn(),
-            detections=self.sync_obj.inputQueue
+            detections=self.sync_obj.inputQueue,
         )
 
     @property
@@ -251,7 +262,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         """
         if not self.es_installed:
             return None
-        return Version(self.get_conn().apps[ES_APP_NAME]["version"])                                # type: ignore
+        return Version(self.get_conn().apps[ES_APP_NAME]["version"])  # type: ignore
 
     @property
     def es_installed(self) -> bool:
@@ -400,7 +411,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         imported_roles: list[str] = ["user", "power", "can_delete"],
         enterprise_security_roles: list[str] = ["ess_admin", "ess_analyst", "ess_user"],
     ):
-
         # Set which roles should be configured. For Enterprise Security/Integration Testing,
         # we must add some extra foles.
         if self.global_config.enable_integration_testing:

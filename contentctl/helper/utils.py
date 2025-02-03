@@ -491,13 +491,10 @@ class Utils:
         ratio = numerator / denominator
         percent = ratio * 100
         return Utils.getFixedWidth(percent, decimal_places) + "%"
-    
+
     @staticmethod
     def get_logger(
-        name: str,
-        log_level: int,
-        log_path: str,
-        enable_logging: bool
+        name: str, log_level: int, log_path: str, enable_logging: bool
     ) -> logging.Logger:
         """
         Gets a logger instance for the given name; logger is configured if not already configured.
@@ -539,7 +536,9 @@ class Utils:
                 handler = logging.NullHandler()
 
             # Format our output
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s:%(name)s - %(message)s')
+            formatter = logging.Formatter(
+                "%(asctime)s - %(levelname)s:%(name)s - %(message)s"
+            )
             handler.setFormatter(formatter)
 
             # Set handler level and add to logger

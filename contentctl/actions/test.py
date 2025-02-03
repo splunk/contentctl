@@ -3,15 +3,21 @@ from dataclasses import dataclass
 from typing import List
 
 from contentctl.actions.detection_testing.DetectionTestingManager import (
-    DetectionTestingManager, DetectionTestingManagerInputDto)
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import \
-    DetectionTestingManagerOutputDto
-from contentctl.actions.detection_testing.views.DetectionTestingViewCLI import \
-    DetectionTestingViewCLI
-from contentctl.actions.detection_testing.views.DetectionTestingViewFile import \
-    DetectionTestingViewFile
-from contentctl.actions.detection_testing.views.DetectionTestingViewWeb import \
-    DetectionTestingViewWeb
+    DetectionTestingManager,
+    DetectionTestingManagerInputDto,
+)
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
+    DetectionTestingManagerOutputDto,
+)
+from contentctl.actions.detection_testing.views.DetectionTestingViewCLI import (
+    DetectionTestingViewCLI,
+)
+from contentctl.actions.detection_testing.views.DetectionTestingViewFile import (
+    DetectionTestingViewFile,
+)
+from contentctl.actions.detection_testing.views.DetectionTestingViewWeb import (
+    DetectionTestingViewWeb,
+)
 from contentctl.objects.config import Changes, Selected
 from contentctl.objects.config import test as test_
 from contentctl.objects.config import test_servers

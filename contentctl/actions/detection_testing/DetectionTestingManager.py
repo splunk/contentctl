@@ -9,15 +9,19 @@ import docker
 from pydantic import BaseModel
 
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
-    DetectionTestingInfrastructure, DetectionTestingManagerOutputDto)
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import \
-    DetectionTestingInfrastructureContainer
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import \
-    DetectionTestingInfrastructureServer
-from contentctl.actions.detection_testing.views.DetectionTestingView import \
-    DetectionTestingView
-from contentctl.objects.config import (Container, Infrastructure, test,
-                                       test_servers)
+    DetectionTestingInfrastructure,
+    DetectionTestingManagerOutputDto,
+)
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import (
+    DetectionTestingInfrastructureContainer,
+)
+from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import (
+    DetectionTestingInfrastructureServer,
+)
+from contentctl.actions.detection_testing.views.DetectionTestingView import (
+    DetectionTestingView,
+)
+from contentctl.objects.config import Container, Infrastructure, test, test_servers
 from contentctl.objects.detection import Detection
 from contentctl.objects.enums import PostTestBehavior
 
@@ -160,8 +164,8 @@ class DetectionTestingManager(BaseModel):
                     for error in errors[error_type]:
                         print(f"\t❌ {str(error)}")
                         if isinstance(error, ExceptionGroup):
-                            for suberror in error.exceptions:                                       # type: ignore
-                                print(f"\t\t❌ {str(suberror)}")                                    # type: ignore
+                            for suberror in error.exceptions:  # type: ignore
+                                print(f"\t\t❌ {str(suberror)}")  # type: ignore
                     print()
 
         return self.output_dto

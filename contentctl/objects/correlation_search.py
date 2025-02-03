@@ -12,15 +12,20 @@ from splunklib.binding import HTTPError, ResponseReader  # type: ignore
 from splunklib.results import JSONResultsReader, Message  # type: ignore
 from tqdm import tqdm  # type: ignore
 
-from contentctl.actions.detection_testing.progress_bar import \
-    format_pbar_string  # type: ignore
+from contentctl.actions.detection_testing.progress_bar import format_pbar_string  # type: ignore
 from contentctl.actions.detection_testing.progress_bar import (
-    TestingStates, TestReportingType)
+    TestingStates,
+    TestReportingType,
+)
 from contentctl.helper.utils import Utils
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.detection import Detection
-from contentctl.objects.errors import (ClientError, IntegrationTestingError,
-                                       ServerError, ValidationFailed)
+from contentctl.objects.errors import (
+    ClientError,
+    IntegrationTestingError,
+    ServerError,
+    ValidationFailed,
+)
 from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.objects.notable_action import NotableAction
 from contentctl.objects.notable_event import NotableEvent
@@ -97,10 +102,9 @@ class ResultIterator:
     :param error_filters: set of re Patterns used to filter out errors we're ok ignoring
     :type error_filters: list[:class:`re.Pattern[str]`]
     """
+
     def __init__(
-            self,
-            response_reader: ResponseReader,
-            error_filters: list[re.Pattern[str]] = []
+        self, response_reader: ResponseReader, error_filters: list[re.Pattern[str]] = []
     ) -> None:
         # init the results reader
         self.results_reader: JSONResultsReader = JSONResultsReader(response_reader)
@@ -110,10 +114,7 @@ class ResultIterator:
 
         # get logger
         self.logger: logging.Logger = Utils.get_logger(
-            __name__,
-            LOG_LEVEL,
-            LOG_PATH,
-            ENABLE_LOGGING
+            __name__, LOG_LEVEL, LOG_PATH, ENABLE_LOGGING
         )
 
     def __iter__(self) -> "ResultIterator":
@@ -125,7 +126,7 @@ class ResultIterator:
             # log messages, or raise if error
             if isinstance(result, Message):
                 # convert level string to level int
-                level_name: str = result.type.strip().upper()                                       # type: ignore
+                level_name: str = result.type.strip().upper()  # type: ignore
                 # TODO (PEX-510): this method is deprecated; replace with our own enum
                 level: int = logging.getLevelName(level_name)
 
@@ -138,7 +139,9 @@ class ResultIterator:
                     for filter in self.error_filters:
                         self.logger.debug(f"Filter: {filter}; message: {message}")
                         if filter.match(message) is not None:
-                            self.logger.debug(f"Error matched filter {filter}; continuing")
+                            self.logger.debug(
+                                f"Error matched filter {filter}; continuing"
+                            )
                             filtered = True
                             break
 
@@ -148,7 +151,7 @@ class ResultIterator:
 
             # if dict, just return
             elif isinstance(result, dict):
-                return result                                                                       # type: ignore
+                return result  # type: ignore
 
             # raise for any unexpected types
             else:
@@ -200,13 +203,11 @@ class CorrelationSearch(BaseModel):
 
     # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
     # to conflict w/ tqdm)
-    logger: logging.Logger = Field(default_factory=lambda: Utils.get_logger(
-            __name__,
-            LOG_LEVEL,
-            LOG_PATH,
-            ENABLE_LOGGING
+    logger: logging.Logger = Field(
+        default_factory=lambda: Utils.get_logger(
+            __name__, LOG_LEVEL, LOG_PATH, ENABLE_LOGGING
         ),
-        init=False
+        init=False,
     )
 
     # The set of indexes to clear on cleanup
@@ -400,7 +401,9 @@ class CorrelationSearch(BaseModel):
         )
 
         # grab notable details if present
-        self._notable_action = CorrelationSearch._get_notable_action(self.saved_search.content)     # type: ignore
+        self._notable_action = CorrelationSearch._get_notable_action(
+            self.saved_search.content
+        )  # type: ignore
 
     def refresh(self) -> None:
         """Refreshes the metadata in the SavedSearch entity, and re-parses the fields we care about

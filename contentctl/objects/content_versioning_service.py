@@ -22,9 +22,6 @@ ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "content_versioning_service.log"
 
-# TODO (cmcginley): would it be better for this to only run on one instance? Or to consolidate
-#   error reporting at least?
-
 
 class ContentVersioningService(BaseModel):
     """
@@ -355,7 +352,8 @@ class ContentVersioningService(BaseModel):
         count = 100
         offset = 0
         remaining_detections = {
-            x.get_action_dot_correlationsearch_dot_label(self.global_config.app): x for x in self.detections
+            x.get_action_dot_correlationsearch_dot_label(self.global_config.app): x
+            for x in self.detections
         }
         matched_detections: dict[str, Detection] = {}
 

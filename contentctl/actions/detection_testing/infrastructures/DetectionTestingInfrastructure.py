@@ -1572,7 +1572,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
     def status(self):
         pass
 
-    # TODO (cmcginley): the finish function doesn't actually stop execution
     def finish(self):
         self.pbar.bar_format = (
             f"Finished running tests on instance: [{self.get_name()}]"

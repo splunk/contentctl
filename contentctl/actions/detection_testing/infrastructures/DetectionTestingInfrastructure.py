@@ -1276,8 +1276,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     # on a field.  In this case, the field will appear but will not contain any values
                     current_empty_fields: set[str] = set()
 
-                    # TODO (cmcginley): @ljstella is this something we're keeping for testing as
-                    #   well?
                     for field in full_rba_field_set:
                         if result.get(field, "null") == "null":
                             if field in risk_object_fields_set:

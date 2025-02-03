@@ -1,30 +1,27 @@
-import os
 import sys
-from pathlib import Path
 from dataclasses import dataclass, field
-from pydantic import ValidationError
+from pathlib import Path
 from uuid import UUID
-from contentctl.input.yml_reader import YmlReader
 
-from contentctl.objects.detection import Detection
-from contentctl.objects.story import Story
+from pydantic import ValidationError
 
-from contentctl.objects.baseline import Baseline
-from contentctl.objects.investigation import Investigation
-from contentctl.objects.playbook import Playbook
-from contentctl.objects.deployment import Deployment
-from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import LookupAdapter, Lookup
-from contentctl.objects.atomic import AtomicEnrichment
-from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.data_source import DataSource
-from contentctl.objects.dashboard import Dashboard
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
-
-from contentctl.objects.config import validate
-from contentctl.objects.enums import SecurityContentType
 from contentctl.helper.utils import Utils
+from contentctl.input.yml_reader import YmlReader
+from contentctl.objects.atomic import AtomicEnrichment
+from contentctl.objects.baseline import Baseline
+from contentctl.objects.config import validate
+from contentctl.objects.dashboard import Dashboard
+from contentctl.objects.data_source import DataSource
+from contentctl.objects.deployment import Deployment
+from contentctl.objects.detection import Detection
+from contentctl.objects.investigation import Investigation
+from contentctl.objects.lookup import Lookup
+from contentctl.objects.macro import Macro
+from contentctl.objects.playbook import Playbook
+from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.story import Story
 
 
 @dataclass
@@ -102,16 +99,16 @@ class Director:
 
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
-        self.createSecurityContent(SecurityContentType.deployments)
-        self.createSecurityContent(SecurityContentType.lookups)
-        self.createSecurityContent(SecurityContentType.macros)
-        self.createSecurityContent(SecurityContentType.stories)
-        self.createSecurityContent(SecurityContentType.baselines)
-        self.createSecurityContent(SecurityContentType.investigations)
-        self.createSecurityContent(SecurityContentType.data_sources)
-        self.createSecurityContent(SecurityContentType.playbooks)
-        self.createSecurityContent(SecurityContentType.detections)
-        self.createSecurityContent(SecurityContentType.dashboards)
+        self.createSecurityContent(Deployment)
+        # self.createSecurityContent(LookupAdapter)
+        self.createSecurityContent(Macro)
+        self.createSecurityContent(Story)
+        self.createSecurityContent(Baseline)
+        self.createSecurityContent(Investigation)
+        self.createSecurityContent(DataSource)
+        self.createSecurityContent(Playbook)
+        self.createSecurityContent(Detection)
+        self.createSecurityContent(Dashboard)
 
         from contentctl.objects.abstract_security_content_objects.detection_abstract import (
             MISSING_SOURCES,
@@ -127,29 +124,14 @@ class Director:
         else:
             print("No missing data_sources!")
 
-    def createSecurityContent(self, contentType: SecurityContentType) -> None:
-        if contentType in [
-            SecurityContentType.deployments,
-            SecurityContentType.lookups,
-            SecurityContentType.macros,
-            SecurityContentType.stories,
-            SecurityContentType.baselines,
-            SecurityContentType.investigations,
-            SecurityContentType.playbooks,
-            SecurityContentType.detections,
-            SecurityContentType.data_sources,
-            SecurityContentType.dashboards,
-        ]:
-            files = Utils.get_all_yml_files_from_directory(
-                os.path.join(self.input_dto.path, str(contentType.name))
-            )
-            security_content_files = [f for f in files]
-        else:
-            raise (
-                Exception(
-                    f"Cannot createSecurityContent for unknown product {contentType}."
-                )
-            )
+    def createSecurityContent(self, contentType: type[SecurityContentObject]) -> None:
+        files = Utils.get_all_yml_files_from_directory(
+            self.input_dto.path / contentType.containing_folder()
+        )
+
+        # convert this generator to a list so that we can
+        # calculate progress as we iterate over the files
+        security_content_files = [f for f in files]
 
         validation_errors: list[tuple[Path, ValueError]] = []
 
@@ -159,10 +141,17 @@ class Director:
         for index, file in enumerate(security_content_files):
             progress_percent = ((index + 1) / len(security_content_files)) * 100
             try:
-                type_string = contentType.name.upper()
+                type_string = type(contentType).__name__.upper()
                 modelDict = YmlReader.load_file(file)
 
-                if contentType == SecurityContentType.lookups:
+                content = contentType.model_validate(
+                    modelDict, context={"output_dto": self.output_dto}
+                )
+                import code
+
+                code.interact(local=locals())
+                """
+                if contentType == SecurityContentType.lookup:
                     lookup = LookupAdapter.validate_python(
                         modelDict,
                         context={
@@ -173,43 +162,43 @@ class Director:
                     # lookup = Lookup.model_validate(modelDict, context={"output_dto":self.output_dto, "config":self.input_dto})
                     self.output_dto.addContentToDictMappings(lookup)
 
-                elif contentType == SecurityContentType.macros:
+                elif contentType == SecurityContentType.macro:
                     macro = Macro.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
                     self.output_dto.addContentToDictMappings(macro)
 
-                elif contentType == SecurityContentType.deployments:
+                elif contentType == SecurityContentType.deployment:
                     deployment = Deployment.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
                     self.output_dto.addContentToDictMappings(deployment)
 
-                elif contentType == SecurityContentType.playbooks:
+                elif contentType == SecurityContentType.playbook:
                     playbook = Playbook.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
                     self.output_dto.addContentToDictMappings(playbook)
 
-                elif contentType == SecurityContentType.baselines:
+                elif contentType == SecurityContentType.baseline:
                     baseline = Baseline.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
                     self.output_dto.addContentToDictMappings(baseline)
 
-                elif contentType == SecurityContentType.investigations:
+                elif contentType == SecurityContentType.investigation:
                     investigation = Investigation.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
                     self.output_dto.addContentToDictMappings(investigation)
 
-                elif contentType == SecurityContentType.stories:
+                elif contentType == SecurityContentType.story:
                     story = Story.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
                     self.output_dto.addContentToDictMappings(story)
 
-                elif contentType == SecurityContentType.detections:
+                elif contentType == SecurityContentType.detection:
                     detection = Detection.model_validate(
                         modelDict,
                         context={
@@ -219,13 +208,13 @@ class Director:
                     )
                     self.output_dto.addContentToDictMappings(detection)
 
-                elif contentType == SecurityContentType.dashboards:
+                elif contentType == SecurityContentType.dashboard:
                     dashboard = Dashboard.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
                     self.output_dto.addContentToDictMappings(dashboard)
 
-                elif contentType == SecurityContentType.data_sources:
+                elif contentType == SecurityContentType.data_source:
                     data_source = DataSource.model_validate(
                         modelDict, context={"output_dto": self.output_dto}
                     )
@@ -233,7 +222,7 @@ class Director:
 
                 else:
                     raise Exception(f"Unsupported type: [{contentType}]")
-
+                """
                 if (
                     sys.stdout.isatty() and sys.stdin.isatty() and sys.stderr.isatty()
                 ) or not already_ran:

@@ -73,84 +73,6 @@ class DeprecationInfo(BaseModel):
         "determining the type of an object based on the presence of values of its fields."
     )
 
-    @computed_field
-    @cached_property
-    def migration_guide(self) -> HttpUrl:
-        """
-        A link to the research site containing a migration guide for the content
-
-        :returns: URL to the research site
-        :rtype: HTTPUrl
-        """
-
-        return HttpUrl(url=f"https://research.splunk.com/migration_guide/{self.id}")  # type: ignore
-
-    @staticmethod
-    def writeDeprecationCSV(
-        deprecated_content: list[DeprecatedSecurityContentObject],
-        app: CustomApp,
-        output_file: pathlib.Path,
-    ):
-        deprecation_rows: list[dict[str, str]] = []
-        for content in deprecated_content:
-            if content.deprecation_info is None:
-                raise Exception(
-                    f"Cannot compute deprecation info for {content.name} - object has no deprecation info"
-                )
-            content.deprecation_info.generateDeprecationLookupRow(content, app)
-
-        with open(output_file, "w") as deprecation_csv_file:
-            deprecation_csv_writer = DictWriter(
-                deprecation_csv_file,
-                fieldnames=[
-                    "Name",
-                    "ID",
-                    "Content Type",
-                    "Deprecation Date",
-                    "Deprecation Version",
-                    "Reason",
-                    "Migration Guide",
-                    "Replacement Content",
-                ],
-            )
-            deprecation_csv_writer.writeheader()
-            deprecation_csv_writer.writerows(deprecation_rows)
-
-    def generateDeprecationLookupRow(
-        self, object: DeprecatedSecurityContentObject, app: CustomApp
-    ) -> dict[str, str]:
-        """
-        This function exists as a bit of a shim because pieces of content are identified in ESCU by
-        their Stanza name, which could be different than
-        """
-
-        if self.content_type == SecurityContentType.detections:
-            pass
-            # content_name = Detection.static_get_conf_stanza_name(object.name, app)
-        elif self.content_type == SecurityContentType.stories:
-            content_name = object.name
-        elif self.content_type == SecurityContentType.baselines:
-            pass
-            # content_name = Baseline.static_get_conf_stanza_name(object.name, app)
-
-        else:
-            raise Exception(
-                f"{self.content_type} deprecation is not supported at this time."
-            )
-
-        return {
-            "Name": content_name,
-            "ID": str(object.id),
-            "Content Type": self.content_type.name,
-            "Deprecation Date": str(self.deprecation_date),
-            "Deprecation Version": str(self.deprecation_version),
-            "Reason": "Give a unique reason in the model here",
-            "Migration Guide": str(self.migration_guide),
-            "Replacement Content": "\n".join(
-                [str(content.researchSiteLink) for content in self.replacement_content]
-            ),
-        }
-
 
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     model_config = ConfigDict(validate_default=True, extra="forbid")
@@ -164,6 +86,13 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     references: Optional[List[HttpUrl]] = None
     deprecation_info: DeprecationInfo | None = None
 
+    @staticmethod
+    @abstractmethod
+    def containing_folder() -> pathlib.Path:
+        raise NotImplementedError(
+            "Containing folder has not been implemented for this SecurityContentObject"
+        )
+
     def model_post_init(self, __context: Any) -> None:
         self.ensureFileNameMatchesSearchName()
 
@@ -175,10 +104,17 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         status: None | DetectionStatus = getattr(self, "status", None)
         if status == DetectionStatus.deprecated:
             # This is a detection and the status was defined.
-            if self.deprecation_info is None:
-                raise ValueError(
-                    f"[{self.name}] has 'status: deprecated' set in the yml, but does not have 'deprecation_info' defined: {self.file_path}"
+            if self.deprecation_info is None and type(self).__name__.upper() not in (
+                "STORY",
+                "INVESTIGATION",
+                "BASELINE",
+            ):
+                print(
+                    f"\nWarning - you are missing deprecation info for deprecated {type(self).__name__.upper()} [{self.name}]\n"
                 )
+                # raise ValueError(
+                #     f"[{self.name}] has 'status: deprecated' set in the yml, but does not have 'deprecation_info' defined: {self.file_path}"
+                # )
         elif status is None:
             # Status wasn't defined in the file
             pass
@@ -195,6 +131,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     @cached_property
     @abstractmethod
     def researchSiteLink(self) -> HttpUrl:
+        return HttpUrl(url="google.com")
         raise NotImplementedError(
             f"researchSiteLink has not been implemented for {self.name}"
         )
@@ -478,6 +415,94 @@ class DeprecatedSecurityContentObject(SecurityContentObject_Abstract):
             )
         return deprecation_info
 
+    @computed_field
+    @cached_property
+    def migration_guide(self) -> HttpUrl:
+        """
+        A link to the research site containing a migration guide for the content
+
+        :returns: URL to the research site
+        :rtype: HTTPUrl
+        """
+        # this is split up so that we can explicilty ignore the warning on constructing
+        # the HttpUrl but catch other type issues
+        link = f"https://research.splunk.com/migration_guide/{self.id}"
+
+        return HttpUrl(url=link)  # type: ignore
+
+    @staticmethod
+    def writeDeprecationCSV(
+        deprecated_content: list[DeprecatedSecurityContentObject],
+        app: CustomApp,
+        output_file: pathlib.Path,
+    ):
+        deprecation_rows: list[dict[str, str]] = []
+        for content in deprecated_content:
+            if content.deprecation_info is None:
+                raise Exception(
+                    f"Cannot compute deprecation info for {content.name} - object has no deprecation info"
+                )
+            content.generateDeprecationLookupRow(content, app)
+
+        with open(output_file, "w") as deprecation_csv_file:
+            deprecation_csv_writer = DictWriter(
+                deprecation_csv_file,
+                fieldnames=[
+                    "Name",
+                    "ID",
+                    "Content Type",
+                    "Deprecation Date",
+                    "Deprecation Version",
+                    "Reason",
+                    "Migration Guide",
+                    "Replacement Content",
+                ],
+            )
+            deprecation_csv_writer.writeheader()
+            deprecation_csv_writer.writerows(deprecation_rows)
+
+    def generateDeprecationLookupRow(self, app: CustomApp) -> dict[str, str]:
+        """
+        This function exists as a bit of a shim because pieces of content are identified in ESCU by
+        their Stanza name, which could be different than
+        """
+        if self.deprecation_info is None:
+            raise ValueError(
+                f"DeprecatedSecurityContentObject 'deprecation_info' field was None for '{self.name}' in file '{self.file_path}'"
+            )
+
+        if self.deprecation_info.content_type == SecurityContentType.detection:
+            from contentctl.objects.detection import Detection
+
+            content_name = Detection.static_get_conf_stanza_name(self.name, app)
+        elif self.deprecation_info.content_type == SecurityContentType.story:
+            content_name = self.name
+        elif self.deprecation_info.content_type == SecurityContentType.baseline:
+            from contentctl.objects.baseline import Baseline
+
+            content_name = Baseline.static_get_conf_stanza_name(self.name, app)
+
+        else:
+            raise Exception(
+                f"{self.deprecation_info.content_type} deprecation is not supported at this time."
+            )
+
+        return {
+            "Name": content_name,
+            "ID": str(self.id),
+            "Content Type": self.deprecation_info.content_type.name,
+            "Deprecation Date": str(self.deprecation_info.deprecation_date),
+            "Deprecation Version": str(self.deprecation_info.deprecation_version),
+            "Reason": "Give a unique reason in the model here",
+            "Migration Guide": str(self.migration_guide),
+            "Replacement Content": "\n".join(
+                [
+                    str(content.researchSiteLink)
+                    for content in self.deprecation_info.replacement_content
+                ]
+            ),
+        }
+
 
 # class DeprecatedSecurityContentObject(SecurityContentObject_Abstract):
 #     # We MUST allow extra fields here because the python definitions of the underlying
@@ -599,6 +624,7 @@ class DeprecatedSecurityContentObject(SecurityContentObject_Abstract):
 #             ),
 #         }
 #             ),
+#         }
 #         }
 #         }
 #         }

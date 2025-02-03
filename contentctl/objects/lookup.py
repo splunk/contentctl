@@ -351,6 +351,6 @@ class MlModel(FileBackedLookup):
         return pathlib.Path(f"{self.filename.stem}.{self.lookup_type}")
 
 
-LookupAdapter = TypeAdapter(
+LookupAdapter: TypeAdapter[CSVLookup | KVStoreLookup | MlModel] = TypeAdapter(
     Annotated[CSVLookup | KVStoreLookup | MlModel, Field(discriminator="lookup_type")]
 )

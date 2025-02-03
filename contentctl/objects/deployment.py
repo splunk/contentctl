@@ -1,19 +1,22 @@
 from __future__ import annotations
+
+import datetime
+import pathlib
+import uuid
+from typing import Any
+
 from pydantic import (
     Field,
-    computed_field,
-    ValidationInfo,
-    model_serializer,
     NonNegativeInt,
+    ValidationInfo,
+    computed_field,
+    model_serializer,
 )
-from typing import Any
-import uuid
-import datetime
-from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.deployment_scheduling import DeploymentScheduling
-from contentctl.objects.alert_action import AlertAction
 
+from contentctl.objects.alert_action import AlertAction
+from contentctl.objects.deployment_scheduling import DeploymentScheduling
 from contentctl.objects.enums import DeploymentType
+from contentctl.objects.security_content_object import SecurityContentObject
 
 
 class Deployment(SecurityContentObject):
@@ -29,6 +32,10 @@ class Deployment(SecurityContentObject):
     @property
     def tags(self) -> dict[str, DeploymentType]:
         return {"type": self.type}
+
+    @staticmethod
+    def containing_folder() -> pathlib.Path:
+        return pathlib.Path("deployments")
 
     @staticmethod
     def getDeployment(v: dict[str, Any], info: ValidationInfo) -> Deployment:
@@ -79,6 +86,9 @@ class Deployment(SecurityContentObject):
         model.update(alert_action_fields)
 
         del model["references"]
+
+        # return the model
+        return model
 
         # return the model
         return model

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from enum import Enum
-from typing import Annotated, Any, Set
+from typing import Annotated, Set
 
 from pydantic import BaseModel, Field, computed_field, model_serializer
 
@@ -45,7 +45,6 @@ class ThreatObjectType(str, Enum):
     TLS_HASH = "tls_hash"
     URL = "url"
 
-#[{"risk_object_field": "dest", "risk_object_type": "system", "risk_score": 64}, {"threat_object_field": "src_ip", "threat_object_type": "ip_address"}]
 
 class RiskObject(BaseModel):
     field: str
@@ -62,19 +61,19 @@ class RiskObject(BaseModel):
         ):
             return True
         return False
-    
+
     @model_serializer
     def serialize_risk_object(self) -> dict[str, str | int]:
-        '''
-        We define this explicitly for two reasons, even though the automatic 
-        serialization works correctly.  First we want to enforce a specific 
-        field order for reasons of readability. Second, some of the fields 
+        """
+        We define this explicitly for two reasons, even though the automatic
+        serialization works correctly.  First we want to enforce a specific
+        field order for reasons of readability. Second, some of the fields
         actually have different names than they do in the object.
-        '''
-        return{
+        """
+        return {
             "risk_object_field": self.field,
             "risk_object_type": self.type,
-            "risk_score": self.score
+            "risk_score": self.score,
         }
 
 
@@ -89,16 +88,16 @@ class ThreatObject(BaseModel):
         if f"{self.field}{self.type}" < f"{other.field}{other.type}":
             return True
         return False
-    
+
     @model_serializer
     def serialize_threat_object(self) -> dict[str, str]:
-        '''
-        We define this explicitly for two reasons, even though the automatic 
-        serialization works correctly.  First we want to enforce a specific 
-        field order for reasons of readability. Second, some of the fields 
+        """
+        We define this explicitly for two reasons, even though the automatic
+        serialization works correctly.  First we want to enforce a specific
+        field order for reasons of readability. Second, some of the fields
         actually have different names than they do in the object.
-        '''
-        return{
+        """
+        return {
             "threat_object_field": self.field,
             "threat_object_type": self.type,
         }

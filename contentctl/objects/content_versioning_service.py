@@ -478,8 +478,17 @@ class ContentVersioningService(BaseModel):
             self.global_config.app
         )
 
-        # Compare the UUIDs
-        if cms_uuid != detection.id:
+        # Compare the correlation search label
+        if cms_event["action.correlationsearch.label"] != rule_name_from_detection:
+            msg = (
+                f"[{self.infrastructure.instance_name}][{detection.name}]: Correlation search "
+                f"label in cms_event ('{cms_event['action.correlationsearch.label']}') does not "
+                "match detection name"
+            )
+            self.logger.error(msg)
+            return Exception(msg)
+        elif cms_uuid != detection.id:
+            # Compare the UUIDs
             msg = (
                 f"[{self.infrastructure.instance_name}] [{detection.name}]: UUID in cms_event "
                 f"('{cms_uuid}') does not match UUID in detection ('{detection.id}')"
@@ -493,15 +502,6 @@ class ContentVersioningService(BaseModel):
                 f"[{self.infrastructure.instance_name}] [{detection.name}]: Version in cms_event "
                 f"('{cms_event['version']}') does not match version in detection "
                 f"('{detection.version}.1')"
-            )
-            self.logger.error(msg)
-            return Exception(msg)
-        elif cms_event["action.correlationsearch.label"] != rule_name_from_detection:
-            # Compare the correlation search label
-            msg = (
-                f"[{self.infrastructure.instance_name}][{detection.name}]: Correlation search "
-                f"label in cms_event ('{cms_event['action.correlationsearch.label']}') does not "
-                "match detection name"
             )
             self.logger.error(msg)
             return Exception(msg)

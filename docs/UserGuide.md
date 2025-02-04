@@ -38,6 +38,9 @@ contentctl validate
 ```
 which will surface validation errors with your configurations. 
 
+## Risk Based Alerting
+There are more details around how to utilize Risk Based Alerting in `contentctl` present in both the [v5 migration guide](contentctl_v5_migration_guide.md) and the [RBA Types](RBA_Types.md) documents.
+
 ## Shell tab-complete
 
 Leveraging the tab completion featureset of the CLI library we're using, you can generate tab completions for `contentctl` automatically, for zsh, bash, and tcsh. For additional details, you can view the docs for the library [here.](https://brentyi.github.io/tyro/tab_completion/) 

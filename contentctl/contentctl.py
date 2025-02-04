@@ -143,20 +143,14 @@ def test_common_func(config: test_common):
 
 CONTENTCTL_5_WARNING = """
 *****************************************************************************
-WARNING - THIS IS AN ALPHA BUILD OF CONTENTCTL 5.
+WARNING - THIS IS A BUILD OF CONTENTCTL 5.
 THERE HAVE BEEN NUMEROUS CHANGES IN CONTENTCTL (ESPECIALLY TO YML FORMATS). 
-YOU ALMOST CERTAINLY DO NOT WANT TO USE THIS BUILD.
-IF YOU ENCOUNTER ERRORS, PLEASE USE THE LATEST CURRENTYLY SUPPORTED RELEASE: 
-
-CONTENTCTL==4.4.7 
-
-YOU HAVE BEEN WARNED!
+IF YOU ENCOUNTER LARGE QUANTITIES OF ERRORS, YOU MAY HAVE UPDATED TO THIS RELEASE BY MISTAKE.
 *****************************************************************************
 """
 
 
 def main():
-    print(CONTENTCTL_5_WARNING)
     try:
         configFile = pathlib.Path("contentctl.yml")
 

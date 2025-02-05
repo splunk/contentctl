@@ -135,6 +135,12 @@ class DetectionTags(BaseModel):
         if len(missing_tactics) > 0:
             raise ValueError(f"Missing Mitre Attack IDs. {missing_tactics} not found.")
         else:
+            try:
+                MitreAttackEnrichment.checkParentTypeNotDefinedWhenSubtypeDefined(
+                    mitre_enrichments
+                )
+            except Exception as e:
+                raise ValueError(e)
             self.mitre_attack_enrichments = mitre_enrichments
 
         return self

@@ -1,23 +1,45 @@
-import sys
-from dataclasses import dataclass
-import pathlib
-import json
 import datetime
-import timeit
+import json
+import pathlib
+import sys
 import time
+import timeit
+from dataclasses import dataclass
+from io import BufferedReader
 
-from requests import Session, post, get
+from requests import Session, get, post
 from requests.auth import HTTPBasicAuth
 
 from contentctl.objects.config import inspect
-from contentctl.objects.savedsearches_conf import SavedsearchesConf
 from contentctl.objects.errors import (
-    MetadataValidationError,
     DetectionIDError,
     DetectionMissingError,
-    VersionDecrementedError,
+    MetadataValidationError,
     VersionBumpingError,
+    VersionDecrementedError,
 )
+from contentctl.objects.savedsearches_conf import SavedsearchesConf
+
+"""
+The following list includes all appinspect tags available from:
+https://dev.splunk.com/enterprise/reference/appinspect/appinspecttagreference/
+
+This allows contentctl to be as forward-leaning as possible in catching
+any potential issues on the widest variety of stacks.
+"""
+INCLUDED_TAGS_LIST = [
+    "aarch64_compatibility",
+    "ast",
+    "cloud",
+    "future",
+    "manual",
+    "packaging_standards",
+    "private_app",
+    "private_classic",
+    "private_victoria",
+    "splunk_appinspect",
+]
+INCLUDED_TAGS_STRING = ",".join(INCLUDED_TAGS_LIST)
 
 
 @dataclass(frozen=True)
@@ -28,7 +50,6 @@ class InspectInputDto:
 class Inspect:
     def execute(self, config: inspect) -> str:
         if config.build_app or config.build_api:
-            self.inspectAppCLI(config)
             appinspect_token = self.inspectAppAPI(config)
 
             if config.enable_metadata_validation:
@@ -49,10 +70,6 @@ class Inspect:
         session.auth = HTTPBasicAuth(
             config.splunk_api_username, config.splunk_api_password
         )
-        if config.stack_type not in ["victoria", "classic"]:
-            raise Exception(
-                f"stack_type MUST be either 'classic' or 'victoria', NOT '{config.stack_type}'"
-            )
 
         APPINSPECT_API_LOGIN = "https://api.splunk.com/2.0/rest/login/splunk"
 
@@ -64,10 +81,6 @@ class Inspect:
         APPINSPECT_API_VALIDATION_REQUEST = (
             "https://appinspect.splunk.com/v1/app/validate"
         )
-        headers = {
-            "Authorization": f"bearer {authorization_bearer}",
-            "Cache-Control": "no-cache",
-        }
 
         package_path = config.getPackageFilePath(include_version=False)
         if not package_path.is_file():
@@ -77,18 +90,43 @@ class Inspect:
                 "trying to 'contentctl deploy_acs' the package BEFORE running 'contentctl build'?"
             )
 
-        files = {
+        """
+        Some documentation on "files" argument for requests.post exists here:
+        https://docs.python-requests.org/en/latest/api/
+        The type (None, INCLUDED_TAGS_STRING) is intentional, and the None is important.
+        In curl syntax, the request we make below is equivalent to
+        curl -X POST \
+            -H "Authorization: bearer <TOKEN>" \
+            -H "Cache-Control: no-cache" \
+            -F "app_package=@<PATH/APP-PACKAGE>" \
+            -F "included_tags=cloud" \
+            --url "https://appinspect.splunk.com/v1/app/validate"
+        
+        This is confirmed by the great resource:
+        https://curlconverter.com/
+        """
+        data: dict[str, tuple[None, str] | BufferedReader] = {
             "app_package": open(package_path, "rb"),
-            "included_tags": (None, "cloud"),
+            "included_tags": (
+                None,
+                INCLUDED_TAGS_STRING,
+            ),  # tuple with None is intentional here
         }
 
-        res = post(APPINSPECT_API_VALIDATION_REQUEST, headers=headers, files=files)
+        headers = {
+            "Authorization": f"bearer {authorization_bearer}",
+            "Cache-Control": "no-cache",
+        }
+
+        res = post(APPINSPECT_API_VALIDATION_REQUEST, files=data, headers=headers)
 
         res.raise_for_status()
 
         request_id = res.json().get("request_id", None)
-        APPINSPECT_API_VALIDATION_STATUS = f"https://appinspect.splunk.com/v1/app/validate/status/{request_id}?included_tags=private_{config.stack_type}"
-        headers = headers = {"Authorization": f"bearer {authorization_bearer}"}
+        APPINSPECT_API_VALIDATION_STATUS = (
+            f"https://appinspect.splunk.com/v1/app/validate/status/{request_id}"
+        )
+
         startTime = timeit.default_timer()
         # the first time, wait for 40 seconds. subsequent times, wait for less.
         # this is because appinspect takes some time to return, so there is no sense
@@ -114,7 +152,9 @@ class Inspect:
                 raise Exception(f"Error - Unknown Appinspect API status '{status}'")
 
         # We have finished running appinspect, so get the report
-        APPINSPECT_API_REPORT = f"https://appinspect.splunk.com/v1/app/report/{request_id}?included_tags=private_{config.stack_type}"
+        APPINSPECT_API_REPORT = (
+            f"https://appinspect.splunk.com/v1/app/report/{request_id}"
+        )
         # Get human-readable HTML report
         headers = headers = {
             "Authorization": f"bearer {authorization_bearer}",
@@ -159,14 +199,14 @@ class Inspect:
                 "\t - https://dev.splunk.com/enterprise/docs/developapps/testvalidate/appinspect/useappinspectclitool/"
             )
             from splunk_appinspect.main import (
-                validate,
-                MODE_OPTION,
                 APP_PACKAGE_ARGUMENT,
-                OUTPUT_FILE_OPTION,
-                LOG_FILE_OPTION,
-                INCLUDED_TAGS_OPTION,
                 EXCLUDED_TAGS_OPTION,
+                INCLUDED_TAGS_OPTION,
+                LOG_FILE_OPTION,
+                MODE_OPTION,
+                OUTPUT_FILE_OPTION,
                 TEST_MODE,
+                validate,
             )
         except Exception as e:
             print(e)

@@ -241,7 +241,7 @@ def main():
             "test_servers": test_servers.model_construct(**t.__dict__),
             "release_notes": release_notes.model_construct(**config_obj),
             "deploy_acs": deploy_acs.model_construct(**t.__dict__),
-            "recognize": RecognizeCommand(),  # Use the dummy subcommand
+            "recognize": tyro.conf.subcommand(),
         }
     )
 
@@ -272,7 +272,7 @@ def main():
             deploy_acs_func(updated_config)
         elif type(config) is test or type(config) is test_servers:
             test_common_func(config)
-        elif isinstance(config, RecognizeCommand):
+        elif type(config) is tyro.conf.subcommand:
             recognize_func()
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")

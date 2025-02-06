@@ -233,7 +233,7 @@ def main():
             "test_servers": test_servers.model_construct(**t.__dict__),
             "release_notes": release_notes.model_construct(**config_obj),
             "deploy_acs": deploy_acs.model_construct(**t.__dict__),
-            "recognize": tyro.conf.Subcommand(),
+            "recognize": tyro.conf.subcommand(),  # type: ignore
         }
     )
 

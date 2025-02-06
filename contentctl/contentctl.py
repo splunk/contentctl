@@ -158,14 +158,18 @@ YOU HAVE BEEN WARNED!
 
 def get_random_compliment():
     compliments = [
-        "Your code is as elegant as a perfectly balanced binary tree! 🌳",
-        "You're the human equivalent of well-documented code! ⭐",
-        "Bug-free code? Must be your work! 🚀",
-        "You make debugging look like an art form! 🎨",
-        "Your commits are poetry in motion! 📝",
-        "You're the exception handler of excellence! 🛡️",
-        "Your code reviews are legendary! 👑",
-        "You're the MVP of the repository! 🏆",
+        "Your detection rules are like a zero-day shield! 🛡️",
+        "You catch threats like it's child's play! 🎯",
+        "Your correlation rules are pure genius! 🧠",
+        "Threat actors fear your detection engineering! ⚔️",
+        "You're the SOC's secret weapon! 🦾",
+        "Your false positive rate is impressively low! 📊",
+        "Malware trembles at your detection logic! 🦠",
+        "You're the threat hunter extraordinaire! 🔍",
+        "Your MITRE mappings are a work of art! 🎨",
+        "APTs have nightmares about your detections! 👻",
+        "Your content testing is bulletproof! 🎯",
+        "You're the detection engineering MVP! 🏆",
     ]
     return random.choice(compliments)
 

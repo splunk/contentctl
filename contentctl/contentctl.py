@@ -1,4 +1,5 @@
 import pathlib
+import random
 import sys
 import traceback
 import warnings
@@ -155,6 +156,24 @@ YOU HAVE BEEN WARNED!
 """
 
 
+def get_random_compliment():
+    compliments = [
+        "Your code is as elegant as a perfectly balanced binary tree! 🌳",
+        "You're the human equivalent of well-documented code! ⭐",
+        "Bug-free code? Must be your work! 🚀",
+        "You make debugging look like an art form! 🎨",
+        "Your commits are poetry in motion! 📝",
+        "You're the exception handler of excellence! 🛡️",
+        "Your code reviews are legendary! 👑",
+        "You're the MVP of the repository! 🏆",
+    ]
+    return random.choice(compliments)
+
+
+def recognize_func():
+    print(get_random_compliment())
+
+
 def main():
     print(CONTENTCTL_5_WARNING)
     try:
@@ -210,6 +229,7 @@ def main():
             "test_servers": test_servers.model_construct(**t.__dict__),
             "release_notes": release_notes.model_construct(**config_obj),
             "deploy_acs": deploy_acs.model_construct(**t.__dict__),
+            "recognize": tyro.conf.Subcommand(),
         }
     )
 
@@ -240,6 +260,8 @@ def main():
             deploy_acs_func(updated_config)
         elif type(config) is test or type(config) is test_servers:
             test_common_func(config)
+        elif type(config) is tyro.conf.Subcommand:
+            recognize_func()
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
     except FileNotFoundError as e:

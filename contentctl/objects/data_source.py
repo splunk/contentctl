@@ -17,7 +17,7 @@ class DataSource(SecurityContentObject):
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None
-    separator_value: Optional[str] = None
+    separator_value: None | str = None
     configuration: Optional[str] = None
     supported_TA: list[TA] = []
     fields: None | list = None

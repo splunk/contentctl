@@ -255,6 +255,23 @@ class Director:
             end="",
             flush=True,
         )
+        if contentType == SecurityContentType.data_sources:
+            # After resolving all data_sources, we need to complete mappings 
+            # that can ONLY be done after all data_sources have been parsed. 
+            # This is because datasources may reference each other 
+            # and we cannot resolve those references until all data sources have been parsed.
+            for ds in self.output_dto.data_sources:
+                try:
+                    ds.resolveDataSourceObject(self.output_dto)
+                except (ValidationError, ValueError) as e:
+                    if ds.file_path is None:
+                        validation_errors.append((relative_path, ValueError(f"File path for DataSource {ds.name} was None.")))
+                        validation_errors.append((Path("PATH_NOT_FOUND"), e))
+                    else:    
+                        relative_path = ds.file_path.absolute().relative_to(
+                            self.input_dto.path.absolute()
+                        )
+                        validation_errors.append((relative_path, e))
         print("Done!")
 
         if len(validation_errors) > 0:

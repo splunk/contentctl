@@ -79,46 +79,6 @@ SES_KILL_CHAIN_MAPPINGS = {
     "Actions on Objectives": 7,
 }
 
-# TODO (cmcginley): @ljstella should this be removed? also referenced in new_content.py
-SES_OBSERVABLE_ROLE_MAPPING = {
-    "Other": -1,
-    "Unknown": 0,
-    "Actor": 1,
-    "Target": 2,
-    "Attacker": 3,
-    "Victim": 4,
-    "Parent Process": 5,
-    "Child Process": 6,
-    "Known Bad": 7,
-    "Data Loss": 8,
-    "Observer": 9,
-}
-
-# TODO (cmcginley): @ljstella should this be removed? also referenced in new_content.py
-SES_OBSERVABLE_TYPE_MAPPING = {
-    "Unknown": 0,
-    "Hostname": 1,
-    "IP Address": 2,
-    "MAC Address": 3,
-    "User Name": 4,
-    "Email Address": 5,
-    "URL String": 6,
-    "File Name": 7,
-    "File Hash": 8,
-    "Process Name": 9,
-    "Resource UID": 10,
-    "Endpoint": 20,
-    "User": 21,
-    "Email": 22,
-    "Uniform Resource Locator": 23,
-    "File": 24,
-    "Process": 25,
-    "Geo Location": 26,
-    "Container": 27,
-    "Registry Key": 28,
-    "Registry Value": 29,
-    "Other": 99,
-}
 
 SES_ATTACK_TACTICS_ID_MAPPING = {
     "Reconnaissance": "TA0043",
@@ -137,8 +97,6 @@ SES_ATTACK_TACTICS_ID_MAPPING = {
     "Impact": "TA0040",
 }
 
-# TODO (cmcginley): is this just for the transition testing?
-RBA_OBSERVABLE_ROLE_MAPPING = {"Attacker": 0, "Victim": 1}
 
 # The relative path to the directory where any apps/packages will be downloaded
 DOWNLOADS_DIRECTORY = "downloads"
@@ -186,3 +144,6 @@ CONTENTCTL_MAX_SEARCH_NAME_LENGTH = CONTENTCTL_MAX_STANZA_LENGTH - len(
         app_label="ESCU", detection_name=""
     )
 )
+
+DEPRECATED_TEMPLATE = "**WARNING**, this {content_type} has been marked **DEPRECATED** by the Splunk Threat Research Team. This means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {description}"
+EXPERIMENTAL_TEMPLATE = "**WARNING**, this {content_type} is marked **EXPERIMENTAL** by the Splunk Threat Research Team. This means that the {content_type} has been manually tested but we do not have the associated attack data to perform automated testing or cannot share this attack dataset due to its sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {description}"

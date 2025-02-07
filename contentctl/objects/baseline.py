@@ -1,28 +1,28 @@
 from __future__ import annotations
-from typing import Annotated, List, Any, TYPE_CHECKING
+
+from typing import TYPE_CHECKING, Annotated, Any, List, Literal
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
 from pydantic import (
-    field_validator,
-    ValidationInfo,
     Field,
-    model_serializer,
+    ValidationInfo,
     computed_field,
+    field_validator,
+    model_serializer,
+)
+
+from contentctl.objects.baseline_tags import BaselineTags
+from contentctl.objects.config import CustomApp
+from contentctl.objects.constants import (
+    CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE,
+    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
 )
 from contentctl.objects.deployment import Deployment
-from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import DataModel
-from contentctl.objects.baseline_tags import BaselineTags
-
-from contentctl.objects.config import CustomApp
-
+from contentctl.objects.enums import DataModel, DetectionStatus
 from contentctl.objects.lookup import Lookup
-from contentctl.objects.constants import (
-    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
-    CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE,
-)
+from contentctl.objects.security_content_object import SecurityContentObject
 
 
 class Baseline(SecurityContentObject):
@@ -35,6 +35,7 @@ class Baseline(SecurityContentObject):
     lookups: list[Lookup] = Field([], validate_default=True)
     # enrichment
     deployment: Deployment = Field({})
+    status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
 
     @field_validator("lookups", mode="before")
     @classmethod

@@ -5,16 +5,10 @@
 [{{ detection.get_conf_stanza_name(app) }}]
 action.escu = 0
 action.escu.enabled = 1
-{% if detection.status == "deprecated" %}
-description = **WARNING**, this detection has been marked **DEPRECATED** by the Splunk Threat Research Team. This means that it will no longer be maintained or supported. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description | escapeNewlines() }} 
-{% elif detection.status == "experimental" %}
-description = **WARNING**, this detection is marked **EXPERIMENTAL** by the Splunk Threat Research Team. This means that the detection has been manually tested but we do not have the associated attack data to perform automated testing or cannot share this attack dataset due to its sensitive nature. If you have any questions feel free to email us at: research@splunk.com. {{ detection.description | escapeNewlines() }} 
-{% else %}
-description = {{ detection.description | escapeNewlines() }}
-{% endif %}
+description = {{ detection.status_aware_description | escapeNewlines() }} 
 action.escu.mappings = {{ detection.mappings | tojson }}
 action.escu.data_models = {{ detection.datamodel | tojson }}
-action.escu.eli5 = {{ detection.description | escapeNewlines() }}
+action.escu.eli5 = {{ detection.status_aware_description | escapeNewlines() }}
 {% if detection.how_to_implement %}
 action.escu.how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
 {% else %}

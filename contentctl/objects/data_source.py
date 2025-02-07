@@ -25,6 +25,7 @@ class DataSource(SecurityContentObject):
     mitre_components: list[str] = []
     convert_to_log_source: None | list = None
     example_log: None | str = None
+    output_fields: list[str] = []
 
     @model_serializer
     def serialize_model(self):

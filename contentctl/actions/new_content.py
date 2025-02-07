@@ -1,19 +1,17 @@
-import questionary
-from typing import Any
-from contentctl.input.new_content_questions import NewContentQuestions
-from contentctl.objects.config import new, NewContentType
+import pathlib
 import uuid
 from datetime import datetime
-import pathlib
+from typing import Any
+
+import questionary
+
+from contentctl.input.new_content_questions import NewContentQuestions
 from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
     SecurityContentObject_Abstract,
 )
-from contentctl.output.yml_writer import YmlWriter
+from contentctl.objects.config import NewContentType, new
 from contentctl.objects.enums import AssetType
-from contentctl.objects.constants import (
-    SES_OBSERVABLE_TYPE_MAPPING,
-    SES_OBSERVABLE_ROLE_MAPPING,
-)
+from contentctl.output.yml_writer import YmlWriter
 
 
 class NewContent:
@@ -34,6 +32,14 @@ class NewContent:
         },
     ]
 
+    DEFAULT_RBA = {
+        "message": "Risk Message goes here",
+        "risk_objects": [{"field": "dest", "type": "system", "score": 10}],
+        "threat_objects": [
+            {"field": "parent_process_name", "type": "parent_process_name"}
+        ],
+    }
+
     def buildDetection(self) -> tuple[dict[str, Any], str]:
         questions = NewContentQuestions.get_questions_detection()
         answers: dict[str, str] = questionary.prompt(
@@ -44,8 +50,8 @@ class NewContent:
             raise ValueError("User didn't answer one or more questions!")
 
         data_source_field = (
-            answers["data_source"]
-            if len(answers["data_source"]) > 0
+            answers["data_sources"]
+            if len(answers["data_sources"]) > 0
             else [f"{NewContent.UPDATE_PREFIX} zero or more data_sources"]
         )
         file_name = (
@@ -85,24 +91,13 @@ class NewContent:
                 f"{NewContent.UPDATE_PREFIX} zero or more http references to provide more information about your search"
             ],
             "drilldown_searches": NewContent.DEFAULT_DRILLDOWN_DEF,
+            "rba": NewContent.DEFAULT_RBA,
             "tags": {
                 "analytic_story": [
                     f"{NewContent.UPDATE_PREFIX} by providing zero or more analytic stories"
                 ],
                 "asset_type": f"{NewContent.UPDATE_PREFIX} by providing and asset type from {list(AssetType._value2member_map_)}",
-                "confidence": f"{NewContent.UPDATE_PREFIX} by providing a value between 1-100",
-                "impact": f"{NewContent.UPDATE_PREFIX} by providing a value between 1-100",
-                "message": f"{NewContent.UPDATE_PREFIX} by providing a risk message. Fields in your search results can be referenced using $fieldName$",
                 "mitre_attack_id": mitre_attack_ids,
-                "observable": [
-                    {
-                        "name": f"{NewContent.UPDATE_PREFIX} the field name of the observable. This is a field that exists in your search results.",
-                        "type": f"{NewContent.UPDATE_PREFIX} the type of your observable from the list {list(SES_OBSERVABLE_TYPE_MAPPING.keys())}.",
-                        "role": [
-                            f"{NewContent.UPDATE_PREFIX} the role from the list {list(SES_OBSERVABLE_ROLE_MAPPING.keys())}"
-                        ],
-                    }
-                ],
                 "product": [
                     "Splunk Enterprise",
                     "Splunk Enterprise Security",
@@ -128,6 +123,9 @@ class NewContent:
         if answers["detection_type"] not in ["TTP", "Anomaly", "Correlation"]:
             del output_file_answers["drilldown_searches"]
 
+        if answers["detection_type"] not in ["TTP", "Anomaly"]:
+            del output_file_answers["rba"]
+
         return output_file_answers, answers["detection_kind"]
 
     def buildStory(self) -> dict[str, Any]:
@@ -142,6 +140,7 @@ class NewContent:
         del answers["story_name"]
         answers["id"] = str(uuid.uuid4())
         answers["version"] = 1
+        answers["status"] = "production"
         answers["date"] = datetime.today().strftime("%Y-%m-%d")
         answers["author"] = answers["story_author"]
         del answers["story_author"]

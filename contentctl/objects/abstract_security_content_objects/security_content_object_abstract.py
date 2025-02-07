@@ -1,31 +1,39 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Self, Any
+
+from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.deployment import Deployment
     from contentctl.objects.security_content_object import SecurityContentObject
-    from contentctl.input.director import DirectorOutputDto
 
-from contentctl.objects.enums import AnalyticsType
-from contentctl.objects.constants import CONTENTCTL_MAX_STANZA_LENGTH
 import abc
-import uuid
 import datetime
+import pathlib
 import pprint
+import uuid
+from functools import cached_property
+from typing import List, Optional, Tuple, Union
+
 from pydantic import (
     BaseModel,
-    field_validator,
+    ConfigDict,
     Field,
-    ValidationInfo,
     FilePath,
     HttpUrl,
     NonNegativeInt,
-    ConfigDict,
+    ValidationInfo,
+    computed_field,
+    field_validator,
     model_serializer,
 )
-from typing import Tuple, Optional, List, Union
-import pathlib
 
+from contentctl.objects.constants import (
+    CONTENTCTL_MAX_STANZA_LENGTH,
+    DEPRECATED_TEMPLATE,
+    EXPERIMENTAL_TEMPLATE,
+)
+from contentctl.objects.enums import AnalyticsType, DetectionStatus
 
 NO_FILE_NAME = "NO_FILE_NAME"
 
@@ -43,6 +51,41 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
     def model_post_init(self, __context: Any) -> None:
         self.ensureFileNameMatchesSearchName()
+
+    @computed_field
+    @cached_property
+    def status_aware_description(self) -> str:
+        """We need to be able to write out a description that includes information
+        about whether or not a detection has been deprecated or not. This is important
+        for providing information to the user as well as powering the deprecation
+        assistant dashboad(s). Make sure this information is output correctly, if
+        appropriate.
+        Otherwise, if a detection is not deprecated or experimental, just return th
+        unmodified description.
+
+        Raises:
+            NotImplementedError: This content type does not support status_aware_description.
+            This is because the object does not define a status field
+
+        Returns:
+            str: description, which may or may not be prefixed with the deprecation/experimental message
+        """
+        status = getattr(self, "status", None)
+
+        if not isinstance(status, DetectionStatus):
+            raise NotImplementedError(
+                f"Detection status is not implemented for [{self.name}] of type '{type(self).__name__}'"
+            )
+        if status == DetectionStatus.experimental:
+            return EXPERIMENTAL_TEMPLATE.format(
+                content_type=type(self).__name__, description=self.description
+            )
+        elif status == DetectionStatus.deprecated:
+            return DEPRECATED_TEMPLATE.format(
+                content_type=type(self).__name__, description=self.description
+            )
+        else:
+            return self.description
 
     @model_serializer
     def serialize_model(self):

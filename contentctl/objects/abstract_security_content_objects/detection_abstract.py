@@ -1,54 +1,55 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Union, Optional, List, Any, Annotated
-import re
+
 import pathlib
+import re
 from enum import StrEnum
+from typing import TYPE_CHECKING, Annotated, Any, List, Optional, Union
 
 from pydantic import (
-    field_validator,
-    model_validator,
-    ValidationInfo,
     Field,
-    computed_field,
-    model_serializer,
     FilePath,
+    ValidationInfo,
+    computed_field,
+    field_validator,
+    model_serializer,
+    model_validator,
 )
 
+from contentctl.objects.lookup import FileBackedLookup, KVStoreLookup, Lookup
 from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import Lookup, FileBackedLookup, KVStoreLookup
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.baseline import Baseline
     from contentctl.objects.config import CustomApp
 
-from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import AnalyticsType
-from contentctl.objects.enums import DataModel
-from contentctl.objects.enums import DetectionStatus
-from contentctl.objects.enums import NistCategory
-
-from contentctl.objects.detection_tags import DetectionTags
-from contentctl.objects.deployment import Deployment
-from contentctl.objects.unit_test import UnitTest
-from contentctl.objects.manual_test import ManualTest
-from contentctl.objects.test_group import TestGroup
-from contentctl.objects.integration_test import IntegrationTest
-from contentctl.objects.data_source import DataSource
-
-from contentctl.objects.rba import RBAObject
-
-from contentctl.objects.base_test_result import TestResultStatus
-from contentctl.objects.drilldown import Drilldown, DRILLDOWN_SEARCH_PLACEHOLDER
-from contentctl.objects.enums import ProvidingTechnology
-from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 import datetime
+
+from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
+from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.constants import (
+    CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE,
+    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
     ES_MAX_STANZA_LENGTH,
     ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE,
-    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
-    CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE,
 )
+from contentctl.objects.data_source import DataSource
+from contentctl.objects.deployment import Deployment
+from contentctl.objects.detection_tags import DetectionTags
+from contentctl.objects.drilldown import DRILLDOWN_SEARCH_PLACEHOLDER, Drilldown
+from contentctl.objects.enums import (
+    AnalyticsType,
+    DataModel,
+    DetectionStatus,
+    NistCategory,
+    ProvidingTechnology,
+)
+from contentctl.objects.integration_test import IntegrationTest
+from contentctl.objects.manual_test import ManualTest
+from contentctl.objects.rba import RBAObject
+from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.test_group import TestGroup
+from contentctl.objects.unit_test import UnitTest
 
 MISSING_SOURCES: set[str] = set()
 
@@ -382,82 +383,17 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
-        risk_objects: list[dict[str, str | int]] = []
-
-        for entity in self.rba.risk_objects:
-            risk_object: dict[str, str | int] = dict()
-            risk_object["risk_object_type"] = entity.type
-            risk_object["risk_object_field"] = entity.field
-            risk_object["risk_score"] = entity.score
-            risk_objects.append(risk_object)
-
-        for entity in self.rba.threat_objects:
-            threat_object: dict[str, str] = dict()
-            threat_object["threat_object_field"] = entity.field
-            threat_object["threat_object_type"] = entity.type
-            risk_objects.append(threat_object)
-        return risk_objects
-
-    # TODO Remove observable code
-    # @computed_field
-    # @property
-    # def risk(self) -> list[dict[str, Any]]:
-    #     risk_objects: list[dict[str, str | int]] = []
-    #     # TODO (#246): "User Name" type should map to a "user" risk object and not "other"
-    #     risk_object_user_types = {'user', 'username', 'email address'}
-    #     risk_object_system_types = {'device', 'endpoint', 'hostname', 'ip address'}
-    #     process_threat_object_types = {'process name', 'process'}
-    #     file_threat_object_types = {'file name', 'file', 'file hash'}
-    #     url_threat_object_types = {'url string', 'url'}
-    #     ip_threat_object_types = {'ip address'}
-
-    #     for entity in self.tags.observable:
-    #         risk_object: dict[str, str | int] = dict()
-    #         if 'Victim' in entity.role and entity.type.lower() in risk_object_user_types:
-    #             risk_object['risk_object_type'] = 'user'
-    #             risk_object['risk_object_field'] = entity.name
-    #             risk_object['risk_score'] = self.tags.risk_score
-    #             risk_objects.append(risk_object)
-
-    #         elif 'Victim' in entity.role and entity.type.lower() in risk_object_system_types:
-    #             risk_object['risk_object_type'] = 'system'
-    #             risk_object['risk_object_field'] = entity.name
-    #             risk_object['risk_score'] = self.tags.risk_score
-    #             risk_objects.append(risk_object)
-
-    #         elif 'Attacker' in entity.role and entity.type.lower() in process_threat_object_types:
-    #             risk_object['threat_object_field'] = entity.name
-    #             risk_object['threat_object_type'] = "process"
-    #             risk_objects.append(risk_object)
-
-    #         elif 'Attacker' in entity.role and entity.type.lower() in file_threat_object_types:
-    #             risk_object['threat_object_field'] = entity.name
-    #             risk_object['threat_object_type'] = "file_name"
-    #             risk_objects.append(risk_object)
-
-    #         elif 'Attacker' in entity.role and entity.type.lower() in ip_threat_object_types:
-    #             risk_object['threat_object_field'] = entity.name
-    #             risk_object['threat_object_type'] = "ip_address"
-    #             risk_objects.append(risk_object)
-
-    #         elif 'Attacker' in entity.role and entity.type.lower() in url_threat_object_types:
-    #             risk_object['threat_object_field'] = entity.name
-    #             risk_object['threat_object_type'] = "url"
-    #             risk_objects.append(risk_object)
-
-    #         elif 'Attacker' in entity.role:
-    #             risk_object['threat_object_field'] = entity.name
-    #             risk_object['threat_object_type'] = entity.type.lower()
-    #             risk_objects.append(risk_object)
-
-    #         else:
-    #             risk_object['risk_object_type'] = 'other'
-    #             risk_object['risk_object_field'] = entity.name
-    #             risk_object['risk_score'] = self.tags.risk_score
-    #             risk_objects.append(risk_object)
-    #             continue
-
-    #     return risk_objects
+        if self.rba is None:
+            raise Exception(
+                f"Attempting to serialize rba section of [{self.name}], however RBA section is None"
+            )
+        """
+        action.risk.param._risk
+        of the conf file only contains a list of dicts. We do not eant to 
+        include the message here, so we do not return it.
+        """
+        rba_dict = self.rba.model_dump()
+        return rba_dict["risk_objects"] + rba_dict["threat_objects"]
 
     @computed_field
     @property
@@ -868,40 +804,6 @@ class Detection_Abstract(SecurityContentObject):
                         "Detection expects an RBA config with at least one risk object."
                     )
 
-    # TODO - Remove old observable code
-    # @model_validator(mode="after")
-    # def ensureProperObservablesExist(self):
-    #     """
-    #     If a detections is PRODUCTION and either TTP or ANOMALY, then it MUST have an Observable with the VICTIM role.
-
-    #     Returns:
-    #         self: Returns itself if the valdiation passes
-    #     """
-    #     # NOTE: we ignore the type error around self.status because we are using Pydantic's
-    #     # use_enum_values configuration
-    #     # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-    #     if self.status not in [DetectionStatus.production.value]:                                   # type: ignore
-    #         # Only perform this validation on production detections
-    #         return self
-
-    #     if self.type not in [AnalyticsType.TTP.value, AnalyticsType.Anomaly.value]:
-    #         # Only perform this validation on TTP and Anomaly detections
-    #         return self
-
-    #     # Detection is required to have a victim
-    #     roles: list[str] = []
-    #     for observable in self.tags.observable:
-    #         roles.extend(observable.role)
-
-    #     if roles.count("Victim") == 0:
-    #         raise ValueError(
-    #             "Error, there must be AT LEAST 1 Observable with the role 'Victim' declared in "
-    #             "Detection.tags.observables. However, none were found."
-    #         )
-
-    #     # Exactly one victim was found
-    #     return self
-
     @model_validator(mode="after")
     def search_rba_fields_exist_validate(self):
         # Return immediately if RBA isn't required
@@ -955,50 +857,6 @@ class Detection_Abstract(SecurityContentObject):
             )
             raise ValueError(msg)
         return self
-
-    # TODO: Remove old observable code
-    # @model_validator(mode="after")
-    # def search_observables_exist_validate(self):
-    #     observable_fields = [ob.name.lower() for ob in self.tags.observable]
-
-    #     # All $field$ fields from the message must appear in the search
-    #     field_match_regex = r"\$([^\s.]*)\$"
-
-    #     missing_fields: set[str]
-    #     if self.tags.message:
-    #         matches = re.findall(field_match_regex, self.tags.message.lower())
-    #         message_fields = [match.replace("$", "").lower() for match in matches]
-    #         missing_fields = set([field for field in observable_fields if field not in self.search.lower()])
-    #     else:
-    #         message_fields = []
-    #         missing_fields = set()
-
-    #     error_messages: list[str] = []
-    #     if len(missing_fields) > 0:
-    #         error_messages.append(
-    #             "The following fields are declared as observables, but do not exist in the "
-    #             f"search: {missing_fields}"
-    #         )
-
-    #     missing_fields = set([field for field in message_fields if field not in self.search.lower()])
-    #     if len(missing_fields) > 0:
-    #         error_messages.append(
-    #             "The following fields are used as fields in the message, but do not exist in "
-    #             f"the search: {missing_fields}"
-    #         )
-
-    #     # NOTE: we ignore the type error around self.status because we are using Pydantic's
-    #     # use_enum_values configuration
-    #     # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
-    #     if len(error_messages) > 0 and self.status == DetectionStatus.production.value:         # type: ignore
-    #         msg = (
-    #             "Use of fields in observables/messages that do not appear in search:\n\t- "
-    #             "\n\t- ".join(error_messages)
-    #         )
-    #         raise ValueError(msg)
-
-    #     # Found everything
-    #     return self
 
     @field_validator("tests", mode="before")
     def ensure_yml_test_is_unittest(cls, v: list[dict]):

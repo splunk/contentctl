@@ -1,16 +1,19 @@
 from __future__ import annotations
+
 import re
-from typing import List, Any
-from pydantic import computed_field, Field, ConfigDict, model_serializer
-from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import DataModel
-from contentctl.objects.investigation_tags import InvestigationTags
+from typing import Any, List, Literal
+
+from pydantic import ConfigDict, Field, computed_field, model_serializer
+
+from contentctl.objects.config import CustomApp
 from contentctl.objects.constants import (
     CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
-    CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE,
     CONTENTCTL_MAX_STANZA_LENGTH,
+    CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE,
 )
-from contentctl.objects.config import CustomApp
+from contentctl.objects.enums import DataModel, DetectionStatus
+from contentctl.objects.investigation_tags import InvestigationTags
+from contentctl.objects.security_content_object import SecurityContentObject
 
 
 class Investigation(SecurityContentObject):
@@ -21,6 +24,7 @@ class Investigation(SecurityContentObject):
     how_to_implement: str = Field(...)
     known_false_positives: str = Field(...)
     tags: InvestigationTags
+    status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
 
     # enrichment
     @computed_field
@@ -96,6 +100,9 @@ class Investigation(SecurityContentObject):
 
     def model_post_init(self, ctx: dict[str, Any]):
         # Ensure we link all stories this investigation references
+        # back to itself
+        for story in self.tags.analytic_story:
+            story.investigations.append(self)
         # back to itself
         for story in self.tags.analytic_story:
             story.investigations.append(self)

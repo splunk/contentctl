@@ -44,7 +44,7 @@ class DetectionTags(BaseModel):
     asset_type: AssetType = Field(...)
     group: list[str] = []
 
-    mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
+    mitre_attack_id: list[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
 
     product: list[SecurityContentProductName] = Field(..., min_length=1)
@@ -164,6 +164,39 @@ class DetectionTags(BaseModel):
 
         return enrichments
     """
+
+    @field_validator("mitre_attack_id", mode="after")
+    @classmethod
+    def sameTypeAndSubtypeNotPresent(
+        cls, mitre_ids: list[MITRE_ATTACK_ID_TYPE]
+    ) -> list[MITRE_ATTACK_ID_TYPE]:
+        id_types: list[str] = [
+            f"{mitre_id}." for mitre_id in mitre_ids if "." not in mitre_id
+        ]
+        id_subtypes: list[MITRE_ATTACK_ID_TYPE] = [
+            mitre_id for mitre_id in mitre_ids if "." in mitre_id
+        ]
+        subtype_and_parent_exist_exceptions: list[ValueError] = []
+
+        for id_subtype in id_subtypes:
+            for id_type in id_types:
+                if id_subtype.startswith(id_type):
+                    subtype_and_parent_exist_exceptions.append(
+                        ValueError(
+                            f"    Tactic   : {id_type.split('.')[0]}\n"
+                            f"    Subtactic: {id_subtype}\n"
+                        )
+                    )
+
+        if len(subtype_and_parent_exist_exceptions):
+            error_string = "\n".join(
+                str(e) for e in subtype_and_parent_exist_exceptions
+            )
+            raise ValueError(
+                f"Overlapping MITRE Attack ID Tactics and Subtactics may not be defined:\n{error_string}"
+            )
+
+        return mitre_ids
 
     @field_validator("analytic_story", mode="before")
     @classmethod

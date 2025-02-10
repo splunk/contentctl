@@ -134,14 +134,6 @@ class DetectionTags(BaseModel):
 
         if len(missing_tactics) > 0:
             raise ValueError(f"Missing Mitre Attack IDs. {missing_tactics} not found.")
-        else:
-            try:
-                MitreAttackEnrichment.checkParentTypeNotDefinedWhenSubtypeDefined(
-                    mitre_enrichments
-                )
-            except Exception as e:
-                raise ValueError(e)
-            self.mitre_attack_enrichments = mitre_enrichments
 
         return self
 
@@ -193,7 +185,8 @@ class DetectionTags(BaseModel):
                 str(e) for e in subtype_and_parent_exist_exceptions
             )
             raise ValueError(
-                f"Overlapping MITRE Attack ID Tactics and Subtactics may not be defined:\n{error_string}"
+                "Overlapping MITRE Attack ID Tactics and Subtactics may not be defined. "
+                f"Remove the tactic and keep the subtactic:\n{error_string}"
             )
 
         return mitre_ids

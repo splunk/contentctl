@@ -33,7 +33,7 @@ from contentctl.objects.enums import (
     SecurityContentProductName,
     SecurityDomain,
 )
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
+from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment, MitreAttackGroup
 
 
 class DetectionTags(BaseModel):
@@ -67,6 +67,13 @@ class DetectionTags(BaseModel):
                 phase = KillChainPhase(ATTACK_TACTICS_KILLCHAIN_MAPPING[tactic])
                 phases.add(phase)
         return sorted(list(phases))
+
+    @property
+    def unique_mitre_attack_groups(self)->list[MitreAttackGroup]:
+        group_set: set[MitreAttackGroup] = set()
+        for enrichment in self.enrichments:
+            group_set.update(set(enrichment.mitre_attack_group_objects))
+        return sorted(group_set, lambda k: k.group)
 
     # enum is intentionally Cis18 even though field is named cis20 for legacy reasons
     @computed_field

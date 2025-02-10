@@ -106,12 +106,3 @@ class MitreAttackEnrichment(BaseModel):
 
     def __hash__(self) -> int:
         return id(self)
-
-    @staticmethod
-    def getUniqueGroups(
-        enrichments: list[MitreAttackEnrichment],
-    ) -> list[MitreAttackGroup]:
-        group_set: set[MitreAttackGroup] = set()
-        for enrichment in enrichments:
-            group_set.update(set(enrichment.mitre_attack_group_objects))
-        return sorted(group_set)

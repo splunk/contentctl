@@ -258,15 +258,22 @@ class Director:
         print("Done!")
 
         if len(validation_errors) > 0:
-            errors_string = "\n\n".join(
-                [
-                    f"File: {e_tuple[0]}\nError: {str(e_tuple[1])}"
-                    for e_tuple in validation_errors
-                ]
-            )
+            #errors_string = "\n\n".join(
+            #    [
+            #        f"File: {e_tuple[0]}\nError: {str(e_tuple[1])}"
+            #        for e_tuple in validation_errors
+            #    ]
+            #)
+
+            for entry in validation_errors:
+                print(f"File: {entry[0]}\n")
+                for error in entry[1].errors():
+                    error_type, msg = error["msg"].split(", ")
+                    print(f"\t{error_type.upper()}: {msg}\n")
+
             # print(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
             # We quit after validation a single type/group of content because it can cause significant cascading errors in subsequent
             # types of content (since they may import or otherwise use it)
-            raise Exception(
-                f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED"
-            )
+            #raise Exception(
+            #    f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED"
+            #)

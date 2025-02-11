@@ -94,6 +94,9 @@ class MitreAttackGroup(BaseModel):
             )
         return self.group < other.group
 
+    def __hash__(self) -> int:
+        return id(self)
+
 
 class MitreAttackEnrichment(BaseModel):
     ConfigDict(extra="forbid")

@@ -39,7 +39,7 @@ class Validate:
 
             return director_output_dto
             
-        except ValidationFailedError as e:
+        except ValidationFailedError:
             # Just re-raise without additional output since we already formatted everything
             raise SystemExit(1)
 

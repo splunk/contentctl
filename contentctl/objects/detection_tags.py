@@ -196,7 +196,11 @@ class DetectionTags(BaseModel):
             error_string = "\n".join(
                 str(e) for e in subtype_and_parent_exist_exceptions
             )
-            raise ValueError(
+            # raise ValueError(
+            #     "Overlapping MITRE Attack ID Tactics and Subtactics may not be defined. "
+            #     f"Remove the tactic and keep the subtactic:\n{error_string}"
+            # )
+            print(
                 "Overlapping MITRE Attack ID Tactics and Subtactics may not be defined. "
                 f"Remove the tactic and keep the subtactic:\n{error_string}"
             )

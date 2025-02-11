@@ -147,6 +147,8 @@ class DetectionTags(BaseModel):
         if len(missing_tactics) > 0:
             raise ValueError(f"Missing Mitre Attack IDs. {missing_tactics} not found.")
 
+        self.mitre_attack_enrichments = mitre_enrichments
+
         return self
 
     """

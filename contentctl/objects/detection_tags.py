@@ -33,7 +33,10 @@ from contentctl.objects.enums import (
     SecurityContentProductName,
     SecurityDomain,
 )
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment, MitreAttackGroup
+from contentctl.objects.mitre_attack_enrichment import (
+    MitreAttackEnrichment,
+    MitreAttackGroup,
+)
 
 
 class DetectionTags(BaseModel):
@@ -68,12 +71,14 @@ class DetectionTags(BaseModel):
                 phases.add(phase)
         return sorted(list(phases))
 
+    # We do not want this to be included in serialization. By default, @property
+    # objects are not included in dumps
     @property
-    def unique_mitre_attack_groups(self)->list[MitreAttackGroup]:
+    def unique_mitre_attack_groups(self) -> list[MitreAttackGroup]:
         group_set: set[MitreAttackGroup] = set()
-        for enrichment in self.enrichments:
+        for enrichment in self.mitre_attack_enrichments:
             group_set.update(set(enrichment.mitre_attack_group_objects))
-        return sorted(group_set, lambda k: k.group)
+        return sorted(group_set, key=lambda k: k.group)
 
     # enum is intentionally Cis18 even though field is named cis20 for legacy reasons
     @computed_field
@@ -274,6 +279,9 @@ class DetectionTags(BaseModel):
         elif len(missing_tests) > 0:
             raise ValueError(missing_tests_string)
 
+        return matched_tests + [
+            AtomicTest.AtomicTestWhenTestIsMissing(test) for test in missing_tests
+        ]
         return matched_tests + [
             AtomicTest.AtomicTestWhenTestIsMissing(test) for test in missing_tests
         ]

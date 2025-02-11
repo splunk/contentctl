@@ -174,23 +174,27 @@ class DetectionTags(BaseModel):
     @field_validator("mitre_attack_id", mode="after")
     @classmethod
     def sameTypeAndSubtypeNotPresent(
-        cls, mitre_ids: list[MITRE_ATTACK_ID_TYPE]
+        cls, techniques_and_subtechniques: list[MITRE_ATTACK_ID_TYPE]
     ) -> list[MITRE_ATTACK_ID_TYPE]:
-        id_types: list[str] = [
-            f"{mitre_id}." for mitre_id in mitre_ids if "." not in mitre_id
+        techniques: list[str] = [
+            f"{unknown_technique}."
+            for unknown_technique in techniques_and_subtechniques
+            if "." not in unknown_technique
         ]
-        id_subtypes: list[MITRE_ATTACK_ID_TYPE] = [
-            mitre_id for mitre_id in mitre_ids if "." in mitre_id
+        subtechniques: list[MITRE_ATTACK_ID_TYPE] = [
+            unknown_technique
+            for unknown_technique in techniques_and_subtechniques
+            if "." in unknown_technique
         ]
         subtype_and_parent_exist_exceptions: list[ValueError] = []
 
-        for id_subtype in id_subtypes:
-            for id_type in id_types:
-                if id_subtype.startswith(id_type):
+        for subtechnique in subtechniques:
+            for technique in techniques:
+                if subtechnique.startswith(technique):
                     subtype_and_parent_exist_exceptions.append(
                         ValueError(
-                            f"    Tactic   : {id_type.split('.')[0]}\n"
-                            f"    Subtactic: {id_subtype}\n"
+                            f"    Technique   : {technique.split('.')[0]}\n"
+                            f"    SubTechnique: {subtechnique}\n"
                         )
                     )
 
@@ -199,11 +203,11 @@ class DetectionTags(BaseModel):
                 str(e) for e in subtype_and_parent_exist_exceptions
             )
             raise ValueError(
-                "Overlapping MITRE Attack ID Tactics and Subtactics may not be defined. "
-                f"Remove the tactic and keep the subtactic:\n{error_string}"
+                "Overlapping MITRE Attack ID Techniques and Subtechniques may not be defined. "
+                f"Remove the Technique and keep the Subtechnique:\n{error_string}"
             )
 
-        return mitre_ids
+        return techniques_and_subtechniques
 
     @field_validator("analytic_story", mode="before")
     @classmethod

@@ -476,7 +476,7 @@ class Detection_Abstract(SecurityContentObject):
                         "name": lookup.name,
                         "description": lookup.description,
                         "filename": lookup.filename.name,
-                        "default_match": "true" if lookup.default_match else "false",
+                        "default_match": lookup.default_match,
                         "case_sensitive_match": "true"
                         if lookup.case_sensitive_match
                         else "false",

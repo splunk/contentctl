@@ -6,7 +6,7 @@ import pathlib
 import re
 from enum import StrEnum, auto
 from functools import cached_property
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional, Self
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
 from pydantic import (
     Field,
@@ -69,10 +69,13 @@ class Lookup_Type(StrEnum):
 
 # TODO (#220): Split Lookup into 2 classes
 class Lookup(SecurityContentObject, abc.ABC):
-    default_match: str = Field(default='', description="This field is given a default value of ''"
-                                "because it is the default value specified in the transforms.conf "
-                                "docs. Giving it a type of str rather than str | None simplifies "
-                                "the typing for the field.")
+    default_match: str = Field(
+        default="",
+        description="This field is given a default value of ''"
+        "because it is the default value specified in the transforms.conf "
+        "docs. Giving it a type of str rather than str | None simplifies "
+        "the typing for the field.",
+    )
     # Per the documentation for transforms.conf, EXACT should not be specified in this list,
     # so we include only WILDCARD and CIDR
     match_type: list[Annotated[str, Field(pattern=r"(^WILDCARD|CIDR)\(.+\)$")]] = Field(

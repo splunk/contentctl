@@ -1,17 +1,18 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, model_serializer, ConfigDict
-from typing import List, Set, Optional
 
 from enum import Enum
+from typing import List, Optional, Set
 
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
+
+from contentctl.objects.annotated_types import CVE_TYPE, MITRE_ATTACK_ID_TYPE
 from contentctl.objects.enums import (
-    StoryCategory,
     DataModel,
     KillChainPhase,
     SecurityContentProductName,
+    StoryCategory,
 )
-from contentctl.objects.annotated_types import CVE_TYPE, MITRE_ATTACK_ID_TYPE
+from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
 
 
 class StoryUseCase(str, Enum):

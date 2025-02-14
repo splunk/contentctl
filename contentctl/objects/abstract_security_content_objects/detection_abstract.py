@@ -399,21 +399,17 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @property
     def risk(self) -> list[dict[str, Any]]:
-        risk_objects: list[dict[str, str | int]] = []
-
-        for entity in self.rba.risk_objects:
-            risk_object: dict[str, str | int] = dict()
-            risk_object["risk_object_type"] = entity.type
-            risk_object["risk_object_field"] = entity.field
-            risk_object["risk_score"] = entity.score
-            risk_objects.append(risk_object)
-
-        for entity in self.rba.threat_objects:
-            threat_object: dict[str, str] = dict()
-            threat_object["threat_object_field"] = entity.field
-            threat_object["threat_object_type"] = entity.type
-            risk_objects.append(threat_object)
-        return risk_objects
+        if self.rba is None:
+            raise Exception(
+                f"Attempting to serialize rba section of [{self.name}], however RBA section is None"
+            )
+        """
+        action.risk.param._risk
+        of the conf file only contains a list of dicts. We do not eant to 
+        include the message here, so we do not return it.
+        """
+        rba_dict = self.rba.model_dump()
+        return rba_dict["risk_objects"] + rba_dict["threat_objects"]
 
     @computed_field
     @property

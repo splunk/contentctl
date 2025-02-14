@@ -1,30 +1,29 @@
 import os
 import sys
-from pathlib import Path
 from dataclasses import dataclass, field
-from pydantic import ValidationError
+from pathlib import Path
 from uuid import UUID
-from contentctl.input.yml_reader import YmlReader
 
-from contentctl.objects.detection import Detection
-from contentctl.objects.story import Story
+from pydantic import ValidationError
 
-from contentctl.objects.baseline import Baseline
-from contentctl.objects.investigation import Investigation
-from contentctl.objects.playbook import Playbook
-from contentctl.objects.deployment import Deployment
-from contentctl.objects.macro import Macro
-from contentctl.objects.lookup import LookupAdapter, Lookup
-from contentctl.objects.atomic import AtomicEnrichment
-from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.data_source import DataSource
-from contentctl.objects.dashboard import Dashboard
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
-
-from contentctl.objects.config import validate
-from contentctl.objects.enums import SecurityContentType
 from contentctl.helper.utils import Utils
+from contentctl.input.yml_reader import YmlReader
+from contentctl.objects.atomic import AtomicEnrichment
+from contentctl.objects.baseline import Baseline
+from contentctl.objects.config import validate
+from contentctl.objects.dashboard import Dashboard
+from contentctl.objects.data_source import DataSource
+from contentctl.objects.deployment import Deployment
+from contentctl.objects.detection import Detection
+from contentctl.objects.enums import SecurityContentType
+from contentctl.objects.investigation import Investigation
+from contentctl.objects.lookup import Lookup, LookupAdapter
+from contentctl.objects.macro import Macro
+from contentctl.objects.playbook import Playbook
+from contentctl.objects.security_content_object import SecurityContentObject
+from contentctl.objects.story import Story
 
 
 @dataclass
@@ -113,9 +112,8 @@ class Director:
         self.createSecurityContent(SecurityContentType.detections)
         self.createSecurityContent(SecurityContentType.dashboards)
 
-        from contentctl.objects.abstract_security_content_objects.detection_abstract import (
-            MISSING_SOURCES,
-        )
+        from contentctl.objects.abstract_security_content_objects.detection_abstract import \
+            MISSING_SOURCES
 
         if len(MISSING_SOURCES) > 0:
             missing_sources_string = "\n 🟡 ".join(sorted(list(MISSING_SOURCES)))

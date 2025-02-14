@@ -9,6 +9,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
 from pydantic import (
+    BeforeValidator,
     Field,
     FilePath,
     NonNegativeInt,
@@ -69,7 +70,13 @@ class Lookup_Type(StrEnum):
 
 # TODO (#220): Split Lookup into 2 classes
 class Lookup(SecurityContentObject, abc.ABC):
-    default_match: str = Field(
+    # We need to make sure that this is converted to a string because we widely
+    # use the string "False" in our lookup content.  However, PyYAML reads this
+    # as a BOOL and this causes parsing to fail. As such, we will always
+    # convert this to a string if it is passed as a bool
+    default_match: Annotated[
+        str, BeforeValidator(lambda dm: str(dm) if isinstance(dm, bool) else dm)
+    ] = Field(
         default="",
         description="This field is given a default value of ''"
         "because it is the default value specified in the transforms.conf "

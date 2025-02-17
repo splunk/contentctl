@@ -81,6 +81,10 @@ class Lookup(SecurityContentObject, abc.ABC):
     )
     case_sensitive_match: None | bool = Field(default=None)
 
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("lookups")
+
     @model_serializer
     def serialize_model(self):
         # Call parent serializer
@@ -354,3 +358,5 @@ class MlModel(FileBackedLookup):
 LookupAdapter: TypeAdapter[CSVLookup | KVStoreLookup | MlModel] = TypeAdapter(
     Annotated[CSVLookup | KVStoreLookup | MlModel, Field(discriminator="lookup_type")]
 )
+setattr(LookupAdapter, "containing_folder", lambda: "lookups")
+setattr(LookupAdapter, "__name__", "Lookup")

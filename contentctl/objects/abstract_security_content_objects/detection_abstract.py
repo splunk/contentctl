@@ -103,6 +103,10 @@ class Detection_Abstract(SecurityContentObject):
         description="A list of Drilldowns that should be included with this search",
     )
 
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("detections")
+
     @computed_field
     @cached_property
     def researchSiteLink(self) -> HttpUrl:

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Self
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.deployment import Deployment
-    from contentctl.objects.config import CustomApp
+    from contentctl.objects.config import CustomApp, Config_Base
 
 import abc
 import datetime
@@ -15,7 +15,7 @@ import uuid
 from abc import abstractmethod
 from csv import DictWriter
 from functools import cached_property
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Type, Union
 
 from pydantic import (
     BaseModel,
@@ -30,6 +30,7 @@ from pydantic import (
     model_serializer,
     model_validator,
 )
+from semantic_version import Version
 
 from contentctl.objects.constants import (
     CONTENTCTL_MAX_STANZA_LENGTH,
@@ -45,6 +46,7 @@ NO_FILE_NAME = "NO_FILE_NAME"
 
 
 class DeprecationInfo(BaseModel):
+    deprecated_content: SecurityContentObject_Abstract
     deprecation_date: datetime.date = Field(
         ...,
         description="On what expected date will this content be deprecated? "
@@ -67,11 +69,183 @@ class DeprecationInfo(BaseModel):
         "For example, a detection may be replaced by a story or a macro may be replaced by a lookup.",
     )
 
-    content_type: SecurityContentType = Field(
-        description="The type of this object. This must be logged separately because, "
-        "as the Python Object definitions change, we may not be able to continue "
-        "determining the type of an object based on the presence of values of its fields."
+    def enforceDeprecationRequirement(self, cfg: Config_Base) -> None:
+        """
+        If content is supposed to be deprecated based on the deprecation_version,
+        but has NOT been deprecated, this function should throw an Exception indicating that.
+
+        Args:
+            cfg (Config_Base): configuration for contentctl built app
+        """
+        if self.shouldContentBeRemoved(cfg):
+            if self.hasContentBeenRemoved(cfg):
+                print(
+                    f"emit has-been-deprecated row in deprecation assistant lookup for {self.deprecated_content.name}"
+                )
+            else:
+                raise Exception(
+                    f"Content named '{self.deprecated_content.name}' "
+                    f"was marked for deprecation in version [{self.deprecation_version}]. "
+                    f"However, this content is STILL PRESENT in the current build [{cfg.app.version}]. "
+                    f"This content should be moved to the folder '{self.deprecated_content.file_path}' into '{cfg.deprecated_content_path}'"
+                )
+        else:
+            if self.hasContentBeenRemoved(cfg):
+                raise Exception(
+                    f"Content named '{self.deprecated_content.name}' "
+                    f"was marked for deprecation in version [{self.deprecation_version}]. "
+                    f"However, this content is HAS BEEN REMOVED in the current build [{cfg.app.version}]. "
+                    f"This content should be moved out of the folder '{cfg.deprecated_content_path}'"
+                )
+            else:
+                print(
+                    f"emit to-be-deprecated row in deprecation assistant lookup for {self.deprecated_content.name}"
+                )
+
+    def hasContentBeenRemoved(self, cfg: Config_Base) -> bool:
+        """
+        Determines if a piece of content has actually been removed from the app.
+        This is true if a piece of content resides in the REPO_ROOT/deprecated folder.
+        A piece of content that lives in detections, even detections/deprecated, has NOT
+        actually been removed from the app yet and will be included in a build
+        Args:
+            cfg (Config_Base): configuration for contentctl built app
+
+        Returns:
+            bool: whether or not the content is still included in a build of the app
+        """
+        if self.deprecated_content.file_path is None:
+            raise Exception(
+                f"Unable to determine if content {self.deprecated_content.name} "
+                f"has been moved into the folder {cfg.deprecated_content_path}. "
+                "The content is not backed by a file (content.file_path was 'None')"
+            )
+        return self.deprecated_content.file_path.resolve().is_relative_to(
+            cfg.deprecated_content_path.resolve()
+        )
+
+    def shouldContentBeRemoved(self, cfg: Config_Base) -> bool:
+        """
+        Determines if a piece of content should have been removed from the
+        content shipped in the app.  This is true if a piece of deprecated
+        content meets one, of both, of the following criteria:
+        1. The deprecation date is <= the current date
+        2. The deprecation verison is <= the current version
+        Args:
+            cfg (Config_Base): configuration for contentctl built app
+
+        Returns:
+            bool: True or False, based on whether something should be removed from the app
+        """
+        try:
+            deprecation_version = Version(self.deprecation_version)
+        except Exception:
+            raise Exception(
+                f"Unable to parse deprecation_version info for {self.deprecated_content.name} into a valid Semantic Version: [{self.deprecation_version}]"
+            )
+        try:
+            current_app_version = Version(cfg.app.version)
+        except Exception:
+            raise Exception(
+                f"Unable to parse deprecation_version info for the app {cfg.app.title} into a valid Semantic Version: [{cfg.app.version}]"
+            )
+        if deprecation_version <= current_app_version:
+            return True
+        return False
+
+
+class DeprecationDocumentationFile(BaseModel):
+    baselines: list[DeprecationInfo]
+    dashboards: list[DeprecationInfo] = []
+    data_sources: list[DeprecationInfo] = []
+    deployments: list[DeprecationInfo] = []
+    investigations: list[DeprecationInfo]
+    lookups: list[DeprecationInfo] = []
+    macros: list[DeprecationInfo] = []
+    stories: list[DeprecationInfo]
+    detections: list[DeprecationInfo]
+
+    @classmethod
+    def mapContent(
+        cls,
+        v: list[dict[str, Any]],
+        info: ValidationInfo,
+        contentClass: Type[SecurityContentObject_Abstract],
+    ) -> list[SecurityContentObject_Abstract]:
+        director: DirectorOutputDto = info.context.get("output_dto", None)
+        if not isinstance(v, list):
+            raise ValueError(f"Must be a list of DeprecationInfo, not {type(v)}")
+
+        for elem in v:
+            if not isinstance(elem, dict):
+                raise ValueError(
+                    f"Must be a list DeprecationInfo object, not {type(elem)}"
+                )
+            name = elem.get("deprecated_content", None)
+            if not isinstance(name, str):
+                raise ValueError(
+                    f"deprecated_content must be a string, not {type(name)}"
+                )
+            try:
+                elem["deprecated_content"] = (
+                    contentClass.mapNamesToSecurityContentObjects([b], director)
+                )
+            except Exception:
+                try:
+                    elem["deprecated_content"] = (
+                        SecurityContentObject_Abstract.mapNamesToSecurityContentObjects(
+                            [elem], director
+                        )
+                    )
+                except Exception:
+                    raise ValueError(
+                        f"Failed to map content found in deprecated content yml to any content: [{name}]"
+                    )
+        return v
+
+    @field_validator("baselines", mode="before")
+    @classmethod
+    def mapBaselines(
+        cls, v: list[dict[str, Any]], info: ValidationInfo
+    ) -> list[SecurityContentObject_Abstract]:
+        from contentctl.objects.baseline import Baseline
+
+        return cls.mapContent(v, info, Baseline)
+
+    @field_validator("detections", mode="before")
+    @classmethod
+    def mapDetections(
+        cls, v: list[dict[str, Any]], info: ValidationInfo
+    ) -> list[SecurityContentObject_Abstract]:
+        from contentctl.objects.detection import Detection
+
+        return cls.mapContent(v, info, Detection)
+
+    @field_validator("stories", mode="before")
+    @classmethod
+    def mapStories(
+        cls, v: list[dict[str, Any]], info: ValidationInfo
+    ) -> list[SecurityContentObject_Abstract]:
+        from contentctl.objects.story import Story
+
+        return cls.mapContent(v, info, Story)
+
+    @field_validator(
+        "dashboards",
+        "data_sources",
+        "deployments",
+        "investigations",
+        "lookups",
+        "macros",
+        mode="before",
     )
+    @classmethod
+    def mapUnsupportedContent(
+        cls, v: list[dict[str, Any]], info: ValidationInfo
+    ) -> list[SecurityContentObject_Abstract]:
+        if len(v) > 0:
+            raise Exception("Deprecation of this content is not yet supported")
+        return []
 
 
 class SecurityContentObject_Abstract(BaseModel, abc.ABC):
@@ -86,11 +260,11 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     references: Optional[List[HttpUrl]] = None
     deprecation_info: DeprecationInfo | None = None
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def containing_folder() -> pathlib.Path:
+    def containing_folder(cls) -> pathlib.Path:
         raise NotImplementedError(
-            "Containing folder has not been implemented for this SecurityContentObject"
+            f"Containing folder has not been implemented for {cls.__name__}"
         )
 
     def model_post_init(self, __context: Any) -> None:
@@ -98,6 +272,7 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
     @model_validator(mode="after")
     def validate_deprecation_info(self) -> Self:
+        return self
         # Ensure that if the object has a "status" field AND
         # that field is set to deprecated that the deprecation_info
         # field is not None.
@@ -624,6 +799,7 @@ class DeprecatedSecurityContentObject(SecurityContentObject_Abstract):
 #             ),
 #         }
 #             ),
+#         }
 #         }
 #         }
 #         }

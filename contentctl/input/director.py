@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
@@ -17,7 +17,7 @@ from contentctl.objects.data_source import DataSource
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.detection import Detection
 from contentctl.objects.investigation import Investigation
-from contentctl.objects.lookup import Lookup
+from contentctl.objects.lookup import Lookup, LookupAdapter
 from contentctl.objects.macro import Macro
 from contentctl.objects.playbook import Playbook
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -100,7 +100,7 @@ class Director:
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
         self.createSecurityContent(Deployment)
-        # self.createSecurityContent(LookupAdapter)
+        self.createSecurityContent(LookupAdapter)
         self.createSecurityContent(Macro)
         self.createSecurityContent(Story)
         self.createSecurityContent(Baseline)
@@ -124,7 +124,9 @@ class Director:
         else:
             print("No missing data_sources!")
 
-    def createSecurityContent(self, contentType: type[SecurityContentObject]) -> None:
+    def createSecurityContent(
+        self, contentType: type[SecurityContentObject] | TypeAdapter[Lookup]
+    ) -> None:
         files = Utils.get_all_yml_files_from_directory(
             self.input_dto.path / contentType.containing_folder()
         )
@@ -141,15 +143,23 @@ class Director:
         for index, file in enumerate(security_content_files):
             progress_percent = ((index + 1) / len(security_content_files)) * 100
             try:
-                type_string = type(contentType).__name__.upper()
+                type_string = contentType.__name__.upper()
                 modelDict = YmlReader.load_file(file)
 
-                content = contentType.model_validate(
-                    modelDict, context={"output_dto": self.output_dto}
-                )
-                import code
+                if contentType != LookupAdapter:
+                    content = contentType.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
+                else:
+                    content = contentType.validate_python(
+                        modelDict,
+                        context={
+                            "output_dto": self.output_dto,
+                            "config": self.input_dto,
+                        },
+                    )
+                self.output_dto.addContentToDictMappings(content)
 
-                code.interact(local=locals())
                 """
                 if contentType == SecurityContentType.lookup:
                     lookup = LookupAdapter.validate_python(
@@ -240,7 +250,7 @@ class Director:
                 validation_errors.append((relative_path, e))
 
         print(
-            f"\r{f'{contentType.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...",
+            f"\r{f'{contentType.__name__.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...",
             end="",
             flush=True,
         )

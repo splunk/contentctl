@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
 
+import pathlib
+
 from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -28,6 +30,10 @@ class Story(SecurityContentObject):
     detections: List[Detection] = []
     investigations: List[Investigation] = []
     baselines: List[Baseline] = []
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("stories")
 
     @computed_field
     @cached_property
@@ -150,5 +156,7 @@ class Story(SecurityContentObject):
     @computed_field
     @property
     def baseline_names(self) -> List[str]:
+        return [baseline.name for baseline in self.baselines]
+        return [baseline.name for baseline in self.baselines]
         return [baseline.name for baseline in self.baselines]
         return [baseline.name for baseline in self.baselines]

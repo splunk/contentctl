@@ -33,8 +33,8 @@ class Deployment(SecurityContentObject):
     def tags(self) -> dict[str, DeploymentType]:
         return {"type": self.type}
 
-    @staticmethod
-    def containing_folder() -> pathlib.Path:
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
         return pathlib.Path("deployments")
 
     @staticmethod

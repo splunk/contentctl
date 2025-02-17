@@ -1,12 +1,13 @@
+import json
+import pathlib
+from enum import StrEnum
 from typing import Any
+
+from jinja2 import Environment
 from pydantic import Field, Json, model_validator
 
-import pathlib
-from jinja2 import Environment
-import json
-from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.config import build
-from enum import StrEnum
+from contentctl.objects.security_content_object import SecurityContentObject
 
 DEFAULT_DASHBAORD_JINJA2_TEMPLATE = """<dashboard version="2" theme="{{ dashboard.theme }}">
     <label>{{ dashboard.label(config) }}</label>
@@ -50,6 +51,10 @@ class Dashboard(SecurityContentObject):
 
     def label(self, config: build) -> str:
         return f"{config.app.label} - {self.name}"
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("dashboards")
 
     @model_validator(mode="before")
     @classmethod
@@ -111,4 +116,5 @@ class Dashboard(SecurityContentObject):
             "a",
         ) as f:
             output_xml = dashboard_text.encode("utf-8", "ignore").decode("utf-8")
+            f.write(output_xml)
             f.write(output_xml)

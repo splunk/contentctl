@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Annotated, Any, List, Literal
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
+import pathlib
+
 from pydantic import (
     Field,
     ValidationInfo,
@@ -36,6 +38,10 @@ class Baseline(SecurityContentObject):
     # enrichment
     deployment: Deployment = Field({})
     status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("baselines")
 
     @field_validator("lookups", mode="before")
     @classmethod
@@ -95,4 +101,5 @@ class Baseline(SecurityContentObject):
         super_fields.update(model)
 
         # return the model
+        return super_fields
         return super_fields

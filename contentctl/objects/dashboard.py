@@ -10,7 +10,7 @@ from contentctl.objects.config import build
 from contentctl.objects.constants import CONTENTCTL_DASHBOARD_LABEL_TEMPLATE
 from contentctl.objects.security_content_object import SecurityContentObject
 
-DEFAULT_DASHBAORD_JINJA2_TEMPLATE = """<dashboard version="2" theme="{{ dashboard.theme }}">
+DEFAULT_DASHBOARD_JINJA2_TEMPLATE = """<dashboard version="2" theme="{{ dashboard.theme }}">
     <label>{{ dashboard.label(config) }}</label>
     <description></description>
     <definition><![CDATA[
@@ -33,7 +33,7 @@ class DashboardTheme(StrEnum):
 
 class Dashboard(SecurityContentObject):
     j2_template: str = Field(
-        default=DEFAULT_DASHBAORD_JINJA2_TEMPLATE,
+        default=DEFAULT_DASHBOARD_JINJA2_TEMPLATE,
         description="Jinja2 Template used to construct the dashboard",
     )
     description: str = Field(

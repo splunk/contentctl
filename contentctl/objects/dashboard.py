@@ -104,7 +104,11 @@ class Dashboard(SecurityContentObject):
     def getOutputFilepathRelativeToAppRoot(self, config: build) -> pathlib.Path:
         # for clarity, the name of the dashboard file will follow the same convention
         # as we use for detections, prefixing it with app_name -
-        filename = f"{self.label(config)}.xml"
+        if self.file_path is None:
+            raise FileNotFoundError(
+                f"Dashboard {self.name} file_path was None. Dashboards must be backed by a file."
+            )
+        filename = f"{self.file_path.stem}.xml"
         return pathlib.Path("default/data/ui/views") / filename
 
     def writeDashboardFile(self, j2_env: Environment, config: build):

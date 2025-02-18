@@ -3,7 +3,6 @@ name = "contentctl"
 
 version = "5.1.0"
 
-
 description = "Splunk Content Control Tool"
 authors = ["STRT <research@splunk.com>"]
 license = "Apache 2.0"

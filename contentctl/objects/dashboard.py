@@ -1,14 +1,16 @@
+import json
+import pathlib
+from enum import StrEnum
 from typing import Any
+
+from jinja2 import Environment
 from pydantic import Field, Json, model_validator
 
-import pathlib
-from jinja2 import Environment
-import json
-from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.config import build
-from enum import StrEnum
+from contentctl.objects.constants import CONTENTCTL_DASHBOARD_LABEL_TEMPLATE
+from contentctl.objects.security_content_object import SecurityContentObject
 
-DEFAULT_DASHBAORD_JINJA2_TEMPLATE = """<dashboard version="2" theme="{{ dashboard.theme }}">
+DEFAULT_DASHBOARD_JINJA2_TEMPLATE = """<dashboard version="2" theme="{{ dashboard.theme }}">
     <label>{{ dashboard.label(config) }}</label>
     <description></description>
     <definition><![CDATA[
@@ -31,7 +33,7 @@ class DashboardTheme(StrEnum):
 
 class Dashboard(SecurityContentObject):
     j2_template: str = Field(
-        default=DEFAULT_DASHBAORD_JINJA2_TEMPLATE,
+        default=DEFAULT_DASHBOARD_JINJA2_TEMPLATE,
         description="Jinja2 Template used to construct the dashboard",
     )
     description: str = Field(
@@ -49,7 +51,9 @@ class Dashboard(SecurityContentObject):
     )
 
     def label(self, config: build) -> str:
-        return f"{config.app.label} - {self.name}"
+        return CONTENTCTL_DASHBOARD_LABEL_TEMPLATE.format(
+            app_label=config.app.label, dashboard_name=self.name
+        )
 
     @model_validator(mode="before")
     @classmethod
@@ -98,7 +102,9 @@ class Dashboard(SecurityContentObject):
         return json.dumps(self.json_obj, indent=4)
 
     def getOutputFilepathRelativeToAppRoot(self, config: build) -> pathlib.Path:
-        filename = f"{self.file_path.stem}.xml".lower()
+        # for clarity, the name of the dashboard file will follow the same convention
+        # as we use for detections, prefixing it with app_name -
+        filename = f"{self.label(config)}.xml"
         return pathlib.Path("default/data/ui/views") / filename
 
     def writeDashboardFile(self, j2_env: Environment, config: build):

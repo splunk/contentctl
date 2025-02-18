@@ -102,7 +102,7 @@ class Dashboard(SecurityContentObject):
             )
         # Prefix with the appLabel__ in order to make a search for these easy with match="__"
         # in the default.xml file
-        filename = f"{config.app.label}__{self.file_path.stem}".lower().replace(
+        filename = f"{config.app.label}__{self.file_path.stem}.xml".lower().replace(
             " ", "_"
         )
 

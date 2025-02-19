@@ -124,7 +124,6 @@ CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE = (
     "{app_label} - {detection_name} - Rule"
 )
 
-CONTENTCTL_DASHBOARD_LABEL_TEMPLATE = "{app_label} - {dashboard_name}"
 CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE = "{app_label} - {detection_name}"
 CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE = (
     "{app_label} - {detection_name} - Response Task"

@@ -1,36 +1,28 @@
+import pathlib
 from dataclasses import dataclass
 from typing import List
-
-from contentctl.objects.config import test_common, Selected, Changes
-from contentctl.objects.detection import Detection
-
 
 from contentctl.actions.detection_testing.DetectionTestingManager import (
     DetectionTestingManager,
     DetectionTestingManagerInputDto,
 )
-
-
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
-
-
-from contentctl.actions.detection_testing.views.DetectionTestingViewWeb import (
-    DetectionTestingViewWeb,
-)
-
 from contentctl.actions.detection_testing.views.DetectionTestingViewCLI import (
     DetectionTestingViewCLI,
 )
-
 from contentctl.actions.detection_testing.views.DetectionTestingViewFile import (
     DetectionTestingViewFile,
 )
-
+from contentctl.actions.detection_testing.views.DetectionTestingViewWeb import (
+    DetectionTestingViewWeb,
+)
+from contentctl.objects.config import Changes, Selected
+from contentctl.objects.config import test as test_
+from contentctl.objects.config import test_servers
+from contentctl.objects.detection import Detection
 from contentctl.objects.integration_test import IntegrationTest
-
-import pathlib
 
 MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 
@@ -38,7 +30,7 @@ MAXIMUM_CONFIGURATION_TIME_SECONDS = 600
 @dataclass(frozen=True)
 class TestInputDto:
     detections: List[Detection]
-    config: test_common
+    config: test_ | test_servers
 
 
 class Test:
@@ -77,8 +69,8 @@ class Test:
 
         if len(input_dto.detections) == 0:
             print(
-                f"With Detection Testing Mode '{input_dto.config.mode.mode_name}', there were [0] detections found to test."
-                "\nAs such, we will quit immediately."
+                f"With Detection Testing Mode '{input_dto.config.mode.mode_name}', there were "
+                "[0] detections found to test.\nAs such, we will quit immediately."
             )
             # Directly call stop so that the summary.yml will be generated. Of course it will not
             # have any test results, but we still want it to contain a summary showing that now
@@ -109,6 +101,10 @@ class Test:
         try:
             summary_results = file.getSummaryObject()
             summary = summary_results.get("summary", {})
+            if not isinstance(summary, dict):
+                raise ValueError(
+                    f"Summary in results was an unexpected type ({type(summary)}): {summary}"
+                )
 
             print(f"Test Summary (mode: {summary.get('mode', 'Error')})")
             print(f"\tSuccess                      : {summary.get('success', False)}")
@@ -152,7 +148,7 @@ class Test:
                 "detection types (e.g. Correlation), but there may be overlap between these\n"
                 "categories."
             )
-            return summary_results.get("summary", {}).get("success", False)
+            return summary.get("success", False)
 
         except Exception as e:
             print(f"Error determining if whole test was successful: {str(e)}")

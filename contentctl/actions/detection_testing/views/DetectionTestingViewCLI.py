@@ -47,6 +47,8 @@ class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True
         while True:
             summary = self.getSummaryObject()
 
+            # TODO (#338): there's a 1-off error here I think (we show one more than we
+            #   actually have during testing)
             total = len(
                 summary.get("tested_detections", [])
                 + summary.get("untested_detections", [])

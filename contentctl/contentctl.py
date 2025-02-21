@@ -143,15 +143,6 @@ def test_common_func(config: test_common):
     raise Exception("There was at least one unsuccessful test")
 
 
-CONTENTCTL_5_WARNING = """
-*****************************************************************************
-WARNING - THIS IS A BUILD OF CONTENTCTL 5.
-THERE HAVE BEEN NUMEROUS CHANGES IN CONTENTCTL (ESPECIALLY TO YML FORMATS). 
-IF YOU ENCOUNTER LARGE QUANTITIES OF ERRORS, YOU MAY HAVE UPDATED TO THIS RELEASE BY MISTAKE.
-*****************************************************************************
-"""
-
-
 def get_random_compliment():
     compliments = [
         "Your detection rules are like a zero-day shield! 🛡️",
@@ -293,7 +284,6 @@ def main():
             )
 
         print(e)
-        print(CONTENTCTL_5_WARNING)
         sys.exit(1)
 
 

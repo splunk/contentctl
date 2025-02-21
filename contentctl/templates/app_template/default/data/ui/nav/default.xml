@@ -2,6 +2,6 @@
   <view name="escu_summary" default="true"/>
   <view name="search"/>
   <collection label="Dashboards">
-    <view source="unclassified" match=" - "/>
+    <view source="unclassified" match="__"/>
   </collection>
 </nav>

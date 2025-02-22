@@ -75,7 +75,7 @@ tags:
 To begin, we have shifted the RBA config out of the `tags` object, and re-oriented it around the actual in-product usage. 
 - The `rba.message` field is a direct replacement for the old `tags.message` field. 
 - Risk object config is now much more straightforward. `rba.risk_objects` takes a list of risk objects that consist of a `field` (the field from your search), `type` (user, system, or other, and we strongly recommend not using Other), and a `score` - an integer between 0 and 100. The risk scores are no longer derived from an opaque formula that involves computing from other fields. Each risk object can now have their own independent risk score, as detailed in the above snippet.  
-- Finally, the threat object config is similarly less complicated. `rba.threat_objects` takes a list of objects consisting of a `field` (the field in your search) and `type` (a selection of fields that can be seen [here](https://github.com/splunk/contentctl/blob/0ce5a79d49606609cce55e66708e015abc1257d0/contentctl/objects/rba.py#L17)). 
+- Finally, the threat object config is similarly less complicated. `rba.threat_objects` takes a list of objects consisting of a `field` (the field in your search) and `type` (a selection of fields that can be seen [here](RBA_Types.md)). 
 
 These fields are now also only required AND only allowed when the detection receives a risk-related configuration via its deployment. So, your Hunting searches that power dashboards or your Correlation searches that create risk notables, but don't create more risk on their own- none of those require RBA configs, and `contentctl` will give you an error if they are present.
 

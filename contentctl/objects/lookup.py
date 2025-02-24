@@ -358,5 +358,8 @@ class MlModel(FileBackedLookup):
 LookupAdapter: TypeAdapter[CSVLookup | KVStoreLookup | MlModel] = TypeAdapter(
     Annotated[CSVLookup | KVStoreLookup | MlModel, Field(discriminator="lookup_type")]
 )
+
+# The following are defined as they are used by the Director.  For normal SecurityContentObject
+# types, they already exist. But do not for the TypeAdapter
 setattr(LookupAdapter, "containing_folder", lambda: "lookups")
 setattr(LookupAdapter, "__name__", "Lookup")

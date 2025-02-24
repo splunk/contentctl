@@ -7,7 +7,6 @@ import pathlib
 import time
 import urllib.parse
 import uuid
-from shutil import copyfile
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
 from tempfile import TemporaryDirectory, mktemp
@@ -1298,30 +1297,26 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 f"The only valid indexes on the server are {self.all_indexes_on_server}"
             )
 
-        tempfile = mktemp(dir=tmp_dir)
-        if not (
-            str(attack_data_file.data).startswith("http://")
-            or str(attack_data_file.data).startswith("https://")
-        ):
-            if pathlib.Path(str(attack_data_file.data)).is_file():
-                self.format_pbar_string(
-                    TestReportingType.GROUP,
-                    test_group.name,
-                    "Copying Data",
-                    test_group_start_time,
+        # Runtime check to see if the attack_data repo exists. If so, check for the existence of the
+        # attack_data file(s) on disk. If it exists, use those files rather than a download of the file
+        if str(attack_data_file.data).startswith("https://"):
+            attack_data_repo_directory: pathlib.Path = (
+                self.global_config.path / "attack_data"
+            )
+            new_data_file = pathlib.Path(
+                str(attack_data_file.data).replace(
+                    "https://media.githubusercontent.com/media/splunk/attack_data/master",
+                    str(attack_data_repo_directory),
                 )
+            )
+            attack_data_file.data = new_data_file
 
-                try:
-                    copyfile(str(attack_data_file.data), tempfile)
-                except Exception as e:
-                    raise Exception(
-                        f"Error copying local Attack Data File for [{test_group.name}] - [{attack_data_file.data}]: "
-                        f"{str(e)}"
-                    )
-            else:
-                raise Exception(
-                    f"Attack Data File for [{test_group.name}] is local [{attack_data_file.data}], but does not exist."
-                )
+        if not (
+            str(attack_data_file.data).startswith("https://")
+            or str(attack_data_file.data).startswith("http://")
+        ):
+            # This is a file on the filesystem, so no need to download it
+            target_file = str(attack_data_file.data)
 
         else:
             # Download the file
@@ -1337,9 +1332,11 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     start_time=test_group_start_time,
                 )
 
+                tempfile = mktemp(dir=tmp_dir)
                 Utils.download_file_from_http(
                     str(attack_data_file.data), tempfile, self.pbar, overwrite_file=True
                 )
+                target_file = tempfile
             except Exception as e:
                 raise (
                     Exception(
@@ -1355,7 +1352,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             start_time=test_group_start_time,
         )
 
-        self.hec_raw_replay(tempfile, attack_data_file)
+        self.hec_raw_replay(target_file, attack_data_file)
 
         return attack_data_file.custom_index or self.sync_obj.replay_index
 

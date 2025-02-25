@@ -12,6 +12,7 @@ import datetime
 import pathlib
 import pprint
 import uuid
+from difflib import get_close_matches
 from functools import cached_property
 from typing import List, Optional, Tuple, Union
 
@@ -160,16 +161,18 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     def mapNamesToSecurityContentObjects(
         cls, v: list[str], director: Union[DirectorOutputDto, None]
     ) -> list[Self]:
-        if director is not None:
-            name_map = director.name_to_content_map
-        else:
-            name_map = {}
+        if director is None:
+            raise Exception(
+                "Direction was 'None' when passed to "
+                "'mapNamesToSecurityContentObjects'. This is "
+                "an error in the contentctl codebase which must be resolved."
+            )
 
         mappedObjects: list[Self] = []
         mistyped_objects: list[SecurityContentObject_Abstract] = []
         missing_objects: list[str] = []
         for object_name in v:
-            found_object = name_map.get(object_name, None)
+            found_object = director.name_to_content_map.get(object_name, None)
             if not found_object:
                 missing_objects.append(object_name)
             elif not isinstance(found_object, cls):
@@ -178,22 +181,40 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
                 mappedObjects.append(found_object)
 
         errors: list[str] = []
-        if len(missing_objects) > 0:
-            errors.append(
-                f"Failed to find the following '{cls.__name__}': {missing_objects}"
+        for missing_object in missing_objects:
+            if missing_object.endswith("_filter"):
+                # Most filter macros are defined as empty at runtime, so we do not
+                # want to make any suggestions.  It is time consuming and not helpful
+                # to make these suggestions, so we just skip them in this check.
+                continue
+            matches = get_close_matches(
+                missing_object,
+                director.name_to_content_map.keys(),
+                n=3,
             )
-        if len(mistyped_objects) > 0:
-            for mistyped_object in mistyped_objects:
-                errors.append(
-                    f"'{mistyped_object.name}' expected to have type '{cls}', but actually "
-                    f"had type '{type(mistyped_object)}'"
-                )
+            if matches == []:
+                matches = ["NO SUGGESTIONS"]
+
+            matches_string = ", ".join(matches)
+            errors.append(
+                f"Unable to find: {missing_object}\n       Suggestions: {matches_string}"
+            )
+
+        for mistyped_object in mistyped_objects:
+            matches = get_close_matches(
+                mistyped_object.name, director.name_to_content_map.keys(), n=3
+            )
+
+            errors.append(
+                f"'{mistyped_object.name}' expected to have type '{cls.__name__}', but actually "
+                f"had type '{type(mistyped_object).__name__}'"
+            )
 
         if len(errors) > 0:
-            error_string = "\n  - ".join(errors)
+            error_string = "\n\n  - ".join(errors)
             raise ValueError(
-                f"Found {len(errors)} issues when resolving references Security Content Object "
-                f"names:\n  - {error_string}"
+                f"Found {len(errors)} issues when resolving references to '{cls.__name__}' objects:\n"
+                f"  - {error_string}"
             )
 
         # Sort all objects sorted by name

@@ -126,4 +126,3 @@ class Dashboard(SecurityContentObject):
         ) as f:
             output_xml = dashboard_text.encode("utf-8", "ignore").decode("utf-8")
             f.write(output_xml)
-            f.write(output_xml)

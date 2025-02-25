@@ -1300,16 +1300,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         # Runtime check to see if the attack_data repo exists. If so, check for the existence of the
         # attack_data file(s) on disk. If it exists, use those files rather than a download of the file
         if str(attack_data_file.data).startswith("https://"):
-            attack_data_repo_directory: pathlib.Path = (
-                self.global_config.path / "attack_data"
-            )
             new_data_file = pathlib.Path(
                 str(attack_data_file.data).replace(
                     "https://media.githubusercontent.com/media/splunk/attack_data/master",
-                    str(attack_data_repo_directory),
+                    str(self.global_config.splunk_attack_data_path),
                 )
             )
-            attack_data_file.data = new_data_file
+            if new_data_file.exists():
+                attack_data_file.data = new_data_file
 
         if not (
             str(attack_data_file.data).startswith("https://")

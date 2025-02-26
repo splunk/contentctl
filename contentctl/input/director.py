@@ -15,6 +15,9 @@ from contentctl.objects.config import validate
 from contentctl.objects.dashboard import Dashboard
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.deployment import Deployment
+from contentctl.objects.deprecated_security_content_object import (
+    DeprecatedSecurityContentObject,
+)
 from contentctl.objects.detection import Detection
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.lookup import (
@@ -46,6 +49,7 @@ class DirectorOutputDto:
     lookups: list[Lookup]
     deployments: list[Deployment]
     dashboards: list[Dashboard]
+    deprecated: list[DeprecatedSecurityContentObject]
 
     data_sources: list[DataSource]
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
@@ -88,6 +92,8 @@ class DirectorOutputDto:
             self.dashboards.append(content)
         elif isinstance(content, DataSource):
             self.data_sources.append(content)
+        elif isinstance(content, DeprecatedSecurityContentObject):
+            self.deprecated.append(content)
         else:
             raise Exception(f"Unknown security content type: {type(content)}")
 
@@ -114,6 +120,8 @@ class Director:
         self.createSecurityContent(Playbook)
         self.createSecurityContent(Detection)
         self.createSecurityContent(Dashboard)
+        self.createSecurityContent(DeprecatedSecurityContentObject)
+        self.validateDeprecation()
 
         from contentctl.objects.abstract_security_content_objects.detection_abstract import (
             MISSING_SOURCES,
@@ -128,6 +136,23 @@ class Director:
             )
         else:
             print("No missing data_sources!")
+
+    def validateDeprecation(self):
+        data = YmlReader.load_file(
+            self.input_dto.path
+            / "deprecated"
+            / "deprecated_detection_mapping_updated.yml"
+        )
+        from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
+            DeprecationDocumentationFile,
+        )
+
+        mapping = DeprecationDocumentationFile.model_validate(
+            data, context={"output_dto": self.output_dto, "config": self.input_dto}
+        )
+
+        for detection in mapping.detections:
+            detection.enforceDeprecationRequirement(self.input_dto)
 
     def createSecurityContent(
         self,
@@ -197,12 +222,6 @@ class Director:
                     f"File: {e_tuple[0]}\nError: {str(e_tuple[1])}"
                     for e_tuple in validation_errors
                 ]
-            )
-            # print(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
-            # We quit after validation a single type/group of content because it can cause significant cascading errors in subsequent
-            # types of content (since they may import or otherwise use it)
-            raise Exception(
-                f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED"
             )
             # print(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
             # We quit after validation a single type/group of content because it can cause significant cascading errors in subsequent

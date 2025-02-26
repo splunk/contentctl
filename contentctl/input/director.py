@@ -1,10 +1,9 @@
-import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
@@ -16,10 +15,18 @@ from contentctl.objects.config import validate
 from contentctl.objects.dashboard import Dashboard
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.deployment import Deployment
+from contentctl.objects.deprecated_security_content_object import (
+    DeprecatedSecurityContentObject,
+)
 from contentctl.objects.detection import Detection
-from contentctl.objects.enums import SecurityContentType
 from contentctl.objects.investigation import Investigation
-from contentctl.objects.lookup import Lookup, LookupAdapter
+from contentctl.objects.lookup import (
+    CSVLookup,
+    KVStoreLookup,
+    Lookup,
+    LookupAdapter,
+    MlModel,
+)
 from contentctl.objects.macro import Macro
 from contentctl.objects.playbook import Playbook
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -42,6 +49,7 @@ class DirectorOutputDto:
     lookups: list[Lookup]
     deployments: list[Deployment]
     dashboards: list[Dashboard]
+    deprecated: list[DeprecatedSecurityContentObject]
 
     data_sources: list[DataSource]
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
@@ -82,9 +90,10 @@ class DirectorOutputDto:
             self.detections.append(content)
         elif isinstance(content, Dashboard):
             self.dashboards.append(content)
-
         elif isinstance(content, DataSource):
             self.data_sources.append(content)
+        elif isinstance(content, DeprecatedSecurityContentObject):
+            self.deprecated.append(content)
         else:
             raise Exception(f"Unknown security content type: {type(content)}")
 
@@ -101,40 +110,46 @@ class Director:
 
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
-        self.createSecurityContent(SecurityContentType.deployments)
-        self.createSecurityContent(SecurityContentType.lookups)
-        self.createSecurityContent(SecurityContentType.macros)
-        self.createSecurityContent(SecurityContentType.stories)
-        self.createSecurityContent(SecurityContentType.baselines)
-        self.createSecurityContent(SecurityContentType.investigations)
-        self.createSecurityContent(SecurityContentType.data_sources)
-        self.createSecurityContent(SecurityContentType.playbooks)
-        self.createSecurityContent(SecurityContentType.detections)
-        self.createSecurityContent(SecurityContentType.dashboards)
+        self.createSecurityContent(Deployment)
+        self.createSecurityContent(LookupAdapter)
+        self.createSecurityContent(Macro)
+        self.createSecurityContent(Story)
+        self.createSecurityContent(Baseline)
+        self.createSecurityContent(Investigation)
+        self.createSecurityContent(DataSource)
+        self.createSecurityContent(Playbook)
+        self.createSecurityContent(Detection)
+        self.createSecurityContent(Dashboard)
+        self.createSecurityContent(DeprecatedSecurityContentObject)
+        self.validateDeprecation()
 
-    def createSecurityContent(self, contentType: SecurityContentType) -> None:
-        if contentType in [
-            SecurityContentType.deployments,
-            SecurityContentType.lookups,
-            SecurityContentType.macros,
-            SecurityContentType.stories,
-            SecurityContentType.baselines,
-            SecurityContentType.investigations,
-            SecurityContentType.playbooks,
-            SecurityContentType.detections,
-            SecurityContentType.data_sources,
-            SecurityContentType.dashboards,
-        ]:
-            files = Utils.get_all_yml_files_from_directory(
-                os.path.join(self.input_dto.path, str(contentType.name))
-            )
-            security_content_files = [f for f in files]
-        else:
-            raise (
-                Exception(
-                    f"Cannot createSecurityContent for unknown product {contentType}."
-                )
-            )
+    def validateDeprecation(self):
+        data = YmlReader.load_file(
+            self.input_dto.path / "deprecated" / "deprecated_detection_mapping.yml"
+        )
+        from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
+            DeprecationDocumentationFile,
+        )
+
+        mapping = DeprecationDocumentationFile.model_validate(
+            data, context={"output_dto": self.output_dto, "config": self.input_dto}
+        )
+
+        for detection in mapping.detections:
+            detection.enforceDeprecationRequirement(self.input_dto)
+
+    def createSecurityContent(
+        self,
+        contentType: type[SecurityContentObject]
+        | TypeAdapter[CSVLookup | KVStoreLookup | MlModel],
+    ) -> None:
+        files = Utils.get_all_yml_files_from_directory(
+            self.input_dto.path / contentType.containing_folder()  # type: ignore
+        )
+
+        # convert this generator to a list so that we can
+        # calculate progress as we iterate over the files
+        security_content_files = [f for f in files]
 
         validation_errors: list[tuple[Path, ValueError]] = []
 
@@ -144,80 +159,23 @@ class Director:
         for index, file in enumerate(security_content_files):
             progress_percent = ((index + 1) / len(security_content_files)) * 100
             try:
-                type_string = contentType.name.upper()
+                type_string = contentType.__name__.upper()  # type: ignore
                 modelDict = YmlReader.load_file(file)
 
-                if contentType == SecurityContentType.lookups:
-                    lookup = LookupAdapter.validate_python(
+                if contentType != LookupAdapter:
+                    content = contentType.model_validate(
+                        modelDict, context={"output_dto": self.output_dto}
+                    )
+                else:
+                    content = contentType.validate_python(
                         modelDict,
                         context={
                             "output_dto": self.output_dto,
                             "config": self.input_dto,
                         },
                     )
-                    # lookup = Lookup.model_validate(modelDict, context={"output_dto":self.output_dto, "config":self.input_dto})
-                    self.output_dto.addContentToDictMappings(lookup)
 
-                elif contentType == SecurityContentType.macros:
-                    macro = Macro.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.addContentToDictMappings(macro)
-
-                elif contentType == SecurityContentType.deployments:
-                    deployment = Deployment.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.addContentToDictMappings(deployment)
-
-                elif contentType == SecurityContentType.playbooks:
-                    playbook = Playbook.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.addContentToDictMappings(playbook)
-
-                elif contentType == SecurityContentType.baselines:
-                    baseline = Baseline.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.addContentToDictMappings(baseline)
-
-                elif contentType == SecurityContentType.investigations:
-                    investigation = Investigation.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.addContentToDictMappings(investigation)
-
-                elif contentType == SecurityContentType.stories:
-                    story = Story.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.addContentToDictMappings(story)
-
-                elif contentType == SecurityContentType.detections:
-                    detection = Detection.model_validate(
-                        modelDict,
-                        context={
-                            "output_dto": self.output_dto,
-                            "app": self.input_dto.app,
-                        },
-                    )
-                    self.output_dto.addContentToDictMappings(detection)
-
-                elif contentType == SecurityContentType.dashboards:
-                    dashboard = Dashboard.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.addContentToDictMappings(dashboard)
-
-                elif contentType == SecurityContentType.data_sources:
-                    data_source = DataSource.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
-                    )
-                    self.output_dto.addContentToDictMappings(data_source)
-
-                else:
-                    raise Exception(f"Unsupported type: [{contentType}]")
+                self.output_dto.addContentToDictMappings(content)
 
                 if (
                     sys.stdout.isatty() and sys.stdin.isatty() and sys.stderr.isatty()
@@ -236,7 +194,7 @@ class Director:
                 validation_errors.append((relative_path, e))
 
         print(
-            f"\r{f'{contentType.name.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...",
+            f"\r{f'{contentType.__name__.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...",
             end="",
             flush=True,
         )

@@ -1,19 +1,17 @@
+import datetime
+import json
+import pathlib
 import shutil
-
+import uuid
 from dataclasses import dataclass
 
 from contentctl.input.director import DirectorOutputDto
+from contentctl.objects.config import build
+from contentctl.objects.lookup import CSVLookup, Lookup_Type
+from contentctl.output.api_json_output import ApiJsonOutput
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.conf_writer import ConfWriter
-from contentctl.output.api_json_output import ApiJsonOutput
 from contentctl.output.data_source_writer import DataSourceWriter
-from contentctl.objects.lookup import CSVLookup, Lookup_Type
-import pathlib
-import json
-import datetime
-import uuid
-
-from contentctl.objects.config import build
 
 
 @dataclass(frozen=True)
@@ -46,9 +44,21 @@ class Build:
                 / "data_sources.csv"
             )
 
+            deprecation_lookup_fake_yml_path = (
+                input_dto.config.getPackageDirectoryPath()
+                / "lookups"
+                / "deprecated_content.yml"
+            )
+
             DataSourceWriter.writeDataSourceCsv(
                 input_dto.director_output_dto.data_sources, data_sources_lookup_csv_path
             )
+            deprecation_lookup_csv_path = (
+                input_dto.config.getPackageDirectoryPath()
+                / "lookups"
+                / "deprecated_content.csv"
+            )
+
             input_dto.director_output_dto.addContentToDictMappings(
                 CSVLookup.model_construct(
                     name="data_sources",

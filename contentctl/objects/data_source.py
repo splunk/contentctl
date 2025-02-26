@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, model_serializer
@@ -25,6 +26,10 @@ class DataSource(SecurityContentObject):
     example_log: None | str = None
     output_fields: list[str] = []
 
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("data_sources")
+
     @model_serializer
     def serialize_model(self):
         # Call serializer for parent
@@ -47,4 +52,5 @@ class DataSource(SecurityContentObject):
         super_fields.update(model)
 
         # return the model
+        return super_fields
         return super_fields

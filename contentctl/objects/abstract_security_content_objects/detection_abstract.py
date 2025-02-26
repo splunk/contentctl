@@ -51,8 +51,6 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.unit_test import UnitTest
 
-MISSING_SOURCES: set[str] = set()
-
 # Those AnalyticsTypes that we do not test via contentctl
 SKIPPED_ANALYTICS_TYPES: set[str] = {AnalyticsType.Correlation}
 
@@ -514,7 +512,7 @@ class Detection_Abstract(SecurityContentObject):
             baseline.tags.detections = new_detections
 
         # Data source may be defined 1 on each line, OR they may be defined as
-        # SOUCE_1 AND ANOTHERSOURCE AND A_THIRD_SOURCE
+        # SOURCE_1 AND ANOTHERSOURCE AND A_THIRD_SOURCE
         # if more than 1 data source is required for a detection (for example, because it includes a join)
         # Parse and update the list to resolve individual names and remove potential duplicates
         updated_data_source_names: set[str] = set()
@@ -524,27 +522,9 @@ class Detection_Abstract(SecurityContentObject):
             updated_data_source_names.update(split_data_sources)
 
         sources = sorted(list(updated_data_source_names))
-
-        matched_data_sources: list[DataSource] = []
-        missing_sources: list[str] = []
-        for source in sources:
-            try:
-                matched_data_sources += DataSource.mapNamesToSecurityContentObjects(
-                    [source], director
-                )
-            except Exception:
-                # We gobble this up and add it to a global set so that we
-                # can print it ONCE at the end of the build of datasources.
-                # This will be removed later as per the note below
-                MISSING_SOURCES.add(source)
-
-        if len(missing_sources) > 0:
-            # This will be changed to ValueError when we have a complete list of data sources
-            print(
-                "WARNING: The following exception occurred when mapping the data_source field to "
-                f"DataSource objects:{missing_sources}"
-            )
-
+        matched_data_sources = DataSource.mapNamesToSecurityContentObjects(
+            sources, director
+        )
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:

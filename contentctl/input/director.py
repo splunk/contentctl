@@ -9,6 +9,9 @@ from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.helper.utils import Utils
 from contentctl.input.yml_reader import YmlReader
+from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
+    DeprecationDocumentationFile,
+)
 from contentctl.objects.atomic import AtomicEnrichment
 from contentctl.objects.baseline import Baseline
 from contentctl.objects.config import validate
@@ -19,6 +22,7 @@ from contentctl.objects.deprecated_security_content_object import (
     DeprecatedSecurityContentObject,
 )
 from contentctl.objects.detection import Detection
+from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.lookup import (
     CSVLookup,
@@ -50,8 +54,8 @@ class DirectorOutputDto:
     deployments: list[Deployment]
     dashboards: list[Dashboard]
     deprecated: list[DeprecatedSecurityContentObject]
-
     data_sources: list[DataSource]
+    deprecation_documentation: DeprecationDocumentationFile | None = None
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
     uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
 
@@ -135,8 +139,21 @@ class Director:
             data, context={"output_dto": self.output_dto, "config": self.input_dto}
         )
 
-        for detection in mapping.detections:
-            detection.enforceDeprecationRequirement(self.input_dto)
+        all_deprecated_content = list(
+            filter(
+                lambda content: getattr(content, "status", None)
+                == DetectionStatus.deprecated,
+                self.output_dto.name_to_content_map.values(),
+            )
+        )
+        print(
+            f"\n\nThe length of all deprecated content is: {len(all_deprecated_content)}\n\n"
+        )
+        for content in all_deprecated_content:
+            if getattr(content, "deprecation_info", None) is None:
+                print(
+                    f"[{type(content).__name__} - {content.name}] - Missing deprecation_info"
+                )
 
     def createSecurityContent(
         self,
@@ -155,6 +172,11 @@ class Director:
 
         already_ran = False
         progress_percent = 0
+        context: dict[str, validate | DirectorOutputDto] = {
+            "output_dto": self.output_dto,
+            "config": self.input_dto,
+        }
+        contentCartegoryName: str = contentType.__name__.upper()  # type: ignore
 
         for index, file in enumerate(security_content_files):
             progress_percent = ((index + 1) / len(security_content_files)) * 100
@@ -162,18 +184,20 @@ class Director:
                 type_string = contentType.__name__.upper()  # type: ignore
                 modelDict = YmlReader.load_file(file)
 
-                if contentType != LookupAdapter:
-                    content = contentType.model_validate(
-                        modelDict, context={"output_dto": self.output_dto}
+                if isinstance(contentType, type(SecurityContentObject)):
+                    content: SecurityContentObject = contentType.model_validate(
+                        modelDict, context=context
                     )
+                elif contentType == LookupAdapter:
+                    content: SecurityContentObject = (  # type: ignore
+                        contentType.validate_python(modelDict, context=context)  # type:ignore
+                    )
+                    if not isinstance(content, SecurityContentObject):
+                        raise Exception(
+                            f"Expected lookup to be a SecurityContentObject (CSVLookup, KVStoreLookup, or MLModel), but it was actually: {type(content)}"  # type: ignore
+                        )
                 else:
-                    content = contentType.validate_python(
-                        modelDict,
-                        context={
-                            "output_dto": self.output_dto,
-                            "config": self.input_dto,
-                        },
-                    )
+                    raise Exception(f"Unknown contentType in Director: {contentType}")
 
                 self.output_dto.addContentToDictMappings(content)
 
@@ -194,7 +218,7 @@ class Director:
                 validation_errors.append((relative_path, e))
 
         print(
-            f"\r{f'{contentType.__name__.upper()} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...",
+            f"\r{f'{contentCartegoryName} Progress'.rjust(23)}: [{progress_percent:3.0f}%]...",
             end="",
             flush=True,
         )

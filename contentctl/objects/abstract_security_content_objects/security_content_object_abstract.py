@@ -200,6 +200,7 @@ class DeprecationDocumentationFile(BaseModel):
                 elem["deprecated_content"] = (
                     contentClass.mapNamesToSecurityContentObjects([name], director)[0]
                 )
+
             except Exception:
                 try:
                     from contentctl.objects.deprecated_security_content_object import (
@@ -216,6 +217,27 @@ class DeprecationDocumentationFile(BaseModel):
                         f"Failed to map content found in deprecated content yml to any content: [{name}]"
                     )
         return v
+
+    @model_validator(mode="after")
+    def enforceDeprecationRequirements(self, info: ValidationInfo) -> Self:
+        config: Config_Base = info.context.get("config", None)
+        for content in (
+            self.baselines
+            + self.dashboards
+            + self.data_sources
+            + self.deployments
+            + self.investigations
+            + self.lookups
+            + self.macros
+            + self.stories
+            + self.detections
+        ):
+            # point the deprecation_info for the object at the deprecation_info that was constructed
+            content.deprecated_content.deprecation_info = content
+
+            # Make sure that if the content has been deprecated, it is in the right location
+            content.enforceDeprecationRequirement(config)
+        return self
 
     @field_validator("baselines", mode="before")
     @classmethod
@@ -244,11 +266,19 @@ class DeprecationDocumentationFile(BaseModel):
 
         return cls.mapContent(v, info, Story)
 
+    @field_validator("investigations", mode="before")
+    @classmethod
+    def mapInvestigations(
+        cls, v: list[dict[str, Any]], info: ValidationInfo
+    ) -> list[SecurityContentObject_Abstract]:
+        from contentctl.objects.investigation import Investigation
+
+        return cls.mapContent(v, info, Investigation)
+
     @field_validator(
         "dashboards",
         "data_sources",
         "deployments",
-        "investigations",
         "lookups",
         "macros",
         mode="before",

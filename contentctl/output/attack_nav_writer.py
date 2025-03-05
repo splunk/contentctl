@@ -1,11 +1,11 @@
 import json
-from typing import Union, List
 import pathlib
+from typing import List, Union
 
-VERSION = "4.3"
+VERSION = "4.5"
 NAME = "Detection Coverage"
-DESCRIPTION = "security_content detection coverage"
-DOMAIN = "mitre-enterprise"
+DESCRIPTION = "Security Content Detection Coverage"
+DOMAIN = "enterprise-attack"
 
 
 class AttackNavWriter:
@@ -14,52 +14,68 @@ class AttackNavWriter:
         mitre_techniques: dict[str, dict[str, Union[List[str], int]]],
         output_path: pathlib.Path,
     ) -> None:
-        max_count = 0
-        for technique_id in mitre_techniques.keys():
-            if mitre_techniques[technique_id]["score"] > max_count:
-                max_count = mitre_techniques[technique_id]["score"]
+        max_count = max(
+            (technique["score"] for technique in mitre_techniques.values()), default=0
+        )
 
         layer_json = {
-            "version": VERSION,
+            "versions": {"attack": "16", "navigator": "5.1.0", "layer": VERSION},
             "name": NAME,
             "description": DESCRIPTION,
             "domain": DOMAIN,
             "techniques": [],
+            "gradient": {
+                "colors": ["#ffffff", "#66b1ff", "#096ed7"],
+                "minValue": 0,
+                "maxValue": max_count,
+            },
+            "filters": {
+                "platforms": [
+                    "Windows",
+                    "Linux",
+                    "macOS",
+                    "Network",
+                    "AWS",
+                    "GCP",
+                    "Azure",
+                    "Azure AD",
+                    "Office 365",
+                    "SaaS",
+                ]
+            },
+            "layout": {
+                "layout": "side",
+                "showName": True,
+                "showID": True,
+                "showAggregateScores": False,
+            },
+            "legendItems": [
+                {"label": "No detections", "color": "#ffffff"},
+                {"label": "Has detections", "color": "#66b1ff"},
+            ],
+            "showTacticRowBackground": True,
+            "tacticRowBackground": "#dddddd",
+            "selectTechniquesAcrossTactics": True,
         }
 
-        layer_json["gradient"] = {
-            "colors": ["#ffffff", "#66b1ff", "#096ed7"],
-            "minValue": 0,
-            "maxValue": max_count,
-        }
+        for technique_id, data in mitre_techniques.items():
+            links = []
+            for detection_info in data["file_paths"]:
+                # Split the detection info into its components
+                detection_type, detection_id, detection_name = detection_info.split("|")
 
-        layer_json["filters"] = {
-            "platforms": [
-                "Windows",
-                "Linux",
-                "macOS",
-                "AWS",
-                "GCP",
-                "Azure",
-                "Office 365",
-                "SaaS",
-            ]
-        }
+                # Construct research website URL (without the name)
+                research_url = (
+                    f"https://research.splunk.com/{detection_type}/{detection_id}/"
+                )
 
-        layer_json["legendItems"] = [
-            {"label": "NO available detections", "color": "#ffffff"},
-            {"label": "Some detections available", "color": "#66b1ff"},
-        ]
+                links.append({"label": detection_name, "url": research_url})
 
-        layer_json["showTacticRowBackground"] = True
-        layer_json["tacticRowBackground"] = "#dddddd"
-        layer_json["sorting"] = 3
-
-        for technique_id in mitre_techniques.keys():
             layer_technique = {
                 "techniqueID": technique_id,
-                "score": mitre_techniques[technique_id]["score"],
-                "comment": "\n\n".join(mitre_techniques[technique_id]["file_paths"]),
+                "score": data["score"],
+                "enabled": True,
+                "links": links,
             }
             layer_json["techniques"].append(layer_technique)
 

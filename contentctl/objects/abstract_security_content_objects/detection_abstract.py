@@ -1060,8 +1060,7 @@ class Detection_Abstract(SecurityContentObject):
     def validate_data_source_output_fields(self):
         # Skip validation for Hunting and Correlation types, or non-production detections
         if (self.status != DetectionStatus.production or 
-            self.type in {AnalyticsType.Hunting, AnalyticsType.Correlation} or 
-            len(self.data_source) <= 1):
+            self.type in {AnalyticsType.Hunting, AnalyticsType.Correlation}):
             return self
 
         # Validate that all required output fields are present in the search

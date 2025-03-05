@@ -23,7 +23,7 @@ class DataSource(SecurityContentObject):
     field_mappings: None | list = None
     convert_to_log_source: None | list = None
     example_log: None | str = None
-    output_fields: list[str] = []
+    output_fields: None | list = None
 
     @model_serializer
     def serialize_model(self):

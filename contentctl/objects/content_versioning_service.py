@@ -16,9 +16,8 @@ from contentctl.objects.config import Infrastructure, test_common
 from contentctl.objects.correlation_search import ResultIterator
 from contentctl.objects.detection import Detection
 
-# TODO (cmcginley): suppress logging
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = True
+ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "content_versioning_service.log"
 

@@ -12,10 +12,10 @@ from splunklib.binding import HTTPError, ResponseReader  # type: ignore
 from splunklib.results import JSONResultsReader, Message  # type: ignore
 from tqdm import tqdm  # type: ignore
 
-from contentctl.actions.detection_testing.progress_bar import format_pbar_string  # type: ignore
 from contentctl.actions.detection_testing.progress_bar import (
     TestingStates,
     TestReportingType,
+    format_pbar_string,  # type: ignore
 )
 from contentctl.helper.utils import Utils
 from contentctl.objects.base_test_result import TestResultStatus
@@ -33,7 +33,7 @@ from contentctl.objects.risk_analysis_action import RiskAnalysisAction
 from contentctl.objects.risk_event import RiskEvent
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = True
+ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 

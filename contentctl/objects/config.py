@@ -428,7 +428,6 @@ class inspect(build):
             "enforcement (defaults to the latest release of the app published on Splunkbase)."
         ),
     )
-    stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
 
     @field_validator("enrichments", mode="after")
     @classmethod
@@ -499,6 +498,9 @@ class new(Config_Base):
 
 class deploy_acs(inspect):
     model_config = ConfigDict(validate_default=False, arbitrary_types_allowed=True)
+
+    stack_type: StackType = Field(description="The type of your Splunk Cloud Stack")
+
     # ignore linter error
     splunk_cloud_jwt_token: str = Field(
         exclude=True,

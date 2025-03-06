@@ -96,6 +96,7 @@ class DetectionStatus(StrEnum):
     deprecated = "deprecated"
     experimental = "experimental"
     validation = "validation"
+    removed = "removed"
 
 
 class LogLevel(StrEnum):

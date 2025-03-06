@@ -135,9 +135,10 @@ class Director:
             DeprecationDocumentationFile,
         )
 
-        mapping = DeprecationDocumentationFile.model_validate(
-            data, context={"output_dto": self.output_dto, "config": self.input_dto}
-        )
+        try:
+            mapping = DeprecationDocumentationFile.model_validate(data, context={"output_dto": self.output_dto, "config": self.input_dto})
+        except Exception as e:
+            
 
         all_deprecated_content = list(
             filter(
@@ -154,6 +155,7 @@ class Director:
                 print(
                     f"[{type(content).__name__} - {content.name}] - Missing deprecation_info"
                 )
+            
 
     def createSecurityContent(
         self,

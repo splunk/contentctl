@@ -186,20 +186,24 @@ class DeprecationDocumentationFile(BaseModel):
         if not isinstance(v, list):
             raise ValueError(f"Must be a list of DeprecationInfo, not {type(v)}")
 
+        mapping_exceptions: list[Exception] = []
         for elem in v:
             if not isinstance(elem, dict):
-                raise ValueError(
-                    f"Must be a list DeprecationInfo object, not {type(elem)}"
+                mapping_exceptions.append(
+                    ValueError(
+                        f"Must be a list DeprecationInfo object, not {type(elem)}"
+                    )
                 )
             name = elem.get("deprecated_content", None)
             if not isinstance(name, str):
-                raise ValueError(
-                    f"deprecated_content must be a string, not {type(name)}"
+                mapping_exceptions.append(
+                    ValueError(f"deprecated_content must be a string, not {type(name)}")
                 )
+                continue
             try:
-                elem["deprecated_content"] = (
-                    contentClass.mapNamesToSecurityContentObjects([name], director)[0]
-                )
+                matched_content = contentClass.mapNamesToSecurityContentObjects(
+                    [name], director
+                )[0]
 
             except Exception:
                 try:
@@ -207,15 +211,33 @@ class DeprecationDocumentationFile(BaseModel):
                         DeprecatedSecurityContentObject,
                     )
 
-                    elem["deprecated_content"] = (
-                        DeprecatedSecurityContentObject.mapNamesToSecurityContentObjects(
-                            [name], director
-                        )[0]
-                    )
+                    matched_content = DeprecatedSecurityContentObject.mapNamesToSecurityContentObjects(
+                        [name], director
+                    )[0]
                 except Exception:
-                    raise ValueError(
-                        f"Failed to map content found in deprecated content yml to any content: [{name}]"
+                    mapping_exceptions.append(
+                        ValueError(
+                            f"Failed to map content found in deprecated content yml to any content: [{name}]"
+                        )
                     )
+                    continue
+            if matched_content.status not in [
+                DetectionStatus.deprecated,
+                DetectionStatus.removed,
+            ]:
+                mapping_exceptions.append(
+                    Exception(
+                        f"{matched_content.name} is in the deprecation file but the underlying detection is not marked as deprecated"
+                    )
+                )
+                continue
+            elem["deprecated_content"] = matched_content
+
+        if len(mapping_exceptions) > 0:
+            raise ExceptionGroup(
+                "The following Exceptions were generated while parsing the Deprecation Mapping File",
+                mapping_exceptions,
+            )
         return v
 
     @model_validator(mode="after")

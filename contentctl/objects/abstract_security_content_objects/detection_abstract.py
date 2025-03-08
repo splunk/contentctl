@@ -435,12 +435,8 @@ class Detection_Abstract(SecurityContentObject):
             "datamodel": self.datamodel,
             "source": self.source,
             "nes_fields": self.nes_fields,
+            "rba": self.rba,
         }
-        if self.rba is not None:
-            model["risk_severity"] = self.rba.severity
-            model["tags"]["risk_score"] = self.rba.risk_score
-        else:
-            model["tags"]["risk_score"] = 0
 
         # Only a subset of macro fields are required:
         all_macros: list[dict[str, str | list[str]]] = []

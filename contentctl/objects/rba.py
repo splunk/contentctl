@@ -11,6 +11,23 @@ from contentctl.objects.enums import RiskSeverity
 RiskScoreValue_Type = Annotated[int, Field(ge=1, le=100)]
 
 
+def risk_score_to_severity(num: int) -> RiskSeverity:
+    if 0 <= num <= 20:
+        return RiskSeverity.INFORMATIONAL
+    elif 20 < num <= 40:
+        return RiskSeverity.LOW
+    elif 40 < num <= 60:
+        return RiskSeverity.MEDIUM
+    elif 60 < num <= 80:
+        return RiskSeverity.HIGH
+    elif 80 < num <= 100:
+        return RiskSeverity.CRITICAL
+    else:
+        raise Exception(
+            f"Error getting severity - risk_score must be between 0-100, but was actually {num}"
+        )
+
+
 class RiskObjectType(str, Enum):
     SYSTEM = "system"
     USER = "user"
@@ -62,6 +79,11 @@ class RiskObject(BaseModel):
             return True
         return False
 
+    @computed_field
+    @property
+    def severity(self) -> RiskSeverity:
+        return risk_score_to_severity(self.score)
+
     @model_serializer
     def serialize_risk_object(self) -> dict[str, str | int]:
         """
@@ -74,6 +96,7 @@ class RiskObject(BaseModel):
             "risk_object_field": self.field,
             "risk_object_type": self.type,
             "risk_score": self.score,
+            "severity": self.severity,
         }
 
 
@@ -123,20 +146,7 @@ class RBAObject(BaseModel, ABC):
     @computed_field
     @property
     def severity(self) -> RiskSeverity:
-        if 0 <= self.risk_score <= 20:
-            return RiskSeverity.INFORMATIONAL
-        elif 20 < self.risk_score <= 40:
-            return RiskSeverity.LOW
-        elif 40 < self.risk_score <= 60:
-            return RiskSeverity.MEDIUM
-        elif 60 < self.risk_score <= 80:
-            return RiskSeverity.HIGH
-        elif 80 < self.risk_score <= 100:
-            return RiskSeverity.CRITICAL
-        else:
-            raise Exception(
-                f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}"
-            )
+        return risk_score_to_severity(self.risk_score)
 
     @model_serializer
     def serialize_rba(self) -> dict[str, str | list[dict[str, str | int]]]:
@@ -144,4 +154,5 @@ class RBAObject(BaseModel, ABC):
             "message": self.message,
             "risk_objects": [obj.model_dump() for obj in sorted(self.risk_objects)],
             "threat_objects": [obj.model_dump() for obj in sorted(self.threat_objects)],
+            "severity": self.severity,
         }

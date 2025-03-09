@@ -1055,3 +1055,30 @@ class Detection_Abstract(SecurityContentObject):
         # Return the summary
 
         return summary_dict
+
+    @model_validator(mode="after")
+    def validate_data_source_output_fields(self):
+        # Skip validation for Hunting and Correlation types, or non-production detections
+        if self.status != DetectionStatus.production or self.type in {
+            AnalyticsType.Hunting,
+            AnalyticsType.Correlation,
+        }:
+            return self
+
+        # Validate that all required output fields are present in the search
+        for data_source in self.data_source_objects:
+            if not data_source.output_fields:
+                continue
+
+            missing_fields = [
+                field for field in data_source.output_fields if field not in self.search
+            ]
+
+            if missing_fields:
+                raise ValueError(
+                    f"Data source '{data_source.name}' has output fields "
+                    f"{missing_fields} that are not present in the search "
+                    f"for detection '{self.name}'"
+                )
+
+        return self

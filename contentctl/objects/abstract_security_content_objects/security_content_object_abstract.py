@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
+    from contentctl.objects.config import Config_Base, CustomApp
     from contentctl.objects.deployment import Deployment
-    from contentctl.objects.config import Config_Base
 
 import abc
 import datetime
@@ -13,6 +13,7 @@ import pathlib
 import pprint
 import uuid
 from abc import abstractmethod
+from csv import DictWriter
 from functools import cached_property
 from typing import List, Optional, Tuple, Type, Union
 
@@ -174,6 +175,83 @@ class DeprecationDocumentationFile(BaseModel):
     macros: list[DeprecationInfo] = []
     stories: list[DeprecationInfo]
     detections: list[DeprecationInfo]
+
+    def writeDeprecationCSV(
+        self,
+        app: CustomApp,
+        output_file: pathlib.Path,
+    ):
+        deprecation_rows: list[dict[str, str]] = []
+
+        for content in self.detections:
+            from contentctl.objects.detection import Detection
+
+            deprecation_rows.append(
+                self.generateDeprecationLookupRow(content, Detection, app)
+            )
+
+        for content in self.baselines:
+            from contentctl.objects.baseline import Baseline
+
+            deprecation_rows.append(
+                self.generateDeprecationLookupRow(content, Baseline, app)
+            )
+        for content in self.stories:
+            from contentctl.objects.story import Story
+
+            deprecation_rows.append(
+                self.generateDeprecationLookupRow(content, Story, app)
+            )
+
+        with open(output_file, "w") as deprecation_csv_file:
+            deprecation_csv_writer = DictWriter(
+                deprecation_csv_file,
+                fieldnames=[
+                    "Name",
+                    "Content Type",
+                    "Deprecated in Version",
+                    "Reason",
+                    "Migration Guide",
+                    "Replacement Content",
+                ],
+            )
+            deprecation_csv_writer.writeheader()
+            deprecation_csv_writer.writerows(deprecation_rows)
+
+        print(f"Finished generating deprecation CSV at {output_file}")
+
+    def generateDeprecationLookupRow(
+        self,
+        info: DeprecationInfo,
+        contentType: type[SecurityContentObject_Abstract],
+        app: CustomApp,
+    ) -> dict[str, str]:
+        """
+        This function exists as a bit of a shim because pieces of content are identified in ESCU by
+        their Stanza name, which could be different than
+        """
+
+        # For deprecation to be supported for a given object type, the static_get_conf_stanza_name
+        # must be defined. It is presently only defined for Detection, Baselines, and Stories, so
+        # this is likely something we will need to work on in the future if we plan to deprecate
+        # other types of content
+
+        print(contentType)
+        full_content_name: str = contentType.static_get_conf_stanza_name(
+            info.deprecated_content.name, app
+        )
+        return {
+            "Name": full_content_name,
+            "Content Type": contentType.__name__,
+            "Deprecated in Version": str(info.deprecated_in_version),
+            "Reason": info.reason,
+            # We could compute this dynamically for each
+            # piece of content if we wanted
+            "Migration Guide": "https://research.splunk.com/migration_guide/",
+            "Replacement Content": "\n".join(
+                [str(content.researchSiteLink) for content in info.replacement_content]
+            ),
+        }
 
     @classmethod
     def mapContent(

@@ -6,9 +6,11 @@ if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
 import pathlib
+from functools import cached_property
 
 from pydantic import (
     Field,
+    HttpUrl,
     ValidationInfo,
     computed_field,
     field_validator,
@@ -103,3 +105,8 @@ class Baseline(SecurityContentObject):
         # return the model
         return super_fields
         return super_fields
+
+    @computed_field
+    @cached_property
+    def researchSiteLink(self) -> HttpUrl:
+        return HttpUrl(url=f"https://research.splunk.com/baselines/{self.id}")  # type: ignore

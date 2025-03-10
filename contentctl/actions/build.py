@@ -44,6 +44,12 @@ class Build:
                 / "data_sources.csv"
             )
 
+            if input_dto.director_output_dto.deprecation_documentation is not None:
+                input_dto.director_output_dto.deprecation_documentation.writeDeprecationCSV(
+                    input_dto.config.app,
+                    input_dto.config.getPackageDirectoryPath() / "deprecation_info.csv",
+                )
+
             deprecation_lookup_fake_yml_path = (
                 input_dto.config.getPackageDirectoryPath()
                 / "lookups"

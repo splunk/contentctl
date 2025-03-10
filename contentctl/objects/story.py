@@ -157,3 +157,7 @@ class Story(SecurityContentObject):
     @property
     def baseline_names(self) -> List[str]:
         return [baseline.name for baseline in self.baselines]
+
+    @staticmethod
+    def static_get_conf_stanza_name(name: str, app: CustomApp) -> str:
+        return name

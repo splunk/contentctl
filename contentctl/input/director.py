@@ -112,19 +112,6 @@ class Director:
         self.createSecurityContent(SecurityContentType.detections)
         self.createSecurityContent(SecurityContentType.dashboards)
 
-        from contentctl.objects.abstract_security_content_objects.detection_abstract import \
-            MISSING_SOURCES
-
-        if len(MISSING_SOURCES) > 0:
-            missing_sources_string = "\n 🟡 ".join(sorted(list(MISSING_SOURCES)))
-            print(
-                "WARNING: The following data_sources have been used in detections, but are not yet defined.\n"
-                "This is not yet an error since not all data_sources have been defined, but will be convered to an error soon:\n 🟡 "
-                f"{missing_sources_string}"
-            )
-        else:
-            print("No missing data_sources!")
-
     def createSecurityContent(self, contentType: SecurityContentType) -> None:
         if contentType in [
             SecurityContentType.deployments,

@@ -94,6 +94,10 @@ class Lookup(SecurityContentObject, abc.ABC):
     )
     case_sensitive_match: None | bool = Field(default=None)
 
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("lookups")
+
     @model_serializer
     def serialize_model(self):
         # Call parent serializer
@@ -364,6 +368,11 @@ class MlModel(FileBackedLookup):
         return pathlib.Path(f"{self.filename.stem}.{self.lookup_type}")
 
 
-LookupAdapter = TypeAdapter(
+LookupAdapter: TypeAdapter[CSVLookup | KVStoreLookup | MlModel] = TypeAdapter(
     Annotated[CSVLookup | KVStoreLookup | MlModel, Field(discriminator="lookup_type")]
 )
+
+# The following are defined as they are used by the Director.  For normal SecurityContentObject
+# types, they already exist. But do not for the TypeAdapter
+setattr(LookupAdapter, "containing_folder", lambda: "lookups")
+setattr(LookupAdapter, "__name__", "Lookup")

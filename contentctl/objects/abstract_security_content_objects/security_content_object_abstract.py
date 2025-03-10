@@ -304,9 +304,9 @@ class DeprecationDocumentationFile(BaseModel):
             elem["deprecated_content"] = matched_content
 
         if len(mapping_exceptions) > 0:
-            raise ExceptionGroup(
-                "The following Exceptions were generated while parsing the Deprecation Mapping File",
-                mapping_exceptions,
+            exception_string = "\n  \n-".join(str(e) for e in mapping_exceptions)
+            raise Exception(
+                f"The following Exceptions were generated while parsing the Deprecation Mapping File: \n{exception_string}"
             )
         return v
 
@@ -335,9 +335,10 @@ class DeprecationDocumentationFile(BaseModel):
                 exceptions.append(e)
         if len(exceptions) == 0:
             return self
-        raise ExceptionGroup(
-            "The following errors we found while enforcing content deprecation requirements.",
-            exceptions,
+
+        exception_string = "\n  \n-".join(str(e) for e in exceptions)
+        raise Exception(
+            f"The following errors we found while enforcing content deprecation requirements:\n{exception_string}"
         )
 
     @field_validator("baselines", mode="before")

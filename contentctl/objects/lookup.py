@@ -75,7 +75,7 @@ class Lookup(SecurityContentObject, abc.ABC):
     # as a BOOL and this causes parsing to fail. As such, we will always
     # convert this to a string if it is passed as a bool
     default_match: Annotated[
-        str, BeforeValidator(lambda dm: str(dm) if isinstance(dm, bool) else dm)
+        str, BeforeValidator(lambda dm: str(dm).lower() if isinstance(dm, bool) else dm)
     ] = Field(
         default="",
         description="This field is given a default value of ''"

@@ -313,6 +313,7 @@ class DeprecationDocumentationFile(BaseModel):
     @model_validator(mode="after")
     def enforceDeprecationRequirements(self, info: ValidationInfo) -> Self:
         config: Config_Base = info.context.get("config", None)
+        exceptions: list[Exception] = []
         for content in (
             self.baselines
             + self.dashboards
@@ -328,8 +329,16 @@ class DeprecationDocumentationFile(BaseModel):
             content.deprecated_content.deprecation_info = content
 
             # Make sure that if the content has been deprecated, it is in the right location
-            content.enforceDeprecationRequirement(config)
-        return self
+            try:
+                content.enforceDeprecationRequirement(config)
+            except Exception as e:
+                exceptions.append(e)
+        if len(exceptions) == 0:
+            return self
+        raise ExceptionGroup(
+            "The following errors we found while enforcing content deprecation requirements.",
+            exceptions,
+        )
 
     @field_validator("baselines", mode="before")
     @classmethod

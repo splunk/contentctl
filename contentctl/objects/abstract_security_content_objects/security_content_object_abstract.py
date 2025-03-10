@@ -44,11 +44,6 @@ NO_FILE_NAME = "NO_FILE_NAME"
 
 class DeprecationInfo(BaseModel):
     deprecated_content: SecurityContentObject_Abstract
-    deprecated_date: datetime.date = Field(
-        ...,
-        description="On what expected date will this content be deprecated? "
-        "If an app is built after this date and attempts to write out this content, an exception will be generated.",
-    )
 
     deprecated_in_version: str = Field(
         ...,
@@ -59,7 +54,7 @@ class DeprecationInfo(BaseModel):
     reason: str = Field(
         ...,
         description="An explanation of why this content was deprecated.",
-        min_length=0,
+        min_length=6,
     )
     replacement_content: list[SecurityContentObject_Abstract] = Field(
         [],
@@ -78,9 +73,8 @@ class DeprecationInfo(BaseModel):
         """
         if self.shouldContentBeRemoved(cfg):
             if self.hasContentBeenRemoved(cfg):
-                print(
-                    f"emit has-been-deprecated row in deprecation assistant lookup for {self.deprecated_content.name}"
-                )
+                # This is content that has already been removed
+                pass
             else:
                 raise Exception(
                     f"Content named '{self.deprecated_content.name}' "
@@ -97,9 +91,8 @@ class DeprecationInfo(BaseModel):
                     f"This content should be moved out of the folder '{cfg.deprecated_content_path} and into its appropriate content folder.'"
                 )
             else:
-                print(
-                    f"emit to-be-deprecated row in deprecation assistant lookup for {self.deprecated_content.name}"
-                )
+                # This is content that will be removed in the future
+                pass
 
     def hasContentBeenRemoved(self, cfg: Config_Base) -> bool:
         """
@@ -149,7 +142,7 @@ class DeprecationInfo(BaseModel):
             raise Exception(
                 f"Unable to parse deprecation_version info for the app {cfg.app.title} into a valid Semantic Version: [{cfg.app.version}]"
             )
-        print(f"Dep: {deprecation_version}, App: {current_app_version}")
+
         if deprecation_version <= current_app_version:
             return True
         return False
@@ -236,7 +229,6 @@ class DeprecationDocumentationFile(BaseModel):
         # this is likely something we will need to work on in the future if we plan to deprecate
         # other types of content
 
-        print(contentType)
         full_content_name: str = contentType.static_get_conf_stanza_name(
             info.deprecated_content.name, app
         )

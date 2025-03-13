@@ -1402,18 +1402,16 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         url_with_hec_path = urllib.parse.urljoin(
             url_with_port, "services/collector/raw"
         )
+
+        if attack_data_file.endpoint:
+            url_with_hec_path = urllib.parse.urljoin(url_with_port, attack_data_file.endpoint)
+
         with open(tempfile, "rb") as datafile:
             try:
-                content = datafile.read()
-                content_str = content.decode("utf-8")
-                if content_str.startswith('{"event"'):
-                    url_with_hec_path = urllib.parse.urljoin(
-                        url_with_port, "services/collector/event"
-                    )
                 res = requests.post(
                     url_with_hec_path,
                     params=url_params,
-                    data=content,
+                    data=datafile.read(),
                     allow_redirects=True,
                     headers=headers,
                     verify=verify_ssl,

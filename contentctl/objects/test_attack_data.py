@@ -11,3 +11,4 @@ class TestAttackData(BaseModel):
     sourcetype: str = Field(...)
     custom_index: str | None = None
     host: str | None = None
+    endpoint: str | None = None

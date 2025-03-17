@@ -33,7 +33,7 @@ gitpython = "^3.1.43"
 setuptools = ">=69.5.1,<76.0.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.9.10"
+ruff = ">=0.9.10,<0.12.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

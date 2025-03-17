@@ -204,7 +204,6 @@ class DeprecationDocumentationFile(BaseModel):
                     "Content Type",
                     "Deprecated in Version",
                     "Reason",
-                    "Migration Guide",
                     "Replacement Content",
                 ],
             )
@@ -237,11 +236,11 @@ class DeprecationDocumentationFile(BaseModel):
             "Content Type": contentType.__name__,
             "Deprecated in Version": str(info.deprecated_in_version),
             "Reason": info.reason,
-            # We could compute this dynamically for each
-            # piece of content if we wanted
-            "Migration Guide": "https://research.splunk.com/migration_guide/",
             "Replacement Content": "\n".join(
-                [str(content.researchSiteLink) for content in info.replacement_content]
+                [
+                    content.get_conf_stanza_name(app)
+                    for content in info.replacement_content
+                ]
             ),
         }
 

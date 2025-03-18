@@ -119,7 +119,7 @@ class Director:
         self.createSecurityContent(Macro)
         self.createSecurityContent(Story)
         self.createSecurityContent(Baseline)
-        self.createSecurityContent(Investigation)
+        #self.createSecurityContent(Investigation)
         self.createSecurityContent(DataSource)
         self.createSecurityContent(Playbook)
         self.createSecurityContent(Detection)
@@ -129,7 +129,7 @@ class Director:
 
     def validateDeprecation(self):
         data = YmlReader.load_file(
-            self.input_dto.path / "deprecated" / "deprecated_detection_mapping.yml"
+            self.input_dto.path / "deprecated" / "deprecation_mapping.YML"
         )
         from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
             DeprecationDocumentationFile,

@@ -1,14 +1,18 @@
 # Used so that we can have a staticmethod that takes the class
 # type Macro as an argument
 from __future__ import annotations
-from typing import TYPE_CHECKING, List
-import re
-from pydantic import Field, model_serializer, NonNegativeInt
-import uuid
+
 import datetime
+import pathlib
+import re
+import uuid
+from typing import TYPE_CHECKING, List
+
+from pydantic import Field, NonNegativeInt, model_serializer
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
+
 from contentctl.objects.security_content_object import SecurityContentObject
 
 # The following macros are included in commonly-installed apps.
@@ -31,6 +35,10 @@ class Macro(SecurityContentObject):
     date: datetime.date = Field(datetime.date.today())
     author: str = Field("NO AUTHOR DEFINED", max_length=255)
     version: NonNegativeInt = 1
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("macros")
 
     @model_serializer
     def serialize_model(self):
@@ -85,6 +93,9 @@ class Macro(SecurityContentObject):
                 if any(to_ignore in macro for to_ignore in ignore_macros)
             ]
         )
+        # remove the ones that we will ignore
+        macros_to_get -= macros_to_ignore
+        return Macro.mapNamesToSecurityContentObjects(list(macros_to_get), director)
         # remove the ones that we will ignore
         macros_to_get -= macros_to_ignore
         return Macro.mapNamesToSecurityContentObjects(list(macros_to_get), director)

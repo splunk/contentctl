@@ -49,6 +49,13 @@ class Dashboard(SecurityContentObject):
         ..., description="Valid JSON object that describes the dashboard"
     )
 
+    def label(self, config: build) -> str:
+        return f"{config.app.label} - {self.name}"
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("dashboards")
+
     @model_validator(mode="before")
     @classmethod
     def validate_fields_from_json(cls, data: Any) -> Any:

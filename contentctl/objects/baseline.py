@@ -6,11 +6,9 @@ if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
 import pathlib
-from functools import cached_property
 
 from pydantic import (
     Field,
-    HttpUrl,
     ValidationInfo,
     computed_field,
     field_validator,
@@ -59,8 +57,8 @@ class Baseline(SecurityContentObject):
         lookups = Lookup.get_lookups(search, director)
         return lookups
 
-    @staticmethod
-    def static_get_conf_stanza_name(name: str, app: CustomApp) -> str:
+    @classmethod
+    def static_get_conf_stanza_name(cls, name: str, app: CustomApp) -> str:
         """
         This is exposed as a static method since it may need to be used for SecurityContentObject which does not
         pass all currenty validations - most notable Deprecated content.
@@ -68,11 +66,6 @@ class Baseline(SecurityContentObject):
         stanza_name = CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE.format(
             app_label=app.label, detection_name=name
         )
-        return stanza_name
-
-    def get_conf_stanza_name(self, app: CustomApp) -> str:
-        stanza_name = self.static_get_conf_stanza_name(self.name, app)
-        self.check_conf_stanza_max_length(stanza_name)
         return stanza_name
 
     @field_validator("deployment", mode="before")
@@ -105,8 +98,3 @@ class Baseline(SecurityContentObject):
         # return the model
         return super_fields
         return super_fields
-
-    @computed_field
-    @cached_property
-    def researchSiteLink(self) -> HttpUrl:
-        return HttpUrl(url=f"https://research.splunk.com/baselines/{self.id}")  # type: ignore

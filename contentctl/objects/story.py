@@ -38,7 +38,7 @@ class Story(SecurityContentObject):
     @computed_field
     @cached_property
     def researchSiteLink(self) -> HttpUrl:
-        return HttpUrl(url=f"https://research.splunk.com/detections/{self.id}")  # type: ignore
+        return HttpUrl(url=f"https://research.splunk.com/stories/{self.file_path.stem}")  # type:ignore
 
     @computed_field
     @property
@@ -158,6 +158,6 @@ class Story(SecurityContentObject):
     def baseline_names(self) -> List[str]:
         return [baseline.name for baseline in self.baselines]
 
-    @staticmethod
-    def static_get_conf_stanza_name(name: str, app: CustomApp) -> str:
+    @classmethod
+    def static_get_conf_stanza_name(cls, name: str, app: CustomApp) -> str:
         return name

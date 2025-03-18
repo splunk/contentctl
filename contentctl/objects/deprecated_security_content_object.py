@@ -21,14 +21,12 @@ class DeprecatedSecurityContentObject(SecurityContentObject):
     # objects can change. We do not want to throw pasing errors on any of these, but we will
     # only expose fields that are defined in the SecurityContentObject definiton directly
     model_config = ConfigDict(validate_default=True, extra="ignore")
-    status: Literal[DetectionStatus.deprecated] = Field(
-        default=DetectionStatus.deprecated
-    )
-    # Evaluate whether files in this folder should have status REMOVED instead of deprecated
-    """description="Any deprecated object MUST have "
+    status: Literal[DetectionStatus.removed] = Field(
+        description="Any deprecated object MUST have "
         "a status of removed.  'Deprecated' objects are still "
         "in ESCU, but have been marked deprecated for future "
-        "removal. 'Removed' objects are no longer included in ESCU.", """
+        "removal. 'Removed' objects are no longer included in ESCU."
+    )
 
     @field_validator("deprecation_info")
     def ensure_deprecation_info_is_not_none(cls, deprecation_info: Any) -> Any:
@@ -59,4 +57,4 @@ class DeprecatedSecurityContentObject(SecurityContentObject):
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:
-        return pathlib.Path("deprecated")
+        return pathlib.Path("removed")

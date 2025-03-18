@@ -108,10 +108,10 @@ class Detection_Abstract(SecurityContentObject):
     @computed_field
     @cached_property
     def researchSiteLink(self) -> HttpUrl:
-        return HttpUrl(url=f"https://research.splunk.com/detections/{self.id}")  # type: ignore
+        return HttpUrl(url=f"https://research.splunk.com/{self.source}/{self.id}")  # type: ignore
 
-    @staticmethod
-    def static_get_conf_stanza_name(name: str, app: CustomApp) -> str:
+    @classmethod
+    def static_get_conf_stanza_name(cls, name: str, app: CustomApp) -> str:
         """
         This is exposed as a static method since it may need to be used for SecurityContentObject which does not
         pass all currenty validations - most notable Deprecated content.
@@ -119,11 +119,6 @@ class Detection_Abstract(SecurityContentObject):
         stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(
             app_label=app.label, detection_name=name
         )
-        return stanza_name
-
-    def get_conf_stanza_name(self, app: CustomApp) -> str:
-        stanza_name = self.static_get_conf_stanza_name(self.name, app)
-        self.check_conf_stanza_max_length(stanza_name)
         return stanza_name
 
     def get_action_dot_correlationsearch_dot_label(

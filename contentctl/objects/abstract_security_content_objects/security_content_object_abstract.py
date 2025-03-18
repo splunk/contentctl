@@ -43,9 +43,9 @@ NO_FILE_NAME = "NO_FILE_NAME"
 
 
 class DeprecationInfo(BaseModel):
-    deprecated_content: SecurityContentObject_Abstract
+    content: SecurityContentObject_Abstract
 
-    deprecated_in_version: str = Field(
+    removed_in_version: str = Field(
         ...,
         description="In which version of the app was this content deprecated? "
         "If an app is built on or after this version and contains this content, an exception will be generated.",
@@ -77,18 +77,18 @@ class DeprecationInfo(BaseModel):
                 pass
             else:
                 raise Exception(
-                    f"Content named '{self.deprecated_content.name}' "
-                    f"was marked for deprecation in version [{self.deprecated_in_version}]. "
+                    f"Content named '{self.content.name}' "
+                    f"was marked for deprecation in version [{self.removed_in_version}]. "
                     f"However, this content is STILL PRESENT in the current build [{cfg.app.version}]. "
-                    f"This content should be moved to the folder '{self.deprecated_content.file_path}' into '{cfg.deprecated_content_path}'"
+                    f"This content should be moved to the folder '{self.content.file_path}' into '{cfg.removed_content_path}'"
                 )
         else:
             if self.hasContentBeenRemoved(cfg):
                 raise Exception(
-                    f"Content named '{self.deprecated_content.name}' "
-                    f"was marked for deprecation in version [{self.deprecated_in_version}]. "
+                    f"Content named '{self.content.name}' "
+                    f"was marked for deprecation in version [{self.removed_in_version}]. "
                     f"However, this content is HAS BEEN REMOVED EARLY in the current build [{cfg.app.version}]. "
-                    f"This content should be moved out of the folder '{cfg.deprecated_content_path} and into its appropriate content folder.'"
+                    f"This content should be moved out of the folder '{cfg.removed_content_path} and into its appropriate content folder.'"
                 )
             else:
                 # This is content that will be removed in the future
@@ -106,15 +106,15 @@ class DeprecationInfo(BaseModel):
         Returns:
             bool: whether or not the content is still included in a build of the app
         """
-        if self.deprecated_content.file_path is None:
+        if self.content.file_path is None:
             raise Exception(
-                f"Unable to determine if content {self.deprecated_content.name} "
-                f"has been moved into the folder {cfg.deprecated_content_path}. "
+                f"Unable to determine if content {self.content.name} "
+                f"has been moved into the folder {cfg.removed_content_path}. "
                 "The content is not backed by a file (content.file_path was 'None')"
             )
 
-        return self.deprecated_content.file_path.resolve().is_relative_to(
-            cfg.deprecated_content_path.resolve()
+        return self.content.file_path.resolve().is_relative_to(
+            cfg.removed_content_path.resolve()
         )
 
     def shouldContentBeRemoved(self, cfg: Config_Base) -> bool:
@@ -131,10 +131,10 @@ class DeprecationInfo(BaseModel):
             bool: True or False, based on whether something should be removed from the app
         """
         try:
-            deprecation_version = Version(self.deprecated_in_version)
+            deprecation_version = Version(self.removed_in_version)
         except Exception as e:
             raise Exception(
-                f"Unable to parse deprecation_version info for {self.deprecated_content.name} into a valid Semantic Version: [{self.deprecated_in_version}]: {e}"
+                f"Unable to parse deprecation_version info for {self.content.name} into a valid Semantic Version: [{self.removed_in_version}]: {e}"
             )
         try:
             current_app_version = Version(cfg.app.version)
@@ -153,9 +153,21 @@ class DeprecationInfo(BaseModel):
         cls, v: list[str], info: ValidationInfo
     ) -> list[SecurityContentObject_Abstract]:
         director: DirectorOutputDto = info.context.get("output_dto", None)
-        return SecurityContentObject_Abstract.mapNamesToSecurityContentObjects(
-            v, director
+        replacement_content = (
+            SecurityContentObject_Abstract.mapNamesToSecurityContentObjects(v, director)
         )
+        old_content = [
+            content
+            for content in replacement_content
+            if getattr(content, "status", None)
+            not in [DetectionStatus.experimental, DetectionStatus.production]
+        ]
+        if len(old_content) > 0:
+            content_string = "\n  - " + "\n  - ".join(c.name for c in old_content)
+            raise ValueError(
+                f"The following Replacement Content has ALSO been marked as Deprecated/Removed. Replacement Content MUST be either Experimental or Production:{content_string}"
+            )
+        return replacement_content
 
 
 class DeprecationDocumentationFile(BaseModel):
@@ -196,15 +208,27 @@ class DeprecationDocumentationFile(BaseModel):
                 self.generateDeprecationLookupRow(content, Story, app)
             )
 
+        # Sort the information to be included in the deprecation file
+        deprecation_rows.sort(
+            key=lambda row: (
+                row["Content Type"],
+                row["Name"],
+            )
+        )
+        deprecation_rows.sort(
+            key=lambda row: (row["Removed in Version"],), reverse=True
+        )
+
         with open(output_file, "w") as deprecation_csv_file:
             deprecation_csv_writer = DictWriter(
                 deprecation_csv_file,
                 fieldnames=[
                     "Name",
                     "Content Type",
-                    "Deprecated in Version",
+                    "Removed in Version",
                     "Reason",
                     "Replacement Content",
+                    "Replacement Content Link",
                 ],
             )
             deprecation_csv_writer.writeheader()
@@ -226,21 +250,33 @@ class DeprecationDocumentationFile(BaseModel):
         # For deprecation to be supported for a given object type, the static_get_conf_stanza_name
         # must be defined. It is presently only defined for Detection, Baselines, and Stories, so
         # this is likely something we will need to work on in the future if we plan to deprecate
-        # other types of content
+        # other types of content.
+
+        # Note that we MUST pass the content type to construct the name because a piece of content
+        # which has already been removed is no longer parsed into, for example, a Detection or Baseline
+        # object. Instead it is parsed into a DeprecatedSecurityContentObject.  We need to call the
+        # static_get_conf_stanza name from its ORIGINAL type to get the properly formatted name of
+        # the content.
 
         full_content_name: str = contentType.static_get_conf_stanza_name(
-            info.deprecated_content.name, app
+            info.content.name, app
         )
+
         return {
             "Name": full_content_name,
             "Content Type": contentType.__name__,
-            "Deprecated in Version": str(info.deprecated_in_version),
+            "Removed in Version": str(info.removed_in_version),
             "Reason": info.reason,
             "Replacement Content": "\n".join(
                 [
                     content.get_conf_stanza_name(app)
                     for content in info.replacement_content
                 ]
+                or ["No Replacement Content Available"]
+            ),
+            "Replacement Content Link": "\n".join(
+                [str(content.researchSiteLink) for content in info.replacement_content]
+                or ["No Content Link Available"]
             ),
         }
 
@@ -263,10 +299,10 @@ class DeprecationDocumentationFile(BaseModel):
                         f"Must be a list DeprecationInfo object, not {type(elem)}"
                     )
                 )
-            name = elem.get("deprecated_content", None)
+            name = elem.get("content", None)
             if not isinstance(name, str):
                 mapping_exceptions.append(
-                    ValueError(f"deprecated_content must be a string, not {type(name)}")
+                    ValueError(f"'content' must be a string, not {type(name)}")
                 )
                 continue
             try:
@@ -300,7 +336,7 @@ class DeprecationDocumentationFile(BaseModel):
                     )
                 )
                 continue
-            elem["deprecated_content"] = matched_content
+            elem["content"] = matched_content
 
         if len(mapping_exceptions) > 0:
             exception_string = "\n  \n-".join(str(e) for e in mapping_exceptions)
@@ -325,7 +361,7 @@ class DeprecationDocumentationFile(BaseModel):
             + self.detections
         ):
             # point the deprecation_info for the object at the deprecation_info that was constructed
-            content.deprecated_content.deprecation_info = content
+            content.content.deprecation_info = content
 
             # Make sure that if the content has been deprecated, it is in the right location
             try:
@@ -451,9 +487,8 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     @cached_property
     @abstractmethod
     def researchSiteLink(self) -> HttpUrl:
-        return HttpUrl(url="google.com")
         raise NotImplementedError(
-            f"researchSiteLink has not been implemented for {self.name}"
+            f"researchSiteLink has not been implemented for [{type(self).__name__} - {self.name}]"
         )
 
     @computed_field
@@ -511,6 +546,17 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
                 f"conf stanza may only be {max_stanza_length} characters, "
                 f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' "
             )
+
+    @classmethod
+    def static_get_conf_stanza_name(cls, name: str, app: CustomApp) -> str:
+        raise NotImplementedError(
+            "{cls.__name__} does not have an implementation for static_get_conf_stanza_name"
+        )
+
+    def get_conf_stanza_name(self, app: CustomApp) -> str:
+        stanza_name = self.static_get_conf_stanza_name(self.name, app)
+        self.check_conf_stanza_max_length(stanza_name)
+        return stanza_name
 
     @staticmethod
     def objectListToNameList(objects: list[SecurityContentObject]) -> list[str]:

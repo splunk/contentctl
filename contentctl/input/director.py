@@ -119,7 +119,7 @@ class Director:
         self.createSecurityContent(Macro)
         self.createSecurityContent(Story)
         self.createSecurityContent(Baseline)
-        #self.createSecurityContent(Investigation)
+        # self.createSecurityContent(Investigation)
         self.createSecurityContent(DataSource)
         self.createSecurityContent(Playbook)
         self.createSecurityContent(Detection)
@@ -129,7 +129,7 @@ class Director:
 
     def validateDeprecation(self):
         data = YmlReader.load_file(
-            self.input_dto.path / "deprecated" / "deprecation_mapping.YML"
+            self.input_dto.path / "removed" / "deprecation_mapping.YML"
         )
         from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
             DeprecationDocumentationFile,
@@ -142,12 +142,12 @@ class Director:
         all_deprecated_content = list(
             filter(
                 lambda content: getattr(content, "status", None)
-                == DetectionStatus.deprecated,
+                in [DetectionStatus.deprecated, DetectionStatus.removed],
                 self.output_dto.name_to_content_map.values(),
             )
         )
         print(
-            f"\n\nThe length of all deprecated content is: {len(all_deprecated_content)}\n\n"
+            f"\n\nThe length of all deprecated or removed content is: {len(all_deprecated_content)}\n\n"
         )
         for content in all_deprecated_content:
             if getattr(content, "deprecation_info", None) is None:

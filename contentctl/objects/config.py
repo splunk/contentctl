@@ -239,8 +239,8 @@ class Config_Base(BaseModel):
         return str(path)
 
     @property
-    def deprecated_content_path(self) -> pathlib.Path:
-        return self.path / "deprecated"
+    def removed_content_path(self) -> pathlib.Path:
+        return self.path / "removed"
 
 
 class init(Config_Base):

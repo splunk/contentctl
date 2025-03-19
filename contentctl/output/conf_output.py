@@ -93,6 +93,10 @@ class ConfOutput:
 
         return written_files
 
+    # TODO (#339): we could have a discrepancy between detections tested and those delivered
+    #   based on the jinja2 template
+    #   {% if (detection.type == 'TTP' or detection.type == 'Anomaly' or
+    #       detection.type == 'Hunting' or detection.type == 'Correlation') %}
     def writeDetections(self, objects: list[Detection]) -> set[pathlib.Path]:
         written_files: set[pathlib.Path] = set()
         for output_app_path, template_name in [

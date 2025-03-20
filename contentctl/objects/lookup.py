@@ -6,9 +6,10 @@ import pathlib
 import re
 from enum import StrEnum, auto
 from functools import cached_property
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional, Self
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
 from pydantic import (
+    BeforeValidator,
     Field,
     FilePath,
     NonNegativeInt,
@@ -69,7 +70,19 @@ class Lookup_Type(StrEnum):
 
 # TODO (#220): Split Lookup into 2 classes
 class Lookup(SecurityContentObject, abc.ABC):
-    default_match: Optional[bool] = None
+    # We need to make sure that this is converted to a string because we widely
+    # use the string "False" in our lookup content.  However, PyYAML reads this
+    # as a BOOL and this causes parsing to fail. As such, we will always
+    # convert this to a string if it is passed as a bool
+    default_match: Annotated[
+        str, BeforeValidator(lambda dm: str(dm).lower() if isinstance(dm, bool) else dm)
+    ] = Field(
+        default="",
+        description="This field is given a default value of ''"
+        "because it is the default value specified in the transforms.conf "
+        "docs. Giving it a type of str rather than str | None simplifies "
+        "the typing for the field.",
+    )
     # Per the documentation for transforms.conf, EXACT should not be specified in this list,
     # so we include only WILDCARD and CIDR
     match_type: list[Annotated[str, Field(pattern=r"(^WILDCARD|CIDR)\(.+\)$")]] = Field(
@@ -88,7 +101,7 @@ class Lookup(SecurityContentObject, abc.ABC):
 
         # All fields custom to this model
         model = {
-            "default_match": "true" if self.default_match is True else "false",
+            "default_match": self.default_match,
             "match_type": self.match_type_to_conf_format,
             "min_matches": self.min_matches,
             "max_matches": self.max_matches,

@@ -1,7 +1,9 @@
 import pathlib
+import random
 import sys
 import traceback
 import warnings
+from dataclasses import dataclass
 
 import tyro
 
@@ -141,22 +143,36 @@ def test_common_func(config: test_common):
     raise Exception("There was at least one unsuccessful test")
 
 
-CONTENTCTL_5_WARNING = """
-*****************************************************************************
-WARNING - THIS IS AN ALPHA BUILD OF CONTENTCTL 5.
-THERE HAVE BEEN NUMEROUS CHANGES IN CONTENTCTL (ESPECIALLY TO YML FORMATS). 
-YOU ALMOST CERTAINLY DO NOT WANT TO USE THIS BUILD.
-IF YOU ENCOUNTER ERRORS, PLEASE USE THE LATEST CURRENTYLY SUPPORTED RELEASE: 
+def get_random_compliment():
+    compliments = [
+        "Your detection rules are like a zero-day shield! 🛡️",
+        "You catch threats like it's child's play! 🎯",
+        "Your correlation rules are pure genius! 🧠",
+        "Threat actors fear your detection engineering! ⚔️",
+        "You're the SOC's secret weapon! 🦾",
+        "Your false positive rate is impressively low! 📊",
+        "Malware trembles at your detection logic! 🦠",
+        "You're the threat hunter extraordinaire! 🔍",
+        "Your MITRE mappings are a work of art! 🎨",
+        "APTs have nightmares about your detections! 👻",
+        "Your content testing is bulletproof! 🎯",
+        "You're the detection engineering MVP! 🏆",
+    ]
+    return random.choice(compliments)
 
-CONTENTCTL==4.4.7 
 
-YOU HAVE BEEN WARNED!
-*****************************************************************************
-"""
+def recognize_func():
+    print(get_random_compliment())
+
+
+@dataclass
+class RecognizeCommand:
+    """Dummy subcommand for 'recognize' with no parameters."""
+
+    pass
 
 
 def main():
-    print(CONTENTCTL_5_WARNING)
     try:
         configFile = pathlib.Path("contentctl.yml")
 
@@ -210,6 +226,7 @@ def main():
             "test_servers": test_servers.model_construct(**t.__dict__),
             "release_notes": release_notes.model_construct(**config_obj),
             "deploy_acs": deploy_acs.model_construct(**t.__dict__),
+            "recognize": RecognizeCommand(),
         }
     )
 
@@ -240,6 +257,8 @@ def main():
             deploy_acs_func(updated_config)
         elif type(config) is test or type(config) is test_servers:
             test_common_func(config)
+        elif type(config) is RecognizeCommand:
+            recognize_func()
         else:
             raise Exception(f"Unknown command line type '{type(config).__name__}'")
     except FileNotFoundError as e:
@@ -265,7 +284,6 @@ def main():
             )
 
         print(e)
-        print(CONTENTCTL_5_WARNING)
         sys.exit(1)
 
 

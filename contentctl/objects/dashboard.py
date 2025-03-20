@@ -1,15 +1,16 @@
+import json
+import pathlib
+from enum import StrEnum
 from typing import Any
+
+from jinja2 import Environment
 from pydantic import Field, Json, model_validator
 
-import pathlib
-from jinja2 import Environment
-import json
-from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.config import build
-from enum import StrEnum
+from contentctl.objects.security_content_object import SecurityContentObject
 
-DEFAULT_DASHBAORD_JINJA2_TEMPLATE = """<dashboard version="2" theme="{{ dashboard.theme }}">
-    <label>{{ dashboard.label(config) }}</label>
+DEFAULT_DASHBOARD_JINJA2_TEMPLATE = """<dashboard version="2" theme="{{ dashboard.theme }}">
+    <label>{{ dashboard.name }}</label>
     <description></description>
     <definition><![CDATA[
 {{ dashboard.pretty_print_json_obj() }}
@@ -31,7 +32,7 @@ class DashboardTheme(StrEnum):
 
 class Dashboard(SecurityContentObject):
     j2_template: str = Field(
-        default=DEFAULT_DASHBAORD_JINJA2_TEMPLATE,
+        default=DEFAULT_DASHBOARD_JINJA2_TEMPLATE,
         description="Jinja2 Template used to construct the dashboard",
     )
     description: str = Field(
@@ -47,9 +48,6 @@ class Dashboard(SecurityContentObject):
     json_obj: Json[dict[str, Any]] = Field(
         ..., description="Valid JSON object that describes the dashboard"
     )
-
-    def label(self, config: build) -> str:
-        return f"{config.app.label} - {self.name}"
 
     @model_validator(mode="before")
     @classmethod
@@ -98,7 +96,16 @@ class Dashboard(SecurityContentObject):
         return json.dumps(self.json_obj, indent=4)
 
     def getOutputFilepathRelativeToAppRoot(self, config: build) -> pathlib.Path:
-        filename = f"{self.file_path.stem}.xml".lower()
+        if self.file_path is None:
+            raise FileNotFoundError(
+                f"Dashboard {self.name} file_path was None. Dashboards must be backed by a file."
+            )
+        # Prefix with the appLabel__ in order to make a search for these easy with match="__"
+        # in the default.xml file
+        filename = f"{config.app.label}__{self.file_path.stem}.xml".lower().replace(
+            " ", "_"
+        )
+
         return pathlib.Path("default/data/ui/views") / filename
 
     def writeDashboardFile(self, j2_env: Environment, config: build):

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "contentctl"
 
-version = "5.1.0"
+version = "5.2.0"
 
 description = "Splunk Content Control Tool"
 authors = ["STRT <research@splunk.com>"]
@@ -33,7 +33,7 @@ gitpython = "^3.1.43"
 setuptools = ">=69.5.1,<76.0.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.9.2"
+ruff = "^0.11.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

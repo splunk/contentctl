@@ -200,6 +200,7 @@ class Director:
                         context={
                             "output_dto": self.output_dto,
                             "app": self.input_dto.app,
+                            "config": self.input_dto,
                         },
                     )
                     self.output_dto.addContentToDictMappings(detection)

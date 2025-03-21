@@ -284,6 +284,10 @@ class validate(Config_Base):
     def atomic_red_team_repo_path(self):
         return self.external_repos_path / "atomic-red-team"
 
+    @property
+    def splunk_attack_data_path(self):
+        return self.external_repos_path / "attack_data"
+
     @model_validator(mode="after")
     def ensureEnrichmentReposPresent(self) -> Self:
         """

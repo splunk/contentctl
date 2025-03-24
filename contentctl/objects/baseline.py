@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Annotated, Any, List, Literal
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
+import pathlib
+
 from pydantic import (
     Field,
     ValidationInfo,
@@ -37,6 +39,10 @@ class Baseline(SecurityContentObject):
     deployment: Deployment = Field({})
     status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
 
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("baselines")
+
     @field_validator("lookups", mode="before")
     @classmethod
     def getBaselineLookups(cls, v: list[str], info: ValidationInfo) -> list[Lookup]:
@@ -51,11 +57,15 @@ class Baseline(SecurityContentObject):
         lookups = Lookup.get_lookups(search, director)
         return lookups
 
-    def get_conf_stanza_name(self, app: CustomApp) -> str:
+    @classmethod
+    def static_get_conf_stanza_name(cls, name: str, app: CustomApp) -> str:
+        """
+        This is exposed as a static method since it may need to be used for SecurityContentObject which does not
+        pass all currenty validations - most notable Deprecated content.
+        """
         stanza_name = CONTENTCTL_BASELINE_STANZA_NAME_FORMAT_TEMPLATE.format(
-            app_label=app.label, detection_name=self.name
+            app_label=app.label, detection_name=name
         )
-        self.check_conf_stanza_max_length(stanza_name)
         return stanza_name
 
     @field_validator("deployment", mode="before")
@@ -86,4 +96,5 @@ class Baseline(SecurityContentObject):
         super_fields.update(model)
 
         # return the model
+        return super_fields
         return super_fields

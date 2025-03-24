@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 import re
 from typing import Any, List, Literal
 
@@ -25,6 +26,10 @@ class Investigation(SecurityContentObject):
     known_false_positives: str = Field(...)
     tags: InvestigationTags
     status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("investigations")
 
     # enrichment
     @computed_field
@@ -105,4 +110,5 @@ class Investigation(SecurityContentObject):
             story.investigations.append(self)
         # back to itself
         for story in self.tags.analytic_story:
+            story.investigations.append(self)
             story.investigations.append(self)

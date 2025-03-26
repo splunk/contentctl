@@ -252,6 +252,17 @@ class init(Config_Base):
     )
 
 
+class AttackDataCache(BaseModel):
+    prefix: str = Field(
+        "This is the prefix that the data must begin with to map to this cache object"
+    )
+    root_folder_name: str = Field(
+        "This is the root folder name where the attack data should be downloaded to."
+    )
+    # suggested checkout information for our attack_data repo
+    # curl https://attack-range-attack-data.s3.us-west-2.amazonaws.com/attack_data.tar.zstd | zstd --decompress | tar -x -C datasets
+
+
 class validate(Config_Base):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)
     enrichments: bool = Field(
@@ -272,9 +283,56 @@ class validate(Config_Base):
         default=False, description="Validate latest TA information from Splunkbase"
     )
 
+    test_data_caches: list[AttackDataCache] = Field(
+        default=[],
+        description="A list of attack data that can "
+        "be used in lieu of the HTTPS download links "
+        "of each test data file. This cache can significantly "
+        "increase overall test speed, ensure the correctness of "
+        "links at 'contentctl validate' time, and reduce errors "
+        "associated with failed responses from file servers.",
+    )
+
     @property
     def external_repos_path(self) -> pathlib.Path:
         return self.path / "external_repos"
+
+    def map_to_attack_data_cache(
+        self, filename: HttpUrl | FilePath
+    ) -> HttpUrl | FilePath:
+        # If this is simply a link to a file directly, then no mapping
+        # needs to take place. Return the link to the file.
+        if isinstance(filename, pathlib.Path):
+            return filename
+
+        if len(self.test_data_caches) == 0:
+            return filename
+
+        # Otherwise, this is a URL.  See if its prefix matches one of the
+        # prefixes in the list of caches
+        for cache in self.test_data_caches:
+            root_folder_path = self.external_repos_path / cache.root_folder_name
+            # See if this data file was in that path
+            if str(filename).startswith(cache.prefix):
+                new_file_name = str(filename).replace(cache.prefix, "")
+                new_file_path = root_folder_path / new_file_name
+
+                if not root_folder_path.is_dir():
+                    # This has not been checked out. If a cache file was listed in the config AND we hit
+                    # on a prefix, it MUST be checked out
+                    raise ValueError(
+                        f"Expected to find cached test data at '{root_folder_path}', but that directory does not exist. If a test uses attack data and a prefix matches that data, then the the cached data MUST exist."
+                    )
+
+                if not new_file_path.is_file():
+                    raise ValueError(
+                        f"Expected to find the cached data file '{new_file_name}', but it does not exist in '{root_folder_path}'"
+                    )
+                return new_file_path
+
+        raise ValueError(
+            f"Test data file '{filename}' does not exist in ANY of the following caches.  If you are supplying caches, any HTTP file MUST be located in a cache: [{[cache.prefix for cache in self.test_data_caches]}]"
+        )
 
     @property
     def mitre_cti_repo_path(self) -> pathlib.Path:

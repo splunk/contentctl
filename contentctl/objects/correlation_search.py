@@ -1,80 +1,41 @@
-import logging
-import time
 import json
-from typing import Any
-from enum import StrEnum, IntEnum
+import logging
+import re
+import time
+from enum import IntEnum, StrEnum
 from functools import cached_property
+from typing import Any
 
-from pydantic import ConfigDict, BaseModel, computed_field, Field, PrivateAttr
-from splunklib.results import JSONResultsReader, Message  # type: ignore
-from splunklib.binding import HTTPError, ResponseReader  # type: ignore
 import splunklib.client as splunklib  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field
+from splunklib.binding import HTTPError, ResponseReader  # type: ignore
+from splunklib.results import JSONResultsReader, Message  # type: ignore
 from tqdm import tqdm  # type: ignore
 
-from contentctl.objects.risk_analysis_action import RiskAnalysisAction
-from contentctl.objects.notable_action import NotableAction
-from contentctl.objects.base_test_result import TestResultStatus
-from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.actions.detection_testing.progress_bar import (
-    format_pbar_string,  # type: ignore
-    TestReportingType,
     TestingStates,
+    TestReportingType,
+    format_pbar_string,  # type: ignore
 )
+from contentctl.helper.utils import Utils
+from contentctl.objects.base_test_result import TestResultStatus
+from contentctl.objects.detection import Detection
 from contentctl.objects.errors import (
+    ClientError,
     IntegrationTestingError,
     ServerError,
-    ClientError,
     ValidationFailed,
 )
-from contentctl.objects.detection import Detection
-from contentctl.objects.risk_event import RiskEvent
+from contentctl.objects.integration_test_result import IntegrationTestResult
+from contentctl.objects.notable_action import NotableAction
 from contentctl.objects.notable_event import NotableEvent
-
+from contentctl.objects.risk_analysis_action import RiskAnalysisAction
+from contentctl.objects.risk_event import RiskEvent
 
 # Suppress logging by default; enable for local testing
 ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
-
-
-def get_logger() -> logging.Logger:
-    """
-    Gets a logger instance for the module; logger is configured if not already configured. The
-    NullHandler is used to suppress loggging when running in production so as not to conflict w/
-    contentctl's larger pbar-based logging. The StreamHandler is enabled by setting ENABLE_LOGGING
-    to True (useful for debugging/testing locally)
-    """
-    # get logger for module
-    logger = logging.getLogger(__name__)
-
-    # set propagate to False if not already set as such (needed to that we do not flow up to any
-    # root loggers)
-    if logger.propagate:
-        logger.propagate = False
-
-    # if logger has no handlers, it needs to be configured for the first time
-    if not logger.hasHandlers():
-        # set level
-        logger.setLevel(LOG_LEVEL)
-
-        # if logging enabled, use a StreamHandler; else, use the NullHandler to suppress logging
-        handler: logging.Handler
-        if ENABLE_LOGGING:
-            handler = logging.FileHandler(LOG_PATH)
-        else:
-            handler = logging.NullHandler()
-
-        # Format our output
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s:%(name)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-
-        # Set handler level and add to logger
-        handler.setLevel(LOG_LEVEL)
-        logger.addHandler(handler)
-
-    return logger
 
 
 class SavedSearchKeys(StrEnum):
@@ -135,34 +96,58 @@ class ResultIterator:
     Given a ResponseReader, constructs a JSONResultsReader and iterates over it; when Message instances are encountered,
     they are logged if the message is anything other than "error", in which case an error is raised. Regular results are
     returned as expected
+
     :param response_reader: a ResponseReader object
-    :param logger: a Logger object
+    :type response_reader: :class:`splunklib.binding.ResponseReader`
+    :param error_filters: set of re Patterns used to filter out errors we're ok ignoring
+    :type error_filters: list[:class:`re.Pattern[str]`]
     """
 
-    def __init__(self, response_reader: ResponseReader) -> None:
+    def __init__(
+        self, response_reader: ResponseReader, error_filters: list[re.Pattern[str]] = []
+    ) -> None:
         # init the results reader
         self.results_reader: JSONResultsReader = JSONResultsReader(response_reader)
 
+        # the list of patterns for errors to ignore
+        self.error_filters: list[re.Pattern[str]] = error_filters
+
         # get logger
-        self.logger: logging.Logger = get_logger()
+        self.logger: logging.Logger = Utils.get_logger(
+            __name__, LOG_LEVEL, LOG_PATH, ENABLE_LOGGING
+        )
 
     def __iter__(self) -> "ResultIterator":
         return self
 
-    def __next__(self) -> dict[Any, Any]:
+    def __next__(self) -> dict[str, Any]:
         # Use a reader for JSON format so we can iterate over our results
         for result in self.results_reader:
             # log messages, or raise if error
             if isinstance(result, Message):
                 # convert level string to level int
-                level_name = result.type.strip().upper()  # type: ignore
+                level_name: str = result.type.strip().upper()  # type: ignore
+                # TODO (PEX-510): this method is deprecated; replace with our own enum
                 level: int = logging.getLevelName(level_name)
 
                 # log message at appropriate level and raise if needed
                 message = f"SPLUNK: {result.message}"  # type: ignore
                 self.logger.log(level, message)
+                filtered = False
                 if level == logging.ERROR:
-                    raise ServerError(message)
+                    # if the error matches any of the filters, flag it
+                    for filter in self.error_filters:
+                        self.logger.debug(f"Filter: {filter}; message: {message}")
+                        if filter.match(message) is not None:
+                            self.logger.debug(
+                                f"Error matched filter {filter}; continuing"
+                            )
+                            filtered = True
+                            break
+
+                    # if no filter was matched, raise
+                    if not filtered:
+                        raise ServerError(message)
 
             # if dict, just return
             elif isinstance(result, dict):
@@ -218,7 +203,12 @@ class CorrelationSearch(BaseModel):
 
     # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
     # to conflict w/ tqdm)
-    logger: logging.Logger = Field(default_factory=get_logger, init=False)
+    logger: logging.Logger = Field(
+        default_factory=lambda: Utils.get_logger(
+            __name__, LOG_LEVEL, LOG_PATH, ENABLE_LOGGING
+        ),
+        init=False,
+    )
 
     # The set of indexes to clear on cleanup
     indexes_to_purge: set[str] = Field(default=set(), init=False)

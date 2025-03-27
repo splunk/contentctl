@@ -513,9 +513,6 @@ class CorrelationSearch(BaseModel):
         events = self.get_risk_events(force_update=True)
         return len(events) > 0
 
-    # TODO (cmcginley): to minimize number of queries, perhaps filter these events from the
-    #   returned risk dm events? --> I think no; we want to validate product behavior; we should
-    #   instead compare the risk dm and the risk index (maybe...)
     def get_risk_events(self, force_update: bool = False) -> list[RiskEvent]:
         """Get risk events from the Splunk instance
 
@@ -548,8 +545,6 @@ class CorrelationSearch(BaseModel):
         events: list[RiskEvent] = []
         try:
             for result in result_iterator:
-                # TODO (cmcginley): Do we need an else condition here for when the index is
-                #   anything other than expected?
                 # sanity check that this result from the iterator is a risk event and not some
                 # other metadata
                 if result["index"] == Indexes.RISK_INDEX:
@@ -563,6 +558,13 @@ class CorrelationSearch(BaseModel):
                         raise
                     events.append(event)
                     self.logger.debug(f"Found risk event for '{self.name}': {event}")
+                else:
+                    msg = (
+                        f"Found event for unexpected index ({result['index']}) in our query "
+                        f"results (expected {Indexes.RISK_INDEX})"
+                    )
+                    self.logger.error(msg)
+                    raise ValueError(msg)
         except ServerError as e:
             self.logger.error(f"Error returned from Splunk instance: {e}")
             raise e
@@ -632,6 +634,13 @@ class CorrelationSearch(BaseModel):
                         raise
                     events.append(event)
                     self.logger.debug(f"Found notable event for '{self.name}': {event}")
+                else:
+                    msg = (
+                        f"Found event for unexpected index ({result['index']}) in our query "
+                        f"results (expected {Indexes.NOTABLE_INDEX})"
+                    )
+                    self.logger.error(msg)
+                    raise ValueError(msg)
         except ServerError as e:
             self.logger.error(f"Error returned from Splunk instance: {e}")
             raise e
@@ -679,8 +688,6 @@ class CorrelationSearch(BaseModel):
             )
             return self._risk_dm_events
 
-        # TODO (cmcginley): optimize this query? don't REALLY need the full events here for the
-        #   depth of validation we're doing -> really just need the index
         # TODO (#248): Refactor risk/notable querying to pin to a single savedsearch ID
         # Search for all risk data model events from a single scheduled search (indicated by
         # orig_sid)
@@ -691,8 +698,6 @@ class CorrelationSearch(BaseModel):
         )
         result_iterator = self._search(query)
 
-        # TODO (cmcginley): make parent structure for risk and notabel events for shared fields (** START HERE **)
-        # TODO (cmcginley): make new structure for risk DM events? parent structure for risk/notable events?
         # Iterate over the events, storing them in a list and checking for any errors
         events: list[BaseSecurityEvent] = []
         risk_count = 0
@@ -729,6 +734,13 @@ class CorrelationSearch(BaseModel):
                     self.logger.debug(
                         f"Found notable event in risk data model for '{self.name}': {event}"
                     )
+                else:
+                    msg = (
+                        f"Found event for unexpected index ({result['index']}) in our query "
+                        f"results (expected {Indexes.NOTABLE_INDEX} or {Indexes.RISK_INDEX})"
+                    )
+                    self.logger.error(msg)
+                    raise ValueError(msg)
         except ServerError as e:
             self.logger.error(f"Error returned from Splunk instance: {e}")
             raise e
@@ -856,10 +868,6 @@ class CorrelationSearch(BaseModel):
                 "(e.g. TTP), or the number of risk modifiers."
             )
 
-    # TODO (cmcginley): implement... Should this maybe be baked into the notable validation
-    #   routine? since we are returning an integration test result; I think yes; get the risk dm
-    #   events directly in the notable validation routine and ensure no notables are found in the
-    #   data model
     def notable_in_risk_dm(self) -> bool:
         """Check if notables are in the risk data model
 

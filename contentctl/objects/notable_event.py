@@ -4,8 +4,6 @@ from contentctl.objects.detection import Detection
 
 class NotableEvent(BaseSecurityEvent):
     # TODO (PEX-434): implement deeper notable validation
-    # TODO (cmcginley): do I need to define the abstractmethods?
-    pass
 
     def validate_against_detection(self, detection: Detection) -> None:
         """

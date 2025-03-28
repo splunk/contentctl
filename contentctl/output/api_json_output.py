@@ -1,14 +1,15 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from contentctl.objects.baseline import Baseline
+    from contentctl.objects.deployment import Deployment
     from contentctl.objects.detection import Detection
+    from contentctl.objects.investigation import Investigation
     from contentctl.objects.lookup import Lookup
     from contentctl.objects.macro import Macro
     from contentctl.objects.story import Story
-    from contentctl.objects.baseline import Baseline
-    from contentctl.objects.investigation import Investigation
-    from contentctl.objects.deployment import Deployment
 
 import os
 import pathlib
@@ -39,6 +40,7 @@ class ApiJsonOutput:
                         "id",
                         "description",
                         "tags",
+                        "rba",
                         "search",
                         "how_to_implement",
                         "known_false_positives",

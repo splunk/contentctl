@@ -33,9 +33,6 @@ class YmlReader:
                 import strictyaml
                 strictyaml.dirty_load(file_handler.read(), allow_flow_style=True)
                 file_handler.seek(0)
-            
-                print(f"Error loading YML file {file_path}: {str(e)}")
-                sys.exit(1)
 
             
             # Ideally we should use

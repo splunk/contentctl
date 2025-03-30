@@ -3,6 +3,7 @@ from git import Repo
 import re
 import yaml
 import pathlib
+from os import path
 from typing import List, Union
 
 
@@ -229,7 +230,7 @@ class ReleaseNotes:
             file_path = pathlib.Path(diff.a_path)
 
             # Check if the file is in the specified directories
-            if any(str(file_path).startswith(directory) for directory in directories):
+            if any(str(file_path).startswith(path.normpath(directory)) for directory in directories):
                 # Check if a file is Modified
                 if diff.change_type == "M":
                     modified_files.append(file_path)

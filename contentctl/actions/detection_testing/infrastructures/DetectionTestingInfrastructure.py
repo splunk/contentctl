@@ -1506,6 +1506,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         url_with_hec_path = urllib.parse.urljoin(
             url_with_port, "services/collector/raw"
         )
+
+        if attack_data_file.endpoint:
+            url_with_hec_path = urllib.parse.urljoin(url_with_port, attack_data_file.endpoint)
+
         with open(tempfile, "rb") as datafile:
             try:
                 res = requests.post(

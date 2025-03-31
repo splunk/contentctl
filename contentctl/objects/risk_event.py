@@ -1,25 +1,16 @@
 import re
 from functools import cached_property
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    PrivateAttr,
-    computed_field,
-    field_validator,
-)
+from pydantic import Field, PrivateAttr, computed_field, field_validator
 
+from contentctl.objects.base_security_event import BaseSecurityEvent
 from contentctl.objects.detection import Detection
 from contentctl.objects.errors import ValidationFailed
 from contentctl.objects.rba import RiskObject
 
 
-class RiskEvent(BaseModel):
+class RiskEvent(BaseSecurityEvent):
     """Model for risk event in ES"""
-
-    # The search name (e.g. "ESCU - Windows Modify Registry EnableLinkedConnections - Rule")
-    search_name: str
 
     # The subject of the risk event (e.g. a username, process name, system name, account ID, etc.)
     # (not to be confused w/ the risk object from the detection)
@@ -31,9 +22,6 @@ class RiskEvent(BaseModel):
 
     # The level of risk associated w/ the risk event
     risk_score: int
-
-    # The search ID that found that generated this risk event
-    orig_sid: str
 
     # The message for the risk event
     risk_message: str
@@ -52,10 +40,6 @@ class RiskEvent(BaseModel):
 
     # Private attribute caching the risk object this RiskEvent is mapped to
     _matched_risk_object: RiskObject | None = PrivateAttr(default=None)
-
-    # Allowing fields that aren't explicitly defined to be passed since some of the risk event's
-    # fields vary depending on the SPL which generated them
-    model_config = ConfigDict(extra="allow")
 
     @field_validator("annotations_mitre_attack", "analyticstories", mode="before")
     @classmethod

@@ -318,6 +318,7 @@ class validate(Config_Base):
         for cache in self.test_data_caches:
             root_folder_path = self.external_repos_path / cache.root_folder_name
             # See if this data file was in that path
+
             if str(filename).startswith(cache.prefix):
                 new_file_name = str(filename).replace(cache.prefix, "")
                 new_file_path = root_folder_path / new_file_name
@@ -336,7 +337,7 @@ class validate(Config_Base):
                 return new_file_path
 
         raise ValueError(
-            f"Test data file '{filename}' does not exist in ANY of the following caches.  If you are supplying caches, any HTTP file MUST be located in a cache: [{[cache.prefix for cache in self.test_data_caches]}]"
+            f"Test data file '{filename}' does not exist in ANY of the following caches. If you are supplying caches, any HTTP file MUST be located in a cache: [{[cache.root_folder_name for cache in self.test_data_caches]}]"
         )
 
     @property

@@ -1,9 +1,11 @@
-from contentctl.objects.config import release_notes
-from git import Repo
-import re
-import yaml
 import pathlib
+import re
 from typing import List, Union
+
+import yaml
+from git import Repo
+
+from contentctl.objects.config import release_notes
 
 
 class ReleaseNotes:
@@ -171,13 +173,13 @@ class ReleaseNotes:
 
     def release_notes(self, config: release_notes) -> None:
         ### Remove hard coded path
-        directories = [
-            "detections/",
-            "stories/",
-            "macros/",
-            "lookups/",
-            "playbooks/",
-            "ssa_detections/",
+        directories: list[pathlib.Path] = [
+            config.path / "detections",
+            config.path / "stories",
+            config.path / "macros",
+            config.path / "lookups",
+            config.path / "playbooks",
+            config.path / "ssa_detections",
         ]
 
         repo = Repo(config.path)
@@ -229,7 +231,7 @@ class ReleaseNotes:
             file_path = pathlib.Path(diff.a_path)
 
             # Check if the file is in the specified directories
-            if any(str(file_path).startswith(directory) for directory in directories):
+            if any(file_path.is_relative_to(directory) for directory in directories):
                 # Check if a file is Modified
                 if diff.change_type == "M":
                     modified_files.append(file_path)

@@ -97,7 +97,8 @@ class TestApp(App_Base):
                 return str(self.getSplunkbasePath())
             if self.version is None or self.uid is None:
                 print(
-                    f"Not downloading {self.title} from Splunkbase since uid[{self.uid}] AND version[{self.version}] MUST be defined"
+                    f"Not downloading {self.title} from Splunkbase since uid[{self.uid}] AND "
+                    f"version[{self.version}] MUST be defined"
                 )
 
         elif isinstance(self.hardcoded_path, pathlib.Path):
@@ -149,7 +150,10 @@ class CustomApp(App_Base):
         exclude=True,
         default=int(datetime.now(UTC).strftime("%Y%m%d%H%M%S")),
         validate_default=True,
-        description="Build number for your app.  This will always be a number that corresponds to the time of the build in the format YYYYMMDDHHMMSS",
+        description=(
+            "Build number for your app.  This will always be a number that corresponds to the "
+            "time of the build in the format YYYYMMDDHHMMSS"
+        ),
     )
     # id has many restrictions:
     # * Omit this setting for apps that are for internal use only and not intended
@@ -194,7 +198,8 @@ class CustomApp(App_Base):
         except Exception as e:
             raise (
                 ValueError(
-                    f"The specified version does not follow the semantic versioning spec (https://semver.org/). {str(e)}"
+                    "The specified version does not follow the semantic versioning spec "
+                    f"(https://semver.org/). {str(e)}"
                 )
             )
         return v
@@ -420,8 +425,6 @@ class inspect(build):
             f"or CLI invocation appropriately] {validate.model_fields['enrichments'].description}"
         ),
     )
-    # TODO (cmcginley): wording should change here if we want to be able to download any app from
-    #   Splunkbase
     previous_build: str | None = Field(
         default=None,
         description=(
@@ -552,7 +555,10 @@ class ContainerSettings(BaseModel):
     )
     full_image_path: str = Field(
         default="registry.hub.docker.com/splunk/splunk:9.3",
-        title="Full path to the container image to be used. We are currently pinned to 9.3 as we resolve an issue with waiting to run until app installation completes.",
+        title=(
+            "Full path to the container image to be used. We are currently pinned to 9.3 as we "
+            "resolve an issue with waiting to run until app installation completes."
+        ),
     )
 
     def getContainers(self) -> List[Container]:
@@ -581,7 +587,10 @@ class Changes(BaseModel):
     mode_name: str = "Changes"
     target_branch: str = Field(
         ...,
-        description="The target branch to diff against. Note that this includes uncommitted changes in the working directory as well.",
+        description=(
+            "The target branch to diff against. Note that this includes uncommitted changes in the "
+            "working directory as well."
+        ),
     )
 
 
@@ -825,7 +834,8 @@ class test_common(build):
         f"'{PostTestBehavior.always_pause}' -  the state of "
         "the test will always pause after a test, allowing the user to log into the "
         "server and experiment with the search and data before it is removed.\n\n"
-        f"'{PostTestBehavior.pause_on_failure}' - pause execution ONLY when a test fails. The user may press ENTER in the terminal "
+        f"'{PostTestBehavior.pause_on_failure}' - pause execution ONLY when a test fails. "
+        "The user may press ENTER in the terminal "
         "running the test to move on to the next test.\n\n"
         f"'{PostTestBehavior.never_pause}' -  never stop testing, even if a test fails.\n\n"
         "***SPECIAL NOTE FOR CI/CD*** 'never_pause' MUST be used for a test to "

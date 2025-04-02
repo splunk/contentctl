@@ -1,3 +1,4 @@
+import logging
 import pathlib
 import random
 import shutil
@@ -12,7 +13,6 @@ import tqdm
 
 if TYPE_CHECKING:
     from contentctl.objects.security_content_object import SecurityContentObject
-
 from contentctl.objects.security_content_object import SecurityContentObject
 
 TOTAL_BYTES = 0
@@ -484,4 +484,58 @@ class Utils:
         ratio = numerator / denominator
         percent = ratio * 100
         return Utils.getFixedWidth(percent, decimal_places) + "%"
-        return Utils.getFixedWidth(percent, decimal_places) + "%"
+
+    @staticmethod
+    def get_logger(
+        name: str, log_level: int, log_path: str, enable_logging: bool
+    ) -> logging.Logger:
+        """
+        Gets a logger instance for the given name; logger is configured if not already configured.
+        The NullHandler is used to suppress loggging when running in production so as not to
+        conflict w/ contentctl's larger pbar-based logging. The StreamHandler is enabled by setting
+        enable_logging to True (useful for debugging/testing locally)
+
+        :param name: the logger name
+        :type name: str
+        :param log_level: the logging level (e.g. `logging.Debug`)
+        :type log_level: int
+        :param log_path: the path for the log file
+        :type log_path: str
+        :param enable_logging: a flag indicating whether logging should be redirected from null to
+            the stream handler
+        :type enable_logging: bool
+
+        :return: a logger
+        :rtype: :class:`logging.Logger`
+        """
+        # get logger for module
+        logger = logging.getLogger(name)
+
+        # set propagate to False if not already set as such (needed to that we do not flow up to any
+        # root loggers)
+        if logger.propagate:
+            logger.propagate = False
+
+        # if logger has no handlers, it needs to be configured for the first time
+        if not logger.hasHandlers():
+            # set level
+            logger.setLevel(log_level)
+
+            # if logging enabled, use a StreamHandler; else, use the NullHandler to suppress logging
+            handler: logging.Handler
+            if enable_logging:
+                handler = logging.FileHandler(log_path)
+            else:
+                handler = logging.NullHandler()
+
+            # Format our output
+            formatter = logging.Formatter(
+                "%(asctime)s - %(levelname)s:%(name)s - %(message)s"
+            )
+            handler.setFormatter(formatter)
+
+            # Set handler level and add to logger
+            handler.setLevel(log_level)
+            logger.addHandler(handler)
+
+        return logger

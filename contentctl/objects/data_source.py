@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import pathlib
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, model_serializer
 
+from contentctl.objects.enums import ContentStatus, ContentStatusField
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
@@ -26,6 +28,11 @@ class DataSource(SecurityContentObject):
     convert_to_log_source: None | list = None
     example_log: None | str = None
     output_fields: list[str] = []
+    status: ContentStatus = ContentStatusField([ContentStatus.production])
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("data_sources")
 
     @model_serializer
     def serialize_model(self):
@@ -49,4 +56,5 @@ class DataSource(SecurityContentObject):
         super_fields.update(model)
 
         # return the model
+        return super_fields
         return super_fields

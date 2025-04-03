@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import pathlib
 import re
-from typing import Any, List, Literal
+from typing import Any, List
 
 from pydantic import ConfigDict, Field, computed_field, model_serializer
 
@@ -11,7 +12,7 @@ from contentctl.objects.constants import (
     CONTENTCTL_MAX_STANZA_LENGTH,
     CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE,
 )
-from contentctl.objects.enums import DataModel, DetectionStatus
+from contentctl.objects.enums import ContentStatus, ContentStatusField, DataModel
 from contentctl.objects.investigation_tags import InvestigationTags
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -24,7 +25,13 @@ class Investigation(SecurityContentObject):
     how_to_implement: str = Field(...)
     known_false_positives: str = Field(...)
     tags: InvestigationTags
-    status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
+    status: ContentStatus = ContentStatusField(
+        [ContentStatus.production, ContentStatus.deprecated, ContentStatus.removed]
+    )
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("investigations")
 
     # enrichment
     @computed_field
@@ -105,4 +112,5 @@ class Investigation(SecurityContentObject):
             story.investigations.append(self)
         # back to itself
         for story in self.tags.analytic_story:
+            story.investigations.append(self)
             story.investigations.append(self)

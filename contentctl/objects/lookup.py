@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import validate
 
+from contentctl.objects.enums import ContentStatus, ContentStatusField
 from contentctl.objects.security_content_object import SecurityContentObject
 
 # This section is used to ignore lookups that are NOT  shipped with ESCU app but are used in the detections. Adding exclusions here will so that contentctl builds will not fail.
@@ -93,6 +94,11 @@ class Lookup(SecurityContentObject, abc.ABC):
         default=None
     )
     case_sensitive_match: None | bool = Field(default=None)
+    status: ContentStatus = ContentStatusField([ContentStatus.production])
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("lookups")
 
     @model_serializer
     def serialize_model(self):
@@ -364,6 +370,11 @@ class MlModel(FileBackedLookup):
         return pathlib.Path(f"{self.filename.stem}.{self.lookup_type}")
 
 
-LookupAdapter = TypeAdapter(
+LookupAdapter: TypeAdapter[CSVLookup | KVStoreLookup | MlModel] = TypeAdapter(
     Annotated[CSVLookup | KVStoreLookup | MlModel, Field(discriminator="lookup_type")]
 )
+
+# The following are defined as they are used by the Director.  For normal SecurityContentObject
+# types, they already exist. But do not for the TypeAdapter
+setattr(LookupAdapter, "containing_folder", lambda: "lookups")
+setattr(LookupAdapter, "__name__", "Lookup")

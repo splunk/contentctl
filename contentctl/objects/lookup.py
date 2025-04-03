@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import validate
 
+from contentctl.objects.enums import ContentStatus, ContentStatusField
 from contentctl.objects.security_content_object import SecurityContentObject
 
 # This section is used to ignore lookups that are NOT  shipped with ESCU app but are used in the detections. Adding exclusions here will so that contentctl builds will not fail.
@@ -93,6 +94,7 @@ class Lookup(SecurityContentObject, abc.ABC):
         default=None
     )
     case_sensitive_match: None | bool = Field(default=None)
+    status: ContentStatus = ContentStatusField([ContentStatus.production])
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

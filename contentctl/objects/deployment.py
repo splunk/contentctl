@@ -15,7 +15,7 @@ from pydantic import (
 
 from contentctl.objects.alert_action import AlertAction
 from contentctl.objects.deployment_scheduling import DeploymentScheduling
-from contentctl.objects.enums import DeploymentType
+from contentctl.objects.enums import ContentStatus, ContentStatusField, DeploymentType
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
@@ -25,6 +25,7 @@ class Deployment(SecurityContentObject):
     type: DeploymentType = Field(...)
     author: str = Field(..., max_length=255)
     version: NonNegativeInt = 1
+    status: ContentStatus = ContentStatusField([ContentStatus.production])
 
     # Type was the only tag exposed and should likely be removed/refactored.
     # For transitional reasons, provide this as a computed_field in prep for removal

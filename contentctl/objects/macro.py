@@ -13,6 +13,7 @@ from pydantic import Field, NonNegativeInt, model_serializer
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
 
+from contentctl.objects.enums import ContentStatus, ContentStatusField
 from contentctl.objects.security_content_object import SecurityContentObject
 
 # The following macros are included in commonly-installed apps.
@@ -35,6 +36,7 @@ class Macro(SecurityContentObject):
     date: datetime.date = Field(datetime.date.today())
     author: str = Field("NO AUTHOR DEFINED", max_length=255)
     version: NonNegativeInt = 1
+    status: ContentStatus = ContentStatusField([ContentStatus.production])
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

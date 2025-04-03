@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Literal
+from typing import TYPE_CHECKING, List
 
 from pydantic import Field, HttpUrl, computed_field, model_serializer, model_validator
 
@@ -17,14 +17,16 @@ if TYPE_CHECKING:
 
 import pathlib
 
-from contentctl.objects.enums import DetectionStatus
+from contentctl.objects.enums import ContentStatus, ContentStatusField
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
 class Story(SecurityContentObject):
     narrative: str = Field(...)
     tags: StoryTags = Field(...)
-    status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
+    status: ContentStatus = ContentStatusField(
+        [ContentStatus.production, ContentStatus.deprecated, ContentStatus.removed]
+    )
     # These are updated when detection and investigation objects are created.
     # Specifically in the model_post_init functions
     detections: List[Detection] = []

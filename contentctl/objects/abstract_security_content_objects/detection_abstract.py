@@ -41,8 +41,9 @@ from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.drilldown import DRILLDOWN_SEARCH_PLACEHOLDER, Drilldown
 from contentctl.objects.enums import (
     AnalyticsType,
+    ContentStatus,
+    ContentStatusField,
     DataModel,
-    DetectionStatus,
     NistCategory,
     ProvidingTechnology,
 )
@@ -61,7 +62,14 @@ class Detection_Abstract(SecurityContentObject):
     name: str = Field(..., max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     # contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
-    status: DetectionStatus = Field(...)
+    status: ContentStatus = ContentStatusField(
+        [
+            ContentStatus.experimental,
+            ContentStatus.production,
+            ContentStatus.deprecated,
+            ContentStatus.removed,
+        ]
+    )
     data_source: list[str] = []
     tags: DetectionTags = Field(...)
     search: str = Field(...)
@@ -234,7 +242,7 @@ class Detection_Abstract(SecurityContentObject):
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
 
         # Skip tests for non-production detections
-        if self.status != DetectionStatus.production:
+        if self.status != ContentStatus.production:
             self.skip_all_tests(
                 f"TEST SKIPPED: Detection is non-production ({self.status})"
             )
@@ -421,7 +429,7 @@ class Detection_Abstract(SecurityContentObject):
         # break the `inspect` action.
         return {
             "detection_id": str(self.id),
-            "deprecated": "1" if self.status == DetectionStatus.deprecated else "0",  # type: ignore
+            "deprecated": "1" if self.status == ContentStatus.deprecated else "0",  # type: ignore
             "detection_version": str(self.version),
             "publish_time": datetime.datetime(
                 self.date.year,
@@ -557,7 +565,7 @@ class Detection_Abstract(SecurityContentObject):
 
         if (
             self.type == AnalyticsType.Hunting
-            or self.status != DetectionStatus.production
+            or self.status != ContentStatus.production
         ):
             # No additional check need to happen on the potential drilldowns.
             pass
@@ -709,13 +717,13 @@ class Detection_Abstract(SecurityContentObject):
         if v is False:
             return v
 
-        status = DetectionStatus(info.data.get("status"))
+        status = ContentStatus(info.data.get("status"))
         searchType = AnalyticsType(info.data.get("type"))
         errors: list[str] = []
-        if status != DetectionStatus.production:
+        if status != ContentStatus.production:
             errors.append(
                 f"status is '{status.name}'. Detections that are enabled by default MUST be "
-                f"'{DetectionStatus.production}'"
+                f"'{ContentStatus.production}'"
             )
 
         if searchType not in [
@@ -845,7 +853,7 @@ class Detection_Abstract(SecurityContentObject):
                 f"the search: {missing_fields}"
             )
 
-        if len(error_messages) > 0 and self.status == DetectionStatus.production:
+        if len(error_messages) > 0 and self.status == ContentStatus.production:
             msg = (
                 "Use of fields in rba/messages that do not appear in search:\n\t- "
                 "\n\t- ".join(error_messages)
@@ -896,7 +904,7 @@ class Detection_Abstract(SecurityContentObject):
         cls, v: list[UnitTest | IntegrationTest | ManualTest], info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest | ManualTest]:
         # Only production analytics require tests
-        if info.data.get("status", "") != DetectionStatus.production:
+        if info.data.get("status", "") != ContentStatus.production:
             return v
 
         # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined
@@ -1074,7 +1082,7 @@ class Detection_Abstract(SecurityContentObject):
     @model_validator(mode="after")
     def validate_data_source_output_fields(self):
         # Skip validation for Hunting and Correlation types, or non-production detections
-        if self.status != DetectionStatus.production or self.type in {
+        if self.status != ContentStatus.production or self.type in {
             AnalyticsType.Hunting,
             AnalyticsType.Correlation,
         }:

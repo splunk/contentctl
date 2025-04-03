@@ -37,7 +37,7 @@ from contentctl.objects.constants import (
     DEPRECATED_TEMPLATE,
     EXPERIMENTAL_TEMPLATE,
 )
-from contentctl.objects.enums import AnalyticsType, DetectionStatus
+from contentctl.objects.enums import AnalyticsType, ContentStatus
 
 NO_FILE_NAME = "NO_FILE_NAME"
 
@@ -160,7 +160,7 @@ class DeprecationInfo(BaseModel):
             content
             for content in replacement_content
             if getattr(content, "status", None)
-            not in [DetectionStatus.experimental, DetectionStatus.production]
+            not in [ContentStatus.experimental, ContentStatus.production]
         ]
         if len(old_content) > 0:
             content_string = "\n  - " + "\n  - ".join(c.name for c in old_content)
@@ -327,8 +327,8 @@ class DeprecationDocumentationFile(BaseModel):
                     )
                     continue
             if matched_content.status not in [
-                DetectionStatus.deprecated,
-                DetectionStatus.removed,
+                ContentStatus.deprecated,
+                ContentStatus.removed,
             ]:
                 mapping_exceptions.append(
                     Exception(
@@ -440,6 +440,13 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
     file_path: Optional[FilePath] = None
     references: Optional[List[HttpUrl]] = None
     deprecation_info: DeprecationInfo | None = None
+    status: ContentStatus = Field(
+        description="All SecurityContentObjects must have a status.  "
+        "Further refinements to status are included in each specific object, "
+        "since not every object supports all possible statuses.  "
+        "This is done via a slightly complex regex scheme due to "
+        "limitations in Type Checking."
+    )
 
     @classmethod
     @abstractmethod
@@ -457,8 +464,8 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         # Ensure that if the object has a "status" field AND
         # that field is set to deprecated that the deprecation_info
         # field is not None.
-        status: None | DetectionStatus = getattr(self, "status", None)
-        if status == DetectionStatus.deprecated:
+        status: None | ContentStatus = getattr(self, "status", None)
+        if status == ContentStatus.deprecated:
             # This is a detection and the status was defined.
             if self.deprecation_info is None and type(self).__name__.upper() not in (
                 "STORY",
@@ -511,15 +518,15 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         """
         status = getattr(self, "status", None)
 
-        if not isinstance(status, DetectionStatus):
+        if not isinstance(status, ContentStatus):
             raise NotImplementedError(
                 f"Detection status is not implemented for [{self.name}] of type '{type(self).__name__}'"
             )
-        if status == DetectionStatus.experimental:
+        if status == ContentStatus.experimental:
             return EXPERIMENTAL_TEMPLATE.format(
                 content_type=type(self).__name__, description=self.description
             )
-        elif status == DetectionStatus.deprecated:
+        elif status == ContentStatus.deprecated:
             return DEPRECATED_TEMPLATE.format(
                 content_type=type(self).__name__, description=self.description
             )

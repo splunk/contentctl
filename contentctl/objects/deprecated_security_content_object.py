@@ -9,7 +9,7 @@ from pydantic import ConfigDict, Field, HttpUrl, computed_field, field_validator
 from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
     SecurityContentObject_Abstract,
 )
-from contentctl.objects.enums import DetectionStatus
+from contentctl.objects.enums import ContentStatus
 
 
 class SecurityContentObject(SecurityContentObject_Abstract):
@@ -21,7 +21,7 @@ class DeprecatedSecurityContentObject(SecurityContentObject):
     # objects can change. We do not want to throw pasing errors on any of these, but we will
     # only expose fields that are defined in the SecurityContentObject definiton directly
     model_config = ConfigDict(validate_default=True, extra="ignore")
-    status: Literal[DetectionStatus.removed] = Field(
+    status: Literal[ContentStatus.removed] = Field(
         description="Any deprecated object MUST have "
         "a status of removed.  'Deprecated' objects are still "
         "in ESCU, but have been marked deprecated for future "
@@ -30,7 +30,6 @@ class DeprecatedSecurityContentObject(SecurityContentObject):
 
     @field_validator("deprecation_info")
     def ensure_deprecation_info_is_not_none(cls, deprecation_info: Any) -> Any:
-        return deprecation_info
         if deprecation_info is None:
             raise ValueError(
                 "DeprecatedSecurityObject does not define a valid deprecation_info object."

@@ -1,10 +1,9 @@
 import pathlib
-from typing import List, Any
+from typing import Any, List
 
-from contentctl.objects.enums import SecurityContentType
-from contentctl.output.jinja_writer import JinjaWriter
-from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.detection import Detection
+from contentctl.objects.enums import ContentStatus, SecurityContentType
+from contentctl.output.jinja_writer import JinjaWriter
 
 
 class SvgOutput:
@@ -49,7 +48,7 @@ class SvgOutput:
             [
                 detection
                 for detection in detections
-                if detection.status == DetectionStatus.production
+                if detection.status == ContentStatus.production
             ],
         )
         # deprecated_dict = self.get_badge_dict("Deprecated", detections, [detection for detection in detections if detection.status == DetectionStatus.deprecated])

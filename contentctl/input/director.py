@@ -22,7 +22,7 @@ from contentctl.objects.deprecated_security_content_object import (
     DeprecatedSecurityContentObject,
 )
 from contentctl.objects.detection import Detection
-from contentctl.objects.enums import DetectionStatus
+from contentctl.objects.enums import ContentStatus
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.lookup import (
     CSVLookup,
@@ -142,7 +142,7 @@ class Director:
         all_deprecated_content = list(
             filter(
                 lambda content: getattr(content, "status", None)
-                in [DetectionStatus.deprecated, DetectionStatus.removed],
+                in [ContentStatus.deprecated, ContentStatus.removed],
                 self.output_dto.name_to_content_map.values(),
             )
         )

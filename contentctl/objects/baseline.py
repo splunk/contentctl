@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any, List, Literal
+from typing import TYPE_CHECKING, Annotated, Any, List
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
@@ -22,7 +22,7 @@ from contentctl.objects.constants import (
     CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
 )
 from contentctl.objects.deployment import Deployment
-from contentctl.objects.enums import DataModel, DetectionStatus
+from contentctl.objects.enums import ContentStatus, ContentStatusField, DataModel
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -37,7 +37,9 @@ class Baseline(SecurityContentObject):
     lookups: list[Lookup] = Field([], validate_default=True)
     # enrichment
     deployment: Deployment = Field({})
-    status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
+    status: ContentStatus = ContentStatusField(
+        [ContentStatus.production, ContentStatus.deprecated, ContentStatus.removed]
+    )
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

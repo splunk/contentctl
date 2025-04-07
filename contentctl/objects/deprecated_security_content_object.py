@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pathlib
 from functools import cached_property
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import ConfigDict, Field, HttpUrl, computed_field, field_validator
+from pydantic import ConfigDict, Field, HttpUrl, computed_field
 
 from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
     SecurityContentObject_Abstract,
@@ -27,14 +27,6 @@ class DeprecatedSecurityContentObject(SecurityContentObject):
         "in ESCU, but have been marked deprecated for future "
         "removal. 'Removed' objects are no longer included in ESCU."
     )
-
-    @field_validator("deprecation_info")
-    def ensure_deprecation_info_is_not_none(cls, deprecation_info: Any) -> Any:
-        if deprecation_info is None:
-            raise ValueError(
-                "DeprecatedSecurityObject does not define a valid deprecation_info object."
-            )
-        return deprecation_info
 
     @computed_field
     @cached_property

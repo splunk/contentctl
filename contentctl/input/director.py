@@ -14,7 +14,7 @@ from contentctl.objects.abstract_security_content_objects.security_content_objec
 )
 from contentctl.objects.atomic import AtomicEnrichment
 from contentctl.objects.baseline import Baseline
-from contentctl.objects.config import validate
+from contentctl.objects.config import CustomApp, validate
 from contentctl.objects.dashboard import Dashboard
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.deployment import Deployment
@@ -22,7 +22,6 @@ from contentctl.objects.deprecated_security_content_object import (
     DeprecatedSecurityContentObject,
 )
 from contentctl.objects.detection import Detection
-from contentctl.objects.enums import ContentStatus
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.lookup import (
     CSVLookup,
@@ -44,18 +43,20 @@ class DirectorOutputDto:
     atomic_enrichment: AtomicEnrichment
     attack_enrichment: AttackEnrichment
     cve_enrichment: CveEnrichment
-    detections: list[Detection]
-    stories: list[Story]
-    baselines: list[Baseline]
-    investigations: list[Investigation]
-    playbooks: list[Playbook]
-    macros: list[Macro]
-    lookups: list[Lookup]
-    deployments: list[Deployment]
-    dashboards: list[Dashboard]
-    deprecated: list[DeprecatedSecurityContentObject]
-    data_sources: list[DataSource]
-    deprecation_documentation: DeprecationDocumentationFile | None = None
+    detections: list[Detection] = field(default_factory=list)
+    stories: list[Story] = field(default_factory=list)
+    baselines: list[Baseline] = field(default_factory=list)
+    investigations: list[Investigation] = field(default_factory=list)
+    playbooks: list[Playbook] = field(default_factory=list)
+    macros: list[Macro] = field(default_factory=list)
+    lookups: list[Lookup] = field(default_factory=list)
+    deployments: list[Deployment] = field(default_factory=list)
+    dashboards: list[Dashboard] = field(default_factory=list)
+    deprecated: list[DeprecatedSecurityContentObject] = field(default_factory=list)
+    data_sources: list[DataSource] = field(default_factory=list)
+    deprecation_documentation: DeprecationDocumentationFile = field(
+        default_factory=DeprecationDocumentationFile
+    )
     name_to_content_map: dict[str, SecurityContentObject] = field(default_factory=dict)
     uuid_to_content_map: dict[UUID, SecurityContentObject] = field(default_factory=dict)
 
@@ -114,20 +115,24 @@ class Director:
 
     def execute(self, input_dto: validate) -> None:
         self.input_dto = input_dto
-        self.createSecurityContent(Deployment)
-        self.createSecurityContent(LookupAdapter)
-        self.createSecurityContent(Macro)
-        self.createSecurityContent(Story)
-        self.createSecurityContent(Baseline)
-        # self.createSecurityContent(Investigation)
-        self.createSecurityContent(DataSource)
-        self.createSecurityContent(Playbook)
-        self.createSecurityContent(Detection)
-        self.createSecurityContent(Dashboard)
-        self.createSecurityContent(DeprecatedSecurityContentObject)
-        self.validateDeprecation()
 
-    def validateDeprecation(self):
+        for content in [
+            Deployment,
+            LookupAdapter,
+            Macro,
+            Story,
+            Baseline,
+            DataSource,
+            Playbook,
+            Detection,
+            Dashboard,
+            DeprecatedSecurityContentObject,
+        ]:
+            self.createSecurityContent(content)
+
+        self.loadDeprecationInfo(input_dto.app)
+
+    def loadDeprecationInfo(self, app: CustomApp):
         data = YmlReader.load_file(
             self.input_dto.path / "removed" / "deprecation_mapping.YML"
         )
@@ -135,25 +140,8 @@ class Director:
             DeprecationDocumentationFile,
         )
 
-        mapping = DeprecationDocumentationFile.model_validate(
-            data, context={"output_dto": self.output_dto, "config": self.input_dto}
-        )
-
-        all_deprecated_content = list(
-            filter(
-                lambda content: getattr(content, "status", None)
-                in [ContentStatus.deprecated, ContentStatus.removed],
-                self.output_dto.name_to_content_map.values(),
-            )
-        )
-        print(
-            f"\n\nThe length of all deprecated or removed content is: {len(all_deprecated_content)}\n\n"
-        )
-        for content in all_deprecated_content:
-            if getattr(content, "deprecation_info", None) is None:
-                print(
-                    f"[{type(content).__name__} - {content.name}] - Missing deprecation_info"
-                )
+        mapping = DeprecationDocumentationFile.model_validate(data)
+        mapping.mapAllContent(self.output_dto, app)
         self.output_dto.deprecation_documentation = mapping
 
     def createSecurityContent(

@@ -17,17 +17,6 @@ class Validate:
             AtomicEnrichment.getAtomicEnrichment(input_dto),
             AttackEnrichment.getAttackEnrichment(input_dto),
             CveEnrichment.getCveEnrichment(input_dto),
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
         )
 
         director = Director(director_output_dto)

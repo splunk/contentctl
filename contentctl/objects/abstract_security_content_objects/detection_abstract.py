@@ -42,7 +42,6 @@ from contentctl.objects.drilldown import DRILLDOWN_SEARCH_PLACEHOLDER, Drilldown
 from contentctl.objects.enums import (
     AnalyticsType,
     ContentStatus,
-    ContentStatusField,
     DataModel,
     NistCategory,
     ProvidingTechnology,
@@ -62,14 +61,7 @@ class Detection_Abstract(SecurityContentObject):
     name: str = Field(..., max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     # contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
-    status: ContentStatus = ContentStatusField(
-        [
-            ContentStatus.experimental,
-            ContentStatus.production,
-            ContentStatus.deprecated,
-            ContentStatus.removed,
-        ]
-    )
+    status: ContentStatus
     data_source: list[str] = []
     tags: DetectionTags = Field(...)
     search: str = Field(...)
@@ -108,6 +100,18 @@ class Detection_Abstract(SecurityContentObject):
         default=[],
         description="A list of Drilldowns that should be included with this search",
     )
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(
+            status,
+            [
+                ContentStatus.experimental,
+                ContentStatus.production,
+                ContentStatus.deprecated,
+            ],
+        )
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

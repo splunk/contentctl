@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum, auto
-from typing import Any, List
-
-from pydantic import Field
+from typing import List
 
 
 class AnalyticsType(StrEnum):
@@ -100,37 +98,10 @@ class ContentStatus(StrEnum):
     removed = auto()
 
 
-def ContentStatusField(allowed_types: list[ContentStatus]) -> Any:
-    """
-    This is a strange workaround to support Type Narrowing. Not all different
-    types of Security Content Objects support EVERY content status.  As such,
-    we are not allowed to do something like this:
-
-    Parent(BaseModel):
-        type: ContentStatus
-
-    Child(Parent):
-        type: [ContentStatus.production, ContentStatus.removed]
-
-    Instead, we will essentially enforce this typing with a regex on the field of supported types.
-    This checking occurs to validate the underlying string, now narrow the enum. For example, using
-    this function should be used like the following
-
-    Child(Parent):
-        type: Annotated[ContentStatus, getContentStatusAnnotationField([ContentStatus.Production, ContentStatus.removed])]
-    And it accomplishes the same thing without type warnings.
-
-
-    In the future, we should probably just support ALL possible statuses for all SecurityContentObjects
-    """
-
-    # If only one type is allowed, then use that as the default
-    validation_pattern = "|".join(rf"^{val.value}$" for val in allowed_types)
-    if len(allowed_types) == 1:
-        return Field(default=allowed_types[0], pattern=validation_pattern)
-
-    # Otherwise, do not give a default value
-    return Field(pattern=validation_pattern)
+CONTENT_STATUS_THAT_REQUIRES_DEPRECATION_INFO = [
+    ContentStatus.deprecated,
+    ContentStatus.removed,
+]
 
 
 class LogLevel(StrEnum):

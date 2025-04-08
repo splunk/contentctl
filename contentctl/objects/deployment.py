@@ -10,12 +10,13 @@ from pydantic import (
     NonNegativeInt,
     ValidationInfo,
     computed_field,
+    field_validator,
     model_serializer,
 )
 
 from contentctl.objects.alert_action import AlertAction
 from contentctl.objects.deployment_scheduling import DeploymentScheduling
-from contentctl.objects.enums import ContentStatus, ContentStatusField, DeploymentType
+from contentctl.objects.enums import ContentStatus, DeploymentType
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
@@ -25,7 +26,12 @@ class Deployment(SecurityContentObject):
     type: DeploymentType = Field(...)
     author: str = Field(..., max_length=255)
     version: NonNegativeInt = 1
-    status: ContentStatus = ContentStatusField([ContentStatus.production])
+    status: ContentStatus = ContentStatus.production
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.production])
 
     # Type was the only tag exposed and should likely be removed/refactored.
     # For transitional reasons, provide this as a computed_field in prep for removal

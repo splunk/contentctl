@@ -3,9 +3,9 @@ from __future__ import annotations
 import pathlib
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, HttpUrl, model_serializer
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_serializer
 
-from contentctl.objects.enums import ContentStatus, ContentStatusField
+from contentctl.objects.enums import ContentStatus
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
@@ -28,7 +28,12 @@ class DataSource(SecurityContentObject):
     convert_to_log_source: None | list = None
     example_log: None | str = None
     output_fields: list[str] = []
-    status: ContentStatus = ContentStatusField([ContentStatus.production])
+    status: ContentStatus = ContentStatus.production
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.production])
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

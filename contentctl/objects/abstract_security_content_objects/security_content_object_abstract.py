@@ -6,7 +6,6 @@ if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import CustomApp
     from contentctl.objects.deployment import Deployment
-
 import abc
 import datetime
 import pathlib
@@ -27,6 +26,7 @@ from pydantic import (
     computed_field,
     field_validator,
     model_serializer,
+    model_validator,
 )
 from rich import console, table
 from semantic_version import Version
@@ -36,7 +36,11 @@ from contentctl.objects.constants import (
     DEPRECATED_TEMPLATE,
     EXPERIMENTAL_TEMPLATE,
 )
-from contentctl.objects.enums import AnalyticsType, ContentStatus
+from contentctl.objects.enums import (
+    CONTENT_STATUS_THAT_REQUIRES_DEPRECATION_INFO,
+    AnalyticsType,
+    ContentStatus,
+)
 
 NO_FILE_NAME = "NO_FILE_NAME"
 
@@ -60,6 +64,42 @@ class DeprecationInfo(BaseModel):
         "It is possible that the type(s) of the replacement content may be different than the replaced content. "
         "For example, a detection may be replaced by a story or a macro may be replaced by a lookup.",
     )
+
+    @model_validator(mode="after")
+    def noDeprecatedOrRemovedReplacementContent(self) -> Self:
+        from contentctl.objects.detection import Detection
+        from contentctl.objects.story import Story
+
+        bad_mapping_types = [
+            content
+            for content in self.replacement_content
+            if not (isinstance(content, Story) or isinstance(content, Detection))
+        ]
+        if len(bad_mapping_types) > 0:
+            names_only = [
+                f"{content.name} - {type(content).__name__}"
+                for content in bad_mapping_types
+            ]
+            raise ValueError(
+                f"Replacement content MUST have type {Story.__name__} or {Detection.__name__}: {names_only}"
+            )
+
+        deprecated_replacement_content = [
+            content
+            for content in self.replacement_content
+            if content.status in CONTENT_STATUS_THAT_REQUIRES_DEPRECATION_INFO
+        ]
+
+        if len(deprecated_replacement_content) > 0:
+            names_only = [
+                f"{content.name} - {content.status}"
+                for content in deprecated_replacement_content
+            ]
+            raise ValueError(
+                f"Replacement content cannot have status deprecated or removed {names_only}"
+            )
+
+        return self
 
     class DeprecationException(Exception):
         app: CustomApp
@@ -115,7 +155,7 @@ class DeprecationInfo(BaseModel):
             t.add_column("Content Name", justify="left", style="cyan", no_wrap=True)
             t.add_column("Type (YML)", justify="left", style="yellow", no_wrap=True)
             t.add_column("Type (Mapping)", justify="left", style="yellow", no_wrap=True)
-            t.add_column("Status (YML)", justify="left", style="yellow", no_wrap=True)
+            t.add_column("Status (YML)", justify="left", style="magenta", no_wrap=True)
             t.add_column(
                 "Remove In",
                 justify="left",
@@ -157,7 +197,7 @@ class DeprecationInfo(BaseModel):
             )
 
         def message(self) -> str:
-            return f"{self.content_name} only exists in deprecation_mapping.yml, but it does not match a piece of content."
+            return "Exists in deprecation_mapping.yml, but it does not match a piece of content."
 
     class DeprecationStatusMismatch(DeprecationException):
         def __init__(
@@ -176,26 +216,11 @@ class DeprecationInfo(BaseModel):
             )
 
         def message(self) -> str:
-            try:
-                if (
-                    Version(self.removed_in_version) <= self.app.version
-                    and ContentStatus(self.content_status_from_yml)
-                    != ContentStatus.removed
-                ):
-                    return f"Content status should be {ContentStatus.removed}"
-                if (
-                    Version(self.removed_in_version) > self.app.version
-                    and ContentStatus(self.content_status_from_yml)
-                    != ContentStatus.deprecated
-                ):
-                    return f"Content status should be {ContentStatus.deprecated}"
-            except Exception:
-                pass
-            finally:
-                raise Exception(
-                    "Error generating message for DeprecationStatusMismatch - "
-                    f"removed_in:{self.removed_in_version}, app version:{self.app.version}"
-                )
+            if Version(self.app.version) >= Version(self.removed_in_version):
+                val = ContentStatus.removed
+            else:
+                val = ContentStatus.deprecated
+            return f"Based on 'Remove In' and 'App Version', Content Status should be {val}"
 
     class DeprecationTypeMismatch(DeprecationException):
         def __init__(
@@ -214,17 +239,26 @@ class DeprecationInfo(BaseModel):
             )
 
         def message(self) -> str:
-            if (
-                self.content_type_from_content
-                != self.content_type_from_deprecation_mapping
-            ):
-                return "The of the content yml and in the deprecation_mapping.YML do not match."
+            return "The type of the content yml and in the deprecation_mapping.YML do not match."
 
-            raise Exception(
-                "Error generating message for DeprecationTypeMistmatch. "
-                f"We expected that the status from the YML {self.content_type_from_content} and the status "
-                f"from the deprecation_mapping.YML {self.content_type_from_deprecation_mapping} did not match, but they do."
+    class DeprecationInfoDoubleMapped(DeprecationException):
+        def __init__(
+            self,
+            app: CustomApp,
+            obj: SecurityContentObject_Abstract,
+            deprecation_info: DeprecationInfoInFile,
+        ):
+            super().__init__(
+                app=app,
+                content_name=obj.name,
+                content_type_from_content=type(obj).__name__,
+                content_type_from_deprecation_mapping=deprecation_info.content_type.__name__,
+                content_status_from_yml=obj.status,
+                removed_in_version=deprecation_info.removed_in_version,
             )
+
+        def message(self) -> str:
+            return "Any entry in the deprecation_mapping.YML file mapped to two pieces of content."
 
     @classmethod
     def constructFromFileInfoAndDirector(
@@ -284,9 +318,8 @@ class DeprecationDocumentationFile(BaseModel):
 
     @computed_field
     @property
-    def mapping(self) -> dict[str, DeprecationInfoInFile]:
-        mapping: dict[str, DeprecationInfoInFile] = {}
-        for content in (
+    def all_content(self) -> list[DeprecationInfoInFile]:
+        return (
             self.baselines
             + self.detections
             + self.investigations
@@ -295,9 +328,28 @@ class DeprecationDocumentationFile(BaseModel):
             + self.data_sources
             + self.deployments
             + self.macros
-        ):
+        )
+
+    @computed_field
+    @property
+    def mapping(self) -> dict[str, DeprecationInfoInFile]:
+        mapping: dict[str, DeprecationInfoInFile] = {}
+        for content in self.all_content:
             mapping[content.content] = content
         return mapping
+
+    @model_validator(mode="after")
+    def ensureUniqueNames(self) -> Self:
+        all_names: list[str] = [n.content for n in self.all_content]
+        duplicate_names: set[str] = set()
+        for name in all_names:
+            if all_names.count(name) > 1:
+                duplicate_names.add(name)
+        if len(duplicate_names) > 0:
+            raise ValueError(
+                f"The following content names were defined more than once in deprection_mapping.YML:{duplicate_names}"
+            )
+        return self
 
     def mapAllContent(self, director: DirectorOutputDto, app: CustomApp) -> None:
         mapping_exceptions: list[DeprecationInfo.DeprecationException] = []
@@ -310,26 +362,13 @@ class DeprecationDocumentationFile(BaseModel):
             except DeprecationInfo.DeprecationException as e:
                 mapping_exceptions.append(e)
 
-        """
-        if len(mapping_exceptions) > 0:
-            raise ExceptionGroup(
-                "1 or more pieces of content have "
-                f"{[ContentStatus.deprecated, ContentStatus.removed]} "
-                "but to not appear in the deprecation_mapping.YML file:",
-                mapping_exceptions,
+        # Check that every entry in the file actually maps to a piece of content
+        unmapped_deprecations = [d for d in self.mapping.values() if not d.mapped]
+        for unmapped_deprecation in unmapped_deprecations:
+            mapping_exceptions.append(
+                DeprecationInfo.NoContentForDeprecationInfo(app, unmapped_deprecation)
             )
 
-        # Check that every entry in the file actually maps to a piece of content
-        unmapped_deprecation = [d for d in self.mapping.values() if not d.mapped]
-        if len(unmapped_deprecation) > 0:
-            PREFIX = "\n  - "
-            unmapped_string = PREFIX + PREFIX.join(
-                unmapped.content for unmapped in unmapped_deprecation
-            )
-            raise Exception(
-                f"The following [{len(unmapped_deprecation)}] entries in the deprecation yml were not mapped to raw content:{unmapped_string}"
-            )
-        """
         if len(mapping_exceptions):
             DeprecationInfo.DeprecationException.renderExceptionsAsTable(
                 mapping_exceptions
@@ -344,41 +383,17 @@ class DeprecationDocumentationFile(BaseModel):
         director: DirectorOutputDto,
         app: CustomApp,
     ) -> DeprecationInfo | None:
-        content = self.mapping.get(obj.name)
+        deprecation_info: DeprecationInfoInFile | None = self.mapping.get(
+            obj.name, None
+        )
 
-        if content is None:
-            if obj.status in [ContentStatus.deprecated, ContentStatus.removed]:
-                raise DeprecationInfo.DeprecationInfoMissing(app, obj)
-            # This content should not, and does not, have any deprecation info
-            return None
+        obj.checkDeprecationInfo(app, deprecation_info)
+        if deprecation_info is None:
+            return
 
-        # Check whether or not the content and the mapping file agree that the content
-        # should be deprecated
-        if obj.status not in [ContentStatus.deprecated, ContentStatus.removed]:
-            raise DeprecationInfo.DeprecationStatusMismatch(app, obj, content)
-
-        # Finally, make sure that the type is correct
-        if type(obj) is not content.content_type:
-            from contentctl.objects.deprecated_security_content_object import (
-                DeprecatedSecurityContentObject,
-            )
-
-            if type(obj) is DeprecatedSecurityContentObject:
-                # Type for Deprecated Security Content Objects is conveyed by the entry in the mapping file
-                pass
-            else:
-                raise Exception(
-                    f"Expected the type of the content named [{obj.name}] to be {type(obj).__name__}, but in the Mapping YML it is {content.content_type.__name__}"
-                )
-
-        if content.mapped:
-            # This content has now been mapped - we cannot use it again!
-            raise Exception(
-                f"The entry in the Mapping YML for [{content.content}] was mapped more than once. It may only be used once per piece of content."
-            )
-        content.mapped = True
-
-        return DeprecationInfo.constructFromFileInfoAndDirector(content, director)
+        return DeprecationInfo.constructFromFileInfoAndDirector(
+            deprecation_info, director
+        )
 
     @field_validator(
         "detections",
@@ -459,6 +474,77 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         "limitations in Type Checking."
     )
 
+    def checkDeprecationInfo(
+        self, app: CustomApp, deprecation_info: DeprecationInfoInFile | None
+    ):
+        if deprecation_info is None:
+            if self.status not in CONTENT_STATUS_THAT_REQUIRES_DEPRECATION_INFO:
+                return
+            else:
+                raise DeprecationInfo.DeprecationInfoMissing(app, self)
+
+        if deprecation_info.mapped:
+            # This content was already mapped - we cannot use it again and should give an exception
+            raise DeprecationInfo.DeprecationInfoDoubleMapped(
+                app, self, deprecation_info
+            )
+
+        # Once an entry is mapped ot the file, we cannot map to it again
+        # Even if we generate an exception later in this function, we still want
+        # to mark the deprecation info as mapped because we did successfully handle it
+        deprecation_info.mapped = True
+
+        # Make sure that the type in the deprecation info matches the type of
+        # the object
+        if type(self) is not deprecation_info.content_type:
+            from contentctl.objects.deprecated_security_content_object import (
+                DeprecatedSecurityContentObject,
+            )
+
+            if type(self) is not DeprecatedSecurityContentObject:
+                raise DeprecationInfo.DeprecationTypeMismatch(
+                    app, self, deprecation_info
+                )
+
+        # This means we have deprecation info
+        if self.status not in CONTENT_STATUS_THAT_REQUIRES_DEPRECATION_INFO:
+            # However this piece of content should not have the info
+            raise DeprecationInfo.DeprecationStatusMismatch(app, self, deprecation_info)
+
+        # Content should be removed if the app version is greater than or equal to
+        # when we say the content should be removed
+        removed_in = Version(deprecation_info.removed_in_version)
+        current_version = Version(app.version)
+
+        if current_version >= removed_in:
+            # Content should have status removed
+            if self.status is not ContentStatus.removed:
+                raise DeprecationInfo.DeprecationStatusMismatch(
+                    app, self, deprecation_info
+                )
+        else:
+            if self.status is not ContentStatus.deprecated:
+                raise DeprecationInfo.DeprecationStatusMismatch(
+                    app, self, deprecation_info
+                )
+
+    @classmethod
+    def NarrowStatusTemplate(
+        cls, status: ContentStatus, allowed_types: list[ContentStatus]
+    ) -> ContentStatus:
+        if status not in allowed_types:
+            raise ValueError(
+                f"The status '{status}' is not allowed. Only {allowed_types} are supported status for this object."
+            )
+        return status
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        raise NotImplementedError(
+            "Narrow Status must be implemented for each SecurityContentObject"
+        )
+
     @classmethod
     @abstractmethod
     def containing_folder(cls) -> pathlib.Path:
@@ -468,58 +554,6 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
 
     def model_post_init(self, __context: Any) -> None:
         self.ensureFileNameMatchesSearchName()
-
-    def check_deprecation_info(self, director: DirectorOutputDto) -> Self:
-        director.deprecation_documentation.get_deprecation_info(self)
-
-        try:
-            self.deprecation_info = (
-                director.deprecation_documentation.mapSecurityContentObject(self)
-            )
-        except Exception as e:
-            print(e)
-            import code
-
-            code.interact(local=locals())
-
-        if self.status in [ContentStatus.deprecated, ContentStatus.removed]:
-            if self.deprecation_info is None:
-                raise ValueError(
-                    f"[{self.name}] is marked as {self.status}, but it does not have an entry in the Deprecation Mapping"
-                )
-        elif self.deprecation_info is not None:
-            raise ValueError(
-                f"[{self.name}] is has an entry in the Deprecation Mapping, but it is marked as {self.status}. It must not have an entry in the Deprecation Mapping."
-            )
-        return self
-        # Ensure that if the object has a "status" field AND
-        # that field is set to deprecated that the deprecation_info
-        # field is not None.
-        status: None | ContentStatus = getattr(self, "status", None)
-        if status == ContentStatus.deprecated:
-            # This is a detection and the status was defined.
-            if self.deprecation_info is None and type(self).__name__.upper() not in (
-                "STORY",
-                "INVESTIGATION",
-                "BASELINE",
-            ):
-                print(
-                    f"\nWarning - you are missing deprecation info for deprecated {type(self).__name__.upper()} [{self.name}]\n"
-                )
-                # raise ValueError(
-                #     f"[{self.name}] has 'status: deprecated' set in the yml, but does not have 'deprecation_info' defined: {self.file_path}"
-                # )
-        elif status is None:
-            # Status wasn't defined in the file
-            pass
-        else:
-            # Status was defined but a different value, so deprecation_info should not exist
-            if self.deprecation_info is not None:
-                raise ValueError(
-                    f"[{self.name}] has deprecation_info defined, but does not have 'status: deprecated' set in the yml at {self.file_path}"
-                )
-
-        return self
 
     @computed_field
     @cached_property

@@ -22,7 +22,7 @@ from contentctl.objects.constants import (
     CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
 )
 from contentctl.objects.deployment import Deployment
-from contentctl.objects.enums import ContentStatus, ContentStatusField, DataModel
+from contentctl.objects.enums import ContentStatus, DataModel
 from contentctl.objects.lookup import Lookup
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -37,9 +37,17 @@ class Baseline(SecurityContentObject):
     lookups: list[Lookup] = Field([], validate_default=True)
     # enrichment
     deployment: Deployment = Field({})
-    status: ContentStatus = ContentStatusField(
-        [ContentStatus.production, ContentStatus.deprecated, ContentStatus.removed]
-    )
+    status: ContentStatus
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        allowed_types = [ContentStatus.production, ContentStatus.deprecated]
+        if status not in allowed_types:
+            raise ValueError(
+                f"The status '{status}' is not allowed. Only {allowed_types} are supported status for this object."
+            )
+        return status
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

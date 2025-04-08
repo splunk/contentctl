@@ -4,7 +4,14 @@ import re
 from functools import cached_property
 from typing import TYPE_CHECKING, List
 
-from pydantic import Field, HttpUrl, computed_field, model_serializer, model_validator
+from pydantic import (
+    Field,
+    HttpUrl,
+    computed_field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from contentctl.objects.story_tags import StoryTags
 
@@ -17,21 +24,26 @@ if TYPE_CHECKING:
 
 import pathlib
 
-from contentctl.objects.enums import ContentStatus, ContentStatusField
+from contentctl.objects.enums import ContentStatus
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
 class Story(SecurityContentObject):
     narrative: str = Field(...)
     tags: StoryTags = Field(...)
-    status: ContentStatus = ContentStatusField(
-        [ContentStatus.production, ContentStatus.deprecated, ContentStatus.removed]
-    )
+    status: ContentStatus
     # These are updated when detection and investigation objects are created.
     # Specifically in the model_post_init functions
     detections: List[Detection] = []
     investigations: List[Investigation] = []
     baselines: List[Baseline] = []
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(
+            status, [ContentStatus.production, ContentStatus.deprecated]
+        )
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

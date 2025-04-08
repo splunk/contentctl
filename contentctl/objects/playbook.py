@@ -3,9 +3,9 @@ from __future__ import annotations
 import pathlib
 from typing import Self
 
-from pydantic import Field, FilePath, model_validator
+from pydantic import Field, FilePath, field_validator, model_validator
 
-from contentctl.objects.enums import ContentStatus, ContentStatusField, PlaybookType
+from contentctl.objects.enums import ContentStatus, PlaybookType
 from contentctl.objects.playbook_tags import PlaybookTag
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -21,7 +21,12 @@ class Playbook(SecurityContentObject):
     playbook: str = Field(min_length=4)
     app_list: list[str] = Field(..., min_length=0)
     tags: PlaybookTag = Field(...)
-    status: ContentStatus = ContentStatusField([ContentStatus.production])
+    status: ContentStatus = ContentStatus.production
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.production])
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import pathlib
 from functools import cached_property
-from typing import Literal
 
-from pydantic import ConfigDict, Field, HttpUrl, computed_field
+from pydantic import ConfigDict, HttpUrl, computed_field, field_validator
 
 from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
     SecurityContentObject_Abstract,
@@ -21,12 +20,12 @@ class DeprecatedSecurityContentObject(SecurityContentObject):
     # objects can change. We do not want to throw pasing errors on any of these, but we will
     # only expose fields that are defined in the SecurityContentObject definiton directly
     model_config = ConfigDict(validate_default=True, extra="ignore")
-    status: Literal[ContentStatus.removed] = Field(
-        description="Any deprecated object MUST have "
-        "a status of removed.  'Deprecated' objects are still "
-        "in ESCU, but have been marked deprecated for future "
-        "removal. 'Removed' objects are no longer included in ESCU."
-    )
+    status: ContentStatus
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.removed])
 
     @computed_field
     @cached_property

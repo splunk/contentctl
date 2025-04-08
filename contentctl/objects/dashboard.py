@@ -4,10 +4,10 @@ from enum import StrEnum
 from typing import Any
 
 from jinja2 import Environment
-from pydantic import Field, Json, model_validator
+from pydantic import Field, Json, field_validator, model_validator
 
 from contentctl.objects.config import build
-from contentctl.objects.enums import ContentStatus, ContentStatusField
+from contentctl.objects.enums import ContentStatus
 from contentctl.objects.security_content_object import SecurityContentObject
 
 DEFAULT_DASHBOARD_JINJA2_TEMPLATE = """<dashboard version="2" theme="{{ dashboard.theme }}">
@@ -49,7 +49,12 @@ class Dashboard(SecurityContentObject):
     json_obj: Json[dict[str, Any]] = Field(
         ..., description="Valid JSON object that describes the dashboard"
     )
-    status: ContentStatus = ContentStatusField([ContentStatus.production])
+    status: ContentStatus = ContentStatus.production
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.production])
 
     def label(self, config: build) -> str:
         return f"{config.app.label} - {self.name}"

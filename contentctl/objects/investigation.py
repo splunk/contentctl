@@ -4,7 +4,13 @@ import pathlib
 import re
 from typing import Any, List
 
-from pydantic import ConfigDict, Field, computed_field, model_serializer
+from pydantic import (
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_serializer,
+)
 
 from contentctl.objects.config import CustomApp
 from contentctl.objects.constants import (
@@ -12,7 +18,7 @@ from contentctl.objects.constants import (
     CONTENTCTL_MAX_STANZA_LENGTH,
     CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE,
 )
-from contentctl.objects.enums import ContentStatus, ContentStatusField, DataModel
+from contentctl.objects.enums import ContentStatus, DataModel
 from contentctl.objects.investigation_tags import InvestigationTags
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -25,9 +31,12 @@ class Investigation(SecurityContentObject):
     how_to_implement: str = Field(...)
     known_false_positives: str = Field(...)
     tags: InvestigationTags
-    status: ContentStatus = ContentStatusField(
-        [ContentStatus.production, ContentStatus.deprecated, ContentStatus.removed]
-    )
+    status: ContentStatus
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.removed])
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

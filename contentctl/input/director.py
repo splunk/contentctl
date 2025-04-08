@@ -133,16 +133,17 @@ class Director:
         self.loadDeprecationInfo(input_dto.app)
 
     def loadDeprecationInfo(self, app: CustomApp):
-        data = YmlReader.load_file(
-            self.input_dto.path / "removed" / "deprecation_mapping.YML"
-        )
-        from contentctl.objects.abstract_security_content_objects.security_content_object_abstract import (
-            DeprecationDocumentationFile,
-        )
+        mapping_file_path = self.input_dto.path / "removed" / "deprecation_mapping.YML"
+        if mapping_file_path.is_file():
+            data = YmlReader.load_file(mapping_file_path)
+            mapping = DeprecationDocumentationFile.model_validate(data)
+            self.output_dto.deprecation_documentation = mapping
+        else:
+            raise Exception(
+                f"{mapping_file_path} does not exist. WHAT DO WE WANT TO DO HERE? IS THIS NOW A REQUIREMENT? SHOULD IT GIVE A WARNING?"
+            )
 
-        mapping = DeprecationDocumentationFile.model_validate(data)
-        mapping.mapAllContent(self.output_dto, app)
-        self.output_dto.deprecation_documentation = mapping
+        self.output_dto.deprecation_documentation.mapAllContent(self.output_dto, app)
 
     def createSecurityContent(
         self,

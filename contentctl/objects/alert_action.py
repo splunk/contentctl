@@ -22,7 +22,7 @@ class AlertAction(BaseModel):
         # Call serializer for parent
         model = {}
 
-        if self.email is not None and self.rba.enabled:
+        if self.email is not None:
             model["email"] = self.email
 
         if self.notable is not None:

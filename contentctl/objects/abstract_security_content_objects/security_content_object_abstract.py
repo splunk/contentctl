@@ -42,11 +42,9 @@ from contentctl.objects.enums import (
     ContentStatus,
 )
 
-NO_FILE_NAME = "NO_FILE_NAME"
-
 
 class DeprecationInfo(BaseModel):
-    contentType: type
+    contentType: type[SecurityContentObject_Abstract]
     removed_in_version: str = Field(
         ...,
         description="In which version of the app was this content deprecated? "

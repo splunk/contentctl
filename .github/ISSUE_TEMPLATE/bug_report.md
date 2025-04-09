@@ -4,7 +4,7 @@ about: Create a report to help us improve contentctl
 title: "[BUG]"
 labels: bug
 assignees: ''
-type: Bug
+type: "Bug"
 
 ---
 

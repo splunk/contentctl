@@ -103,6 +103,3 @@ class Macro(SecurityContentObject):
         # remove the ones that we will ignore
         macros_to_get -= macros_to_ignore
         return Macro.mapNamesToSecurityContentObjects(list(macros_to_get), director)
-        # remove the ones that we will ignore
-        macros_to_get -= macros_to_ignore
-        return Macro.mapNamesToSecurityContentObjects(list(macros_to_get), director)

@@ -42,12 +42,9 @@ class Baseline(SecurityContentObject):
     @field_validator("status", mode="after")
     @classmethod
     def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
-        allowed_types = [ContentStatus.production, ContentStatus.deprecated]
-        if status not in allowed_types:
-            raise ValueError(
-                f"The status '{status}' is not allowed. Only {allowed_types} are supported status for this object."
-            )
-        return status
+        return cls.NarrowStatusTemplate(
+            status, [ContentStatus.production, ContentStatus.deprecated]
+        )
 
     @classmethod
     def containing_folder(cls) -> pathlib.Path:

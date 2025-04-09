@@ -96,6 +96,3 @@ class Deployment(SecurityContentObject):
 
         # return the model
         return model
-
-        # return the model
-        return model

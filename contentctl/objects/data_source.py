@@ -62,4 +62,3 @@ class DataSource(SecurityContentObject):
 
         # return the model
         return super_fields
-        return super_fields

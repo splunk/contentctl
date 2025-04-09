@@ -109,10 +109,6 @@ class Investigation(SecurityContentObject):
         # back to itself
         for story in self.tags.analytic_story:
             story.investigations.append(self)
-        # back to itself
-        for story in self.tags.analytic_story:
-            story.investigations.append(self)
-            story.investigations.append(self)
 
     @classmethod
     def static_get_conf_stanza_name(

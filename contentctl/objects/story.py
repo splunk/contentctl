@@ -52,7 +52,9 @@ class Story(SecurityContentObject):
     @computed_field
     @cached_property
     def researchSiteLink(self) -> HttpUrl:
-        return HttpUrl(url=f"https://research.splunk.com/stories/{self.file_path.stem}")  # type:ignore
+        return HttpUrl(
+            url=f"https://research.splunk.com/stories/{self.name.lower().replace(' ', '_')}"
+        )  # type:ignore
 
     @computed_field
     @property

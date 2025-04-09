@@ -1,16 +1,70 @@
 import csv
-from contentctl.objects.data_source import DataSource
+from io import StringIO
 from typing import List
-import pathlib
+
+from contentctl.input.director import DirectorOutputDto
+from contentctl.objects.config import CustomApp
+from contentctl.objects.data_source import DataSource
 
 
 class DataSourceWriter:
     @staticmethod
-    def writeDataSourceCsv(
-        data_source_objects: List[DataSource], file_path: pathlib.Path
-    ):
-        with open(file_path, mode="w", newline="") as file:
-            writer = csv.writer(file)
+    def generateDeprecationCSVContents(
+        director: DirectorOutputDto, app: CustomApp
+    ) -> str:
+        with StringIO() as output_buffer:
+            fieldNames = [
+                "Name",
+                "Content Type",
+                "Removed in Version",
+                "Reason",
+                "Replacement Content",
+                "Replacement Content Link",
+            ]
+
+            writer = csv.DictWriter(output_buffer, fieldnames=fieldNames)
+            writer.writeheader()
+
+            for content in director.name_to_content_map.values():
+                if content.deprecation_info is not None:
+                    try:
+                        writer.writerow(
+                            {
+                                "Name": content.deprecation_info.contentType.static_get_conf_stanza_name(
+                                    content.name, app
+                                ),
+                                "Content Type": content.deprecation_info.contentType.__name__,
+                                "Removed in Version": content.deprecation_info.removed_in_version,
+                                "Reason": content.deprecation_info.reason,
+                                "Replacement Content": "\n".join(
+                                    [
+                                        c.name
+                                        for c in content.deprecation_info.replacement_content
+                                    ]
+                                )
+                                or "No Replacement Content Available",
+                                "Replacement Content Link": "\n".join(
+                                    [
+                                        str(c.researchSiteLink)
+                                        for c in content.deprecation_info.replacement_content
+                                    ]
+                                )
+                                or "No Content Link Available",
+                            }
+                        )
+                    except Exception as e:
+                        print(e)
+                        import code
+
+                        code.interact(local=locals())
+            return output_buffer.getvalue()
+
+    @staticmethod
+    def generateDatasourceCSVContents(
+        data_source_objects: List[DataSource],
+    ) -> str:
+        with StringIO() as output_buffer:
+            writer = csv.writer(output_buffer)
             # Write the header
             writer.writerow(
                 [
@@ -50,3 +104,4 @@ class DataSourceWriter:
                         data_source.description,
                     ]
                 )
+            return output_buffer.getvalue()

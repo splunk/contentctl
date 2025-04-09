@@ -12,6 +12,7 @@ from pydantic import (
     BeforeValidator,
     Field,
     FilePath,
+    HttpUrl,
     NonNegativeInt,
     TypeAdapter,
     ValidationInfo,
@@ -24,6 +25,8 @@ from pydantic import (
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import validate
+
+from io import StringIO, TextIOBase
 
 from contentctl.objects.enums import ContentStatus
 from contentctl.objects.security_content_object import SecurityContentObject
@@ -185,6 +188,13 @@ class Lookup(SecurityContentObject, abc.ABC):
 
         return list(all_lookups)
 
+    @computed_field
+    @cached_property
+    def researchSiteLink(self) -> HttpUrl:
+        raise NotImplementedError(
+            f"researchSiteLink has not been implemented for [{type(self).__name__} - {self.name}]"
+        )
+
 
 class FileBackedLookup(Lookup, abc.ABC):
     # For purposes of the disciminated union, the child classes which
@@ -216,6 +226,10 @@ class FileBackedLookup(Lookup, abc.ABC):
         CSV and MLmodel requirements are different.
         """
         pass
+
+    @property
+    def content_file_handle(self) -> TextIOBase:
+        return open(self.filename, "r")
 
 
 class CSVLookup(FileBackedLookup):
@@ -256,8 +270,9 @@ class CSVLookup(FileBackedLookup):
         This function computes the filenames to write into the app itself.  This is abstract because
         CSV and MLmodel requirements are different.
         """
+
         return pathlib.Path(
-            f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}"
+            f"{self.name}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}"
         )
 
     @model_validator(mode="after")
@@ -267,9 +282,11 @@ class CSVLookup(FileBackedLookup):
         # If a row has MORE fields than fieldnames, they will be dumped in a list under the key 'restkey' - this should throw an Exception
         # If a row has LESS fields than fieldnames, then the field should contain None by default. This should also throw an exception.
         csv_errors: list[str] = []
-        with open(self.filename, "r") as csv_fp:
-            RESTKEY = "extra_fields_in_a_row"
-            csv_dict = csv.DictReader(csv_fp, restkey=RESTKEY)
+
+        RESTKEY = "extra_fields_in_a_row"
+        with self.content_file_handle as handle:
+            csv_dict = csv.DictReader(handle, restkey=RESTKEY)
+
             if csv_dict.fieldnames is None:
                 raise ValueError(
                     f"Error validating the CSV referenced by the lookup: {self.filename}:\n\t"
@@ -300,6 +317,25 @@ class CSVLookup(FileBackedLookup):
             )
 
         return self
+
+
+class RuntimeCSV(CSVLookup):
+    contents: str = Field(
+        description="This field contains the contents that would usually "
+        "be written to a CSV file. However, we store these in memory, "
+        "rather than on disk, to avoid needing to create a CSV file "
+        "before copying it into the app build."
+    )
+
+    @model_validator(mode="after")
+    def ensure_lookup_file_exists(self) -> Self:
+        # Because the contents of this file are created at runtime, it does
+        # not actually need to exist. As such, we do not validate it
+        return self
+
+    @property
+    def content_file_handle(self) -> TextIOBase:
+        return StringIO(self.contents)
 
 
 class KVStoreLookup(Lookup):

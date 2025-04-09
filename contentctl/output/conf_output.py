@@ -215,7 +215,11 @@ class ConfOutput:
             # even though the MLModel info was intentionally not written to the
             # transforms.conf file as noted above.
             if isinstance(lookup, FileBackedLookup):
-                shutil.copy(lookup.filename, lookup_folder / lookup.app_filename.name)
+                with (
+                    open(lookup_folder / lookup.app_filename.name, "w") as output_file,
+                    lookup.content_file_handle as output,
+                ):
+                    output_file.write(output.read())
         return written_files
 
     def writeMacros(self, objects: list[Macro]) -> set[pathlib.Path]:

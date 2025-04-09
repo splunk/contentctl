@@ -78,18 +78,8 @@ class Investigation(SecurityContentObject):
 
     # This is a slightly modified version of the get_conf_stanza_name function from
     # SecurityContentObject_Abstract
-    def get_response_task_name(
-        self, app: CustomApp, max_stanza_length: int = CONTENTCTL_MAX_STANZA_LENGTH
-    ) -> str:
-        stanza_name = CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE.format(
-            app_label=app.label, detection_name=self.name
-        )
-        if len(stanza_name) > max_stanza_length:
-            raise ValueError(
-                f"conf stanza may only be {max_stanza_length} characters, "
-                f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' "
-            )
-        return stanza_name
+    def get_response_task_name(self, app: CustomApp) -> str:
+        return self.static_get_conf_stanza_name(self.name, app)
 
     @model_serializer
     def serialize_model(self):
@@ -123,3 +113,20 @@ class Investigation(SecurityContentObject):
         for story in self.tags.analytic_story:
             story.investigations.append(self)
             story.investigations.append(self)
+
+    @classmethod
+    def static_get_conf_stanza_name(
+        cls,
+        name: str,
+        app: CustomApp,
+        max_stanza_length: int = CONTENTCTL_MAX_STANZA_LENGTH,
+    ) -> str:
+        stanza_name = CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE.format(
+            app_label=app.label, detection_name=name
+        )
+        if len(stanza_name) > max_stanza_length:
+            raise ValueError(
+                f"conf stanza may only be {max_stanza_length} characters, "
+                f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' "
+            )
+        return stanza_name

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.config import build
-from contentctl.objects.lookup import CSVLookup, Lookup_Type
+from contentctl.objects.lookup import Lookup_Type, RuntimeCSV
 from contentctl.output.api_json_output import ApiJsonOutput
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.conf_writer import ConfWriter
@@ -25,58 +25,34 @@ class Build:
         if input_dto.config.build_app:
             updated_conf_files: set[pathlib.Path] = set()
             conf_output = ConfOutput(input_dto.config)
-
-            # Construct a path to a YML that does not actually exist.
-            # We mock this "fake" path since the YML does not exist.
-            # This ensures the checking for the existence of the CSV is correct
-            data_sources_fake_yml_path = (
-                input_dto.config.getPackageDirectoryPath()
-                / "lookups"
-                / "data_sources.yml"
+            datasource_lookup = RuntimeCSV(
+                name="data_sources",
+                id=uuid.UUID("b45c1403-6e09-47b0-824f-cf6e44f15ac8"),
+                version=1,
+                author=input_dto.config.app.author_name,
+                date=datetime.date.today(),
+                description="A lookup file that contains the data source objects for detections.",
+                lookup_type=Lookup_Type.csv,
+                contents=DataSourceWriter.generateDatasourceCSVContents(
+                    input_dto.director_output_dto.data_sources
+                ),
             )
+            input_dto.director_output_dto.addContentToDictMappings(datasource_lookup)
 
-            # Construct a special lookup whose CSV is created at runtime and
-            # written directly into the lookups folder. We will delete this after a build,
-            # assuming that it is successful.
-            data_sources_lookup_csv_path = (
-                input_dto.config.getPackageDirectoryPath()
-                / "lookups"
-                / "data_sources.csv"
+            deprecation_lookup = RuntimeCSV(
+                name="deprecation_info",
+                id=uuid.UUID("99262bf2-9606-4b52-b377-c96713527b35"),
+                version=1,
+                author=input_dto.config.app.author_name,
+                date=datetime.date.today(),
+                description="A lookup file that contains information about content that has been deprecated or removed from the app.",
+                lookup_type=Lookup_Type.csv,
+                contents=DataSourceWriter.generateDeprecationCSVContents(
+                    input_dto.director_output_dto, input_dto.config.app
+                ),
             )
+            input_dto.director_output_dto.addContentToDictMappings(deprecation_lookup)
 
-            if input_dto.director_output_dto.deprecation_documentation is not None:
-                input_dto.director_output_dto.deprecation_documentation.writeDeprecationCSV(
-                    input_dto.config.app,
-                    input_dto.config.getBuildDir() / "deprecation_info.csv",
-                )
-
-            deprecation_lookup_fake_yml_path = (
-                input_dto.config.getPackageDirectoryPath()
-                / "lookups"
-                / "deprecated_content.yml"
-            )
-
-            DataSourceWriter.writeDataSourceCsv(
-                input_dto.director_output_dto.data_sources, data_sources_lookup_csv_path
-            )
-            deprecation_lookup_csv_path = (
-                input_dto.config.getPackageDirectoryPath()
-                / "lookups"
-                / "deprecated_content.csv"
-            )
-
-            input_dto.director_output_dto.addContentToDictMappings(
-                CSVLookup.model_construct(
-                    name="data_sources",
-                    id=uuid.UUID("b45c1403-6e09-47b0-824f-cf6e44f15ac8"),
-                    version=1,
-                    author=input_dto.config.app.author_name,
-                    date=datetime.date.today(),
-                    description="A lookup file that will contain the data source objects for detections.",
-                    lookup_type=Lookup_Type.csv,
-                    file_path=data_sources_fake_yml_path,
-                )
-            )
             updated_conf_files.update(conf_output.writeHeaders())
             updated_conf_files.update(
                 conf_output.writeLookups(input_dto.director_output_dto.lookups)

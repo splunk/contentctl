@@ -22,8 +22,8 @@ class AlertAction(BaseModel):
         # Call serializer for parent
         model = {}
 
-        if self.email is not None:
-            raise Exception("Email not implemented")
+        if self.email is not None and self.rba.enabled:
+            model["email"] = self.email
 
         if self.notable is not None:
             model["notable"] = self.notable

@@ -46,6 +46,7 @@ from contentctl.objects.enums import (
 )
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.manual_test import ManualTest
+from contentctl.objects.email import EmailObject
 from contentctl.objects.rba import RBAObject
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.test_group import TestGroup
@@ -66,6 +67,7 @@ class Detection_Abstract(SecurityContentObject):
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     rba: Optional[RBAObject] = Field(default=None)
+    email: Optional[EmailObject] = Field(default=None)
     explanation: None | str = Field(
         default=None,
         exclude=True,  # Don't serialize this value when dumping the object
@@ -441,6 +443,8 @@ class Detection_Abstract(SecurityContentObject):
             model["tags"]["risk_score"] = self.rba.risk_score
         else:
             model["tags"]["risk_score"] = 0
+        if self.email is not None:
+            model["email"] = self.email
 
         # Only a subset of macro fields are required:
         all_macros: list[dict[str, str | list[str]]] = []

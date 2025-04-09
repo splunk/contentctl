@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Any
 
 from pydantic import BaseModel, model_validator
 

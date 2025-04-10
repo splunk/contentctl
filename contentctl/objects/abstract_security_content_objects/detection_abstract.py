@@ -484,7 +484,7 @@ class Detection_Abstract(SecurityContentObject):
             "datamodel": self.datamodel,
             "source": self.source,
             "nes_fields": self.nes_fields,
-            "rba": self.rba,
+            "rba": self.rba or {},
         }
         if self.deployment.alert_action.notable:
             model["risk_severity"] = self.severity

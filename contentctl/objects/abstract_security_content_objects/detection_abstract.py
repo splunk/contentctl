@@ -43,10 +43,11 @@ from contentctl.objects.enums import (
     DetectionStatus,
     NistCategory,
     ProvidingTechnology,
+    RiskSeverity,
 )
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.manual_test import ManualTest
-from contentctl.objects.rba import RBAObject
+from contentctl.objects.rba import RBAObject, RiskScoreValue_Type
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.unit_test import UnitTest
@@ -66,6 +67,54 @@ class Detection_Abstract(SecurityContentObject):
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     rba: Optional[RBAObject] = Field(default=None)
+
+    @computed_field
+    @property
+    def risk_score(self) -> RiskScoreValue_Type:
+        # First get the maximum score associated with
+        # a risk object. If there are no objects, then
+        # we should throw an exception.
+        if self.rba is None or len(self.rba.risk_objects) == 0:
+            raise Exception(
+                "There must be at least one Risk Object present to get Severity."
+            )
+        return max([risk_object.score for risk_object in self.rba.risk_objects])
+
+    @computed_field
+    @property
+    def severity(self) -> RiskSeverity:
+        """
+        Severity is required for notables (but not risk objects).
+        In the contentctl codebase, instead of requiring an additional
+        field to be added to the YMLs, we derive the severity from the
+        HIGHEST risk score of any risk object that is part of this detection.
+        However, if a detection does not have a risk object but still has a notable,
+        we will use a default value of high. This only impact Correlation searches. As
+        TTP searches, which also generate notables, must also have risk object(s)
+        """
+        try:
+            risk_score = self.risk_score
+        except Exception:
+            # This object does not have any RBA objects,
+            # hence no disk score is returned. So we will
+            # return the defualt value of high
+            return RiskSeverity.HIGH
+
+        if 0 <= risk_score <= 20:
+            return RiskSeverity.INFORMATIONAL
+        elif 20 < risk_score <= 40:
+            return RiskSeverity.LOW
+        elif 40 < risk_score <= 60:
+            return RiskSeverity.MEDIUM
+        elif 60 < risk_score <= 80:
+            return RiskSeverity.HIGH
+        elif 80 < risk_score <= 100:
+            return RiskSeverity.CRITICAL
+        else:
+            raise Exception(
+                f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}"
+            )
+
     explanation: None | str = Field(
         default=None,
         exclude=True,  # Don't serialize this value when dumping the object
@@ -435,12 +484,10 @@ class Detection_Abstract(SecurityContentObject):
             "datamodel": self.datamodel,
             "source": self.source,
             "nes_fields": self.nes_fields,
+            "rba": self.rba or {},
         }
-        if self.rba is not None:
-            model["risk_severity"] = self.rba.severity
-            model["tags"]["risk_score"] = self.rba.risk_score
-        else:
-            model["tags"]["risk_score"] = 0
+        if self.deployment.alert_action.notable:
+            model["risk_severity"] = self.severity
 
         # Only a subset of macro fields are required:
         all_macros: list[dict[str, str | list[str]]] = []

@@ -16,8 +16,6 @@ import pathlib
 
 from contentctl.output.json_writer import JsonWriter
 
-EXCLUDE_NONE: bool = True
-
 
 class ApiJsonOutput:
     output_path: pathlib.Path
@@ -53,8 +51,7 @@ class ApiJsonOutput:
                         "source",
                         "nes_fields",
                     ]
-                ),
-                exclude_none=EXCLUDE_NONE,
+                )
             )
             for detection in objects
         ]
@@ -81,10 +78,7 @@ class ApiJsonOutput:
         objects: list[Macro],
     ) -> None:
         macros = [
-            macro.model_dump(
-                include=set(["definition", "description", "name"]),
-                exclude_none=EXCLUDE_NONE,
-            )
+            macro.model_dump(include=set(["definition", "description", "name"]))
             for macro in objects
         ]
         for macro in macros:
@@ -117,8 +111,7 @@ class ApiJsonOutput:
                         "baseline_names",
                         "detections",
                     ]
-                ),
-                exclude_none=EXCLUDE_NONE,
+                )
             )
             for story in objects
         ]
@@ -164,8 +157,7 @@ class ApiJsonOutput:
                         "references",
                         "tags",
                     ]
-                ),
-                exclude_none=EXCLUDE_NONE,
+                )
             )
             for baseline in objects
         ]
@@ -198,8 +190,7 @@ class ApiJsonOutput:
                         "tags",
                         "lowercase_name",
                     ]
-                ),
-                exclude_none=EXCLUDE_NONE,
+                )
             )
             for investigation in objects
         ]
@@ -227,8 +218,7 @@ class ApiJsonOutput:
                         "min_matches",
                         "case_sensitive_match",
                     ]
-                ),
-                exclude_none=EXCLUDE_NONE,
+                )
             )
             for lookup in objects
         ]
@@ -258,8 +248,7 @@ class ApiJsonOutput:
                         "rba",
                         "tags",
                     ]
-                ),
-                exclude_none=EXCLUDE_NONE,
+                )
             )
             for deployment in objects
         ]

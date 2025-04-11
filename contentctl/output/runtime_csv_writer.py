@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 import csv
 from io import StringIO
-from typing import List
+from typing import TYPE_CHECKING, List
 
-from contentctl.input.director import DirectorOutputDto
+if TYPE_CHECKING:
+    from contentctl.input.director import DirectorOutputDto
+
 from contentctl.objects.config import CustomApp
 from contentctl.objects.data_source import DataSource
 
 
-class DataSourceWriter:
+class RuntimeCsvWriter:
     @staticmethod
-    def generateDeprecationCSVContents(
+    def generateDeprecationCSVContent(
         director: DirectorOutputDto, app: CustomApp
     ) -> str:
         with StringIO() as output_buffer:
@@ -60,7 +64,7 @@ class DataSourceWriter:
             return output_buffer.getvalue()
 
     @staticmethod
-    def generateDatasourceCSVContents(
+    def generateDatasourceCSVContent(
         data_source_objects: List[DataSource],
     ) -> str:
         with StringIO() as output_buffer:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import csv
+import datetime
 import pathlib
 import re
 from enum import StrEnum, auto
@@ -326,6 +327,9 @@ class RuntimeCSV(CSVLookup):
         "rather than on disk, to avoid needing to create a CSV file "
         "before copying it into the app build."
     )
+    # Since these are defined at runtime, they always have
+    # a date of today
+    date: datetime.date = Field(default=datetime.date.today())
 
     @model_validator(mode="after")
     def ensure_lookup_file_exists(self) -> Self:

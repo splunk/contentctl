@@ -495,11 +495,11 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         # Make sure that the type in the deprecation info matches the type of
         # the object
         if type(self) is not deprecation_info.content_type:
-            from contentctl.objects.deprecated_security_content_object import (
-                DeprecatedSecurityContentObject,
+            from contentctl.objects.removed_security_content_object import (
+                RemovedSecurityContentObject,
             )
 
-            if type(self) is not DeprecatedSecurityContentObject:
+            if type(self) is not RemovedSecurityContentObject:
                 raise DeprecationInfo.DeprecationTypeMismatch(
                     app, self, deprecation_info
                 )

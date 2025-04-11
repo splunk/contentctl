@@ -18,22 +18,25 @@ from contentctl.objects.config import CustomApp, validate
 from contentctl.objects.dashboard import Dashboard
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.deployment import Deployment
-from contentctl.objects.deprecated_security_content_object import (
-    DeprecatedSecurityContentObject,
-)
 from contentctl.objects.detection import Detection
 from contentctl.objects.investigation import Investigation
 from contentctl.objects.lookup import (
     CSVLookup,
     KVStoreLookup,
     Lookup,
+    Lookup_Type,
     LookupAdapter,
     MlModel,
+    RuntimeCSV,
 )
 from contentctl.objects.macro import Macro
 from contentctl.objects.playbook import Playbook
+from contentctl.objects.removed_security_content_object import (
+    RemovedSecurityContentObject,
+)
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.story import Story
+from contentctl.output.runtime_csv_writer import RuntimeCsvWriter
 
 
 @dataclass
@@ -52,7 +55,7 @@ class DirectorOutputDto:
     lookups: list[Lookup] = field(default_factory=list)
     deployments: list[Deployment] = field(default_factory=list)
     dashboards: list[Dashboard] = field(default_factory=list)
-    deprecated: list[DeprecatedSecurityContentObject] = field(default_factory=list)
+    deprecated: list[RemovedSecurityContentObject] = field(default_factory=list)
     data_sources: list[DataSource] = field(default_factory=list)
     deprecation_documentation: DeprecationDocumentationFile = field(
         default_factory=DeprecationDocumentationFile
@@ -97,7 +100,7 @@ class DirectorOutputDto:
             self.dashboards.append(content)
         elif isinstance(content, DataSource):
             self.data_sources.append(content)
-        elif isinstance(content, DeprecatedSecurityContentObject):
+        elif isinstance(content, RemovedSecurityContentObject):
             self.deprecated.append(content)
         else:
             raise Exception(f"Unknown security content type: {type(content)}")
@@ -126,11 +129,44 @@ class Director:
             Playbook,
             Detection,
             Dashboard,
-            DeprecatedSecurityContentObject,
+            RemovedSecurityContentObject,
         ]:
             self.createSecurityContent(content)
 
         self.loadDeprecationInfo(input_dto.app)
+        self.buildRuntimeCsvs()
+
+    def buildRuntimeCsvs(self):
+        self.buildDataSourceCsv()
+        self.buildDeprecationRemovalCsv()
+
+    def buildDeprecationRemovalCsv(self):
+        deprecation_lookup = RuntimeCSV(
+            name="deprecation_info",
+            id=UUID("99262bf2-9606-4b52-b377-c96713527b35"),
+            version=1,
+            author=self.input_dto.app.author_name,
+            description="A lookup file that contains information about content that has been deprecated or removed from the app.",
+            lookup_type=Lookup_Type.csv,
+            contents=RuntimeCsvWriter.generateDeprecationCSVContent(
+                self.output_dto, self.input_dto.app
+            ),
+        )
+        self.output_dto.addContentToDictMappings(deprecation_lookup)
+
+    def buildDataSourceCsv(self):
+        datasource_lookup = RuntimeCSV(
+            name="data_sources",
+            id=UUID("b45c1403-6e09-47b0-824f-cf6e44f15ac8"),
+            version=1,
+            author=self.input_dto.app.author_name,
+            description="A lookup file that contains the data source objects for detections.",
+            lookup_type=Lookup_Type.csv,
+            contents=RuntimeCsvWriter.generateDatasourceCSVContent(
+                self.output_dto.data_sources
+            ),
+        )
+        self.output_dto.addContentToDictMappings(datasource_lookup)
 
     def loadDeprecationInfo(self, app: CustomApp):
         mapping_file_path = self.input_dto.path / "removed" / "deprecation_mapping.YML"

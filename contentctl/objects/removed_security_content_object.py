@@ -15,7 +15,7 @@ class SecurityContentObject(SecurityContentObject_Abstract):
     pass
 
 
-class DeprecatedSecurityContentObject(SecurityContentObject):
+class RemovedSecurityContentObject(SecurityContentObject):
     # We MUST allow extra fields here because the python definitions of the underlying
     # objects can change. We do not want to throw pasing errors on any of these, but we will
     # only expose fields that are defined in the SecurityContentObject definiton directly

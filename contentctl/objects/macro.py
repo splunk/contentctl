@@ -33,7 +33,7 @@ class Macro(SecurityContentObject):
     arguments: List[str] = Field([])
     # TODO: Add id field to all macro ymls
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    date: datetime.date = Field(datetime.date.today())
+    date: datetime.date = Field(default=datetime.date.today())
     author: str = Field("NO AUTHOR DEFINED", max_length=255)
     version: NonNegativeInt = 1
     status: ContentStatus = ContentStatus.production

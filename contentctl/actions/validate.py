@@ -8,7 +8,7 @@ from contentctl.input.director import Director, DirectorOutputDto
 from contentctl.objects.atomic import AtomicEnrichment
 from contentctl.objects.config import validate
 from contentctl.objects.data_source import DataSource
-from contentctl.objects.lookup import FileBackedLookup
+from contentctl.objects.lookup import FileBackedLookup, RuntimeCSV
 
 
 class Validate:
@@ -58,7 +58,10 @@ class Validate:
         usedLookupFiles: list[pathlib.Path] = [
             lookup.filename
             for lookup in director_output_dto.lookups
+            # Of course Runtime CSVs do not have underlying CSV files, so make
+            # sure that we do not check for that existence.
             if isinstance(lookup, FileBackedLookup)
+            and not isinstance(lookup, RuntimeCSV)
         ] + [
             lookup.file_path
             for lookup in director_output_dto.lookups

@@ -1,6 +1,7 @@
 from __future__ import annotations
+
+from enum import StrEnum, auto
 from typing import List
-from enum import StrEnum, IntEnum
 
 
 class AnalyticsType(StrEnum):
@@ -46,18 +47,21 @@ class PlaybookType(StrEnum):
     RESPONSE = "Response"
 
 
-class SecurityContentType(IntEnum):
-    detections = 1
-    baselines = 2
-    stories = 3
-    playbooks = 4
-    macros = 5
-    lookups = 6
-    deployments = 7
-    investigations = 8
-    unit_tests = 9
-    data_sources = 11
-    dashboards = 12
+class SecurityContentType(StrEnum):
+    detection = auto()
+    baseline = auto()
+    story = auto()
+    playbook = auto()
+    macro = auto()
+    lookup = auto()
+    deployment = auto()
+    investigation = auto()
+    unit_test = auto()
+    data_source = auto()
+    dashboard = auto()
+
+
+# Create a mapping to map the type of content to the directory which stores it
 
 
 # Bringing these changes back in line will take some time after
@@ -87,11 +91,17 @@ class SecurityContentInvestigationProductName(StrEnum):
     SPLUNK_PHANTOM = "Splunk Phantom"
 
 
-class DetectionStatus(StrEnum):
-    production = "production"
-    deprecated = "deprecated"
-    experimental = "experimental"
-    validation = "validation"
+class ContentStatus(StrEnum):
+    experimental = auto()
+    production = auto()
+    deprecated = auto()
+    removed = auto()
+
+
+CONTENT_STATUS_THAT_REQUIRES_DEPRECATION_INFO = [
+    ContentStatus.deprecated,
+    ContentStatus.removed,
+]
 
 
 class LogLevel(StrEnum):

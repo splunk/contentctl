@@ -243,6 +243,10 @@ class Config_Base(BaseModel):
     def serialize_path(path: DirectoryPath) -> str:
         return str(path)
 
+    @property
+    def removed_content_path(self) -> pathlib.Path:
+        return self.path / "removed"
+
 
 class init(Config_Base):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)

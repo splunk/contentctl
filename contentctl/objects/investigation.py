@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import pathlib
 import re
-from typing import Any, List, Literal
+from typing import Any, List
 
-from pydantic import ConfigDict, Field, computed_field, model_serializer
+from pydantic import (
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_serializer,
+)
 
 from contentctl.objects.config import CustomApp
 from contentctl.objects.constants import (
@@ -11,7 +18,7 @@ from contentctl.objects.constants import (
     CONTENTCTL_MAX_STANZA_LENGTH,
     CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE,
 )
-from contentctl.objects.enums import DataModel, DetectionStatus
+from contentctl.objects.enums import ContentStatus, DataModel
 from contentctl.objects.investigation_tags import InvestigationTags
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -24,7 +31,16 @@ class Investigation(SecurityContentObject):
     how_to_implement: str = Field(...)
     known_false_positives: str = Field(...)
     tags: InvestigationTags
-    status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
+    status: ContentStatus
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.removed])
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("investigations")
 
     # enrichment
     @computed_field
@@ -62,18 +78,8 @@ class Investigation(SecurityContentObject):
 
     # This is a slightly modified version of the get_conf_stanza_name function from
     # SecurityContentObject_Abstract
-    def get_response_task_name(
-        self, app: CustomApp, max_stanza_length: int = CONTENTCTL_MAX_STANZA_LENGTH
-    ) -> str:
-        stanza_name = CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE.format(
-            app_label=app.label, detection_name=self.name
-        )
-        if len(stanza_name) > max_stanza_length:
-            raise ValueError(
-                f"conf stanza may only be {max_stanza_length} characters, "
-                f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' "
-            )
-        return stanza_name
+    def get_response_task_name(self, app: CustomApp) -> str:
+        return self.static_get_conf_stanza_name(self.name, app)
 
     @model_serializer
     def serialize_model(self):
@@ -103,6 +109,20 @@ class Investigation(SecurityContentObject):
         # back to itself
         for story in self.tags.analytic_story:
             story.investigations.append(self)
-        # back to itself
-        for story in self.tags.analytic_story:
-            story.investigations.append(self)
+
+    @classmethod
+    def static_get_conf_stanza_name(
+        cls,
+        name: str,
+        app: CustomApp,
+        max_stanza_length: int = CONTENTCTL_MAX_STANZA_LENGTH,
+    ) -> str:
+        stanza_name = CONTENTCTL_RESPONSE_TASK_NAME_FORMAT_TEMPLATE.format(
+            app_label=app.label, detection_name=name
+        )
+        if len(stanza_name) > max_stanza_length:
+            raise ValueError(
+                f"conf stanza may only be {max_stanza_length} characters, "
+                f"but stanza was actually {len(stanza_name)} characters: '{stanza_name}' "
+            )
+        return stanza_name

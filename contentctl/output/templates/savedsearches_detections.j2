@@ -68,6 +68,7 @@ action.notable.param.security_domain = {{ detection.tags.security_domain }}
 action.notable.param.severity = {{ detection.severity }}
 {% endif %}
 {% if detection.deployment.alert_action.email %}
+action.email = 1
 action.email.subject.alert = {{ detection.deployment.alert_action.email.subject | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.email.to = {{ detection.deployment.alert_action.email.to }}
 action.email.message.alert = {{ detection.deployment.alert_action.email.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}

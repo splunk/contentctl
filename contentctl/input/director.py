@@ -169,15 +169,16 @@ class Director:
         self.output_dto.addContentToDictMappings(datasource_lookup)
 
     def loadDeprecationInfo(self, app: CustomApp):
-        mapping_file_path = self.input_dto.path / "removed" / "deprecation_mapping.YML"
-        if mapping_file_path.is_file():
+        mapping_file_paths = list(
+            (self.input_dto.path / "removed").glob("deprecation_mapping*.YML")
+        )
+        # If there are no mapping files, that's okay.  We will other throw exceptions later on if
+        # there are 1 or more detections marked as deprecated or removed.
+        for mapping_file_path in mapping_file_paths:
+            print(f"Parsing mapping file {mapping_file_path.name}")
             data = YmlReader.load_file(mapping_file_path)
             mapping = DeprecationDocumentationFile.model_validate(data)
-            self.output_dto.deprecation_documentation = mapping
-        else:
-            raise Exception(
-                f"{mapping_file_path} does not exist. WHAT DO WE WANT TO DO HERE? IS THIS NOW A REQUIREMENT? SHOULD IT GIVE A WARNING?"
-            )
+            self.output_dto.deprecation_documentation += mapping
 
         self.output_dto.deprecation_documentation.mapAllContent(self.output_dto, app)
 

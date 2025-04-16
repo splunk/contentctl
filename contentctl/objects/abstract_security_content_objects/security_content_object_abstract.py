@@ -314,6 +314,18 @@ class DeprecationDocumentationFile(BaseModel):
     lookups: list[DeprecationInfoInFile] = []
     macros: list[DeprecationInfoInFile] = []
 
+    def __add__(self, o: DeprecationDocumentationFile) -> DeprecationDocumentationFile:
+        return DeprecationDocumentationFile(
+            baselines=self.baselines + o.baselines,
+            detections=self.detections + o.detections,
+            investigations=self.investigations + o.investigations,
+            stories=self.stories + o.stories,
+            dashboards=self.dashboards + o.dashboards,
+            data_sources=self.data_sources + o.data_sources,
+            deployments=self.deployments + o.deployments,
+            macros=self.macros + o.macros,
+        )
+
     @computed_field
     @property
     def all_content(self) -> list[DeprecationInfoInFile]:
@@ -402,8 +414,8 @@ class DeprecationDocumentationFile(BaseModel):
     )
     @classmethod
     def setTypeSupportedContent(
-        cls, v: list[dict[str, Any]], info: ValidationInfo
-    ) -> list[dict[str, Any]]:
+        cls, v: list[dict[str, Any] | DeprecationInfoInFile], info: ValidationInfo
+    ) -> list[dict[str, Any] | DeprecationInfoInFile]:
         """
         This function is important because we need to ensure that the heading a piece of
         content is under in the Deprecation File matches the actual type of that content.
@@ -414,6 +426,12 @@ class DeprecationDocumentationFile(BaseModel):
         determine proper type information for that content.
         """
         for entry in v:
+            if isinstance(entry, DeprecationInfoInFile):
+                # This is already a fully loaded/parsed Object and we are probably
+                # getting here by adding two of them together.  No need to do the
+                # enrichment as the content_type has already been set.
+                continue
+
             if info.field_name == "detections":
                 from contentctl.objects.detection import Detection
 

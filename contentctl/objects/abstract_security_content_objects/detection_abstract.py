@@ -547,7 +547,7 @@ class Detection_Abstract(SecurityContentObject):
                     {
                         "name": lookup.name,
                         "description": lookup.description,
-                        "filename": lookup.filename.name,
+                        "filename": lookup.filename.name,  # This does not cause an issue for RuntimeCSV type because they are not used by any detections
                         "default_match": lookup.default_match,
                         "case_sensitive_match": "true"
                         if lookup.case_sensitive_match

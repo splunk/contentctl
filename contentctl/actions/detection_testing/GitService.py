@@ -14,7 +14,7 @@ from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.config import All, Changes, Selected, test_common
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.detection import Detection
-from contentctl.objects.lookup import CSVLookup, Lookup
+from contentctl.objects.lookup import CSVLookup, Lookup, RuntimeCSV
 from contentctl.objects.macro import Macro
 from contentctl.objects.security_content_object import SecurityContentObject
 
@@ -148,6 +148,9 @@ class GitService(BaseModel):
                             matched = list(
                                 filter(
                                     lambda x: isinstance(x, CSVLookup)
+                                    and not isinstance(
+                                        x, RuntimeCSV
+                                    )  # RuntimeCSV is not used directly by any content
                                     and x.filename == decoded_path,
                                     self.director.lookups,
                                 )

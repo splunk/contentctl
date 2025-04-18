@@ -54,7 +54,7 @@ class Validate:
         """
         lookupsDirectory = repo_path / "lookups"
 
-        # Get all of the files referneced by Lookups
+        # Get all of the files referenced by Lookups
         usedLookupFiles: list[pathlib.Path] = [
             lookup.filename
             for lookup in director_output_dto.lookups

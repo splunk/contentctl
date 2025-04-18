@@ -257,7 +257,7 @@ class CSVLookup(FileBackedLookup):
         """
         if self.file_path is None:
             raise ValueError(
-                f"Cannot get the filename of the lookup {self.lookup_type} because the YML file_path attribute is None"
+                f"Cannot get the filename of the lookup {self.lookup_type} for content [{self.name}] because the YML file_path attribute is None"
             )  # type: ignore
 
         csv_file = self.file_path.parent / f"{self.file_path.stem}.{self.lookup_type}"  # type: ignore

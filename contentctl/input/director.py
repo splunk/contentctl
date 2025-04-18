@@ -141,6 +141,10 @@ class Director:
         self.buildDeprecationRemovalCsv()
 
     def buildDeprecationRemovalCsv(self):
+        if self.input_dto.enforce_deprecation_mapping_requirement is False:
+            # Do not build the CSV, it would be wasteful to include it if it
+            # is not even used
+            return
         deprecation_lookup = RuntimeCSV(
             name="deprecation_info",
             id=UUID("99262bf2-9606-4b52-b377-c96713527b35"),
@@ -172,6 +176,21 @@ class Director:
         mapping_file_paths = list(
             (self.input_dto.path / "removed").glob("deprecation_mapping*.YML")
         )
+
+        if self.input_dto.enforce_deprecation_mapping_requirement is False:
+            # If we are not required to enforce deprecation mapping, then do nothing at all (even if the files exist)
+            if len(mapping_file_paths) > 0:
+                file_paths = "\n - " + "\n - ".join(
+                    str(name) for name in mapping_file_paths
+                )
+                print(
+                    "The following deprecation_mapping*.YML files were found, but will not be parsed because "
+                    f"[enforce_deprecation_mapping_requirement = {self.input_dto.enforce_deprecation_mapping_requirement}]:",
+                    file_paths,
+                )
+            # Otherwise, no need to output extra information
+            return
+
         # If there are no mapping files, that's okay.  We will other throw exceptions later on if
         # there are 1 or more detections marked as deprecated or removed.
         for mapping_file_path in mapping_file_paths:

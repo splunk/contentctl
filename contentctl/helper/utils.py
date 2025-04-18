@@ -24,8 +24,8 @@ class Utils:
     def get_all_yml_files_from_directory(path: pathlib.Path) -> list[pathlib.Path]:
         if not path.exists():
             raise FileNotFoundError(
-                f"Trying to find content files in the directory {path}, but it does not exist. "
-                "It is not mandatory to have content in this directory, but it must exist"
+                f"Trying to find files in the directory '{path.absolute()}', but it does not exist.\n"
+                "It is not mandatory to have content/YMLs in this directory, but it must exist. Please create it."
             )
 
         return sorted(pathlib.Path(yml_path) for yml_path in path.glob("**/*.yml"))

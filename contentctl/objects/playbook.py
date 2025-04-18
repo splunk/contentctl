@@ -1,11 +1,13 @@
 from __future__ import annotations
+
+import pathlib
 from typing import Self
-from pydantic import model_validator, Field, FilePath
 
+from pydantic import Field, FilePath, field_validator, model_validator
 
+from contentctl.objects.enums import ContentStatus, PlaybookType
 from contentctl.objects.playbook_tags import PlaybookTag
 from contentctl.objects.security_content_object import SecurityContentObject
-from contentctl.objects.enums import PlaybookType
 
 
 class Playbook(SecurityContentObject):
@@ -19,6 +21,16 @@ class Playbook(SecurityContentObject):
     playbook: str = Field(min_length=4)
     app_list: list[str] = Field(..., min_length=0)
     tags: PlaybookTag = Field(...)
+    status: ContentStatus = ContentStatus.production
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.production])
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("playbooks")
 
     @model_validator(mode="after")
     def ensureJsonAndPyFilesExist(self) -> Self:
@@ -65,4 +77,6 @@ class Playbook(SecurityContentObject):
                 f"\t- Actual File Name  : {self.file_path.name}"
             )
 
+        return self
+        return self
         return self

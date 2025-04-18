@@ -47,7 +47,14 @@ class YmlReader:
                     f"\nThe file {file_path} contains the value '{UPDATE_PREFIX}'. Please fill out any unpopulated fields as required."
                 )
             yml_obj = yaml.load(data, Loader=yaml.CSafeLoader)
-
+            if yml_obj is None:
+                raise yaml.YAMLError(
+                    f"The YML file's value was parsed as [{None}]. "
+                    "This probably means that the file was entirely "
+                    "empty or contains only comments, which is not "
+                    "supported. Please ensure this file is NOT empty "
+                    "or remove the file."
+                )
         except yaml.YAMLError as exc:
             print(
                 f"\nThere was an unrecoverable YML Parsing error when reading or parsing the file '{file_path}' - we will exit immediately:\n{str(exc)}"

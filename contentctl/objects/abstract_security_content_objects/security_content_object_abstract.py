@@ -647,7 +647,9 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         return stanza_name
 
     @staticmethod
-    def objectListToNameList(objects: list[SecurityContentObject]) -> list[str]:
+    def objectListToNameList(
+        objects: list[SecurityContentObject_Abstract],
+    ) -> list[str]:
         return [object.getName() for object in objects]
 
     # This function is overloadable by specific types if they want to redefine names, for example

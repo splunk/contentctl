@@ -43,7 +43,7 @@ class DetectionTags(BaseModel):
     # detection spec
 
     model_config = ConfigDict(validate_default=False, extra="forbid")
-    analytic_story: list[Story] = Field(...)
+    analytic_story: list[Story] = Field(min_length=1)
     asset_type: AssetType = Field(...)
     group: list[str] = []
 

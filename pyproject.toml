@@ -30,7 +30,7 @@ tqdm = "^4.66.5"
 pygit2 = "^1.15.1"
 tyro = "^0.9.2"
 gitpython = "^3.1.43"
-setuptools = ">=69.5.1,<79.0.0"
+setuptools = ">=69.5.1,<80.0.0"
 rich = "^14.0.0"
 
 [tool.poetry.group.dev.dependencies]

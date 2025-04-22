@@ -16,6 +16,7 @@ from contentctl.objects.errors import (
     DetectionMissingError,
     MetadataValidationError,
     VersionBumpingError,
+    VersionBumpingTooFarError,
     VersionDecrementedError,
 )
 from contentctl.objects.savedsearches_conf import SavedsearchesConf
@@ -101,7 +102,7 @@ class Inspect:
             -F "app_package=@<PATH/APP-PACKAGE>" \
             -F "included_tags=cloud" \
             --url "https://appinspect.splunk.com/v1/app/validate"
-        
+
         This is confirmed by the great resource:
         https://curlconverter.com/
         """
@@ -423,6 +424,19 @@ class Inspect:
             if current_stanza.version_should_be_bumped(previous_stanza):
                 validation_errors[rule_name].append(
                     VersionBumpingError(
+                        rule_name=rule_name,
+                        current_version=current_stanza.metadata.detection_version,
+                        previous_version=previous_stanza.metadata.detection_version,
+                    )
+                )
+
+            # Versions should never increase more than one version between releases
+            if (
+                current_stanza.metadata.detection_version
+                > previous_stanza.metadata.detection_version + 1
+            ):
+                validation_errors[rule_name].append(
+                    VersionBumpingTooFarError(
                         rule_name=rule_name,
                         current_version=current_stanza.metadata.detection_version,
                         previous_version=previous_stanza.metadata.detection_version,

@@ -4,7 +4,7 @@ from contentctl.enrichments.attack_enrichment import AttackEnrichment
 from contentctl.enrichments.cve_enrichment import CveEnrichment
 from contentctl.helper.splunk_app import SplunkApp
 from contentctl.helper.utils import Utils
-from contentctl.input.director import Director, DirectorOutputDto
+from contentctl.input.director import Director, DirectorOutputDto, ValidationFailedError
 from contentctl.objects.atomic import AtomicEnrichment
 from contentctl.objects.config import validate
 from contentctl.objects.data_source import DataSource
@@ -13,19 +13,26 @@ from contentctl.objects.lookup import FileBackedLookup, RuntimeCSV
 
 class Validate:
     def execute(self, input_dto: validate) -> DirectorOutputDto:
-        director_output_dto = DirectorOutputDto(
-            AtomicEnrichment.getAtomicEnrichment(input_dto),
-            AttackEnrichment.getAttackEnrichment(input_dto),
-            CveEnrichment.getCveEnrichment(input_dto),
-        )
+        try:
+            director_output_dto = DirectorOutputDto(
+                AtomicEnrichment.getAtomicEnrichment(input_dto),
+                AttackEnrichment.getAttackEnrichment(input_dto),
+                CveEnrichment.getCveEnrichment(input_dto),
+            )
 
-        director = Director(director_output_dto)
-        director.execute(input_dto)
-        self.ensure_no_orphaned_files_in_lookups(input_dto.path, director_output_dto)
-        if input_dto.data_source_TA_validation:
-            self.validate_latest_TA_information(director_output_dto.data_sources)
+            director = Director(director_output_dto)
+            director.execute(input_dto)
+            self.ensure_no_orphaned_files_in_lookups(
+                input_dto.path, director_output_dto
+            )
+            if input_dto.data_source_TA_validation:
+                self.validate_latest_TA_information(director_output_dto.data_sources)
 
-        return director_output_dto
+            return director_output_dto
+
+        except ValidationFailedError:
+            # Just re-raise without additional output since we already formatted everything
+            raise SystemExit(1)
 
     def ensure_no_orphaned_files_in_lookups(
         self, repo_path: pathlib.Path, director_output_dto: DirectorOutputDto

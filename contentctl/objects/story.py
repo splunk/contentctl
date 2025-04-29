@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, List, Literal
+from functools import cached_property
+from typing import TYPE_CHECKING, List
 
-from pydantic import Field, computed_field, model_serializer, model_validator
+from pydantic import (
+    Field,
+    HttpUrl,
+    computed_field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from contentctl.objects.story_tags import StoryTags
 
@@ -14,19 +22,39 @@ if TYPE_CHECKING:
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
 
-from contentctl.objects.enums import DetectionStatus
+import pathlib
+
+from contentctl.objects.enums import ContentStatus
 from contentctl.objects.security_content_object import SecurityContentObject
 
 
 class Story(SecurityContentObject):
     narrative: str = Field(...)
     tags: StoryTags = Field(...)
-    status: Literal[DetectionStatus.production, DetectionStatus.deprecated]
+    status: ContentStatus
     # These are updated when detection and investigation objects are created.
     # Specifically in the model_post_init functions
     detections: List[Detection] = []
     investigations: List[Investigation] = []
     baselines: List[Baseline] = []
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(
+            status, [ContentStatus.production, ContentStatus.deprecated]
+        )
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("stories")
+
+    @computed_field
+    @cached_property
+    def researchSiteLink(self) -> HttpUrl:
+        return HttpUrl(
+            url=f"https://research.splunk.com/stories/{self.name.lower().replace(' ', '_')}"
+        )  # type:ignore
 
     @computed_field
     @property
@@ -145,3 +173,7 @@ class Story(SecurityContentObject):
     @property
     def baseline_names(self) -> List[str]:
         return [baseline.name for baseline in self.baselines]
+
+    @classmethod
+    def static_get_conf_stanza_name(cls, name: str, app: CustomApp) -> str:
+        return name

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any, List, Optional, Union
 from pydantic import (
     Field,
     FilePath,
+    HttpUrl,
     ValidationInfo,
     computed_field,
     field_validator,
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from contentctl.objects.config import CustomApp
 
 import datetime
+from functools import cached_property
 
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 from contentctl.objects.base_test_result import TestResultStatus
@@ -39,19 +41,18 @@ from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.drilldown import DRILLDOWN_SEARCH_PLACEHOLDER, Drilldown
 from contentctl.objects.enums import (
     AnalyticsType,
+    ContentStatus,
     DataModel,
-    DetectionStatus,
     NistCategory,
     ProvidingTechnology,
+    RiskSeverity,
 )
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.manual_test import ManualTest
-from contentctl.objects.rba import RBAObject
+from contentctl.objects.rba import RBAObject, RiskScoreValue_Type
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.unit_test import UnitTest
-
-MISSING_SOURCES: set[str] = set()
 
 # Those AnalyticsTypes that we do not test via contentctl
 SKIPPED_ANALYTICS_TYPES: set[str] = {AnalyticsType.Correlation}
@@ -61,13 +62,61 @@ class Detection_Abstract(SecurityContentObject):
     name: str = Field(..., max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     # contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
-    status: DetectionStatus = Field(...)
+    status: ContentStatus
     data_source: list[str] = []
     tags: DetectionTags = Field(...)
     search: str = Field(...)
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     rba: Optional[RBAObject] = Field(default=None)
+
+    @computed_field
+    @property
+    def risk_score(self) -> RiskScoreValue_Type:
+        # First get the maximum score associated with
+        # a risk object. If there are no objects, then
+        # we should throw an exception.
+        if self.rba is None or len(self.rba.risk_objects) == 0:
+            raise Exception(
+                "There must be at least one Risk Object present to get Severity."
+            )
+        return max([risk_object.score for risk_object in self.rba.risk_objects])
+
+    @computed_field
+    @property
+    def severity(self) -> RiskSeverity:
+        """
+        Severity is required for notables (but not risk objects).
+        In the contentctl codebase, instead of requiring an additional
+        field to be added to the YMLs, we derive the severity from the
+        HIGHEST risk score of any risk object that is part of this detection.
+        However, if a detection does not have a risk object but still has a notable,
+        we will use a default value of high. This only impact Correlation searches. As
+        TTP searches, which also generate notables, must also have risk object(s)
+        """
+        try:
+            risk_score = self.risk_score
+        except Exception:
+            # This object does not have any RBA objects,
+            # hence no disk score is returned. So we will
+            # return the defualt value of high
+            return RiskSeverity.HIGH
+
+        if 0 <= risk_score <= 20:
+            return RiskSeverity.INFORMATIONAL
+        elif 20 < risk_score <= 40:
+            return RiskSeverity.LOW
+        elif 40 < risk_score <= 60:
+            return RiskSeverity.MEDIUM
+        elif 60 < risk_score <= 80:
+            return RiskSeverity.HIGH
+        elif 80 < risk_score <= 100:
+            return RiskSeverity.CRITICAL
+        else:
+            raise Exception(
+                f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}"
+            )
+
     explanation: None | str = Field(
         default=None,
         exclude=True,  # Don't serialize this value when dumping the object
@@ -101,11 +150,36 @@ class Detection_Abstract(SecurityContentObject):
         description="A list of Drilldowns that should be included with this search",
     )
 
-    def get_conf_stanza_name(self, app: CustomApp) -> str:
-        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(
-            app_label=app.label, detection_name=self.name
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(
+            status,
+            [
+                ContentStatus.experimental,
+                ContentStatus.production,
+                ContentStatus.deprecated,
+            ],
         )
-        self.check_conf_stanza_max_length(stanza_name)
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("detections")
+
+    @computed_field
+    @cached_property
+    def researchSiteLink(self) -> HttpUrl:
+        return HttpUrl(url=f"https://research.splunk.com/{self.source}/{self.id}")  # type: ignore
+
+    @classmethod
+    def static_get_conf_stanza_name(cls, name: str, app: CustomApp) -> str:
+        """
+        This is exposed as a static method since it may need to be used for SecurityContentObject which does not
+        pass all currenty validations - most notable Deprecated content.
+        """
+        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(
+            app_label=app.label, detection_name=name
+        )
         return stanza_name
 
     def get_action_dot_correlationsearch_dot_label(
@@ -221,7 +295,7 @@ class Detection_Abstract(SecurityContentObject):
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
 
         # Skip tests for non-production detections
-        if self.status != DetectionStatus.production:
+        if self.status != ContentStatus.production:
             self.skip_all_tests(
                 f"TEST SKIPPED: Detection is non-production ({self.status})"
             )
@@ -408,7 +482,7 @@ class Detection_Abstract(SecurityContentObject):
         # break the `inspect` action.
         return {
             "detection_id": str(self.id),
-            "deprecated": "1" if self.status == DetectionStatus.deprecated else "0",  # type: ignore
+            "deprecated": "1" if self.status == ContentStatus.deprecated else "0",  # type: ignore
             "detection_version": str(self.version),
             "publish_time": datetime.datetime(
                 self.date.year,
@@ -437,12 +511,10 @@ class Detection_Abstract(SecurityContentObject):
             "datamodel": self.datamodel,
             "source": self.source,
             "nes_fields": self.nes_fields,
+            "rba": self.rba or {},
         }
-        if self.rba is not None:
-            model["risk_severity"] = self.rba.severity
-            model["tags"]["risk_score"] = self.rba.risk_score
-        else:
-            model["tags"]["risk_score"] = 0
+        if self.deployment.alert_action.notable:
+            model["risk_severity"] = self.severity
 
         # Only a subset of macro fields are required:
         all_macros: list[dict[str, str | list[str]]] = []
@@ -475,8 +547,8 @@ class Detection_Abstract(SecurityContentObject):
                     {
                         "name": lookup.name,
                         "description": lookup.description,
-                        "filename": lookup.filename.name,
-                        "default_match": "true" if lookup.default_match else "false",
+                        "filename": lookup.filename.name,  # This does not cause an issue for RuntimeCSV type because they are not used by any detections
+                        "default_match": lookup.default_match,
                         "case_sensitive_match": "true"
                         if lookup.case_sensitive_match
                         else "false",
@@ -514,7 +586,7 @@ class Detection_Abstract(SecurityContentObject):
             baseline.tags.detections = new_detections
 
         # Data source may be defined 1 on each line, OR they may be defined as
-        # SOUCE_1 AND ANOTHERSOURCE AND A_THIRD_SOURCE
+        # SOURCE_1 AND ANOTHERSOURCE AND A_THIRD_SOURCE
         # if more than 1 data source is required for a detection (for example, because it includes a join)
         # Parse and update the list to resolve individual names and remove potential duplicates
         updated_data_source_names: set[str] = set()
@@ -524,27 +596,9 @@ class Detection_Abstract(SecurityContentObject):
             updated_data_source_names.update(split_data_sources)
 
         sources = sorted(list(updated_data_source_names))
-
-        matched_data_sources: list[DataSource] = []
-        missing_sources: list[str] = []
-        for source in sources:
-            try:
-                matched_data_sources += DataSource.mapNamesToSecurityContentObjects(
-                    [source], director
-                )
-            except Exception:
-                # We gobble this up and add it to a global set so that we
-                # can print it ONCE at the end of the build of datasources.
-                # This will be removed later as per the note below
-                MISSING_SOURCES.add(source)
-
-        if len(missing_sources) > 0:
-            # This will be changed to ValueError when we have a complete list of data sources
-            print(
-                "WARNING: The following exception occurred when mapping the data_source field to "
-                f"DataSource objects:{missing_sources}"
-            )
-
+        matched_data_sources = DataSource.mapNamesToSecurityContentObjects(
+            sources, director
+        )
         self.data_source_objects = matched_data_sources
 
         for story in self.tags.analytic_story:
@@ -562,7 +616,7 @@ class Detection_Abstract(SecurityContentObject):
 
         if (
             self.type == AnalyticsType.Hunting
-            or self.status != DetectionStatus.production
+            or self.status != ContentStatus.production
         ):
             # No additional check need to happen on the potential drilldowns.
             pass
@@ -714,13 +768,13 @@ class Detection_Abstract(SecurityContentObject):
         if v is False:
             return v
 
-        status = DetectionStatus(info.data.get("status"))
+        status = ContentStatus(info.data.get("status"))
         searchType = AnalyticsType(info.data.get("type"))
         errors: list[str] = []
-        if status != DetectionStatus.production:
+        if status != ContentStatus.production:
             errors.append(
                 f"status is '{status.name}'. Detections that are enabled by default MUST be "
-                f"'{DetectionStatus.production}'"
+                f"'{ContentStatus.production}'"
             )
 
         if searchType not in [
@@ -850,7 +904,7 @@ class Detection_Abstract(SecurityContentObject):
                 f"the search: {missing_fields}"
             )
 
-        if len(error_messages) > 0 and self.status == DetectionStatus.production:
+        if len(error_messages) > 0 and self.status == ContentStatus.production:
             msg = (
                 "Use of fields in rba/messages that do not appear in search:\n\t- "
                 "\n\t- ".join(error_messages)
@@ -901,7 +955,7 @@ class Detection_Abstract(SecurityContentObject):
         cls, v: list[UnitTest | IntegrationTest | ManualTest], info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest | ManualTest]:
         # Only production analytics require tests
-        if info.data.get("status", "") != DetectionStatus.production:
+        if info.data.get("status", "") != ContentStatus.production:
             return v
 
         # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined
@@ -1075,3 +1129,30 @@ class Detection_Abstract(SecurityContentObject):
         # Return the summary
 
         return summary_dict
+
+    @model_validator(mode="after")
+    def validate_data_source_output_fields(self):
+        # Skip validation for Hunting and Correlation types, or non-production detections
+        if self.status != ContentStatus.production or self.type in {
+            AnalyticsType.Hunting,
+            AnalyticsType.Correlation,
+        }:
+            return self
+
+        # Validate that all required output fields are present in the search
+        for data_source in self.data_source_objects:
+            if not data_source.output_fields:
+                continue
+
+            missing_fields = [
+                field for field in data_source.output_fields if field not in self.search
+            ]
+
+            if missing_fields:
+                raise ValueError(
+                    f"Data source '{data_source.name}' has output fields "
+                    f"{missing_fields} that are not present in the search "
+                    f"for detection '{self.name}'"
+                )
+
+        return self

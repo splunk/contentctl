@@ -65,14 +65,10 @@ action.notable.param.nes_fields = {{ detection.nes_fields }}
 action.notable.param.rule_description = {{ detection.deployment.alert_action.notable.rule_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines()}}
 action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
 action.notable.param.security_domain = {{ detection.tags.security_domain }}
-{% if detection.rba %}
-action.notable.param.severity = {{ detection.rba.severity }}
-{% else %}
-{# Correlations do not have detection.rba defined, but should get a default severity #}
-action.notable.param.severity = high 
-{% endif %}
+action.notable.param.severity = {{ detection.severity }}
 {% endif %}
 {% if detection.deployment.alert_action.email %}
+action.email = 1
 action.email.subject.alert = {{ detection.deployment.alert_action.email.subject | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}
 action.email.to = {{ detection.deployment.alert_action.email.to }}
 action.email.message.alert = {{ detection.deployment.alert_action.email.message | custom_jinja2_enrichment_filter(detection) | escapeNewlines() }}

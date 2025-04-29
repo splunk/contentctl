@@ -1,7 +1,16 @@
+import concurrent.futures
+import datetime
+import signal
+import traceback
+from dataclasses import dataclass
 from typing import List, Union
-from contentctl.objects.config import test, test_servers, Container, Infrastructure
+
+import docker
+from pydantic import BaseModel
+
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
+    DetectionTestingManagerOutputDto,
 )
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureContainer import (
     DetectionTestingInfrastructureContainer,
@@ -9,24 +18,12 @@ from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfras
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructureServer import (
     DetectionTestingInfrastructureServer,
 )
-import signal
-import datetime
-
-# from queue import Queue
-from dataclasses import dataclass
-
-# import threading
-from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
-    DetectionTestingManagerOutputDto,
-)
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
-from contentctl.objects.enums import PostTestBehavior
-from pydantic import BaseModel
+from contentctl.objects.config import Container, Infrastructure, test, test_servers
 from contentctl.objects.detection import Detection
-import concurrent.futures
-import docker
+from contentctl.objects.enums import PostTestBehavior
 
 
 @dataclass(frozen=False)
@@ -63,12 +60,14 @@ class DetectionTestingManager(BaseModel):
                 # a newline '\r\n' which will cause that wait to stop
                 print("*******************************")
                 print(
-                    "If testing is paused and you are debugging a detection, you MUST hit CTRL-D at the prompt to complete shutdown."
+                    "If testing is paused and you are debugging a detection, you MUST hit CTRL-D "
+                    "at the prompt to complete shutdown."
                 )
                 print("*******************************")
 
         signal.signal(signal.SIGINT, sigint_handler)
 
+        # TODO (#337): futures can be hard to maintain/debug; let's consider alternatives
         with (
             concurrent.futures.ThreadPoolExecutor(
                 max_workers=len(self.input_dto.config.test_instances),
@@ -80,10 +79,19 @@ class DetectionTestingManager(BaseModel):
                 max_workers=len(self.input_dto.config.test_instances),
             ) as view_shutdowner,
         ):
+            # Capture any errors for reporting at the end after all threads have been gathered
+            errors: dict[str, list[Exception]] = {
+                "INSTANCE SETUP ERRORS": [],
+                "TESTING ERRORS": [],
+                "ERRORS DURING VIEW SHUTDOWN": [],
+                "ERRORS DURING VIEW EXECUTION": [],
+            }
+
             # Start all the views
             future_views = {
                 view_runner.submit(view.setup): view for view in self.input_dto.views
             }
+
             # Configure all the instances
             future_instances_setup = {
                 instance_pool.submit(instance.setup): instance
@@ -96,7 +104,11 @@ class DetectionTestingManager(BaseModel):
                     future.result()
                 except Exception as e:
                     self.output_dto.terminate = True
-                    print(f"Error setting up container: {str(e)}")
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
+                    errors["INSTANCE SETUP ERRORS"].append(e)
 
             # Start and wait for all tests to run
             if not self.output_dto.terminate:
@@ -111,7 +123,11 @@ class DetectionTestingManager(BaseModel):
                         future.result()
                     except Exception as e:
                         self.output_dto.terminate = True
-                        print(f"Error running in container: {str(e)}")
+                        # Output the traceback if we encounter errors in verbose mode
+                        if self.input_dto.config.verbose:
+                            tb = traceback.format_exc()
+                            print(tb)
+                        errors["TESTING ERRORS"].append(e)
 
             self.output_dto.terminate = True
 
@@ -123,14 +139,34 @@ class DetectionTestingManager(BaseModel):
                 try:
                     future.result()
                 except Exception as e:
-                    print(f"Error stopping view: {str(e)}")
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
+                    errors["ERRORS DURING VIEW SHUTDOWN"].append(e)
 
             # Wait for original view-related threads to complete
             for future in concurrent.futures.as_completed(future_views):
                 try:
                     future.result()
                 except Exception as e:
-                    print(f"Error running container: {str(e)}")
+                    # Output the traceback if we encounter errors in verbose mode
+                    if self.input_dto.config.verbose:
+                        tb = traceback.format_exc()
+                        print(tb)
+                    errors["ERRORS DURING VIEW EXECUTION"].append(e)
+
+            # Log any errors
+            for error_type in errors:
+                if len(errors[error_type]) > 0:
+                    print()
+                    print(f"[{error_type}]:")
+                    for error in errors[error_type]:
+                        print(f"\t❌ {str(error)}")
+                        if isinstance(error, ExceptionGroup):
+                            for suberror in error.exceptions:  # type: ignore
+                                print(f"\t\t❌ {str(suberror)}")  # type: ignore
+                    print()
 
         return self.output_dto
 
@@ -154,12 +190,15 @@ class DetectionTestingManager(BaseModel):
                     )
                     if len(parts) != 2:
                         raise Exception(
-                            f"Expected to find a name:tag in {self.input_dto.config.container_settings.full_image_path}, "
-                            f"but instead found {parts}. Note that this path MUST include the tag, which is separated by ':'"
+                            "Expected to find a name:tag in "
+                            f"{self.input_dto.config.container_settings.full_image_path}, "
+                            f"but instead found {parts}. Note that this path MUST include the "
+                            "tag, which is separated by ':'"
                         )
 
                     print(
-                        f"Getting the latest version of the container image [{self.input_dto.config.container_settings.full_image_path}]...",
+                        "Getting the latest version of the container image "
+                        f"[{self.input_dto.config.container_settings.full_image_path}]...",
                         end="",
                         flush=True,
                     )
@@ -168,7 +207,8 @@ class DetectionTestingManager(BaseModel):
                     break
                 except Exception as e:
                     raise Exception(
-                        f"Failed to pull docker container image [{self.input_dto.config.container_settings.full_image_path}]: {str(e)}"
+                        "Failed to pull docker container image "
+                        f"[{self.input_dto.config.container_settings.full_image_path}]: {str(e)}"
                     )
 
         already_staged_container_files = False

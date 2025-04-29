@@ -11,13 +11,20 @@ from shutil import copyfile
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
 from tempfile import TemporaryDirectory, mktemp
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import requests  # type: ignore
 import splunklib.client as client  # type: ignore
-import splunklib.results
 import tqdm  # type: ignore
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, dataclasses
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    computed_field,
+    dataclasses,
+)
+from semantic_version import Version
 from splunklib.binding import HTTPError  # type: ignore
 from splunklib.results import JSONResultsReader, Message  # type: ignore
 from urllib3 import disable_warnings
@@ -31,7 +38,8 @@ from contentctl.actions.detection_testing.progress_bar import (
 from contentctl.helper.utils import Utils
 from contentctl.objects.base_test import BaseTest
 from contentctl.objects.base_test_result import TestResultStatus
-from contentctl.objects.config import Infrastructure, test_common
+from contentctl.objects.config import All, Infrastructure, test_common
+from contentctl.objects.content_versioning_service import ContentVersioningService
 from contentctl.objects.correlation_search import CorrelationSearch, PbarData
 from contentctl.objects.detection import Detection
 from contentctl.objects.enums import AnalyticsType, PostTestBehavior
@@ -41,6 +49,9 @@ from contentctl.objects.test_attack_data import TestAttackData
 from contentctl.objects.test_group import TestGroup
 from contentctl.objects.unit_test import UnitTest
 from contentctl.objects.unit_test_result import UnitTestResult
+
+# The app name of ES; needed to check ES version
+ES_APP_NAME = "SplunkEnterpriseSecuritySuite"
 
 
 class SetupTestGroupResults(BaseModel):
@@ -89,7 +100,7 @@ class DetectionTestingManagerOutputDto:
     start_time: Union[datetime.datetime, None] = None
     replay_index: str = "contentctl_testing_index"
     replay_host: str = "CONTENTCTL_HOST"
-    timeout_seconds: int = 60
+    timeout_seconds: int = 120
     terminate: bool = False
 
 
@@ -136,21 +147,27 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         )
 
         self.start_time = time.time()
+
+        # Init the list of setup functions we always need
+        primary_setup_functions: list[
+            tuple[Callable[[], None | client.Service], str]
+        ] = [
+            (self.start, "Starting"),
+            (self.get_conn, "Waiting for App Installation"),
+            (self.configure_conf_file_datamodels, "Configuring Datamodels"),
+            (self.create_replay_index, f"Create index '{self.sync_obj.replay_index}'"),
+            (self.get_all_indexes, "Getting all indexes from server"),
+            (self.check_for_es_install, "Checking for ES Install"),
+            (self.configure_imported_roles, "Configuring Roles"),
+            (self.configure_delete_indexes, "Configuring Indexes"),
+            (self.configure_hec, "Configuring HEC"),
+            (self.wait_for_ui_ready, "Finishing Primary Setup"),
+        ]
+
+        # Execute and report on each setup function
         try:
-            for func, msg in [
-                (self.start, "Starting"),
-                (self.get_conn, "Waiting for App Installation"),
-                (self.configure_conf_file_datamodels, "Configuring Datamodels"),
-                (
-                    self.create_replay_index,
-                    f"Create index '{self.sync_obj.replay_index}'",
-                ),
-                (self.get_all_indexes, "Getting all indexes from server"),
-                (self.configure_imported_roles, "Configuring Roles"),
-                (self.configure_delete_indexes, "Configuring Indexes"),
-                (self.configure_hec, "Configuring HEC"),
-                (self.wait_for_ui_ready, "Finishing Setup"),
-            ]:
+            # Run the primary setup functions
+            for func, msg in primary_setup_functions:
                 self.format_pbar_string(
                     TestReportingType.SETUP,
                     self.get_name(),
@@ -160,17 +177,113 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 func()
                 self.check_for_teardown()
 
-        except Exception as e:
-            self.pbar.write(str(e))
-            self.finish()
-            return
+            # Run any setup functions only applicable to content versioning validation
+            if self.should_test_content_versioning:
+                self.pbar.write(
+                    self.format_pbar_string(
+                        TestReportingType.SETUP,
+                        self.get_name(),
+                        "Beginning Content Versioning Validation...",
+                        set_pbar=False,
+                    )
+                )
+                for func, msg in self.content_versioning_service.setup_functions:
+                    self.format_pbar_string(
+                        TestReportingType.SETUP,
+                        self.get_name(),
+                        msg,
+                        update_sync_status=True,
+                    )
+                    func()
+                    self.check_for_teardown()
 
-        self.format_pbar_string(
-            TestReportingType.SETUP, self.get_name(), "Finished Setup!"
+        except Exception as e:
+            msg = f"[{self.get_name()}]: {str(e)}"
+            self.finish()
+            if isinstance(e, ExceptionGroup):
+                raise ExceptionGroup(msg, e.exceptions) from e  # type: ignore
+            raise Exception(msg) from e
+
+        self.pbar.write(
+            self.format_pbar_string(
+                TestReportingType.SETUP,
+                self.get_name(),
+                "Finished Setup!",
+                set_pbar=False,
+            )
         )
 
     def wait_for_ui_ready(self):
         self.get_conn()
+
+    @computed_field
+    @property
+    def content_versioning_service(self) -> ContentVersioningService:
+        """
+        A computed field returning a handle to the content versioning service, used by ES to
+        version detections. We use this model to validate that all detections have been installed
+        compatibly with ES versioning.
+
+        :return:  a handle to the content versioning service on the instance
+        :rtype: :class:`contentctl.objects.content_versioning_service.ContentVersioningService`
+        """
+        return ContentVersioningService(
+            global_config=self.global_config,
+            infrastructure=self.infrastructure,
+            service=self.get_conn(),
+            detections=self.sync_obj.inputQueue,
+        )
+
+    @property
+    def should_test_content_versioning(self) -> bool:
+        """
+        Indicates whether we should test content versioning. Content versioning
+        should be tested when integration testing is enabled, the mode is all, and ES is at least
+        version 8.0.0.
+
+        :return: a bool indicating whether we should test content versioning
+        :rtype: bool
+        """
+        es_version = self.es_version
+        return (
+            self.global_config.enable_integration_testing
+            and isinstance(self.global_config.mode, All)
+            and es_version is not None
+            and es_version >= Version("8.0.0")
+        )
+
+    @property
+    def es_version(self) -> Version | None:
+        """
+        Returns the version of Enterprise Security installed on the instance; None if not installed.
+
+        :return: the version of ES, as a semver aware object
+        :rtype: :class:`semantic_version.Version`
+        """
+        if not self.es_installed:
+            return None
+        return Version(self.get_conn().apps[ES_APP_NAME]["version"])  # type: ignore
+
+    @property
+    def es_installed(self) -> bool:
+        """
+        Indicates whether ES is installed on the instance.
+
+        :return: a bool indicating whether ES is installed or not
+        :rtype: bool
+        """
+        return ES_APP_NAME in self.get_conn().apps
+
+    def check_for_es_install(self) -> None:
+        """
+        Validating function which raises an error if Enterprise Security is not installed and
+        integration testing is enabled.
+        """
+        if not self.es_installed and self.global_config.enable_integration_testing:
+            raise Exception(
+                "Enterprise Security does not appear to be installed on this instance and "
+                "integration testing is enabled."
+            )
 
     def configure_hec(self):
         self.hec_channel = str(uuid.uuid4())
@@ -298,14 +411,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         imported_roles: list[str] = ["user", "power", "can_delete"],
         enterprise_security_roles: list[str] = ["ess_admin", "ess_analyst", "ess_user"],
     ):
-        try:
-            # Set which roles should be configured. For Enterprise Security/Integration Testing,
-            # we must add some extra foles.
-            if self.global_config.enable_integration_testing:
-                roles = imported_roles + enterprise_security_roles
-            else:
-                roles = imported_roles
+        # Set which roles should be configured. For Enterprise Security/Integration Testing,
+        # we must add some extra foles.
+        if self.global_config.enable_integration_testing:
+            roles = imported_roles + enterprise_security_roles
+        else:
+            roles = imported_roles
 
+        try:
             self.get_conn().roles.post(
                 self.infrastructure.splunk_app_username,
                 imported_roles=roles,
@@ -314,16 +427,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             )
             return
         except Exception as e:
-            self.pbar.write(
-                f"The following role(s) do not exist:'{enterprise_security_roles}: {str(e)}"
-            )
-
-        self.get_conn().roles.post(
-            self.infrastructure.splunk_app_username,
-            imported_roles=imported_roles,
-            srchIndexesAllowed=";".join(self.all_indexes_on_server),
-            srchIndexesDefault=self.sync_obj.replay_index,
-        )
+            msg = f"Error configuring roles: {str(e)}"
+            self.pbar.write(msg)
+            raise Exception(msg) from e
 
     def configure_delete_indexes(self):
         endpoint = "/services/properties/authorize/default/deleteIndexesAllowed"
@@ -1170,8 +1276,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     # on a field.  In this case, the field will appear but will not contain any values
                     current_empty_fields: set[str] = set()
 
-                    # TODO (cmcginley): @ljstella is this something we're keeping for testing as
-                    #   well?
                     for field in full_rba_field_set:
                         if result.get(field, "null") == "null":
                             if field in risk_object_fields_set:
@@ -1257,7 +1361,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 job = self.get_conn().jobs.create(splunk_search, **kwargs)
                 results_stream = job.results(output_mode="json")
                 # TODO: should we be doing something w/ this reader?
-                _ = splunklib.results.JSONResultsReader(results_stream)
+                _ = JSONResultsReader(results_stream)
 
             except Exception as e:
                 raise (

@@ -303,6 +303,9 @@ class Director:
         )
 
         if len(validation_errors) > 0:
+            if sys.platform == "win32":
+                sys.stdout.reconfigure(encoding="utf-8")
+
             print("\n")  # Clean separation
             print(f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}╔{'═' * 60}╗{Colors.END}")
             print(

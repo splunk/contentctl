@@ -351,23 +351,25 @@ class Director:
                                 )
                         elif "Extra inputs" in error_msg:
                             print(
-                                f"      {Colors.BLUE}❌ Unexpected Field: {err.get('loc', [''])[0]}{Colors.END}"
+                                f"      {Colors.BLUE}{Colors.ERROR} Unexpected Field: {err.get('loc', [''])[0]}{Colors.END}"
                             )
                         elif "Failed to find" in error_msg:
                             print(
                                 f"      {Colors.RED}🔍 Missing Reference: {error_msg}{Colors.END}"
                             )
                         else:
-                            print(f"      {Colors.RED}❌ {error_msg}{Colors.END}")
+                            print(
+                                f"      {Colors.RED}{Colors.ERROR} {error_msg}{Colors.END}"
+                            )
                 else:
-                    print(f"      {Colors.RED}❌ {str(error)}{Colors.END}")
+                    print(f"      {Colors.RED}{Colors.ERROR} {str(error)}{Colors.END}")
                 print("")
 
             # Clean footer with next steps
             max_width = max(60, max(len(str(e[0])) + 15 for e in validation_errors))
             print(f"{Colors.BOLD}{Colors.CYAN}╔{'═' * max_width}╗{Colors.END}")
             print(
-                f"{Colors.BOLD}{Colors.CYAN}║{Colors.BLUE}{'🎯 Next Steps':^{max_width - 1}}{Colors.CYAN}║{Colors.END}"
+                f"{Colors.BOLD}{Colors.CYAN}║{Colors.BLUE}{Colors.ARROW + ' Next Steps':^{max_width - 1}}{Colors.CYAN}║{Colors.END}"
             )
             print(f"{Colors.BOLD}{Colors.CYAN}╚{'═' * max_width}╝{Colors.END}\n")
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from contentctl.objects.abstract_security_content_objects.detection_abstract import (
     Detection_Abstract,
 )
@@ -15,4 +16,5 @@ class Detection(Detection_Abstract):
     # them or modifying their behavior may cause
     # undefined issues with the contentctl tooling
     # or output of the tooling.
+    pass
     pass

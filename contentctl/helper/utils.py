@@ -1,22 +1,19 @@
-import os
-import git
-import shutil
-import requests
-import random
-import string
-from timeit import default_timer
+import logging
 import pathlib
-
-from typing import Union, Tuple
-import tqdm
+import random
+import shutil
+import string
 from math import ceil
+from timeit import default_timer
+from typing import TYPE_CHECKING, Tuple, Union
 
-from typing import TYPE_CHECKING
+import git
+import requests
+import tqdm
 
 if TYPE_CHECKING:
     from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.security_content_object import SecurityContentObject
-
 
 TOTAL_BYTES = 0
 ALWAYS_PULL = True
@@ -24,17 +21,14 @@ ALWAYS_PULL = True
 
 class Utils:
     @staticmethod
-    def get_all_yml_files_from_directory(path: str) -> list[pathlib.Path]:
-        listOfFiles: list[pathlib.Path] = []
-        base_path = pathlib.Path(path)
-        if not base_path.exists():
-            return listOfFiles
-        for dirpath, dirnames, filenames in os.walk(path):
-            for file in filenames:
-                if file.endswith(".yml"):
-                    listOfFiles.append(pathlib.Path(os.path.join(dirpath, file)))
+    def get_all_yml_files_from_directory(path: pathlib.Path) -> list[pathlib.Path]:
+        if not path.exists():
+            raise FileNotFoundError(
+                f"Trying to find files in the directory '{path.absolute()}', but it does not exist.\n"
+                "It is not mandatory to have content/YMLs in this directory, but it must exist. Please create it."
+            )
 
-        return sorted(listOfFiles)
+        return sorted(pathlib.Path(yml_path) for yml_path in path.glob("**/*.yml"))
 
     @staticmethod
     def get_security_content_files_from_directory(
@@ -490,3 +484,58 @@ class Utils:
         ratio = numerator / denominator
         percent = ratio * 100
         return Utils.getFixedWidth(percent, decimal_places) + "%"
+
+    @staticmethod
+    def get_logger(
+        name: str, log_level: int, log_path: str, enable_logging: bool
+    ) -> logging.Logger:
+        """
+        Gets a logger instance for the given name; logger is configured if not already configured.
+        The NullHandler is used to suppress loggging when running in production so as not to
+        conflict w/ contentctl's larger pbar-based logging. The StreamHandler is enabled by setting
+        enable_logging to True (useful for debugging/testing locally)
+
+        :param name: the logger name
+        :type name: str
+        :param log_level: the logging level (e.g. `logging.Debug`)
+        :type log_level: int
+        :param log_path: the path for the log file
+        :type log_path: str
+        :param enable_logging: a flag indicating whether logging should be redirected from null to
+            the stream handler
+        :type enable_logging: bool
+
+        :return: a logger
+        :rtype: :class:`logging.Logger`
+        """
+        # get logger for module
+        logger = logging.getLogger(name)
+
+        # set propagate to False if not already set as such (needed to that we do not flow up to any
+        # root loggers)
+        if logger.propagate:
+            logger.propagate = False
+
+        # if logger has no handlers, it needs to be configured for the first time
+        if not logger.hasHandlers():
+            # set level
+            logger.setLevel(log_level)
+
+            # if logging enabled, use a StreamHandler; else, use the NullHandler to suppress logging
+            handler: logging.Handler
+            if enable_logging:
+                handler = logging.FileHandler(log_path)
+            else:
+                handler = logging.NullHandler()
+
+            # Format our output
+            formatter = logging.Formatter(
+                "%(asctime)s - %(levelname)s:%(name)s - %(message)s"
+            )
+            handler.setFormatter(formatter)
+
+            # Set handler level and add to logger
+            handler.setLevel(log_level)
+            logger.addHandler(handler)
+
+        return logger

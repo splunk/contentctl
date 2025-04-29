@@ -1,8 +1,11 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, ConfigDict, HttpUrl, field_validator
-from typing import List
-from enum import StrEnum
+
 import datetime
+from enum import StrEnum
+from typing import List
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE
 
 
@@ -83,6 +86,16 @@ class MitreAttackGroup(BaseModel):
         if contributors is None:
             return []
         return contributors
+
+    def __lt__(self, other: MitreAttackGroup) -> bool:
+        if not isinstance(object, MitreAttackGroup):
+            raise Exception(
+                f"Cannot compare object of type MitreAttackGroup to object of type [{type(object).__name__}]"
+            )
+        return self.group < other.group
+
+    def __hash__(self) -> int:
+        return hash(self.group)
 
 
 class MitreAttackEnrichment(BaseModel):

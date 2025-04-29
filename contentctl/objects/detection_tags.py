@@ -33,7 +33,10 @@ from contentctl.objects.enums import (
     SecurityContentProductName,
     SecurityDomain,
 )
-from contentctl.objects.mitre_attack_enrichment import MitreAttackEnrichment
+from contentctl.objects.mitre_attack_enrichment import (
+    MitreAttackEnrichment,
+    MitreAttackGroup,
+)
 
 
 class DetectionTags(BaseModel):
@@ -44,7 +47,7 @@ class DetectionTags(BaseModel):
     asset_type: AssetType = Field(...)
     group: list[str] = []
 
-    mitre_attack_id: List[MITRE_ATTACK_ID_TYPE] = []
+    mitre_attack_id: list[MITRE_ATTACK_ID_TYPE] = []
     nist: list[NistCategory] = []
 
     product: list[SecurityContentProductName] = Field(..., min_length=1)
@@ -67,6 +70,15 @@ class DetectionTags(BaseModel):
                 phase = KillChainPhase(ATTACK_TACTICS_KILLCHAIN_MAPPING[tactic])
                 phases.add(phase)
         return sorted(list(phases))
+
+    # We do not want this to be included in serialization. By default, @property
+    # objects are not included in dumps
+    @property
+    def unique_mitre_attack_groups(self) -> list[MitreAttackGroup]:
+        group_set: set[MitreAttackGroup] = set()
+        for enrichment in self.mitre_attack_enrichments:
+            group_set.update(set(enrichment.mitre_attack_group_objects))
+        return sorted(group_set, key=lambda k: k.group)
 
     # enum is intentionally Cis18 even though field is named cis20 for legacy reasons
     @computed_field
@@ -134,8 +146,8 @@ class DetectionTags(BaseModel):
 
         if len(missing_tactics) > 0:
             raise ValueError(f"Missing Mitre Attack IDs. {missing_tactics} not found.")
-        else:
-            self.mitre_attack_enrichments = mitre_enrichments
+
+        self.mitre_attack_enrichments = mitre_enrichments
 
         return self
 
@@ -158,6 +170,44 @@ class DetectionTags(BaseModel):
 
         return enrichments
     """
+
+    @field_validator("mitre_attack_id", mode="after")
+    @classmethod
+    def sameTypeAndSubtypeNotPresent(
+        cls, techniques_and_subtechniques: list[MITRE_ATTACK_ID_TYPE]
+    ) -> list[MITRE_ATTACK_ID_TYPE]:
+        techniques: list[str] = [
+            f"{unknown_technique}."
+            for unknown_technique in techniques_and_subtechniques
+            if "." not in unknown_technique
+        ]
+        subtechniques: list[MITRE_ATTACK_ID_TYPE] = [
+            unknown_technique
+            for unknown_technique in techniques_and_subtechniques
+            if "." in unknown_technique
+        ]
+        subtype_and_parent_exist_exceptions: list[ValueError] = []
+
+        for subtechnique in subtechniques:
+            for technique in techniques:
+                if subtechnique.startswith(technique):
+                    subtype_and_parent_exist_exceptions.append(
+                        ValueError(
+                            f"    Technique   : {technique.split('.')[0]}\n"
+                            f"    SubTechnique: {subtechnique}\n"
+                        )
+                    )
+
+        if len(subtype_and_parent_exist_exceptions):
+            error_string = "\n".join(
+                str(e) for e in subtype_and_parent_exist_exceptions
+            )
+            raise ValueError(
+                "Overlapping MITRE Attack ID Techniques and Subtechniques may not be defined. "
+                f"Remove the Technique and keep the Subtechnique:\n{error_string}"
+            )
+
+        return techniques_and_subtechniques
 
     @field_validator("analytic_story", mode="before")
     @classmethod
@@ -235,6 +285,9 @@ class DetectionTags(BaseModel):
         elif len(missing_tests) > 0:
             raise ValueError(missing_tests_string)
 
+        return matched_tests + [
+            AtomicTest.AtomicTestWhenTestIsMissing(test) for test in missing_tests
+        ]
         return matched_tests + [
             AtomicTest.AtomicTestWhenTestIsMissing(test) for test in missing_tests
         ]

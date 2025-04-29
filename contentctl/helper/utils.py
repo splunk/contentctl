@@ -1,23 +1,19 @@
-import os
-import git
-import shutil
-import requests
-import random
-import string
-from timeit import default_timer
-import pathlib
 import logging
-
-from typing import Union, Tuple
-import tqdm
+import pathlib
+import random
+import shutil
+import string
 from math import ceil
+from timeit import default_timer
+from typing import TYPE_CHECKING, Tuple, Union
 
-from typing import TYPE_CHECKING
+import git
+import requests
+import tqdm
 
 if TYPE_CHECKING:
     from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.security_content_object import SecurityContentObject
-
 
 TOTAL_BYTES = 0
 ALWAYS_PULL = True
@@ -25,17 +21,14 @@ ALWAYS_PULL = True
 
 class Utils:
     @staticmethod
-    def get_all_yml_files_from_directory(path: str) -> list[pathlib.Path]:
-        listOfFiles: list[pathlib.Path] = []
-        base_path = pathlib.Path(path)
-        if not base_path.exists():
-            return listOfFiles
-        for dirpath, dirnames, filenames in os.walk(path):
-            for file in filenames:
-                if file.endswith(".yml"):
-                    listOfFiles.append(pathlib.Path(os.path.join(dirpath, file)))
+    def get_all_yml_files_from_directory(path: pathlib.Path) -> list[pathlib.Path]:
+        if not path.exists():
+            raise FileNotFoundError(
+                f"Trying to find files in the directory '{path.absolute()}', but it does not exist.\n"
+                "It is not mandatory to have content/YMLs in this directory, but it must exist. Please create it."
+            )
 
-        return sorted(listOfFiles)
+        return sorted(pathlib.Path(yml_path) for yml_path in path.glob("**/*.yml"))
 
     @staticmethod
     def get_security_content_files_from_directory(

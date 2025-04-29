@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any, List, Optional, Union
 from pydantic import (
     Field,
     FilePath,
+    HttpUrl,
     ValidationInfo,
     computed_field,
     field_validator,
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from contentctl.objects.config import CustomApp
 
 import datetime
+from functools import cached_property
 
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 from contentctl.objects.base_test_result import TestResultStatus
@@ -39,8 +41,8 @@ from contentctl.objects.detection_tags import DetectionTags
 from contentctl.objects.drilldown import DRILLDOWN_SEARCH_PLACEHOLDER, Drilldown
 from contentctl.objects.enums import (
     AnalyticsType,
+    ContentStatus,
     DataModel,
-    DetectionStatus,
     NistCategory,
     ProvidingTechnology,
     RiskSeverity,
@@ -60,7 +62,7 @@ class Detection_Abstract(SecurityContentObject):
     name: str = Field(..., max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
     # contentType: SecurityContentType = SecurityContentType.detections
     type: AnalyticsType = Field(...)
-    status: DetectionStatus = Field(...)
+    status: ContentStatus
     data_source: list[str] = []
     tags: DetectionTags = Field(...)
     search: str = Field(...)
@@ -148,11 +150,36 @@ class Detection_Abstract(SecurityContentObject):
         description="A list of Drilldowns that should be included with this search",
     )
 
-    def get_conf_stanza_name(self, app: CustomApp) -> str:
-        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(
-            app_label=app.label, detection_name=self.name
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(
+            status,
+            [
+                ContentStatus.experimental,
+                ContentStatus.production,
+                ContentStatus.deprecated,
+            ],
         )
-        self.check_conf_stanza_max_length(stanza_name)
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("detections")
+
+    @computed_field
+    @cached_property
+    def researchSiteLink(self) -> HttpUrl:
+        return HttpUrl(url=f"https://research.splunk.com/{self.source}/{self.id}")  # type: ignore
+
+    @classmethod
+    def static_get_conf_stanza_name(cls, name: str, app: CustomApp) -> str:
+        """
+        This is exposed as a static method since it may need to be used for SecurityContentObject which does not
+        pass all currenty validations - most notable Deprecated content.
+        """
+        stanza_name = CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE.format(
+            app_label=app.label, detection_name=name
+        )
         return stanza_name
 
     def get_action_dot_correlationsearch_dot_label(
@@ -268,7 +295,7 @@ class Detection_Abstract(SecurityContentObject):
         # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name
 
         # Skip tests for non-production detections
-        if self.status != DetectionStatus.production:
+        if self.status != ContentStatus.production:
             self.skip_all_tests(
                 f"TEST SKIPPED: Detection is non-production ({self.status})"
             )
@@ -455,7 +482,7 @@ class Detection_Abstract(SecurityContentObject):
         # break the `inspect` action.
         return {
             "detection_id": str(self.id),
-            "deprecated": "1" if self.status == DetectionStatus.deprecated else "0",  # type: ignore
+            "deprecated": "1" if self.status == ContentStatus.deprecated else "0",  # type: ignore
             "detection_version": str(self.version),
             "publish_time": datetime.datetime(
                 self.date.year,
@@ -520,7 +547,7 @@ class Detection_Abstract(SecurityContentObject):
                     {
                         "name": lookup.name,
                         "description": lookup.description,
-                        "filename": lookup.filename.name,
+                        "filename": lookup.filename.name,  # This does not cause an issue for RuntimeCSV type because they are not used by any detections
                         "default_match": lookup.default_match,
                         "case_sensitive_match": "true"
                         if lookup.case_sensitive_match
@@ -589,7 +616,7 @@ class Detection_Abstract(SecurityContentObject):
 
         if (
             self.type == AnalyticsType.Hunting
-            or self.status != DetectionStatus.production
+            or self.status != ContentStatus.production
         ):
             # No additional check need to happen on the potential drilldowns.
             pass
@@ -741,13 +768,13 @@ class Detection_Abstract(SecurityContentObject):
         if v is False:
             return v
 
-        status = DetectionStatus(info.data.get("status"))
+        status = ContentStatus(info.data.get("status"))
         searchType = AnalyticsType(info.data.get("type"))
         errors: list[str] = []
-        if status != DetectionStatus.production:
+        if status != ContentStatus.production:
             errors.append(
                 f"status is '{status.name}'. Detections that are enabled by default MUST be "
-                f"'{DetectionStatus.production}'"
+                f"'{ContentStatus.production}'"
             )
 
         if searchType not in [
@@ -877,7 +904,7 @@ class Detection_Abstract(SecurityContentObject):
                 f"the search: {missing_fields}"
             )
 
-        if len(error_messages) > 0 and self.status == DetectionStatus.production:
+        if len(error_messages) > 0 and self.status == ContentStatus.production:
             msg = (
                 "Use of fields in rba/messages that do not appear in search:\n\t- "
                 "\n\t- ".join(error_messages)
@@ -928,7 +955,7 @@ class Detection_Abstract(SecurityContentObject):
         cls, v: list[UnitTest | IntegrationTest | ManualTest], info: ValidationInfo
     ) -> list[UnitTest | IntegrationTest | ManualTest]:
         # Only production analytics require tests
-        if info.data.get("status", "") != DetectionStatus.production:
+        if info.data.get("status", "") != ContentStatus.production:
             return v
 
         # All types EXCEPT Correlation MUST have test(s). Any other type, including newly defined
@@ -1106,7 +1133,7 @@ class Detection_Abstract(SecurityContentObject):
     @model_validator(mode="after")
     def validate_data_source_output_fields(self):
         # Skip validation for Hunting and Correlation types, or non-production detections
-        if self.status != DetectionStatus.production or self.type in {
+        if self.status != ContentStatus.production or self.type in {
             AnalyticsType.Hunting,
             AnalyticsType.Correlation,
         }:

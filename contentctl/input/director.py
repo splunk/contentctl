@@ -355,7 +355,7 @@ class Director:
                             )
                         elif "Failed to find" in error_msg:
                             print(
-                                f"      {Colors.RED}🔍 Missing Reference: {error_msg}{Colors.END}"
+                                f"      {Colors.RED}{Colors.SEARCH} Missing Reference: {error_msg}{Colors.END}"
                             )
                         else:
                             print(

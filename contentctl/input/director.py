@@ -131,6 +131,7 @@ class Colors:
     DOCS = "📚" if sys.platform != "win32" else "?"
     BULB = "💡" if sys.platform != "win32" else "i"
     SEARCH = "🔍" if sys.platform != "win32" else "@"
+    SPARKLE = "✨" if sys.platform != "win32" else "*"
     ZAP = "⚡" if sys.platform != "win32" else "!"
 
 

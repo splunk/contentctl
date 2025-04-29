@@ -306,7 +306,7 @@ class Director:
             print("\n")  # Clean separation
             print(f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}╔{'═' * 60}╗{Colors.END}")
             print(
-                f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}║{Colors.BLUE}{f'{Colors.SEARCH} Content Validation Summary':^60}{Colors.BRIGHT_MAGENTA}║{Colors.END}"
+                f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}║{Colors.BLUE}{f'{Colors.SEARCH} Content Validation Summary':^59}{Colors.BRIGHT_MAGENTA}║{Colors.END}"
             )
             print(f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}╚{'═' * 60}╝{Colors.END}\n")
 
@@ -322,7 +322,7 @@ class Director:
                 number_emoji = f"{index}️⃣"
                 print(f"{Colors.YELLOW}┏{'━' * width}┓{Colors.END}")
                 print(
-                    f"{Colors.YELLOW}┃{Colors.BOLD} {number_emoji} File: {Colors.CYAN}{file_path}{Colors.END}{' ' * (width - len(str(file_path)) - 12)}{Colors.YELLOW}┃{Colors.END}"
+                    f"{Colors.YELLOW}┃{Colors.BOLD} {number_emoji} File: {Colors.CYAN}{file_path}{Colors.END}{' ' * (width - len(str(file_path)) - 9)}{Colors.YELLOW}┃{Colors.END}"
                 )
                 print(f"{Colors.YELLOW}┗{'━' * width}┛{Colors.END}")
 
@@ -367,7 +367,7 @@ class Director:
             max_width = max(60, max(len(str(e[0])) + 15 for e in validation_errors))
             print(f"{Colors.BOLD}{Colors.CYAN}╔{'═' * max_width}╗{Colors.END}")
             print(
-                f"{Colors.BOLD}{Colors.CYAN}║{Colors.BLUE}{'🎯 Next Steps':^{max_width}}{Colors.CYAN}║{Colors.END}"
+                f"{Colors.BOLD}{Colors.CYAN}║{Colors.BLUE}{'🎯 Next Steps':^{max_width - 1}}{Colors.CYAN}║{Colors.END}"
             )
             print(f"{Colors.BOLD}{Colors.CYAN}╚{'═' * max_width}╝{Colors.END}\n")
 

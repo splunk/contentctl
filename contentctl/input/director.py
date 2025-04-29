@@ -109,6 +109,40 @@ class DirectorOutputDto:
         self.uuid_to_content_map[content.id] = content
 
 
+class Colors:
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    END = "\033[0m"
+    MAGENTA = "\033[35m"
+    BRIGHT_MAGENTA = "\033[95m"
+
+    # Add fallback symbols for Windows
+    CHECK_MARK = "✓" if sys.platform != "win32" else "*"
+    WARNING = "⚠️" if sys.platform != "win32" else "!"
+    ERROR = "❌" if sys.platform != "win32" else "X"
+    ARROW = "🎯" if sys.platform != "win32" else ">"
+    TOOLS = "🛠️" if sys.platform != "win32" else "#"
+    DOCS = "📚" if sys.platform != "win32" else "?"
+    BULB = "💡" if sys.platform != "win32" else "i"
+    SEARCH = "🔍" if sys.platform != "win32" else "@"
+    SPARKLE = "✨" if sys.platform != "win32" else "*"
+    ZAP = "⚡" if sys.platform != "win32" else "!"
+
+
+class ValidationFailedError(Exception):
+    """Custom exception for validation failures that already have formatted output."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(message)
+
+
 class Director:
     input_dto: validate
     output_dto: DirectorOutputDto
@@ -268,18 +302,96 @@ class Director:
             end="",
             flush=True,
         )
-        print("Done!")
 
         if len(validation_errors) > 0:
-            errors_string = "\n\n".join(
-                [
-                    f"File: {e_tuple[0]}\nError: {str(e_tuple[1])}"
-                    for e_tuple in validation_errors
-                ]
+            if sys.platform == "win32":
+                sys.stdout.reconfigure(encoding="utf-8")
+
+            print("\n")  # Clean separation
+            print(f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}╔{'═' * 60}╗{Colors.END}")
+            print(
+                f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}║{Colors.BLUE}{f'{Colors.SEARCH} Content Validation Summary':^59}{Colors.BRIGHT_MAGENTA}║{Colors.END}"
             )
-            # print(f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED")
-            # We quit after validation a single type/group of content because it can cause significant cascading errors in subsequent
-            # types of content (since they may import or otherwise use it)
-            raise Exception(
-                f"The following {len(validation_errors)} error(s) were found during validation:\n\n{errors_string}\n\nVALIDATION FAILED"
+            print(f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}╚{'═' * 60}╝{Colors.END}\n")
+
+            print(
+                f"{Colors.BOLD}{Colors.GREEN}{Colors.SPARKLE} Validation Completed{Colors.END} – Issues detected in {Colors.RED}{Colors.BOLD}{len(validation_errors)}{Colors.END} files.\n"
             )
+
+            for index, entry in enumerate(validation_errors, 1):
+                file_path, error = entry
+                width = max(70, len(str(file_path)) + 15)
+
+                # File header with numbered emoji
+                number_emoji = f"{index}️⃣"
+                print(f"{Colors.YELLOW}┏{'━' * width}┓{Colors.END}")
+                print(
+                    f"{Colors.YELLOW}┃{Colors.BOLD} {number_emoji} File: {Colors.CYAN}{file_path}{Colors.END}{' ' * (width - len(str(file_path)) - 9)}{Colors.YELLOW}┃{Colors.END}"
+                )
+                print(f"{Colors.YELLOW}┗{'━' * width}┛{Colors.END}")
+
+                print(
+                    f"   {Colors.RED}{Colors.BOLD}{Colors.ZAP} Validation Issues:{Colors.END}"
+                )
+
+                if isinstance(error, ValidationError):
+                    for err in error.errors():
+                        error_msg = err.get("msg", "")
+                        if "https://errors.pydantic.dev" in error_msg:
+                            continue
+
+                        # Clean error categorization
+                        if "Field required" in error_msg:
+                            print(
+                                f"      {Colors.YELLOW}{Colors.WARNING} Field Required: {err.get('loc', [''])[0]}{Colors.END}"
+                            )
+                        elif "Input should be" in error_msg:
+                            print(
+                                f"      {Colors.MAGENTA}{Colors.ARROW} Invalid Value for {err.get('loc', [''])[0]}{Colors.END}"
+                            )
+                            if err.get("ctx", {}).get("expected", None) is not None:
+                                print(
+                                    f"        Valid options: {err.get('ctx', {}).get('expected', None)}"
+                                )
+                        elif "Extra inputs" in error_msg:
+                            print(
+                                f"      {Colors.BLUE}{Colors.ERROR} Unexpected Field: {err.get('loc', [''])[0]}{Colors.END}"
+                            )
+                        elif "Failed to find" in error_msg:
+                            print(
+                                f"      {Colors.RED}{Colors.SEARCH} Missing Reference: {error_msg}{Colors.END}"
+                            )
+                        else:
+                            print(
+                                f"      {Colors.RED}{Colors.ERROR} {error_msg}{Colors.END}"
+                            )
+                else:
+                    print(f"      {Colors.RED}{Colors.ERROR} {str(error)}{Colors.END}")
+                print("")
+
+            # Clean footer with next steps
+            max_width = max(60, max(len(str(e[0])) + 15 for e in validation_errors))
+            print(f"{Colors.BOLD}{Colors.CYAN}╔{'═' * max_width}╗{Colors.END}")
+            print(
+                f"{Colors.BOLD}{Colors.CYAN}║{Colors.BLUE}{Colors.ARROW + ' Next Steps':^{max_width - 1}}{Colors.CYAN}║{Colors.END}"
+            )
+            print(f"{Colors.BOLD}{Colors.CYAN}╚{'═' * max_width}╝{Colors.END}\n")
+
+            print(
+                f"{Colors.GREEN}{Colors.TOOLS} Fix the validation issues in the listed files{Colors.END}"
+            )
+            print(
+                f"{Colors.YELLOW}{Colors.DOCS} Check the documentation: {Colors.UNDERLINE}https://github.com/splunk/contentctl{Colors.END}"
+            )
+            print(
+                f"{Colors.BLUE}{Colors.BULB} Use --verbose for detailed error information{Colors.END}\n"
+            )
+
+            raise ValidationFailedError(
+                f"Validation failed with {len(validation_errors)} error(s)"
+            )
+
+        # Success case
+        print(
+            f"\r{f'{contentCartegoryName} Progress'.rjust(23)}: [{progress_percent:3.0f}%]... {Colors.GREEN}{Colors.CHECK_MARK} Done!{Colors.END}"
+        )

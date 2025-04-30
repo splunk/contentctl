@@ -262,11 +262,11 @@ class init(Config_Base):
 
 
 class AttackDataCache(BaseModel):
-    prefix: str = Field(
-        "This is the prefix that the data must begin with to map to this cache object"
+    base_url: str = Field(
+        "This is the beginning of a URL that the data must begin with to map to this cache object."
     )
-    root_folder_name: str = Field(
-        "This is the root folder name where the attack data should be downloaded to."
+    base_directory_name: str = Field(
+        "This is the root folder name where the attack data should be downloaded to. Note that this path is releative to the external_repos/ folder."
     )
     # suggested checkout information for our attack_data repo
     # curl https://attack-range-attack-data.s3.us-west-2.amazonaws.com/attack_data.tar.zstd | zstd --decompress | tar -x -C datasets
@@ -330,11 +330,11 @@ class validate(Config_Base):
         # Otherwise, this is a URL.  See if its prefix matches one of the
         # prefixes in the list of caches
         for cache in self.test_data_caches:
-            root_folder_path = self.external_repos_path / cache.root_folder_name
+            root_folder_path = self.external_repos_path / cache.base_directory_name
             # See if this data file was in that path
 
-            if str(filename).startswith(cache.prefix):
-                new_file_name = str(filename).replace(cache.prefix, "")
+            if str(filename).startswith(cache.base_url):
+                new_file_name = str(filename).replace(cache.base_url, "")
                 new_file_path = root_folder_path / new_file_name
 
                 if not root_folder_path.is_dir():
@@ -351,7 +351,7 @@ class validate(Config_Base):
                 return new_file_path
 
         raise ValueError(
-            f"Test data file '{filename}' does not exist in ANY of the following caches. If you are supplying caches, any HTTP file MUST be located in a cache: [{[cache.root_folder_name for cache in self.test_data_caches]}]"
+            f"Test data file '{filename}' does not exist in ANY of the following caches. If you are supplying caches, any HTTP file MUST be located in a cache: [{[cache.base_directory_name for cache in self.test_data_caches]}]"
         )
 
     @property

@@ -338,7 +338,9 @@ class Director:
                     for err in error.errors():
                         error_msg = err.get("msg", "")
                         if "https://errors.pydantic.dev" in error_msg:
-                            continue
+                            # Unfortunately, this is a catch-all for untyped errors. We will still need to emit this
+                            # It will fall through the if/else statement below to the else condition.
+                            pass
 
                         # Clean error categorization
                         if "Field required" in error_msg:

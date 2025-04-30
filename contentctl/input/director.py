@@ -339,7 +339,7 @@ class Director:
                         error_msg = err.get("msg", "")
                         if "https://errors.pydantic.dev" in error_msg:
                             # Unfortunately, this is a catch-all for untyped errors. We will still need to emit this
-                            # This is harder to read, but the other option is suppressing it which we cannot do as 
+                            # This is harder to read, but the other option is suppressing it which we cannot do as
                             # it makes troubleshooting extremelt difficult
                             print(
                                 f"      {Colors.RED}{Colors.ERROR} {error_msg}{Colors.END}"

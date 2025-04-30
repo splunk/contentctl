@@ -185,7 +185,7 @@ class VersionBumpingError(VersioningError):
         return (
             f"Rule '{self.rule_name}' has changed in current build compared to previous "
             "build (stanza hashes differ); the detection version should be bumped "
-            f"to at least {self.previous_version + 1}."
+            f"to {self.previous_version + 1}."
         )
 
     @property
@@ -194,4 +194,30 @@ class VersionBumpingError(VersioningError):
         A short-form error message
         :returns: a str, the message
         """
-        return f"Detection version in current build should be bumped to at least {self.previous_version + 1}."
+        return f"Detection version in current build should be bumped to {self.previous_version + 1}."
+
+
+class VersionBumpingTooFarError(VersioningError):
+    """
+    An error indicating the detection changed but its version was bumped too far
+    """
+
+    @property
+    def long_message(self) -> str:
+        """
+        A long-form error message
+        :returns: a str, the message
+        """
+        return (
+            f"Rule '{self.rule_name}' has changed in current build compared to previous "
+            "build (stanza hashes differ); however the detection version increased too much"
+            f"The version should be reduced to {self.previous_version + 1}."
+        )
+
+    @property
+    def short_message(self) -> str:
+        """
+        A short-form error message
+        :returns: a str, the message
+        """
+        return f"Detection version in current build should be reduced to {self.previous_version + 1}."

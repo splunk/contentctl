@@ -243,6 +243,10 @@ class Config_Base(BaseModel):
     def serialize_path(path: DirectoryPath) -> str:
         return str(path)
 
+    @property
+    def removed_content_path(self) -> pathlib.Path:
+        return self.path / "removed"
+
 
 class init(Config_Base):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)
@@ -270,6 +274,16 @@ class AttackDataCache(BaseModel):
 
 class validate(Config_Base):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)
+    enforce_deprecation_mapping_requirement: bool = Field(
+        default=False,
+        description="contentctl can support graceful deprecation and removal of "
+        "content using files that match the name removed/deprecation_mapping*.YML. "
+        "If this option is enabled, then any content marked as "
+        "status: [deprecated, removed] MUST have a mapping that exists in an "
+        "appropriate file at the listed path. "
+        "If this is not set, then that requirement is not enforced. Even if the"
+        "mapping files exist, they are NOT validated/built.",
+    )
     enrichments: bool = Field(
         default=False,
         description="Enable MITRE, APP, and CVE Enrichments.  "

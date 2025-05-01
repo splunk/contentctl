@@ -432,7 +432,20 @@ class validate(Config_Base):
                     for cache in self.test_data_caches
                 ]
             )
-            print(f"\nAttack Data Missing from all caches:\n{url}{prefixes}")
+            # Give some extra context about missing attack data files/bad mapping
+            try:
+                h = head(str(filename))
+                h.raise_for_status()
+            except RequestException:
+                raise ValueError(
+                    f"Error resolving the attack_data file {filename}. It was missing from all caches and a download from the server failed.\n"
+                    f"{url}{prefixes}\n"
+                )
+
+            print(
+                f"\nAttack Data Missing from all caches, but present at URL:\n{url}{prefixes}"
+            )
+
         return filename
 
     @property

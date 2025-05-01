@@ -266,7 +266,8 @@ class AttackDataCache(BaseModel):
         "This is the beginning of a URL that the data must begin with to map to this cache object."
     )
     base_directory_name: str = Field(
-        "This is the root folder name where the attack data should be downloaded to. Note that this path is releative to the external_repos/ folder."
+        "This is the root folder name where the attack data should be downloaded to. Note that this path MUST be in the external_repos/ folder",
+        pattern=r"^external_repos/.+",
     )
     # suggested checkout information for our attack_data repo
     # curl https://attack-range-attack-data.s3.us-west-2.amazonaws.com/attack_data.tar.zstd | zstd --decompress | tar -x -C datasets
@@ -330,7 +331,7 @@ class validate(Config_Base):
         # Otherwise, this is a URL.  See if its prefix matches one of the
         # prefixes in the list of caches
         for cache in self.test_data_caches:
-            root_folder_path = self.external_repos_path / cache.base_directory_name
+            root_folder_path = self.path / cache.base_directory_name
             # See if this data file was in that path
 
             if str(filename).startswith(cache.base_url):
@@ -341,17 +342,29 @@ class validate(Config_Base):
                     # This has not been checked out. If a cache file was listed in the config AND we hit
                     # on a prefix, it MUST be checked out
                     raise ValueError(
-                        f"Expected to find cached test data at '{root_folder_path}', but that directory does not exist. If a test uses attack data and a prefix matches that data, then the the cached data MUST exist."
+                        f"The following directory does not exist: [{root_folder_path}]. "
+                        "You must check out this directory since you have supplied 1 or more test_data_caches in contentctl.yml."
                     )
 
                 if not new_file_path.is_file():
                     raise ValueError(
-                        f"Expected to find the cached data file '{new_file_name}', but it does not exist in '{root_folder_path}'"
+                        f"The following file does not the test_data_cache {cache.base_directory_name}:\n"
+                        f"\tFile: {new_file_name}"
                     )
                 return new_file_path
 
+        print("raising here\n")
+        x = "\n\t".join(
+            [
+                f"base_url{index:02}: {url}"
+                for index, url in enumerate(
+                    [cache.base_url for cache in self.test_data_caches]
+                )
+            ]
+        )
         raise ValueError(
-            f"Test data file '{filename}' does not exist in ANY of the following caches. If you are supplying caches, any HTTP file MUST be located in a cache: [{[cache.base_directory_name for cache in self.test_data_caches]}]"
+            "Test data file does not start with any of the following base_url's. If you are supplying caches, any HTTP file MUST be located in a cache:\n"
+            f"\tFile      : {filename}\n\t{x}"
         )
 
     @property

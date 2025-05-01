@@ -338,10 +338,15 @@ class Director:
                     for err in error.errors():
                         error_msg = err.get("msg", "")
                         if "https://errors.pydantic.dev" in error_msg:
-                            continue
+                            # Unfortunately, this is a catch-all for untyped errors. We will still need to emit this
+                            # This is harder to read, but the other option is suppressing it which we cannot do as
+                            # it makes troubleshooting extremelt difficult
+                            print(
+                                f"      {Colors.RED}{Colors.ERROR} {error_msg}{Colors.END}"
+                            )
 
                         # Clean error categorization
-                        if "Field required" in error_msg:
+                        elif "Field required" in error_msg:
                             print(
                                 f"      {Colors.YELLOW}{Colors.WARNING} Field Required: {err.get('loc', [''])[0]}{Colors.END}"
                             )

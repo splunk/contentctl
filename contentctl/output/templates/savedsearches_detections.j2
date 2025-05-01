@@ -1,7 +1,6 @@
 ### {{app.label}} DETECTIONS ###
 
 {% for detection in objects %}
-{% if (detection.type == 'TTP' or detection.type == 'Anomaly' or detection.type == 'Hunting' or detection.type == 'Correlation') %}
 [{{ detection.get_conf_stanza_name(app) }}]
 action.escu = 0
 action.escu.enabled = 1
@@ -9,23 +8,13 @@ description = {{ detection.status_aware_description | escapeNewlines() }}
 action.escu.mappings = {{ detection.mappings | tojson }}
 action.escu.data_models = {{ detection.datamodel | tojson }}
 action.escu.eli5 = {{ detection.status_aware_description | escapeNewlines() }}
-{% if detection.how_to_implement %}
 action.escu.how_to_implement = {{ detection.how_to_implement | escapeNewlines() }}
-{% else %}
-action.escu.how_to_implement = none
-{% endif %}
-{% if detection.known_false_positives %}
 action.escu.known_false_positives = {{ detection.known_false_positives | escapeNewlines() }}
-{% else %}
-action.escu.known_false_positives = None
-{% endif %}
 action.escu.creation_date = {{ detection.date }}
 action.escu.modification_date = {{ detection.date }}
 action.escu.confidence = high
 action.escu.search_type = detection
-{% if detection.tags.product is defined %}
 action.escu.product = {{ detection.tags.product | tojson }}
-{% endif %}
 {% if detection.tags.atomic_guid %}
 action.escu.atomic_red_team_guids = {{ detection.tags.getAtomicGuidStringArray() | tojson }}
 {% endif %}
@@ -34,7 +23,6 @@ action.escu.providing_technologies = {{ detection.providing_technologies | tojso
 {% else %}
 action.escu.providing_technologies = null
 {% endif %}
-{% if detection.tags.analytic_story %}
 action.escu.analytic_story = {{ objectListToNameList(detection.tags.analytic_story) | tojson }}
 {% if detection.deployment.alert_action.rba.enabled%}
 action.risk = 1
@@ -43,25 +31,19 @@ action.risk.param._risk = {{ detection.risk | tojson }}
 action.risk.param._risk_score = 0
 action.risk.param.verbose = 0
 {% endif %}
-{% else %}
-action.escu.analytic_story = []
-{% endif %}
 cron_schedule = {{ detection.deployment.scheduling.cron_schedule }}
 dispatch.earliest_time = {{ detection.deployment.scheduling.earliest_time }}
 dispatch.latest_time = {{ detection.deployment.scheduling.latest_time }}
 action.correlationsearch.enabled = 1
+action.correlationsearch.detection_type = ebd
 action.correlationsearch.label = {{ detection.get_action_dot_correlationsearch_dot_label(app) }}
 action.correlationsearch.annotations = {{ detection.annotations | tojson }}
 action.correlationsearch.metadata = {{ detection.metadata | tojson }}
-{% if detection.deployment.scheduling.schedule_window is defined %}
 schedule_window = {{ detection.deployment.scheduling.schedule_window }}
-{% endif %}
-{% if detection.deployment is defined %}
 {% if detection.deployment.alert_action.notable %}
 action.notable = 1
-{% if detection.nes_fields %}
+action.notable.param._entities = [{"risk_object_field": "N/A", "risk_object_type": "N/A", "risk_score": "0"}]
 action.notable.param.nes_fields = {{ detection.nes_fields }}
-{% endif %}
 action.notable.param.rule_description = {{ detection.deployment.alert_action.notable.rule_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines()}}
 action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}
 action.notable.param.security_domain = {{ detection.tags.security_domain }}
@@ -87,13 +69,8 @@ action.sendtophantom.param.phantom_server = {{ detection.deployment.alert_action
 action.sendtophantom.param.sensitivity = {{ detection.deployment.alert_action.phantom.sensitivity | custom_jinja2_enrichment_filter(detection) }}
 action.sendtophantom.param.severity = {{ detection.deployment.alert_action.phantom.severity | custom_jinja2_enrichment_filter(detection) }}
 {% endif %}
-{% endif %}
 alert.digest_mode = 1
-{% if detection.enabled_by_default %}
-disabled = false
-{% else %}
-disabled = true
-{% endif %}
+disabled = {{ (not detection.enabled_by_default) | lower }}
 enableSched = 1
 allow_skew = 100%
 counttype = number of events
@@ -108,7 +85,6 @@ alert.suppress.period = {{ detection.tags.throttling.period }}
 {% endif %}
 search = {{ detection.search | escapeNewlines() }}
 action.notable.param.drilldown_searches = {{ detection.drilldowns_in_JSON | tojson | escapeNewlines() }}
-{% endif %}
 
 {% endfor %}
 ### END {{ app.label }} DETECTIONS ###

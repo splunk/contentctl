@@ -913,7 +913,7 @@ class Detection_Abstract(SecurityContentObject):
         return self
 
     @field_validator("tests", mode="before")
-    def ensure_yml_test_is_unittest(cls, v: list[dict]):
+    def ensure_yml_test_is_unittest(cls, v: list[dict], info: ValidationInfo):
         """The typing for the tests field allows it to be one of
         a number of different types of tests. However, ONLY
         UnitTest should be allowed to be defined in the YML
@@ -941,7 +941,7 @@ class Detection_Abstract(SecurityContentObject):
         for unitTest in v:
             # This raises a ValueError on a failed UnitTest.
             try:
-                UnitTest.model_validate(unitTest)
+                UnitTest.model_validate(unitTest, context=info.context)
             except ValueError as e:
                 valueErrors.append(e)
         if len(valueErrors):

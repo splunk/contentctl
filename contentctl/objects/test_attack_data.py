@@ -41,7 +41,7 @@ class TestAttackData(BaseModel):
         # the test data to a file on disk
         if info.context.get("config", None):
             config: validate = info.context.get("config", None)
-            return config.map_to_attack_data_cache(value)
+            return config.map_to_attack_data_cache(value, verbose=config.verbose)
         else:
             raise ValueError(
                 "config not passed to TestAttackData constructor in context"

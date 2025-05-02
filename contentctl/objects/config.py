@@ -26,6 +26,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from requests import RequestException, head
 
 from contentctl.helper.splunk_app import SplunkApp
 from contentctl.helper.utils import Utils
@@ -261,6 +262,37 @@ class init(Config_Base):
     )
 
 
+# There can be a number of attack data file warning mapping exceptions, or errors,
+# that can occur when using attack data caches.  In order to avoid very complex
+# output, we will only emit the verbose versions of these message once per file.
+# This is a non-intuitive place to put this, but it is good enough for now.
+ATTACK_DATA_CACHE_MAPPING_EXCEPTIONS: set[str] = set()
+
+
+class AttackDataCache(BaseModel):
+    base_url: str = Field(
+        "This is the beginning of a URL that the data must begin with to map to this cache object."
+    )
+    base_directory_name: str = Field(
+        "This is the root folder name where the attack data should be downloaded to. Note that this path MUST be in the external_repos/ folder",
+        pattern=r"^external_repos/.+",
+    )
+    # suggested checkout information for our attack_data repo
+    # curl https://attack-range-attack-data.s3.us-west-2.amazonaws.com/attack_data.tar.zstd | zstd --decompress | tar -x -C attack_data/
+    # suggested YML values for this:
+    helptext: str | None = Field(
+        default="This repo is set up to use test_data_caches. This can be extremely helpful in validating correct links for test attack_data and speeding up testing.\n"
+        "Include the following in your contentctl.yml file to use this cache:\n\n"
+        "test_data_caches:\n"
+        "- base_url: https://media.githubusercontent.com/media/splunk/attack_data/master/\n"
+        "  base_directory_name: external_repos/attack_data\n\n"
+        "In order to check out STRT Attack Data, you can use the following command:\n"
+        "mkdir -p external_repos; curl https://attack-range-attack-data.s3.us-west-2.amazonaws.com/attack_data.tar.zstd | zstd --decompress | tar -x -C external_repos/\n"
+        "or\n"
+        """echo "First ensure git-lfs is enabled"; git clone https://github.com/splunk/attack_data external_repos/attack_data"""
+    )
+
+
 class validate(Config_Base):
     model_config = ConfigDict(validate_default=True, arbitrary_types_allowed=True)
     enforce_deprecation_mapping_requirement: bool = Field(
@@ -291,9 +323,150 @@ class validate(Config_Base):
         default=False, description="Validate latest TA information from Splunkbase"
     )
 
+    test_data_caches: list[AttackDataCache] = Field(
+        default=[],
+        description="A list of attack data that can "
+        "be used in lieu of the HTTPS download links "
+        "of each test data file. This cache can significantly "
+        "increase overall test speed, ensure the correctness of "
+        "links at 'contentctl validate' time, and reduce errors "
+        "associated with failed responses from file servers.",
+    )
+
     @property
     def external_repos_path(self) -> pathlib.Path:
         return self.path / "external_repos"
+
+    # We can't make this a validator because the constructor
+    # is called many times - we don't want to print this out many times.
+    def check_test_data_caches(self) -> Self:
+        """
+        Check that the test data caches actually exist at the specified paths.
+        If they do exist, then do nothing. If they do not, then emit the helpext, but
+        do not raise an exception.  They are not required, but can significantly speed up
+        and reduce the flakiness of tests by reducing failed HTTP requests.
+        """
+        if not self.verbose:
+            # Ignore the check and error output if we are not in verbose mode
+            return self
+        for cache in self.test_data_caches:
+            cache_path = self.path / cache.base_directory_name
+            if not cache_path.is_dir():
+                print(cache.helptext)
+            else:
+                build_date_file = cache_path / "cache_build_date.txt"
+                git_hash_file = cache_path / "git_hash.txt"
+
+                if build_date_file.is_file():
+                    # This is a cache that was built by contentctl.  We can use this to
+                    # determine if the cache is out of date.
+                    with open(build_date_file, "r") as f:
+                        build_date = f.read().strip()
+                else:
+                    build_date = "<UNKNOWN_DATE>"
+                if git_hash_file.is_file():
+                    # This is a cache that was built by contentctl.  We can use this to
+                    # determine if the cache is out of date.
+                    with open(git_hash_file, "r") as f:
+                        git_hash = f.read().strip()
+                else:
+                    git_hash = "<UNKNOWN_HASH>"
+
+                print(
+                    f"Found attack data cache at [{cache_path}]\n**Cache Build Date: {build_date}\n**Repo Git Hash   : {git_hash}\n"
+                )
+
+        return self
+
+    def map_to_attack_data_cache(
+        self, filename: HttpUrl | FilePath, verbose: bool = False
+    ) -> HttpUrl | FilePath:
+        if str(filename) in ATTACK_DATA_CACHE_MAPPING_EXCEPTIONS:
+            # This is already something that we have emitted a warning or
+            # Exception for.  We don't want to emit it again as it will
+            # pollute the output.
+            return filename
+
+        # If this is simply a link to a file directly, then no mapping
+        # needs to take place. Return the link to the file.
+        if isinstance(filename, pathlib.Path):
+            return filename
+
+        if len(self.test_data_caches) == 0:
+            return filename
+
+        # Otherwise, this is a URL.  See if its prefix matches one of the
+        # prefixes in the list of caches
+        for cache in self.test_data_caches:
+            root_folder_path = self.path / cache.base_directory_name
+            # See if this data file was in that path
+
+            if str(filename).startswith(cache.base_url):
+                new_file_name = str(filename).replace(cache.base_url, "")
+                new_file_path = root_folder_path / new_file_name
+
+                if not root_folder_path.is_dir():
+                    # This has not been checked out. Even though we want to use this cache
+                    # whenever possible, we don't want to force it.
+                    return filename
+
+                if new_file_path.is_file():
+                    # We found the file in the cache. Return the new path
+                    return new_file_path
+
+                # Any thing below here is non standard behavior that will produce either a warning message,
+                # an error, or both. We onyl want to do this once for each file, even if it is used
+                # across multiple different detections.
+                ATTACK_DATA_CACHE_MAPPING_EXCEPTIONS.add(str(filename))
+
+                # The cache exists, but we didn't find the file.  We will emit an informational warning
+                # for this, but this is not an exception. Instead, we will just fall back to using
+                # the original URL.
+                if verbose:
+                    # Give some extra context about missing attack data files/bad mapping
+                    try:
+                        h = head(str(filename))
+                        h.raise_for_status()
+
+                    except RequestException:
+                        raise ValueError(
+                            f"Error resolving the attack_data file {filename}. "
+                            f"It was missing from the cache {cache.base_directory_name} and a download from the server failed."
+                        )
+                    print(
+                        f"\nFilename {filename} not found in cache {cache.base_directory_name}, but exists on the server. "
+                        f"Your cache {cache.base_directory_name} may be out of date."
+                    )
+                return filename
+        if verbose:
+            # Any thing below here is non standard behavior that will produce either a warning message,
+            # an error, or both. We onyl want to do this once for each file, even if it is used
+            # across multiple different detections.
+            ATTACK_DATA_CACHE_MAPPING_EXCEPTIONS.add(str(filename))
+
+            # Give some extra context about missing attack data files/bad mapping
+            url = f"Attack Data   : {filename}"
+            prefixes = "".join(
+                [
+                    f"\n  Valid Prefix: {cache.base_url}"
+                    for cache in self.test_data_caches
+                ]
+            )
+            # Give some extra context about missing attack data files/bad mapping
+            try:
+                h = head(str(filename))
+                h.raise_for_status()
+            except RequestException:
+                raise ValueError(
+                    f"Error resolving the attack_data file {filename}. It was missing from all caches and a download from the server failed.\n"
+                    f"{url}{prefixes}\n"
+                )
+
+            print(
+                f"\nAttack Data Missing from all caches, but present at URL:\n{url}{prefixes}"
+            )
+
+        return filename
 
     @property
     def mitre_cti_repo_path(self) -> pathlib.Path:

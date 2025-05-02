@@ -7,7 +7,6 @@ import pathlib
 import time
 import urllib.parse
 import uuid
-from shutil import copyfile
 from ssl import SSLEOFError, SSLZeroReturnError
 from sys import stdout
 from tempfile import TemporaryDirectory, mktemp
@@ -1402,7 +1401,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 f"The only valid indexes on the server are {self.all_indexes_on_server}"
             )
 
-        tempfile = mktemp(dir=tmp_dir)
         if not (
             str(attack_data_file.data).startswith("http://")
             or str(attack_data_file.data).startswith("https://")
@@ -1415,13 +1413,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     test_group_start_time,
                 )
 
-                try:
-                    copyfile(str(attack_data_file.data), tempfile)
-                except Exception as e:
-                    raise Exception(
-                        f"Error copying local Attack Data File for [{test_group.name}] - [{attack_data_file.data}]: "
-                        f"{str(e)}"
-                    )
+                tempfile = str(attack_data_file.data)
             else:
                 raise Exception(
                     f"Attack Data File for [{test_group.name}] is local [{attack_data_file.data}], but does not exist."
@@ -1432,6 +1424,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # We need to overwrite the file - mkstemp will create an empty file with the
             # given name
             try:
+                tempfile = mktemp(dir=tmp_dir)
                 # In case the path is a local file, try to get it
 
                 self.format_pbar_string(

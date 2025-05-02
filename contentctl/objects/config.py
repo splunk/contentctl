@@ -349,13 +349,33 @@ class validate(Config_Base):
         if not self.verbose:
             # Ignore the check and error output if we are not in verbose mode
             return self
-
         for cache in self.test_data_caches:
             cache_path = self.path / cache.base_directory_name
             if not cache_path.is_dir():
                 print(cache.helptext)
             else:
-                print(f"Found attack data cache at {cache_path}")
+                build_date_file = cache_path / "cache_build_date.txt"
+                git_hash_file = cache_path / "git_hash.txt"
+
+                if build_date_file.is_file():
+                    # This is a cache that was built by contentctl.  We can use this to
+                    # determine if the cache is out of date.
+                    with open(build_date_file, "r") as f:
+                        build_date = f"\n**Cache Build Date: {f.read().strip()}"
+                else:
+                    build_date = ""
+                if git_hash_file.is_file():
+                    # This is a cache that was built by contentctl.  We can use this to
+                    # determine if the cache is out of date.
+                    with open(git_hash_file, "r") as f:
+                        git_hash = f"\n**Repo Git Hash   : {f.read().strip()}"
+                else:
+                    git_hash = ""
+
+                print(
+                    f"Found attack data cache at [{cache_path}]{build_date}{git_hash}\n"
+                )
+
         return self
 
     def map_to_attack_data_cache(

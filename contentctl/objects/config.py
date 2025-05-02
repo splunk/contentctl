@@ -361,19 +361,19 @@ class validate(Config_Base):
                     # This is a cache that was built by contentctl.  We can use this to
                     # determine if the cache is out of date.
                     with open(build_date_file, "r") as f:
-                        build_date = f"\n**Cache Build Date: {f.read().strip()}"
+                        build_date = f.read().strip()
                 else:
-                    build_date = ""
+                    build_date = "<UNKNOWN_DATE>"
                 if git_hash_file.is_file():
                     # This is a cache that was built by contentctl.  We can use this to
                     # determine if the cache is out of date.
                     with open(git_hash_file, "r") as f:
-                        git_hash = f"\n**Repo Git Hash   : {f.read().strip()}"
+                        git_hash = f.read().strip()
                 else:
-                    git_hash = ""
+                    git_hash = "<UNKNOWN_HASH>"
 
                 print(
-                    f"Found attack data cache at [{cache_path}]{build_date}{git_hash}\n"
+                    f"Found attack data cache at [{cache_path}]\n**Cache Build Date: {build_date}\n**Repo Git Hash   : {git_hash}\n"
                 )
 
         return self

@@ -42,7 +42,7 @@ action.correlationsearch.metadata = {{ detection.metadata | tojson }}
 schedule_window = {{ detection.deployment.scheduling.schedule_window }}
 {% if detection.deployment.alert_action.notable %}
 action.notable = 1
-action.notable.param._entities = [{"risk_object_field": "N/A", "risk_object_type": "N/A", "risk_score": "0"}]
+action.notable.param._entities = [{"risk_object_field": "N/A", "risk_object_type": "N/A", "risk_score": 0}]
 action.notable.param.nes_fields = {{ detection.nes_fields }}
 action.notable.param.rule_description = {{ detection.deployment.alert_action.notable.rule_description | custom_jinja2_enrichment_filter(detection) | escapeNewlines()}}
 action.notable.param.rule_title = {% if detection.type | lower == "correlation" %}RBA: {{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% else %}{{ detection.deployment.alert_action.notable.rule_title | custom_jinja2_enrichment_filter(detection) }}{% endif +%}

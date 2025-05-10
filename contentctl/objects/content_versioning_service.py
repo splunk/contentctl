@@ -234,7 +234,7 @@ class ContentVersioningService(BaseModel):
         elapsed_sleep_time = 0
         num_tries = 0
         time_to_sleep = 2**num_tries
-        max_sleep = 600
+        max_sleep = 720
 
         # Loop until timeout
         while elapsed_sleep_time < max_sleep:

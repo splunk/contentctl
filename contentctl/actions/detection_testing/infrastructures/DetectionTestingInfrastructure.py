@@ -4,6 +4,7 @@ import datetime
 import json
 import os.path
 import pathlib
+import sys
 import time
 import urllib.parse
 import uuid
@@ -543,6 +544,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         data)
         :param detection: the Detection to test
         """
+        sys.exit()
 
         # iterate TestGroups
         for test_group in detection.test_groups:

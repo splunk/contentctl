@@ -17,7 +17,7 @@ from contentctl.objects.correlation_search import ResultIterator
 from contentctl.objects.detection import Detection
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "content_versioning_service.log"
 
@@ -233,8 +233,8 @@ class ContentVersioningService(BaseModel):
         # Set counters and limits for out exp. backoff timer
         elapsed_sleep_time = 0
         num_tries = 0
-        time_to_sleep = 2**num_tries
-        max_sleep = 600
+        time_to_sleep = 5
+        max_sleep = 1800
 
         # Loop until timeout
         while elapsed_sleep_time < max_sleep:
@@ -266,7 +266,7 @@ class ContentVersioningService(BaseModel):
                 )
             # Update the number of times we've tried, and increment the time to sleep
             num_tries += 1
-            time_to_sleep = 2**num_tries
+            # time_to_sleep = 2**num_tries
 
             # If the computed time to sleep will exceed max_sleep, adjust appropriately
             if (elapsed_sleep_time + time_to_sleep) > max_sleep:

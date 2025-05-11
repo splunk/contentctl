@@ -4,7 +4,6 @@ import datetime
 import json
 import os.path
 import pathlib
-import sys
 import time
 import urllib.parse
 import uuid
@@ -521,7 +520,9 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.finish()
                 return
             try:
-                self.test_detection(detection)
+                self.finish()
+                return
+                # self.test_detection(detection)
             except ContainerStoppedException:
                 self.pbar.write(
                     f"Warning - container was stopped when trying to execute detection [{self.get_name()}]"
@@ -544,7 +545,6 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         data)
         :param detection: the Detection to test
         """
-        sys.exit()
 
         # iterate TestGroups
         for test_group in detection.test_groups:

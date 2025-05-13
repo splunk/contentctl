@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from contentctl.input.director import DirectorOutputDto
 from contentctl.objects.config import build
-from contentctl.output.api_json_output import ApiJsonOutput, JSON_API_VERSION
+from contentctl.output.api_json_output import JSON_API_VERSION, ApiJsonOutput
 from contentctl.output.conf_output import ConfOutput
 from contentctl.output.conf_writer import ConfWriter
 
@@ -76,7 +76,9 @@ class Build:
             api_json_output.writeDeployments(input_dto.director_output_dto.deployments)
 
             # create version file for sse api
-            version_file = input_dto.config.getAPIPath() / f"version_v{JSON_API_VERSION}.json"
+            version_file = (
+                input_dto.config.getAPIPath() / f"version_v{JSON_API_VERSION}.json"
+            )
             utc_time = (
                 datetime.datetime.now(datetime.timezone.utc)
                 .replace(microsecond=0, tzinfo=None)

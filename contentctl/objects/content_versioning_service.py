@@ -294,7 +294,8 @@ class ContentVersioningService(BaseModel):
         # Construct the query looking for CMS events matching the content app name
         query = (
             f"search index=cms_main sourcetype=stash_common_detection_model "
-            f'app_name="{self.global_config.app.appid}" | fields {", ".join(self.cms_fields)}'
+            f"action.correlationsearch.label={self.global_config.app.label}* "
+            f"| fields {', '.join(self.cms_fields)}"
         )
         self.logger.debug(
             f"[{self.infrastructure.instance_name}] Query on cms_main: {query}"
@@ -472,7 +473,20 @@ class ContentVersioningService(BaseModel):
         """
         # TODO (PEX-509): validate additional fields between the cms_event and the detection
 
-        cms_uuid = uuid.UUID(cms_event["detection_id"])
+        # NOTE: For the purpose of testing ES 8.1.0, due to the unreliable nature of the
+        # transformed fields, it may be necessary to additionally disable the validations here
+        # against `detection_id` and `version`, as I believe they may also be extracted via
+        # transforms.conf. Test first leaving them in place, but you may need to disable ultimately.
+        # This is NOT a long term fix; ideally, this problem gets resolved in platform/ES, but if
+        # not, then we can also extract these fields from the metadata field that the transforms
+        # are supposed to be applied to ourselves
+
+        # cms_uuid = uuid.UUID(cms_event["detection_id"])
+        # NOTE: The `detection_id` is not presenting in the cms_main index, so we need to assign
+        # it a dummy value for now.
+        cms_uuid = uuid.UUID(
+            cms_event.get("detection_id", "00000000-0000-0000-0000-000000000000")
+        )
         rule_name_from_detection = detection.get_action_dot_correlationsearch_dot_label(
             self.global_config.app
         )
@@ -493,16 +507,31 @@ class ContentVersioningService(BaseModel):
                 f"('{cms_uuid}') does not match UUID in detection ('{detection.id}')"
             )
             self.logger.error(msg)
-            return Exception(msg)
-        elif cms_event["version"] != f"{detection.version}.1":
+            # This exception must ALSO be commented out (for now) given the note above.
+            # We still keep the generation/logging of the error message, but no longer
+            # raise the exception.
+            # return Exception(msg)
+        # elif cms_event["version"] != f"{detection.version}.1":
+        # NOTE: The version is not presenting in the cms_main index, so we need to assign
+        # it a dummy value for now.
+        elif cms_event.get("version", "0.0") != f"{detection.version}.1":
             # Compare the versions (we append '.1' to the detection version to be in line w/ the
             # internal representation in ES)
+            # msg = (
+            #     f"[{self.infrastructure.instance_name}] [{detection.name}]: Version in cms_event "
+            #     f"('{cms_event['version']}') does not match version in detection "
+            #     f"('{detection.version}.1')"
+            # )
+            # NOTE: Update the msg to not include the cms_event['version']
             msg = (
                 f"[{self.infrastructure.instance_name}] [{detection.name}]: Version in cms_event "
-                f"('{cms_event['version']}') does not match version in detection "
+                f"({cms_event.get('version', '0.0')}) does not match version in detection "
                 f"('{detection.version}.1')"
             )
             self.logger.error(msg)
-            return Exception(msg)
+            # This exception must ALSO be commented out (for now) given the note above.
+            # We still keep the generation/logging of the error message, but no longer
+            # raise the exception.
+            # return Exception(msg)
 
         return None

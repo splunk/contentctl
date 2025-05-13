@@ -294,7 +294,8 @@ class ContentVersioningService(BaseModel):
         # Construct the query looking for CMS events matching the content app name
         query = (
             f"search index=cms_main sourcetype=stash_common_detection_model "
-            f'app_name="{self.global_config.app.appid}" | fields {", ".join(self.cms_fields)}'
+            f"action.correlationsearch.label={self.global_config.app.label}* "
+            f"| fields {', '.join(self.cms_fields)}"
         )
         self.logger.debug(
             f"[{self.infrastructure.instance_name}] Query on cms_main: {query}"
@@ -471,6 +472,14 @@ class ContentVersioningService(BaseModel):
         :rtype: Exception | None
         """
         # TODO (PEX-509): validate additional fields between the cms_event and the detection
+
+        # NOTE: For the purpose of testing ES 8.1.0, due to the unreliable nature of the
+        # transformed fields, it may be necessary to additionally disable the validations here
+        # against `detection_id` and `version`, as I believe they may also be extracted via
+        # transforms.conf. Test first leaving them in place, but you may need to disable ultimately.
+        # This is NOT a long term fix; ideally, this problem gets resolved in platform/ES, but if
+        # not, then we can also extract these fields from the metadata field that the transforms
+        # are supposed to be applied to ourselves
 
         cms_uuid = uuid.UUID(cms_event["detection_id"])
         rule_name_from_detection = detection.get_action_dot_correlationsearch_dot_label(

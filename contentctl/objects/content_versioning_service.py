@@ -481,7 +481,10 @@ class ContentVersioningService(BaseModel):
         # not, then we can also extract these fields from the metadata field that the transforms
         # are supposed to be applied to ourselves
 
-        cms_uuid = uuid.UUID(cms_event["detection_id"])
+        # cms_uuid = uuid.UUID(cms_event["detection_id"])
+        # NOTE: The `detection_id` is not presenting in the cms_main index, so we need to assign
+        # it a dummy value for now.
+        cms_uuid = uuid.UUID("0000")
         rule_name_from_detection = detection.get_action_dot_correlationsearch_dot_label(
             self.global_config.app
         )

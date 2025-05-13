@@ -502,7 +502,10 @@ class ContentVersioningService(BaseModel):
                 f"('{cms_uuid}') does not match UUID in detection ('{detection.id}')"
             )
             self.logger.error(msg)
-            return Exception(msg)
+            # This exception must ALSO be commented out (for now) given the note above.
+            # We still keep the generation/logging of the error message, but no longer
+            # raise the exception.
+            # return Exception(msg)
         elif cms_event["version"] != f"{detection.version}.1":
             # Compare the versions (we append '.1' to the detection version to be in line w/ the
             # internal representation in ES)
@@ -512,6 +515,9 @@ class ContentVersioningService(BaseModel):
                 f"('{detection.version}.1')"
             )
             self.logger.error(msg)
-            return Exception(msg)
+            # This exception must ALSO be commented out (for now) given the note above.
+            # We still keep the generation/logging of the error message, but no longer
+            # raise the exception.
+            # return Exception(msg)
 
         return None

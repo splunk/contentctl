@@ -525,7 +525,7 @@ class ContentVersioningService(BaseModel):
             # NOTE: Update the msg to not include the cms_event['version']
             msg = (
                 f"[{self.infrastructure.instance_name}] [{detection.name}]: Version in cms_event "
-                f"('0.0') does not match version in detection "
+                f"({cms_event.get('version', '0.0')}) does not match version in detection "
                 f"('{detection.version}.1')"
             )
             self.logger.error(msg)

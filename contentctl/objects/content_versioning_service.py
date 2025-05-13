@@ -484,7 +484,9 @@ class ContentVersioningService(BaseModel):
         # cms_uuid = uuid.UUID(cms_event["detection_id"])
         # NOTE: The `detection_id` is not presenting in the cms_main index, so we need to assign
         # it a dummy value for now.
-        cms_uuid = uuid.UUID("00000000-0000-0000-0000-000000000000")
+        cms_uuid = uuid.UUID(
+            cms_event.get("detection_id", "00000000-0000-0000-0000-000000000000")
+        )
         rule_name_from_detection = detection.get_action_dot_correlationsearch_dot_label(
             self.global_config.app
         )
@@ -512,7 +514,7 @@ class ContentVersioningService(BaseModel):
         # elif cms_event["version"] != f"{detection.version}.1":
         # NOTE: The version is not presenting in the cms_main index, so we need to assign
         # it a dummy value for now.
-        elif "0.0" != f"{detection.version}.1":
+        elif cms_event.get("version", "0.0") != f"{detection.version}.1":
             # Compare the versions (we append '.1' to the detection version to be in line w/ the
             # internal representation in ES)
             # msg = (

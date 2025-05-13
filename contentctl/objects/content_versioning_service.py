@@ -509,12 +509,21 @@ class ContentVersioningService(BaseModel):
             # We still keep the generation/logging of the error message, but no longer
             # raise the exception.
             # return Exception(msg)
-        elif cms_event["version"] != f"{detection.version}.1":
+        # elif cms_event["version"] != f"{detection.version}.1":
+        # NOTE: The version is not presenting in the cms_main index, so we need to assign
+        # it a dummy value for now.
+        elif "0.0" != f"{detection.version}.1":
             # Compare the versions (we append '.1' to the detection version to be in line w/ the
             # internal representation in ES)
+            # msg = (
+            #     f"[{self.infrastructure.instance_name}] [{detection.name}]: Version in cms_event "
+            #     f"('{cms_event['version']}') does not match version in detection "
+            #     f"('{detection.version}.1')"
+            # )
+            # NOTE: Update the msg to not include the cms_event['version']
             msg = (
                 f"[{self.infrastructure.instance_name}] [{detection.name}]: Version in cms_event "
-                f"('{cms_event['version']}') does not match version in detection "
+                f"('0.0') does not match version in detection "
                 f"('{detection.version}.1')"
             )
             self.logger.error(msg)

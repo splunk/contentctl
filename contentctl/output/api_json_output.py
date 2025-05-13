@@ -17,6 +17,9 @@ import pathlib
 from contentctl.output.json_writer import JsonWriter
 
 
+
+JSON_API_VERSION = 2
+
 class ApiJsonOutput:
     output_path: pathlib.Path
     app_label: str
@@ -70,7 +73,7 @@ class ApiJsonOutput:
         #     del()
 
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, "detections.json"), "detections", detections
+            os.path.join(self.output_path, f"detections_v{JSON_API_VERSION}.json"), "detections", detections
         )
 
     def writeMacros(
@@ -86,7 +89,7 @@ class ApiJsonOutput:
                 if k in macro:
                     del macro[k]
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, "macros.json"), "macros", macros
+            os.path.join(self.output_path, f"macros_v{JSON_API_VERSION}.json"), "macros", macros
         )
 
     def writeStories(
@@ -132,7 +135,7 @@ class ApiJsonOutput:
             ]
 
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, "stories.json"), "stories", stories
+            os.path.join(self.output_path, f"stories_v{JSON_API_VERSION}.json"), "stories", stories
         )
 
     def writeBaselines(
@@ -163,7 +166,7 @@ class ApiJsonOutput:
         ]
 
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, "baselines.json"), "baselines", baselines
+            os.path.join(self.output_path, f"baselines_v{JSON_API_VERSION}.json"), "baselines", baselines
         )
 
     def writeInvestigations(
@@ -195,7 +198,7 @@ class ApiJsonOutput:
             for investigation in objects
         ]
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, "response_tasks.json"),
+            os.path.join(self.output_path, f"response_tasks_v{JSON_API_VERSION}.json"),
             "response_tasks",
             investigations,
         )
@@ -227,7 +230,7 @@ class ApiJsonOutput:
                 if k in lookup:
                     del lookup[k]
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, "lookups.json"), "lookups", lookups
+            os.path.join(self.output_path, f"lookups_v{JSON_API_VERSION}.json"), "lookups", lookups
         )
 
     def writeDeployments(
@@ -255,7 +258,7 @@ class ApiJsonOutput:
         # references are not to be included, but have been deleted in the
         # model_serialization logic
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, "deployments.json"),
+            os.path.join(self.output_path, f"deployments_v{JSON_API_VERSION}.json"),
             "deployments",
             deployments,
         )

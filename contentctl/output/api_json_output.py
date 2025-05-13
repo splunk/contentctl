@@ -16,9 +16,8 @@ import pathlib
 
 from contentctl.output.json_writer import JsonWriter
 
-
-
 JSON_API_VERSION = 2
+
 
 class ApiJsonOutput:
     output_path: pathlib.Path
@@ -73,7 +72,9 @@ class ApiJsonOutput:
         #     del()
 
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, f"detections_v{JSON_API_VERSION}.json"), "detections", detections
+            os.path.join(self.output_path, f"detections_v{JSON_API_VERSION}.json"),
+            "detections",
+            detections,
         )
 
     def writeMacros(
@@ -89,7 +90,9 @@ class ApiJsonOutput:
                 if k in macro:
                     del macro[k]
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, f"macros_v{JSON_API_VERSION}.json"), "macros", macros
+            os.path.join(self.output_path, f"macros_v{JSON_API_VERSION}.json"),
+            "macros",
+            macros,
         )
 
     def writeStories(
@@ -135,7 +138,9 @@ class ApiJsonOutput:
             ]
 
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, f"stories_v{JSON_API_VERSION}.json"), "stories", stories
+            os.path.join(self.output_path, f"stories_v{JSON_API_VERSION}.json"),
+            "stories",
+            stories,
         )
 
     def writeBaselines(
@@ -166,7 +171,9 @@ class ApiJsonOutput:
         ]
 
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, f"baselines_v{JSON_API_VERSION}.json"), "baselines", baselines
+            os.path.join(self.output_path, f"baselines_v{JSON_API_VERSION}.json"),
+            "baselines",
+            baselines,
         )
 
     def writeInvestigations(
@@ -230,7 +237,9 @@ class ApiJsonOutput:
                 if k in lookup:
                     del lookup[k]
         JsonWriter.writeJsonObject(
-            os.path.join(self.output_path, f"lookups_v{JSON_API_VERSION}.json"), "lookups", lookups
+            os.path.join(self.output_path, f"lookups_v{JSON_API_VERSION}.json"),
+            "lookups",
+            lookups,
         )
 
     def writeDeployments(

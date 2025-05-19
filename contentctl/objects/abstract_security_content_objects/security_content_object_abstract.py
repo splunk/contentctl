@@ -12,6 +12,7 @@ import pathlib
 import pprint
 import uuid
 from abc import abstractmethod
+from collections import Counter
 from difflib import get_close_matches
 from functools import cached_property
 from typing import List, Optional, Tuple, Union
@@ -706,6 +707,15 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
                 "Direction was 'None' when passed to "
                 "'mapNamesToSecurityContentObjects'. This is "
                 "an error in the contentctl codebase which must be resolved."
+            )
+
+        # Catch all for finding duplicates in mapped content
+        if (
+            len(duplicates := [name for name, count in Counter(v).items() if count > 1])
+            > 0
+        ):
+            raise ValueError(
+                f"Duplicate {cls.__name__} ({duplicates}) found in list: {v}."
             )
 
         mappedObjects: list[Self] = []

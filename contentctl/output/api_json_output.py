@@ -52,6 +52,7 @@ class ApiJsonOutput:
                         "lookups",
                         "source",
                         "nes_fields",
+                        "tests",
                     ]
                 )
             )

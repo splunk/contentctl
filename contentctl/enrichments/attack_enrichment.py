@@ -1,22 +1,44 @@
 from __future__ import annotations
-from attackcti import attack_client
+
 import logging
-from pydantic import BaseModel
 from dataclasses import field
-from typing import Any
 from pathlib import Path
+from typing import Any, Dict, List, TypedDict, cast
+
+from attackcti import attack_client  # type: ignore[reportMissingTypeStubs]
+from pydantic import BaseModel
+
+from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE
+from contentctl.objects.config import validate
 from contentctl.objects.mitre_attack_enrichment import (
     MitreAttackEnrichment,
     MitreTactics,
 )
-from contentctl.objects.config import validate
-from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE
 
+# Suppress attackcti logging
 logging.getLogger("taxii2client").setLevel(logging.CRITICAL)
+logging.getLogger("stix2").setLevel(logging.CRITICAL)
+
+
+class AttackPattern(TypedDict):
+    id: str
+    technique_id: str
+    technique: str
+    tactic: List[str]
+
+
+class IntrusionSet(TypedDict):
+    id: str
+    group: str
+
+
+class Relationship(TypedDict):
+    target_object: str
+    source_object: str
 
 
 class AttackEnrichment(BaseModel):
-    data: dict[str, MitreAttackEnrichment] = field(default_factory=dict)
+    data: Dict[str, MitreAttackEnrichment] = field(default_factory=dict)
     use_enrichment: bool = True
 
     @staticmethod
@@ -42,7 +64,7 @@ class AttackEnrichment(BaseModel):
             )
 
     def addMitreIDViaGroupNames(
-        self, technique: dict[str, Any], tactics: list[str], groupNames: list[str]
+        self, technique: Dict[str, Any], tactics: List[str], groupNames: List[str]
     ) -> None:
         technique_id = technique["technique_id"]
         technique_obj = technique["technique"]
@@ -62,15 +84,15 @@ class AttackEnrichment(BaseModel):
 
     def addMitreIDViaGroupObjects(
         self,
-        technique: dict[str, Any],
-        tactics: list[MitreTactics],
-        groupDicts: list[dict[str, Any]],
+        technique: Dict[str, Any],
+        tactics: List[MitreTactics],
+        groupDicts: List[Dict[str, Any]],
     ) -> None:
         technique_id = technique["technique_id"]
         technique_obj = technique["technique"]
         tactics.sort()
 
-        groupNames: list[str] = sorted([group["group"] for group in groupDicts])
+        groupNames: List[str] = sorted([group["group"] for group in groupDicts])
 
         if technique_id in self.data:
             raise Exception(f"Error, trying to redefine MITRE ID '{technique_id}'")
@@ -87,8 +109,8 @@ class AttackEnrichment(BaseModel):
 
     def get_attack_lookup(
         self, input_path: Path, enrichments: bool = False
-    ) -> dict[str, MitreAttackEnrichment]:
-        attack_lookup: dict[str, MitreAttackEnrichment] = {}
+    ) -> Dict[str, MitreAttackEnrichment]:
+        attack_lookup: Dict[str, MitreAttackEnrichment] = {}
         if not enrichments:
             return attack_lookup
 
@@ -98,11 +120,6 @@ class AttackEnrichment(BaseModel):
                 end="",
                 flush=True,
             )
-            # The existence of the input_path is validated during cli argument validation, but it is
-            # possible that the repo is in the wrong format. If the following directories do not
-            # exist, then attack_client will fall back to resolving via REST API. We do not
-            # want this as it is slow and error prone, so we will force an exception to
-            # be generated.
             enterprise_path = input_path / "enterprise-attack"
             mobile_path = input_path / "ics-attack"
             ics_path = input_path / "mobile-attack"
@@ -123,36 +140,47 @@ class AttackEnrichment(BaseModel):
                 }
             )
 
-            all_enterprise_techniques = lift.get_enterprise_techniques(
-                stix_format=False
+            all_enterprise_techniques = cast(
+                List[AttackPattern], lift.get_enterprise_techniques(stix_format=False)
             )
-            enterprise_relationships = lift.get_enterprise_relationships(
-                stix_format=False
+            enterprise_relationships = cast(
+                List[Relationship], lift.get_enterprise_relationships(stix_format=False)
             )
-            enterprise_groups = lift.get_enterprise_groups(stix_format=False)
+            enterprise_groups = cast(
+                List[IntrusionSet], lift.get_enterprise_groups(stix_format=False)
+            )
 
             for technique in all_enterprise_techniques:
-                apt_groups: list[dict[str, Any]] = []
+                apt_groups: List[Dict[str, Any]] = []
                 for relationship in enterprise_relationships:
-                    if (
-                        relationship["target_object"] == technique["id"]
-                    ) and relationship["source_object"].startswith("intrusion-set"):
+                    if relationship["target_object"] == technique[
+                        "id"
+                    ] and relationship["source_object"].startswith("intrusion-set"):
                         for group in enterprise_groups:
                             if relationship["source_object"] == group["id"]:
-                                apt_groups.append(group)
-                                # apt_groups.append(group['group'])
+                                apt_groups.append(dict(group))
 
-                tactics = []
+                tactics: List[MitreTactics] = []
                 if "tactic" in technique:
                     for tactic in technique["tactic"]:
-                        tactics.append(tactic.replace("-", " ").title())
+                        tactics.append(
+                            cast(MitreTactics, tactic.replace("-", " ").title())
+                        )
 
-                self.addMitreIDViaGroupObjects(technique, tactics, apt_groups)
-                attack_lookup[technique["technique_id"]] = {
-                    "technique": technique["technique"],
-                    "tactics": tactics,
-                    "groups": apt_groups,
-                }
+                self.addMitreIDViaGroupObjects(dict(technique), tactics, apt_groups)
+                attack_lookup[technique["technique_id"]] = (
+                    MitreAttackEnrichment.model_validate(
+                        {
+                            "mitre_attack_id": technique["technique_id"],
+                            "mitre_attack_technique": technique["technique"],
+                            "mitre_attack_tactics": tactics,
+                            "mitre_attack_groups": [
+                                group["group"] for group in apt_groups
+                            ],
+                            "mitre_attack_group_objects": apt_groups,
+                        }
+                    )
+                )
 
         except Exception as err:
             raise Exception(f"Error getting MITRE Enrichment: {str(err)}")

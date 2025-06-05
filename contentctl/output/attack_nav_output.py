@@ -1,35 +1,37 @@
+# Standard library imports
 import json
 import pathlib
 from datetime import datetime
-from typing import Any, Dict, List, Set, TypedDict, Union
+from typing import Any, TypedDict, Union
 
+# Third-party imports
 from contentctl.objects.detection import Detection
 
 
 class TechniqueData(TypedDict):
     score: int
-    file_paths: List[str]
-    links: List[Dict[str, str]]
+    file_paths: list[str]
+    links: list[dict[str, str]]
 
 
 class LayerData(TypedDict):
     name: str
-    versions: Dict[str, str]
+    versions: dict[str, str]
     domain: str
     description: str
-    filters: Dict[str, List[str]]
+    filters: dict[str, list[str]]
     sorting: int
-    layout: Dict[str, Union[str, bool]]
+    layout: dict[str, Union[str, bool]]
     hideDisabled: bool
-    techniques: List[Dict[str, Any]]
-    gradient: Dict[str, Union[List[str], int]]
-    legendItems: List[Dict[str, str]]
+    techniques: list[dict[str, Any]]
+    gradient: dict[str, Union[list[str], int]]
+    legendItems: list[dict[str, str]]
     showTacticRowBackground: bool
     tacticRowBackground: str
     selectTechniquesAcrossTactics: bool
     selectSubtechniquesWithParent: bool
     selectVisibleTechniques: bool
-    metadata: List[Dict[str, str]]
+    metadata: list[dict[str, str]]
 
 
 class AttackNavOutput:
@@ -44,7 +46,7 @@ class AttackNavOutput:
         self.layer_domain = layer_domain
 
     def writeObjects(
-        self, detections: List[Detection], output_path: pathlib.Path
+        self, detections: list[Detection], output_path: pathlib.Path
     ) -> None:
         """
         Generate MITRE ATT&CK Navigator layer file from detections
@@ -52,8 +54,8 @@ class AttackNavOutput:
             detections: List of Detection objects
             output_path: Path to write the layer file
         """
-        techniques: Dict[str, TechniqueData] = {}
-        tactic_coverage: Dict[str, Set[str]] = {}
+        techniques: dict[str, TechniqueData] = {}
+        tactic_coverage: dict[str, set[str]] = {}
 
         # Process each detection
         for detection in detections:

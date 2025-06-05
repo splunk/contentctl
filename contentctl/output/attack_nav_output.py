@@ -120,24 +120,21 @@ class AttackNavOutput:
                     "techniqueID": tid,
                     "score": data["score"],
                     "metadata": [
+                        {"name": "Detection", "value": name, "divider": False}
+                        for name in data["file_paths"]
+                    ]
+                    + [
                         {
-                            "name": "Detections",
-                            "value": "\n".join(
-                                [f"• {name}" for name in data["file_paths"]]
-                            ),
-                        },
-                        {"divider": True},
-                        {
-                            "name": "Links",
-                            "value": "\n".join(
-                                [
-                                    f"• [{link['label']}]({link['url']})"
-                                    for link in data["links"]
-                                ]
-                            ),
-                        },
+                            "name": "Link",
+                            "value": f"[View Detection]({link['url']})",
+                            "divider": False,
+                        }
+                        for link in data["links"]
                     ],
-                    "links": data["links"],
+                    "links": [
+                        {"label": link["label"], "url": link["url"]}
+                        for link in data["links"]
+                    ],
                 }
                 for tid, data in techniques.items()
             ],

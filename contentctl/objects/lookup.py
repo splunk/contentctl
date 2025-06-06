@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import abc
 import csv
+import datetime
 import pathlib
 import re
 from enum import StrEnum, auto
 from functools import cached_property
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional, Self
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
 from pydantic import (
+    BeforeValidator,
     Field,
     FilePath,
+    HttpUrl,
     NonNegativeInt,
     TypeAdapter,
     ValidationInfo,
@@ -24,6 +27,9 @@ if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
     from contentctl.objects.config import validate
 
+from io import StringIO, TextIOBase
+
+from contentctl.objects.enums import ContentStatus
 from contentctl.objects.security_content_object import SecurityContentObject
 
 # This section is used to ignore lookups that are NOT  shipped with ESCU app but are used in the detections. Adding exclusions here will so that contentctl builds will not fail.
@@ -69,7 +75,19 @@ class Lookup_Type(StrEnum):
 
 # TODO (#220): Split Lookup into 2 classes
 class Lookup(SecurityContentObject, abc.ABC):
-    default_match: Optional[bool] = None
+    # We need to make sure that this is converted to a string because we widely
+    # use the string "False" in our lookup content.  However, PyYAML reads this
+    # as a BOOL and this causes parsing to fail. As such, we will always
+    # convert this to a string if it is passed as a bool
+    default_match: Annotated[
+        str, BeforeValidator(lambda dm: str(dm).lower() if isinstance(dm, bool) else dm)
+    ] = Field(
+        default="",
+        description="This field is given a default value of ''"
+        "because it is the default value specified in the transforms.conf "
+        "docs. Giving it a type of str rather than str | None simplifies "
+        "the typing for the field.",
+    )
     # Per the documentation for transforms.conf, EXACT should not be specified in this list,
     # so we include only WILDCARD and CIDR
     match_type: list[Annotated[str, Field(pattern=r"(^WILDCARD|CIDR)\(.+\)$")]] = Field(
@@ -80,6 +98,16 @@ class Lookup(SecurityContentObject, abc.ABC):
         default=None
     )
     case_sensitive_match: None | bool = Field(default=None)
+    status: ContentStatus = ContentStatus.production
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.production])
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("lookups")
 
     @model_serializer
     def serialize_model(self):
@@ -88,7 +116,7 @@ class Lookup(SecurityContentObject, abc.ABC):
 
         # All fields custom to this model
         model = {
-            "default_match": "true" if self.default_match is True else "false",
+            "default_match": self.default_match,
             "match_type": self.match_type_to_conf_format,
             "min_matches": self.min_matches,
             "max_matches": self.max_matches,
@@ -161,6 +189,13 @@ class Lookup(SecurityContentObject, abc.ABC):
 
         return list(all_lookups)
 
+    @computed_field
+    @cached_property
+    def researchSiteLink(self) -> HttpUrl:
+        raise NotImplementedError(
+            f"researchSiteLink has not been implemented for [{type(self).__name__} - {self.name}]"
+        )
+
 
 class FileBackedLookup(Lookup, abc.ABC):
     # For purposes of the disciminated union, the child classes which
@@ -193,6 +228,10 @@ class FileBackedLookup(Lookup, abc.ABC):
         """
         pass
 
+    @property
+    def content_file_handle(self) -> TextIOBase:
+        return open(self.filename, "r")
+
 
 class CSVLookup(FileBackedLookup):
     lookup_type: Literal[Lookup_Type.csv]
@@ -218,7 +257,7 @@ class CSVLookup(FileBackedLookup):
         """
         if self.file_path is None:
             raise ValueError(
-                f"Cannot get the filename of the lookup {self.lookup_type} because the YML file_path attribute is None"
+                f"Cannot get the filename of the lookup {self.lookup_type} for content [{self.name}] because the YML file_path attribute is None"
             )  # type: ignore
 
         csv_file = self.file_path.parent / f"{self.file_path.stem}.{self.lookup_type}"  # type: ignore
@@ -232,8 +271,9 @@ class CSVLookup(FileBackedLookup):
         This function computes the filenames to write into the app itself.  This is abstract because
         CSV and MLmodel requirements are different.
         """
+
         return pathlib.Path(
-            f"{self.filename.stem}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}"
+            f"{self.name}_{self.date.year}{self.date.month:02}{self.date.day:02}.{self.lookup_type}"
         )
 
     @model_validator(mode="after")
@@ -243,9 +283,11 @@ class CSVLookup(FileBackedLookup):
         # If a row has MORE fields than fieldnames, they will be dumped in a list under the key 'restkey' - this should throw an Exception
         # If a row has LESS fields than fieldnames, then the field should contain None by default. This should also throw an exception.
         csv_errors: list[str] = []
-        with open(self.filename, "r") as csv_fp:
-            RESTKEY = "extra_fields_in_a_row"
-            csv_dict = csv.DictReader(csv_fp, restkey=RESTKEY)
+
+        RESTKEY = "extra_fields_in_a_row"
+        with self.content_file_handle as handle:
+            csv_dict = csv.DictReader(handle, restkey=RESTKEY)
+
             if csv_dict.fieldnames is None:
                 raise ValueError(
                     f"Error validating the CSV referenced by the lookup: {self.filename}:\n\t"
@@ -276,6 +318,28 @@ class CSVLookup(FileBackedLookup):
             )
 
         return self
+
+
+class RuntimeCSV(CSVLookup):
+    contents: str = Field(
+        description="This field contains the contents that would usually "
+        "be written to a CSV file. However, we store these in memory, "
+        "rather than on disk, to avoid needing to create a CSV file "
+        "before copying it into the app build."
+    )
+    # Since these are defined at runtime, they always have
+    # a date of today
+    date: datetime.date = Field(default=datetime.date.today())
+
+    @model_validator(mode="after")
+    def ensure_lookup_file_exists(self) -> Self:
+        # Because the contents of this file are created at runtime, it does
+        # not actually need to exist. As such, we do not validate it
+        return self
+
+    @property
+    def content_file_handle(self) -> TextIOBase:
+        return StringIO(self.contents)
 
 
 class KVStoreLookup(Lookup):
@@ -351,6 +415,11 @@ class MlModel(FileBackedLookup):
         return pathlib.Path(f"{self.filename.stem}.{self.lookup_type}")
 
 
-LookupAdapter = TypeAdapter(
+LookupAdapter: TypeAdapter[CSVLookup | KVStoreLookup | MlModel] = TypeAdapter(
     Annotated[CSVLookup | KVStoreLookup | MlModel, Field(discriminator="lookup_type")]
 )
+
+# The following are defined as they are used by the Director.  For normal SecurityContentObject
+# types, they already exist. But do not for the TypeAdapter
+setattr(LookupAdapter, "containing_folder", lambda: "lookups")
+setattr(LookupAdapter, "__name__", "Lookup")

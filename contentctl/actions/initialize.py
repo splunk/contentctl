@@ -1,7 +1,21 @@
-import shutil
 import os
 import pathlib
+import shutil
+
+from contentctl.objects.baseline import Baseline
 from contentctl.objects.config import test
+from contentctl.objects.dashboard import Dashboard
+from contentctl.objects.data_source import DataSource
+from contentctl.objects.deployment import Deployment
+from contentctl.objects.detection import Detection
+from contentctl.objects.investigation import Investigation
+from contentctl.objects.lookup import Lookup
+from contentctl.objects.macro import Macro
+from contentctl.objects.playbook import Playbook
+from contentctl.objects.removed_security_content_object import (
+    RemovedSecurityContentObject,
+)
+from contentctl.objects.story import Story
 from contentctl.output.yml_writer import YmlWriter
 
 
@@ -13,21 +27,33 @@ class Initialize:
 
         YmlWriter.writeYmlFile(str(config.path / "contentctl.yml"), config.model_dump())
 
-        # Create the following empty directories:
+        # Create the following empty directories. Each type of content,
+        # even if you don't have any of that type of content, need its own directory to exist.
+        for contentType in [
+            Detection,
+            Playbook,
+            Story,
+            DataSource,
+            Investigation,
+            Macro,
+            Lookup,
+            Dashboard,
+            Baseline,
+            Deployment,
+            RemovedSecurityContentObject,
+        ]:
+            contentType.containing_folder().mkdir(exist_ok=False, parents=True)
+
+        # Some other directories that do not map directly to a piece of content also must exist
+
         for emptyDir in [
-            "lookups",
-            "baselines",
-            "data_sources",
             "docs",
             "reporting",
-            "investigations",
             "detections/application",
             "detections/cloud",
             "detections/endpoint",
             "detections/network",
             "detections/web",
-            "macros",
-            "stories",
         ]:
             # Throw an error if this directory already exists
             (config.path / emptyDir).mkdir(exist_ok=False, parents=True)
@@ -60,7 +86,7 @@ class Initialize:
             source_directory = pathlib.Path(os.path.dirname(__file__)) / templateDir
             target_directory = config.path / targetDir
             # Throw an exception if the target exists
-            shutil.copytree(source_directory, target_directory, dirs_exist_ok=False)
+            shutil.copytree(source_directory, target_directory, dirs_exist_ok=True)
 
         # Create a README.md file.  Note that this is the README.md for the repository, not the
         # one which will actually be packaged into the app. That is located in the app_template folder.

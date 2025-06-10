@@ -2,7 +2,7 @@
 import json
 import pathlib
 from datetime import datetime
-from typing import Any, TypedDict, Union
+from typing import Any, TypedDict
 
 # Third-party imports
 from contentctl.objects.detection import Detection
@@ -21,10 +21,10 @@ class LayerData(TypedDict):
     description: str
     filters: dict[str, list[str]]
     sorting: int
-    layout: dict[str, Union[str, bool]]
+    layout: dict[str, str | bool]
     hideDisabled: bool
     techniques: list[dict[str, Any]]
-    gradient: dict[str, Union[list[str], int]]
+    gradient: dict[str, list[str] | int]
     legendItems: list[dict[str, str]]
     showTacticRowBackground: bool
     tacticRowBackground: str

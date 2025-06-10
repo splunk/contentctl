@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import field
 from pathlib import Path
-from typing import Any, Dict, List, TypedDict, cast
+from typing import Any, TypedDict, cast
 
 from attackcti import attack_client  # type: ignore[reportMissingTypeStubs]
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ class AttackPattern(TypedDict):
     id: str
     technique_id: str
     technique: str
-    tactic: List[str]
+    tactic: list[str]
 
 
 class IntrusionSet(TypedDict):
@@ -38,7 +38,7 @@ class Relationship(TypedDict):
 
 
 class AttackEnrichment(BaseModel):
-    data: Dict[str, MitreAttackEnrichment] = field(default_factory=dict)
+    data: dict[str, MitreAttackEnrichment] = field(default_factory=dict)
     use_enrichment: bool = True
 
     @staticmethod
@@ -64,7 +64,7 @@ class AttackEnrichment(BaseModel):
             )
 
     def addMitreIDViaGroupNames(
-        self, technique: Dict[str, Any], tactics: List[str], groupNames: List[str]
+        self, technique: dict[str, Any], tactics: list[str], groupNames: list[str]
     ) -> None:
         technique_id = technique["technique_id"]
         technique_obj = technique["technique"]
@@ -84,15 +84,15 @@ class AttackEnrichment(BaseModel):
 
     def addMitreIDViaGroupObjects(
         self,
-        technique: Dict[str, Any],
-        tactics: List[MitreTactics],
-        groupDicts: List[Dict[str, Any]],
+        technique: dict[str, Any],
+        tactics: list[MitreTactics],
+        groupDicts: list[dict[str, Any]],
     ) -> None:
         technique_id = technique["technique_id"]
         technique_obj = technique["technique"]
         tactics.sort()
 
-        groupNames: List[str] = sorted([group["group"] for group in groupDicts])
+        groupNames: list[str] = sorted([group["group"] for group in groupDicts])
 
         if technique_id in self.data:
             raise Exception(f"Error, trying to redefine MITRE ID '{technique_id}'")
@@ -109,8 +109,8 @@ class AttackEnrichment(BaseModel):
 
     def get_attack_lookup(
         self, input_path: Path, enrichments: bool = False
-    ) -> Dict[str, MitreAttackEnrichment]:
-        attack_lookup: Dict[str, MitreAttackEnrichment] = {}
+    ) -> dict[str, MitreAttackEnrichment]:
+        attack_lookup: dict[str, MitreAttackEnrichment] = {}
         if not enrichments:
             return attack_lookup
 
@@ -141,17 +141,17 @@ class AttackEnrichment(BaseModel):
             )
 
             all_enterprise_techniques = cast(
-                List[AttackPattern], lift.get_enterprise_techniques(stix_format=False)
+                list[AttackPattern], lift.get_enterprise_techniques(stix_format=False)
             )
             enterprise_relationships = cast(
-                List[Relationship], lift.get_enterprise_relationships(stix_format=False)
+                list[Relationship], lift.get_enterprise_relationships(stix_format=False)
             )
             enterprise_groups = cast(
-                List[IntrusionSet], lift.get_enterprise_groups(stix_format=False)
+                list[IntrusionSet], lift.get_enterprise_groups(stix_format=False)
             )
 
             for technique in all_enterprise_techniques:
-                apt_groups: List[Dict[str, Any]] = []
+                apt_groups: list[dict[str, Any]] = []
                 for relationship in enterprise_relationships:
                     if relationship["target_object"] == technique[
                         "id"
@@ -160,7 +160,7 @@ class AttackEnrichment(BaseModel):
                             if relationship["source_object"] == group["id"]:
                                 apt_groups.append(dict(group))
 
-                tactics: List[MitreTactics] = []
+                tactics: list[MitreTactics] = []
                 if "tactic" in technique:
                     for tactic in technique["tactic"]:
                         tactics.append(

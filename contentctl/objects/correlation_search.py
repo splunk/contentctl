@@ -36,7 +36,7 @@ from contentctl.objects.risk_event import RiskEvent
 # Suppress logging by default; enable for local testing
 ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
-LOG_PATH = "correlation_search.log"
+LOG_PATH = "correlation_search_test2.log"
 
 
 class SavedSearchKeys(StrEnum):
@@ -1013,6 +1013,20 @@ class CorrelationSearch(BaseModel):
                         self.logger.info(f"Waiting {wait_time}s before retry {current_turn}...")
 
                         wait_time = min(wait_time * 2, max_wait)
+                    
+                        # Rerun the search job
+                        job = self.dispatch()
+                        self.logger.info(f"Force running detection '{self.name}' with job ID: {job.sid}")
+
+                        time_to_execute = 0
+
+                        # Check if the job is finished
+                        while not job.is_done():
+                            self.logger.info(f"Job {job.sid} is still running...")
+                            time.sleep(1)
+                            time_to_execute += 1
+
+                        self.logger.info(f"Job {job.sid} has finished running in {time_to_execute} seconds.")
 
                     # reset the result to None on each loop iteration
                     result = None

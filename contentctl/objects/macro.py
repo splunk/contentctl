@@ -26,6 +26,7 @@ MACROS_TO_IGNORE.add(
 )  # SA-ThreatIntelligence, part of Enterprise Security
 MACROS_TO_IGNORE.add("cim_corporate_web_domain_search")  # Part of CIM/Splunk_SA_CIM
 # MACROS_TO_IGNORE.add("prohibited_processes")
+MACROS_TO_IGNORE.add("globedistance")  # Part of SA-Utils, part of Enterprise Security
 
 
 class Macro(SecurityContentObject):

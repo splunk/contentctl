@@ -88,7 +88,7 @@ class AttackNavOutput:
         layer: LayerData = {
             "name": self.layer_name,
             "versions": {
-                "attack": "14",  # Update as needed
+                "attack": "17",  # Update as needed
                 "navigator": "5.1.0",
                 "layer": "4.5",
             },

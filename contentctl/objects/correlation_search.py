@@ -36,7 +36,7 @@ from contentctl.objects.risk_event import RiskEvent
 # Suppress logging by default; enable for local testing
 ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
-LOG_PATH = "correlation_search_test2.log"
+LOG_PATH = "correlation_search.log"
 
 
 class SavedSearchKeys(StrEnum):
@@ -904,6 +904,58 @@ class CorrelationSearch(BaseModel):
                 if isinstance(event, NotableEvent):
                     return True
         return False
+    
+    def validate_risk_notable_events(self) -> IntegrationTestResult | None:
+        try:
+            # Validate risk events
+            if self.has_risk_analysis_action:
+                self.logger.debug("Checking for matching risk events")
+                if self.risk_event_exists():
+                    # TODO (PEX-435): should this in the retry loop? or outside it?
+                    #   -> I've observed there being a missing risk event (15/16) on
+                    #   the first few tries, so this does help us check for true
+                    #   positives; BUT, if we have lots of failing detections, this
+                    #   will definitely add to the total wait time
+                    #   -> certain types of failures (e.g. risk message, or any value
+                    #       checking) should fail testing automatically
+                    #   -> other types, like those based on counts of risk events,
+                    #       should happen should fail more slowly as more events may be
+                    #       produced
+                    self.validate_risk_events()
+                else:
+                    raise ValidationFailed(
+                        f"TEST FAILED: No matching risk event created for: {self.name}"
+                    )
+            else:
+                self.logger.debug(
+                    f"No risk action defined for '{self.name}'"
+                )
+
+            # Validate notable events
+            if self.has_notable_action:
+                self.logger.debug("Checking for matching notable events")
+                # NOTE: because we check this last, if both fail, the error message about notables will
+                # always be the last to be added and thus the one surfaced to the user
+                if self.notable_event_exists():
+                    # TODO (PEX-435): should this in the retry loop? or outside it?
+                    self.validate_notable_events()
+                    pass
+                else:
+                    raise ValidationFailed(
+                        f"TEST FAILED: No matching notable event created for: {self.name}"
+                    )
+            else:
+                self.logger.debug(
+                    f"No notable action defined for '{self.name}'"
+                )
+
+            return None
+        except ValidationFailed as e:
+            self.logger.error(f"Risk/notable validation failed: {e}")
+            return IntegrationTestResult(
+                status=TestResultStatus.FAIL,
+                message=f"TEST FAILED: {e}"
+            )
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
     #   it for completion, but that seems more tricky
@@ -934,10 +986,6 @@ class CorrelationSearch(BaseModel):
 
         # keep track of time slept and number of attempts for exponential backoff (base 2)
         elapsed_sleep_time = 0
-        num_tries = 0
-
-        # set the initial base sleep time
-        time_to_sleep = TimeoutConfig.BASE_SLEEP
 
         try:
             # first make sure the indexes are currently empty and the detection is starting from a disabled state
@@ -970,115 +1018,19 @@ class CorrelationSearch(BaseModel):
                 self.update_pbar(TestingStates.FORCE_RUN)
                 self.force_run()
 
-                # # loop so long as the elapsed time is less than max_sleep
-                # while elapsed_sleep_time < max_sleep:
-                #     # sleep so the detection job can finish
-                #     self.logger.info(
-                #         f"Waiting {time_to_sleep} for {self.name} so it can finish"
-                #     )
-                #     self.update_pbar(TestingStates.VALIDATING)
-                #     # time.sleep(time_to_sleep)
-                #     self.logger.info(
-                #         f"Skipping sleeping time for testing purposes"
-                #     )
-                #     elapsed_sleep_time += time_to_sleep
-
-                #     self.logger.info(
-                #         f"Validating detection (attempt #{num_tries + 1} - {elapsed_sleep_time} seconds elapsed of "
-                #         f"{max_sleep} max)"
-                #     )
-
-                #     # reset the result to None on each loop iteration
-                #     result = None
-
-                max_retries = 10
-                initial_wait = 2
-                max_wait = 60
-                max_total_wait = 300
+                max_retries = 3
 
                 current_turn = 1
-                wait_time = initial_wait
-                total_waited = 0
 
-                while current_turn <= max_retries and total_waited < max_total_wait:
+                while current_turn <= max_retries:
                     current_turn += 1
 
                     self.logger.info(
                         f"Skipping sleeping time for testing purposes"
                     )
 
-                    if current_turn > 3:
-                        time.sleep(wait_time)
-                        total_waited += wait_time
-                        self.logger.info(f"Waiting {wait_time}s before retry {current_turn}...")
-
-                        wait_time = min(wait_time * 2, max_wait)
-                    
-                        # Rerun the search job
-                        job = self.dispatch()
-                        self.logger.info(f"Force running detection '{self.name}' with job ID: {job.sid}")
-
-                        time_to_execute = 0
-
-                        # Check if the job is finished
-                        while not job.is_done():
-                            self.logger.info(f"Job {job.sid} is still running...")
-                            time.sleep(1)
-                            time_to_execute += 1
-
-                        self.logger.info(f"Job {job.sid} has finished running in {time_to_execute} seconds.")
-
                     # reset the result to None on each loop iteration
-                    result = None
-                    try:
-                        # Validate risk events
-                        if self.has_risk_analysis_action:
-                            self.logger.debug("Checking for matching risk events")
-                            if self.risk_event_exists():
-                                # TODO (PEX-435): should this in the retry loop? or outside it?
-                                #   -> I've observed there being a missing risk event (15/16) on
-                                #   the first few tries, so this does help us check for true
-                                #   positives; BUT, if we have lots of failing detections, this
-                                #   will definitely add to the total wait time
-                                #   -> certain types of failures (e.g. risk message, or any value
-                                #       checking) should fail testing automatically
-                                #   -> other types, like those based on counts of risk events,
-                                #       should happen should fail more slowly as more events may be
-                                #       produced
-                                self.validate_risk_events()
-                            else:
-                                raise ValidationFailed(
-                                    f"TEST FAILED: No matching risk event created for: {self.name}"
-                                )
-                        else:
-                            self.logger.debug(
-                                f"No risk action defined for '{self.name}'"
-                            )
-
-                        # Validate notable events
-                        if self.has_notable_action:
-                            self.logger.debug("Checking for matching notable events")
-                            # NOTE: because we check this last, if both fail, the error message about notables will
-                            # always be the last to be added and thus the one surfaced to the user
-                            if self.notable_event_exists():
-                                # TODO (PEX-435): should this in the retry loop? or outside it?
-                                self.validate_notable_events()
-                                pass
-                            else:
-                                raise ValidationFailed(
-                                    f"TEST FAILED: No matching notable event created for: {self.name}"
-                                )
-                        else:
-                            self.logger.debug(
-                                f"No notable action defined for '{self.name}'"
-                            )
-                    except ValidationFailed as e:
-                        self.logger.error(f"Risk/notable validation failed: {e}")
-                        result = IntegrationTestResult(
-                            status=TestResultStatus.FAIL,
-                            message=f"TEST FAILED: {e}",
-                            wait_duration=elapsed_sleep_time,
-                        )
+                    result = self.validate_risk_notable_events()
 
                     # if result is still None, then all checks passed and we can break the loop
                     if result is None:
@@ -1088,16 +1040,37 @@ class CorrelationSearch(BaseModel):
                             wait_duration=elapsed_sleep_time,
                         )
                         break
+            
+            if result != None and result.status == TestResultStatus.FAIL:
+                elapsed = 0
 
-                    # # increment number of attempts to validate detection
-                    # num_tries += 1
+                for i in range(10):
+                    time.sleep(10)
+                    start_time = time.time()
 
-                    # # compute the next time to sleep for
-                    # time_to_sleep = 2**num_tries
+                    job = self.dispatch()
+                    time_to_execute = 0
+                    # Check if the job is finished
+                    while not job.is_done():
+                        self.logger.info(f"Job {job.sid} is still running...")
+                        time.sleep(1)
+                        time_to_execute += 1
+                    self.logger.info(f"Job {job.sid} has finished running in {time_to_execute} seconds.")
 
-                    # # if the computed time to sleep will exceed max_sleep, adjust appropriately
-                    # if (elapsed_sleep_time + time_to_sleep) > max_sleep:
-                    #     time_to_sleep = max_sleep - elapsed_sleep_time
+                    result = self.validate_risk_notable_events()
+                    end_time = time.time()
+
+                    elapsed = elapsed + end_time - start_time + 10
+
+                    if result is None:
+                        result = IntegrationTestResult(
+                            status=TestResultStatus.PASS,
+                            message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}"
+                        )
+                        self.logger.info(
+                            f"Test passed in {i}th retry after {elapsed} seconds"
+                        )
+                        break
 
             # TODO (PEX-436): should cleanup be in a finally block so it runs even on exception?
             # cleanup the created events, disable the detection and return the result

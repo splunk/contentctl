@@ -1068,7 +1068,7 @@ class CorrelationSearch(BaseModel):
                             message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}"
                         )
                         self.logger.info(
-                            f"Test passed in {i}th retry after {elapsed} seconds"
+                            f"Test passed in {i}th retry after {elapsed} seconds for: {self.name}"
                         )
                         break
 

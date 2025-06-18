@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from pydantic import Field
+from typing import Any
 
-from contentctl.objects.test_attack_data import TestAttackData
-from contentctl.objects.unit_test_result import UnitTestResult
+from pydantic import Field, model_serializer
+
 from contentctl.objects.base_test import BaseTest, TestType
 from contentctl.objects.base_test_result import TestResultStatus
+from contentctl.objects.test_attack_data import TestAttackData
+from contentctl.objects.unit_test_result import UnitTestResult
 
 
 class UnitTest(BaseTest):
@@ -32,3 +34,13 @@ class UnitTest(BaseTest):
         self.result = UnitTestResult(  # type: ignore
             message=message, status=TestResultStatus.SKIP
         )
+
+    @model_serializer
+    def serialize_model(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "test_type": self.test_type.value,
+            "attack_data": [
+                attack_data.model_dump() for attack_data in self.attack_data
+            ],
+        }

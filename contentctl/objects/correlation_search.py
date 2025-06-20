@@ -1025,10 +1025,6 @@ class CorrelationSearch(BaseModel):
                 while current_turn <= max_retries:
                     current_turn += 1
 
-                    self.logger.info(
-                        f"Skipping sleeping time for testing purposes"
-                    )
-
                     # reset the result to None on each loop iteration
                     result = self.validate_risk_notable_events()
 
@@ -1041,7 +1037,7 @@ class CorrelationSearch(BaseModel):
                         )
                         break
             
-            if result != None and result.status == TestResultStatus.FAIL:
+            if result is not None and result.status == TestResultStatus.FAIL:
                 elapsed = 0
 
                 for i in range(10):

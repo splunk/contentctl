@@ -447,7 +447,9 @@ class CorrelationSearch(BaseModel):
         try:
             return self.saved_search.dispatch(trigger_actions=True)  # type: ignore
         except HTTPError as e:
-            raise ServerError(f"HTTP error encountered while dispatching detection: {e}")
+            raise ServerError(
+                f"HTTP error encountered while dispatching detection: {e}"
+            )
 
     def disable(self, refresh: bool = True) -> None:
         """Disables the SavedSearch
@@ -509,7 +511,9 @@ class CorrelationSearch(BaseModel):
         if not self.enabled:
             self.enable(refresh=False)
             job = self.dispatch()
-            self.logger.info(f"Force running detection '{self.name}' with job ID: {job.sid}")
+            self.logger.info(
+                f"Force running detection '{self.name}' with job ID: {job.sid}"
+            )
 
             time_to_execute = 0
 
@@ -519,7 +523,9 @@ class CorrelationSearch(BaseModel):
                 time.sleep(1)
                 time_to_execute += 1
 
-            self.logger.info(f"Job {job.sid} has finished running in {time_to_execute} seconds.")
+            self.logger.info(
+                f"Job {job.sid} has finished running in {time_to_execute} seconds."
+            )
         else:
             self.logger.warning(f"Detection '{self.name}' was already enabled")
 
@@ -904,7 +910,7 @@ class CorrelationSearch(BaseModel):
                 if isinstance(event, NotableEvent):
                     return True
         return False
-    
+
     def validate_risk_notable_events(self) -> IntegrationTestResult | None:
         try:
             # Validate risk events
@@ -927,9 +933,7 @@ class CorrelationSearch(BaseModel):
                         f"TEST FAILED: No matching risk event created for: {self.name}"
                     )
             else:
-                self.logger.debug(
-                    f"No risk action defined for '{self.name}'"
-                )
+                self.logger.debug(f"No risk action defined for '{self.name}'")
 
             # Validate notable events
             if self.has_notable_action:
@@ -945,16 +949,13 @@ class CorrelationSearch(BaseModel):
                         f"TEST FAILED: No matching notable event created for: {self.name}"
                     )
             else:
-                self.logger.debug(
-                    f"No notable action defined for '{self.name}'"
-                )
+                self.logger.debug(f"No notable action defined for '{self.name}'")
 
             return None
         except ValidationFailed as e:
             self.logger.error(f"Risk/notable validation failed: {e}")
             return IntegrationTestResult(
-                status=TestResultStatus.FAIL,
-                message=f"TEST FAILED: {e}"
+                status=TestResultStatus.FAIL, message=f"TEST FAILED: {e}"
             )
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
@@ -1036,7 +1037,7 @@ class CorrelationSearch(BaseModel):
                             wait_duration=elapsed_sleep_time,
                         )
                         break
-            
+
             if result is not None and result.status == TestResultStatus.FAIL:
                 elapsed = 0
 
@@ -1051,7 +1052,9 @@ class CorrelationSearch(BaseModel):
                         self.logger.info(f"Job {job.sid} is still running...")
                         time.sleep(1)
                         time_to_execute += 1
-                    self.logger.info(f"Job {job.sid} has finished running in {time_to_execute} seconds.")
+                    self.logger.info(
+                        f"Job {job.sid} has finished running in {time_to_execute} seconds."
+                    )
 
                     result = self.validate_risk_notable_events()
                     end_time = time.time()
@@ -1061,7 +1064,7 @@ class CorrelationSearch(BaseModel):
                     if result is None:
                         result = IntegrationTestResult(
                             status=TestResultStatus.PASS,
-                            message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}"
+                            message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}",
                         )
                         self.logger.info(
                             f"Test passed in {i}th retry after {elapsed} seconds for: {self.name}"

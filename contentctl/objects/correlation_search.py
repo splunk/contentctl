@@ -445,7 +445,19 @@ class CorrelationSearch(BaseModel):
         """
         self.logger.debug(f"Dispatching {self.name}...")
         try:
-            return self.saved_search.dispatch(trigger_actions=True)  # type: ignore
+            job = self.saved_search.dispatch(trigger_actions=True)
+
+            time_to_execute = 0
+            # Check if the job is finished
+            while not job.is_done():
+                self.logger.info(f"Job {job.sid} is still running...")
+                time.sleep(1)
+                time_to_execute += 1
+            self.logger.info(
+                f"Job {job.sid} has finished running in {time_to_execute} seconds."
+            )
+
+            return job  # type: ignore
         except HTTPError as e:
             raise ServerError(
                 f"HTTP error encountered while dispatching detection: {e}"
@@ -512,19 +524,7 @@ class CorrelationSearch(BaseModel):
             self.enable(refresh=False)
             job = self.dispatch()
             self.logger.info(
-                f"Force running detection '{self.name}' with job ID: {job.sid}"
-            )
-
-            time_to_execute = 0
-
-            # Check if the job is finished
-            while not job.is_done():
-                self.logger.info(f"Job {job.sid} is still running...")
-                time.sleep(1)
-                time_to_execute += 1
-
-            self.logger.info(
-                f"Job {job.sid} has finished running in {time_to_execute} seconds."
+                f"Finished running detection '{self.name}' with job ID: {job.sid}"
             )
         else:
             self.logger.warning(f"Detection '{self.name}' was already enabled")
@@ -1019,12 +1019,17 @@ class CorrelationSearch(BaseModel):
                 self.update_pbar(TestingStates.FORCE_RUN)
                 self.force_run()
 
-                max_retries = 3
+                max_total_wait = 150
+                wait_time = 2
+                max_wait = 30
+                time_elapsed = 0
 
-                current_turn = 1
+                while time_elapsed <= max_total_wait:
+                    if time_elapsed > 90:
+                        self.dispatch()
 
-                while current_turn <= max_retries:
-                    current_turn += 1
+                    start_time = time.time()
+                    time.sleep(wait_time)
 
                     # reset the result to None on each loop iteration
                     result = self.validate_risk_notable_events()
@@ -1038,38 +1043,9 @@ class CorrelationSearch(BaseModel):
                         )
                         break
 
-            if result is not None and result.status == TestResultStatus.FAIL:
-                elapsed = 0
-
-                for i in range(10):
-                    time.sleep(10)
-                    start_time = time.time()
-
-                    job = self.dispatch()
-                    time_to_execute = 0
-                    # Check if the job is finished
-                    while not job.is_done():
-                        self.logger.info(f"Job {job.sid} is still running...")
-                        time.sleep(1)
-                        time_to_execute += 1
-                    self.logger.info(
-                        f"Job {job.sid} has finished running in {time_to_execute} seconds."
-                    )
-
-                    result = self.validate_risk_notable_events()
                     end_time = time.time()
-
-                    elapsed = elapsed + end_time - start_time + 10
-
-                    if result is None:
-                        result = IntegrationTestResult(
-                            status=TestResultStatus.PASS,
-                            message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}",
-                        )
-                        self.logger.info(
-                            f"Test passed in {i}th retry after {elapsed} seconds for: {self.name}"
-                        )
-                        break
+                    time_elapsed += end_time - start_time
+                    wait_time = min(max_wait, wait_time * 2)
 
             # TODO (PEX-436): should cleanup be in a finally block so it runs even on exception?
             # cleanup the created events, disable the detection and return the result

@@ -69,14 +69,30 @@ class TimeoutConfig(IntEnum):
     """
 
     # base amount to sleep for before beginning exponential backoff during testing
-    BASE_SLEEP = 60
+    BASE_SLEEP = 2
 
     # NOTE: Some detections take longer to generate their risk/notables than other; testing has
-    #   shown 270s to likely be sufficient for all detections in 99% of runs; however we have
-    #   encountered a handful of transient failures in the last few months. Since our success rate
-    #   is at 100% now, we will round this to a flat 300s to accomodate these outliers.
+    #   shown 30s to likely be sufficient for all detections in 99% of runs and less than 1% of detections
+    #   would need 60s and 90s to wait for risk/notables; therefore 30s is a reasonable interval for max
+    #   wait time.
     # Max amount to wait before timing out during exponential backoff
-    MAX_SLEEP = 300
+    MAX_SLEEP = 30
+
+    # NOTE: Based on testing, 99% of detections will generate risk/notables within 30s, and the remaining 1% of
+    # detections may need up to 150s to finish; so this is a reasonable total maximum wait time
+    # Total wait time before giving up on waiting for risk/notables to be generated
+    TOTAL_MAX_WAIT = 180
+
+    # NOTE: Based on testing, there is 1% detections couldn't generate risk/notables within single dispatch, and
+    # they needed to be retried; 90s is a reasonable wait time before retrying dispatching the SavedSearch
+    # Wait time before retrying dispatching the SavedSearch
+    RETRY_DISPATCH = 90
+
+    # NOTE: Based on testing, 99% of detections will generate risk/notables within 30s, and the validation of risks
+    # and notables would take around 5 to 10 seconds; so before adding additional wait time, we let the validation
+    # process work as the default wait time until we reach the ADD_WAIT_TIME and add additional wait time
+    # Time elased before adding additional wait time
+    ADD_WAIT_TIME = 30
 
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good
@@ -441,7 +457,7 @@ class CorrelationSearch(BaseModel):
         """Dispatches the SavedSearch
 
         Dispatches the SavedSearch entity, returning a Job object representing the search job.
-        :return: a splunklib.Job object representing the search job
+        :return: a splunklib.Job object representing the search job when the SavedSearch is finished running
         """
         self.logger.debug(f"Dispatching {self.name}...")
         try:
@@ -911,7 +927,15 @@ class CorrelationSearch(BaseModel):
                     return True
         return False
 
-    def validate_risk_notable_events(self) -> IntegrationTestResult | None:
+    def validate_risk_notable_events(self) -> tuple[bool, str | None]:
+        """Validates the existence of risk and notable events
+
+        Returns a bool indicating whether validating risks and notables is successful or not,
+        and a message indicating the reason for failure (if any).
+
+        :return: True if validation passes, False if it fails; None if no message, or a string
+            message indicating the reason for failure
+        """
         try:
             # Validate risk events
             if self.has_risk_analysis_action:
@@ -951,12 +975,10 @@ class CorrelationSearch(BaseModel):
             else:
                 self.logger.debug(f"No notable action defined for '{self.name}'")
 
-            return None
+            return True, None
         except ValidationFailed as e:
             self.logger.error(f"Risk/notable validation failed: {e}")
-            return IntegrationTestResult(
-                status=TestResultStatus.FAIL, message=f"TEST FAILED: {e}"
-            )
+            return False, str(e)
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
     #   it for completion, but that seems more tricky
@@ -1019,33 +1041,45 @@ class CorrelationSearch(BaseModel):
                 self.update_pbar(TestingStates.FORCE_RUN)
                 self.force_run()
 
-                max_total_wait = 150
-                wait_time = 2
-                max_wait = 30
+                max_total_wait = TimeoutConfig.TOTAL_MAX_WAIT
+                wait_time = TimeoutConfig.BASE_SLEEP
+                max_wait = TimeoutConfig.MAX_SLEEP
                 time_elapsed = 0
 
                 while time_elapsed <= max_total_wait:
-                    if time_elapsed > 90:
+                    # wait at least 90 seconds to rerun the SavedSearch
+                    if time_elapsed > TimeoutConfig.RETRY_DISPATCH:
                         self.dispatch()
 
                     start_time = time.time()
-                    time.sleep(wait_time)
+
+                    # wait at least 30 seconds before adding to the wait time
+                    if time_elapsed > TimeoutConfig.ADD_WAIT_TIME:
+                        time.sleep(wait_time)
+                        elapsed_sleep_time += wait_time
+                        wait_time = min(max_wait, wait_time * 2)
 
                     # reset the result to None on each loop iteration
-                    result = self.validate_risk_notable_events()
+                    result = None
 
-                    # if result is still None, then all checks passed and we can break the loop
-                    if result is None:
+                    validate_pass, error = self.validate_risk_notable_events()
+
+                    # if result is True, then all checks passed and we can break the loop
+                    if validate_pass:
                         result = IntegrationTestResult(
                             status=TestResultStatus.PASS,
                             message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}",
                             wait_duration=elapsed_sleep_time,
                         )
                         break
+                    else:
+                        result = IntegrationTestResult(
+                            status=TestResultStatus.FAIL,
+                            message=f"TEST FAILED: {error}",
+                        )
 
                     end_time = time.time()
                     time_elapsed += end_time - start_time
-                    wait_time = min(max_wait, wait_time * 2)
 
             # TODO (PEX-436): should cleanup be in a finally block so it runs even on exception?
             # cleanup the created events, disable the detection and return the result

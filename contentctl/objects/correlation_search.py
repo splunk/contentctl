@@ -218,6 +218,9 @@ class CorrelationSearch(BaseModel):
     # cleanup of this index
     test_index: str | None = Field(default=None, min_length=1)
 
+    # The search ID of the last dispatched search; this is used to query for risk/notable events
+    sid: str | None = Field(default=None)
+
     # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
     # to conflict w/ tqdm)
     logger: logging.Logger = Field(
@@ -473,6 +476,8 @@ class CorrelationSearch(BaseModel):
                 f"Job {job.sid} has finished running in {time_to_execute} seconds."
             )
 
+            self.sid = job.sid
+
             return job  # type: ignore
         except HTTPError as e:
             raise ServerError(
@@ -581,10 +586,15 @@ class CorrelationSearch(BaseModel):
 
         # TODO (#248): Refactor risk/notable querying to pin to a single savedsearch ID
         # Search for all risk events from a single scheduled search (indicated by orig_sid)
-        query = (
-            f'search index=risk search_name="{self.name}" [search index=risk search '
-            f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
-        )
+        if self.sid is None:
+            # query for validating detection is starting from a disabled state
+            query = (
+                f'search index=risk search_name="{self.name}" [search index=risk search '
+                f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
+            )
+        else:
+            # query after the detection has been enabled and dispatched
+            query = f'search index=risk search_name="{self.name}" orig_sid="{self.sid}" | tojson'
         result_iterator = self._search(query)
 
         # Iterate over the events, storing them in a list and checking for any errors
@@ -657,10 +667,15 @@ class CorrelationSearch(BaseModel):
             return self._notable_events
 
         # Search for all notable events from a single scheduled search (indicated by orig_sid)
-        query = (
-            f'search index=notable search_name="{self.name}" [search index=notable search '
-            f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
-        )
+        if self.sid is None:
+            # query for validating detection is starting from a disabled state
+            query = (
+                f'search index=notable search_name="{self.name}" [search index=notable search '
+                f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
+            )
+        else:
+            # query after the detection has been enabled and dispatched
+            query = f'search index=notable search_name="{self.name}" orig_sid="{self.sid}" | tojson'
         result_iterator = self._search(query)
 
         # Iterate over the events, storing them in a list and checking for any errors

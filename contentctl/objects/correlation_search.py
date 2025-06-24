@@ -720,7 +720,7 @@ class CorrelationSearch(BaseModel):
             )
             return self._risk_dm_events
 
-        # Search for all risk data model events from a single scheduled search (indicated by
+        # Search for all risk data model events from a single search (indicated by
         # orig_sid)
         if self.sid is None:
             # query for validating detection is starting from a disabled state

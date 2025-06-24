@@ -556,8 +556,7 @@ class CorrelationSearch(BaseModel):
             )
             return self._risk_events
 
-        # TODO (#248): Refactor risk/notable querying to pin to a single savedsearch ID
-        # Search for all risk events from a single scheduled search (indicated by orig_sid)
+        # Search for all risk events from a single search (indicated by orig_sid)
         if self.sid is None:
             # query for validating detection is starting from a disabled state
             query = (
@@ -638,7 +637,7 @@ class CorrelationSearch(BaseModel):
             )
             return self._notable_events
 
-        # Search for all notable events from a single scheduled search (indicated by orig_sid)
+        # Search for all notable events from a single search (indicated by orig_sid)
         if self.sid is None:
             # query for validating detection is starting from a disabled state
             query = (
@@ -721,14 +720,20 @@ class CorrelationSearch(BaseModel):
             )
             return self._risk_dm_events
 
-        # TODO (#248): Refactor risk/notable querying to pin to a single savedsearch ID
         # Search for all risk data model events from a single scheduled search (indicated by
         # orig_sid)
-        query = (
-            f'datamodel Risk All_Risk flat | search search_name="{self.name}" [datamodel Risk '
-            f'All_Risk flat | search search_name="{self.name}" | tail 1 | fields orig_sid] '
-            "| tojson"
-        )
+        if self.sid is None:
+            # query for validating detection is starting from a disabled state
+            query = (
+                f'datamodel Risk All_Risk flat | search search_name="{self.name}" '
+                f'[search datamodel Risk All_Risk flat | search search_name="{self.name}" '
+                "| tail 1 | fields orig_sid] | tojson"
+            )
+        else:
+            query = (
+                f'datamodel Risk All_Risk flat | search search_name="{self.name}" orig_sid="{self.sid}" '
+                "| tojson"
+            )
         result_iterator = self._search(query)
 
         # Iterate over the events, storing them in a list and checking for any errors

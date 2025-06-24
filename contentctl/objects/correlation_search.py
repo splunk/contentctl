@@ -68,25 +68,22 @@ class TimeoutConfig(IntEnum):
     Configuration values for the exponential backoff timer
     """
 
+    # NOTE: Some detections take longer to generate their risk/notables than other; testing has
+    #   shown that in a single run, 99% detections could generate risk/notables within 30s and less than 1%
+    #   detections (20 to 30 detections) would need 60 to 90s to wait for risk/notables.
+
     # base amount to sleep for before beginning exponential backoff during testing
     BASE_SLEEP = 2
 
-    # NOTE: Some detections take longer to generate their risk/notables than other; testing has
-    #   shown 30s to likely be sufficient for all detections in 99% of runs and less than 1% of detections
-    #   would need 60s and 90s to wait for risk/notables; therefore 30s is a reasonable interval for max
-    #   wait time.
-    # Max amount to wait before timing out during exponential backoff
-    MAX_SLEEP = 30
+    # Max amount to wait before timing out during exponential backoff in each iteration
+    MAX_SLEEP_PER_TRY = 30
 
-    # NOTE: Based on testing, there is 1% detections couldn't generate risk/notables within single dispatch, and
+    # NOTE: Based on testing, there are 45 detections couldn't generate risk/notables within single dispatch, and
     # they needed to be retried; 90s is a reasonable wait time before retrying dispatching the SavedSearch
     # Wait time before retrying dispatching the SavedSearch
     RETRY_DISPATCH = 90
 
-    # NOTE: Based on testing, 99% of detections will generate risk/notables within 30s, and the validation of risks
-    # and notables would take around 5 to 10 seconds; so before adding additional wait time, we let the validation
-    # process work as the default wait time until we reach the ADD_WAIT_TIME and add additional wait time
-    # Time elased before adding additional wait time
+    # Time elapsed before adding additional wait time
     ADD_WAIT_TIME = 30
 
 
@@ -464,10 +461,10 @@ class CorrelationSearch(BaseModel):
             time_to_execute = 0
             # Check if the job is finished
             while not job.is_done():
-                self.logger.info(f"Job {job.sid} is still running...")
+                self.logger.debug(f"Job {job.sid} is still running...")
                 time.sleep(1)
                 time_to_execute += 1
-            self.logger.info(
+            self.logger.debug(
                 f"Job {job.sid} has finished running in {time_to_execute} seconds."
             )
 
@@ -917,7 +914,7 @@ class CorrelationSearch(BaseModel):
                     return True
         return False
 
-    def validate_risk_notable_events(self) -> None:
+    def validate_ara_events(self) -> None:
         """
         Validate the risk and notable events created by the saved search
         """
@@ -968,12 +965,12 @@ class CorrelationSearch(BaseModel):
         self.dispatch()
 
         wait_time = TimeoutConfig.BASE_SLEEP
-        max_wait = TimeoutConfig.MAX_SLEEP
+        max_wait = TimeoutConfig.MAX_SLEEP_PER_TRY
         time_elapsed = 0
         validation_failed = False
 
         while time_elapsed <= TimeoutConfig.RETRY_DISPATCH:
-            start_time = time.time()
+            validation_start_time = time.time()
 
             # reset validation_failed for each iteration
             validation_failed = False
@@ -985,29 +982,31 @@ class CorrelationSearch(BaseModel):
                 wait_time = min(max_wait, wait_time * 2)
 
             try:
-                self.validate_risk_notable_events()
+                self.validate_ara_events()
             except ValidationFailed as e:
                 self.logger.error(f"Validation failed: {e}")
                 validation_failed = True
-            
-            end_time = time.time()
-            time_elapsed += end_time - start_time
-
+            # break out of the loop if validation passes
             if not validation_failed:
                 self.logger.info(
                     f"Validation passed for {self.name} after {elapsed_sleep_time['elapsed_sleep_time']} seconds"
                 )
                 break
 
+            validation_end_time = time.time()
+            time_elapsed += validation_end_time - validation_start_time
+
         if validation_failed:
             raise ValidationFailed(
                 f"TEST FAILED: No matching notable event created for: {self.name}"
             )
-    
+
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
     #   it for completion, but that seems more tricky
     def test(
-        self, max_sleep: int = TimeoutConfig.MAX_SLEEP, raise_on_exc: bool = False
+        self,
+        max_sleep: int = TimeoutConfig.MAX_SLEEP_PER_TRY,
+        raise_on_exc: bool = False,
     ) -> IntegrationTestResult:
         """Execute the integration test
 
@@ -1015,13 +1014,12 @@ class CorrelationSearch(BaseModel):
         and clear the indexes if so. Then, we force a run of the detection, wait for `sleep` seconds, and finally we
         validate that the appropriate risk/notable events seem to have been created. NOTE: assumes the data already
         exists in the instance
-        :param max_sleep: max number of seconds to sleep for after enabling the detection before we check for created
-            events; re-checks are made upon failures using an exponential backoff until the max is reached
+        :param max_sleep: max number of seconds to sleep in each iteration for after enabling the detection before we
+            check for created events; re-checks are made upon failures using an exponential backoff until the max is reached
         :param raise_on_exc: bool flag indicating if an exception should be raised when caught by the test routine, or
             if the error state should just be recorded for the test
         """
-        # max_sleep must be greater than the base value we must wait for the scheduled searchjob to run (jobs run every
-        # 60s)
+        # max_sleep must be greater than the base value
         if max_sleep < TimeoutConfig.BASE_SLEEP:
             raise ClientError(
                 f"max_sleep value of {max_sleep} is less than the base sleep required "
@@ -1032,7 +1030,7 @@ class CorrelationSearch(BaseModel):
         result: IntegrationTestResult | None = None
 
         # keep track of time slept and number of attempts for exponential backoff (base 2)
-        elapsed_sleep_time = {'elapsed_sleep_time': 0}
+        elapsed_sleep_time = {"elapsed_sleep_time": 0}
 
         try:
             # first make sure the indexes are currently empty and the detection is starting from a disabled state

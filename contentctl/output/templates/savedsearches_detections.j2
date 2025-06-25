@@ -1,10 +1,13 @@
 ### {{app.label}} DETECTIONS ###
 
+[ default ]
+disabled = 1
+
 {% for detection in objects %}
 [{{ detection.get_conf_stanza_name(app) }}]
 action.escu = 0
 action.escu.enabled = 1
-description = {{ detection.status_aware_description | escapeNewlines() }} 
+description = {{ detection.status_aware_description | escapeNewlines() }}
 action.escu.mappings = {{ detection.mappings | tojson }}
 action.escu.data_models = {{ detection.datamodel | tojson }}
 action.escu.eli5 = {{ detection.status_aware_description | escapeNewlines() }}

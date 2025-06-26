@@ -921,7 +921,8 @@ class CorrelationSearch(BaseModel):
 
     def validate_ara_events(self) -> None:
         """
-        Validate the risk and notable events created by the saved search
+        Validate the risk and notable events created by the saved search.
+        An exception is raised if the validation fails for either risk or notable events.
         """
         # Validate risk events
         if self.has_risk_analysis_action:
@@ -972,15 +973,15 @@ class CorrelationSearch(BaseModel):
         wait_time = TimeoutConfig.BASE_SLEEP
         max_wait = TimeoutConfig.MAX_SLEEP_PER_TRY
         time_elapsed = 0
-        validation_failed = False
+        validation_error = None
 
         while time_elapsed <= TimeoutConfig.RETRY_DISPATCH:
             validation_start_time = time.time()
 
-            # reset validation_failed for each iteration
-            validation_failed = False
+            # reset validation_error for each iteration
+            validation_error = None
 
-            # wait at least 30 seconds before adding to the wait time
+            # wait at least 30 seconds before adding to the wait time (we expect the vast majority of detections to show results w/in that window)
             if time_elapsed > TimeoutConfig.ADD_WAIT_TIME:
                 time.sleep(wait_time)
                 elapsed_sleep_time["elapsed_sleep_time"] += wait_time
@@ -990,9 +991,9 @@ class CorrelationSearch(BaseModel):
                 self.validate_ara_events()
             except ValidationFailed as e:
                 self.logger.error(f"Validation failed: {e}")
-                validation_failed = True
+                validation_error = e
             # break out of the loop if validation passes
-            if not validation_failed:
+            if validation_error is None:
                 self.logger.info(
                     f"Validation passed for {self.name} after {elapsed_sleep_time['elapsed_sleep_time']} seconds"
                 )
@@ -1001,10 +1002,8 @@ class CorrelationSearch(BaseModel):
             validation_end_time = time.time()
             time_elapsed += validation_end_time - validation_start_time
 
-        if validation_failed:
-            raise ValidationFailed(
-                f"TEST FAILED: No matching notable event created for: {self.name}"
-            )
+        if validation_error is not None:
+            raise validation_error
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
     #   it for completion, but that seems more tricky

@@ -15,6 +15,9 @@ from pydantic import (
     model_serializer,
 )
 
+from contentctl.objects.abstract_security_content_objects.detection_abstract import (
+    GLOBAL_COUNTER,
+)
 from contentctl.objects.baseline_tags import BaselineTags
 from contentctl.objects.config import CustomApp
 from contentctl.objects.constants import (
@@ -38,6 +41,60 @@ class Baseline(SecurityContentObject):
     # enrichment
     deployment: Deployment = Field({})
     status: ContentStatus
+
+    @computed_field
+    @property
+    def calculated_cron(self) -> str:
+        global GLOBAL_COUNTER
+        """
+        Returns the cron expression for the detection.
+        Read the docs here to have a better understranding of what cron
+        expressions are skewable (and good or bad candidates for skewing):
+        https://docs.splunk.com/Documentation/SplunkCloud/latest/Report/Skewscheduledreportstarttimes#How_the_search_schedule_affects_the_potential_schedule_offset
+
+        """
+        """
+        # Convert the UUID, which is unique per detection, to an integer.
+        uuid_as_int = int(self.id)
+        name_hash = hash(self.name)
+
+        # Then, mod this by 60.  This should give us a fairly random distribution from 0-60
+        MIN_TIME = 0
+        MAX_TIME = 59
+        TIME_DIFF = (MAX_TIME + 1) - MIN_TIME
+
+        # We do this instead of imply using randrandge or similar because using the UUID makes
+        # generation of the cron schedule deterministic, which is useful for testing different
+        # windows.  For example, there is a good chance we may get another request to not have
+        # things starts within the first 5 minutes, given that many other searches are scheduled
+        # in ES to kick off at that time.
+        new_start_minute = name_hash % TIME_DIFF
+
+        # Every cron schedule for an ESCU Search is 0 * * * *, we we will just substitute what
+        # we generated above, ignoring what is actually in the deploymnet
+        """
+
+        # The spacing of the above implementation winds up being quite poor, maybe because
+        # our sample size is too small to approach a uniform distribution.
+        # So just use an int and mod it
+        MIN_TIME = 0
+        MAX_TIME = 14
+        TIME_DIFF = (MAX_TIME + 1) - MIN_TIME
+        new_start_minute = GLOBAL_COUNTER % TIME_DIFF
+        GLOBAL_COUNTER = GLOBAL_COUNTER + 1
+
+        new_start_minute = GLOBAL_COUNTER % TIME_DIFF
+        GLOBAL_COUNTER = GLOBAL_COUNTER + 1
+
+        try:
+            return self.deployment.scheduling.cron_schedule.format(
+                minute=new_start_minute
+            )
+        except Exception as e:
+            print(e)
+            import code
+
+            code.interact(local=locals())
 
     @field_validator("status", mode="after")
     @classmethod

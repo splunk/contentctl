@@ -52,6 +52,7 @@ from contentctl.objects.manual_test import ManualTest
 from contentctl.objects.rba import RBAObject, RiskScoreValue_Type
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.test_group import TestGroup
+from contentctl.objects.throttling import Throttling
 from contentctl.objects.unit_test import UnitTest
 
 # Those AnalyticsTypes that we do not test via contentctl
@@ -127,17 +128,27 @@ class Detection_Abstract(SecurityContentObject):
         # Every cron schedule for an ESCU Search is 0 * * * *, we we will just substitute what
         # we generated above, ignoring what is actually in the deploymnet
         """
+
         # The spacing of the above implementation winds up being quite poor, maybe because
         # our sample size is too small to approach a uniform distribution.
         # So just use an int and mod it
         MIN_TIME = 0
-        MAX_TIME = 59
+        MAX_TIME = 14
         TIME_DIFF = (MAX_TIME + 1) - MIN_TIME
         new_start_minute = GLOBAL_COUNTER % TIME_DIFF
         GLOBAL_COUNTER = GLOBAL_COUNTER + 1
 
+        if self.type is AnalyticsType.TTP:
+            minute_start = new_start_minute % 15
+            minute_stop = minute_start + 45
+
+            return self.deployment.scheduling.cron_schedule.format(
+                minute_range=f"{minute_start}-{minute_stop}"
+            )
+
         # return "0 * * * *"
-        return f"{new_start_minute} * * * *"
+
+        return self.deployment.scheduling.cron_schedule.format(minute=new_start_minute)
 
     @computed_field
     @property
@@ -873,22 +884,40 @@ class Detection_Abstract(SecurityContentObject):
         return self
 
     @model_validator(mode="after")
-    def ensureThrottlingFieldsExist(self):
+    def automaticallyCreateThrottling(self, default_throttling_period: str = "86400s"):
         """
+        If throttling is not explicitly configured, then automatically create
+        it from the risk and threat objects defined in the RBA config.
+
+
         For throttling to work properly, the fields to throttle on MUST
         exist in the search itself.  If not, then we cannot apply the throttling
         """
         if self.tags.throttling is None:
             # No throttling configured for this detection
-            return self
+
+            # Automatically add throttling fields based on the risk and threat objects
+            if self.rba is None:
+                # Cannot add any throttling because there is no RBA config
+                return self
+
+            self.tags.throttling = Throttling(
+                fields=[ro.field for ro in self.rba.risk_objects]  # type: ignore
+                + [to.field for to in self.rba.threat_objects],  # type: ignore
+                period=default_throttling_period,  # provide a default period of 1 day
+            )
 
         missing_fields: list[str] = [
             field for field in self.tags.throttling.fields if field not in self.search
         ]
         if len(missing_fields) > 0:
-            raise ValueError(
-                f"The following throttle fields were missing from the search: {missing_fields}"
+            print(
+                f"\nThe following throttle fields were missing from the search [{self.name}]. This is just a warning for now since this is an experimental feature: {missing_fields}\n"
             )
+            return self
+            # raise ValueError(
+            #     f"The following throttle fields were missing from the search [{self.name}]: {missing_fields}"
+            # )
 
         else:
             # All throttling fields present in search

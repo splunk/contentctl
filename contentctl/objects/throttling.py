@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, field_validator
 from typing import Annotated
+
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 
 # Alert Suppression/Throttling settings have been taken from
@@ -28,6 +29,8 @@ class Throttling(BaseModel):
                 )
         return v
 
+    @computed_field
+    @property
     def conf_formatted_fields(self) -> str:
         """
         TODO:

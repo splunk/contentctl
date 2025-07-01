@@ -57,6 +57,11 @@ from contentctl.objects.unit_test import UnitTest
 # Those AnalyticsTypes that we do not test via contentctl
 SKIPPED_ANALYTICS_TYPES: set[str] = {AnalyticsType.Correlation}
 
+import random
+
+GLOBAL_COUNTER = 0
+random.seed(42)  # For reproducibility in tests
+
 
 class Detection_Abstract(SecurityContentObject):
     name: str = Field(..., max_length=CONTENTCTL_MAX_SEARCH_NAME_LENGTH)
@@ -69,6 +74,70 @@ class Detection_Abstract(SecurityContentObject):
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     rba: Optional[RBAObject] = Field(default=None)
+
+    @computed_field
+    @property
+    def statistically_disabled(self) -> str:
+        global GLOBAL_COUNTER
+        """
+        Returns a string that indicates whether the detection is statistically disabled.
+        This is used to determine whether or not in test app builds, for the purposes
+        of performance testing, this detection should be enabled by default or not.
+        """
+
+        # Convert the UUID and mod by 100, letting us set probability of this
+        # search being enabled between 0 and 100
+
+        PERCENT_OF_SEARCHES_TO_ENABLE = 10
+        # Remember, the name of this field is disabled, so 0 means the search
+        # should be "enabled" and 1 means disabled.  Kind of feels backwards.
+        if random.randint(0, 99) < PERCENT_OF_SEARCHES_TO_ENABLE:
+            return "false"
+        else:
+            return "true"
+
+    @computed_field
+    @property
+    def calculated_cron(self) -> str:
+        global GLOBAL_COUNTER
+        """
+        Returns the cron expression for the detection.
+        Read the docs here to have a better understranding of what cron
+        expressions are skewable (and good or bad candidates for skewing):
+        https://docs.splunk.com/Documentation/SplunkCloud/latest/Report/Skewscheduledreportstarttimes#How_the_search_schedule_affects_the_potential_schedule_offset
+
+        """
+        """
+        # Convert the UUID, which is unique per detection, to an integer.
+        uuid_as_int = int(self.id)
+        name_hash = hash(self.name)
+
+        # Then, mod this by 60.  This should give us a fairly random distribution from 0-60
+        MIN_TIME = 0
+        MAX_TIME = 59
+        TIME_DIFF = (MAX_TIME + 1) - MIN_TIME
+
+        # We do this instead of imply using randrandge or similar because using the UUID makes
+        # generation of the cron schedule deterministic, which is useful for testing different
+        # windows.  For example, there is a good chance we may get another request to not have
+        # things starts within the first 5 minutes, given that many other searches are scheduled
+        # in ES to kick off at that time.
+        new_start_minute = name_hash % TIME_DIFF
+
+        # Every cron schedule for an ESCU Search is 0 * * * *, we we will just substitute what
+        # we generated above, ignoring what is actually in the deploymnet
+        """
+        # The spacing of the above implementation winds up being quite poor, maybe because
+        # our sample size is too small to approach a uniform distribution.
+        # So just use an int and mod it
+        MIN_TIME = 0
+        MAX_TIME = 59
+        TIME_DIFF = (MAX_TIME + 1) - MIN_TIME
+        new_start_minute = GLOBAL_COUNTER % TIME_DIFF
+        GLOBAL_COUNTER = GLOBAL_COUNTER + 1
+
+        # return "0 * * * *"
+        return f"{new_start_minute} * * * *"
 
     @computed_field
     @property

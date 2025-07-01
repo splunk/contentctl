@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from contentctl.objects.config import CustomApp
 
 import datetime
+import random
 from functools import cached_property
 
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
@@ -58,7 +59,6 @@ from contentctl.objects.unit_test import UnitTest
 # Those AnalyticsTypes that we do not test via contentctl
 SKIPPED_ANALYTICS_TYPES: set[str] = {AnalyticsType.Correlation}
 
-import random
 
 GLOBAL_COUNTER = 0
 random.seed(42)  # For reproducibility in tests

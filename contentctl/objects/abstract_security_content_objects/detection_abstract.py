@@ -89,7 +89,7 @@ class Detection_Abstract(SecurityContentObject):
         # Convert the UUID and mod by 100, letting us set probability of this
         # search being enabled between 0 and 100
 
-        PERCENT_OF_SEARCHES_TO_ENABLE = 10
+        PERCENT_OF_SEARCHES_TO_ENABLE = 0
         # Remember, the name of this field is disabled, so 0 means the search
         # should be "enabled" and 1 means disabled.  Kind of feels backwards.
         if random.randint(0, 99) < PERCENT_OF_SEARCHES_TO_ENABLE:

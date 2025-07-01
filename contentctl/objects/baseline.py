@@ -83,9 +83,6 @@ class Baseline(SecurityContentObject):
         new_start_minute = GLOBAL_COUNTER % TIME_DIFF
         GLOBAL_COUNTER = GLOBAL_COUNTER + 1
 
-        new_start_minute = GLOBAL_COUNTER % TIME_DIFF
-        GLOBAL_COUNTER = GLOBAL_COUNTER + 1
-
         try:
             return self.deployment.scheduling.cron_schedule.format(
                 minute=new_start_minute

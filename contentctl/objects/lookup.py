@@ -65,6 +65,13 @@ LOOKUPS_TO_IGNORE.add(
 # Special case for the Detection "Exploit Public Facing Application via Apache Commons Text"
 LOOKUPS_TO_IGNORE.add("=")
 LOOKUPS_TO_IGNORE.add("other_lookups")
+LOOKUPS_TO_IGNORE.add(
+    "asn_lookup_by_cidr"
+)  # Provided by SA-ThreatIntelligence, part of Enterprise Security
+
+LOOKUPS_TO_IGNORE.add(
+    "mitre_attack_lookup"
+)  # KVStore provided by SA-ThreatIntelligence, part of Enterprise Security
 
 
 class Lookup_Type(StrEnum):

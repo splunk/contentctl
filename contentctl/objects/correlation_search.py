@@ -557,15 +557,7 @@ class CorrelationSearch(BaseModel):
             return self._risk_events
 
         # Search for all risk events from a single search (indicated by orig_sid)
-        if self.sid is None:
-            # query for validating detection is starting from a disabled state
-            query = (
-                f'search index=risk search_name="{self.name}" [search index=risk search '
-                f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
-            )
-        else:
-            # query after the detection has been enabled and dispatched
-            query = f'search index=risk search_name="{self.name}" orig_sid="{self.sid}" | tojson'
+        query = f'search index=risk search_name="{self.name}" orig_sid="{self.sid}" | tojson'
         result_iterator = self._search(query)
 
         # Iterate over the events, storing them in a list and checking for any errors
@@ -638,15 +630,7 @@ class CorrelationSearch(BaseModel):
             return self._notable_events
 
         # Search for all notable events from a single search (indicated by orig_sid)
-        if self.sid is None:
-            # query for validating detection is starting from a disabled state
-            query = (
-                f'search index=notable search_name="{self.name}" [search index=notable search '
-                f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
-            )
-        else:
-            # query after the detection has been enabled and dispatched
-            query = f'search index=notable search_name="{self.name}" orig_sid="{self.sid}" | tojson'
+        query = f'search index=notable search_name="{self.name}" orig_sid="{self.sid}" | tojson'
         result_iterator = self._search(query)
 
         # Iterate over the events, storing them in a list and checking for any errors
@@ -722,18 +706,10 @@ class CorrelationSearch(BaseModel):
 
         # Search for all risk data model events from a single search (indicated by
         # orig_sid)
-        if self.sid is None:
-            # query for validating detection is starting from a disabled state
-            query = (
-                f'datamodel Risk All_Risk flat | search search_name="{self.name}" '
-                f'[search datamodel Risk All_Risk flat | search search_name="{self.name}" '
-                "| tail 1 | fields orig_sid] | tojson"
-            )
-        else:
-            query = (
-                f'datamodel Risk All_Risk flat | search search_name="{self.name}" orig_sid="{self.sid}" '
-                "| tojson"
-            )
+        query = (
+            f'datamodel Risk All_Risk flat | search search_name="{self.name}" orig_sid="{self.sid}" '
+            "| tojson"
+        )
         result_iterator = self._search(query)
 
         # Iterate over the events, storing them in a list and checking for any errors
@@ -1044,19 +1020,6 @@ class CorrelationSearch(BaseModel):
         elapsed_sleep_time = {"elapsed_sleep_time": 0}
 
         try:
-            # first make sure the indexes are currently empty and the detection is starting from a disabled state
-            self.logger.debug("Cleaning up any pre-existing risk/notable events...")
-            self.update_pbar(TestingStates.PRE_CLEANUP)
-            if self.risk_event_exists():
-                self.logger.warning(
-                    f"Risk events matching '{self.name}' already exist; marking for deletion"
-                )
-            if self.notable_event_exists():
-                self.logger.warning(
-                    f"Notable events matching '{self.name}' already exist; marking for deletion"
-                )
-            self.cleanup()
-
             # skip test if no risk or notable action defined
             if not self.has_risk_analysis_action and not self.has_notable_action:
                 message = (

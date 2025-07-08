@@ -82,6 +82,19 @@ class NewContent:
             "author": answers["detection_author"],
             "status": "production",  # start everything as production since that's what we INTEND the content to become
             "type": answers["detection_type"],
+            "deployment": {
+                "scheduling": {
+                    "cron_schedule": "0 * * * *",
+                    "earliest_time": "-70m@m",
+                    "latest_time": "-10m@m",
+                    "schedule_window": "auto",
+                },
+                "alert_action": {
+                    "rba": {
+                        "enabled": "true",
+                    },
+                },
+            },
             "description": f"{NewContent.UPDATE_PREFIX} by providing a description of your search",
             "data_source": data_source_field,
             "search": f"{answers['detection_search']} | `{file_name}_filter`",
@@ -125,6 +138,10 @@ class NewContent:
 
         if answers["detection_type"] not in ["TTP", "Anomaly"]:
             del output_file_answers["rba"]
+            del output_file_answers["deployment"]["alert_action"]
+        
+        if answers["deployment_override"] == "no":
+            del output_file_answers["deployment"]
 
         return output_file_answers, answers["detection_kind"]
 

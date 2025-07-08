@@ -75,9 +75,6 @@ class TimeoutConfig(IntEnum):
     # base amount to sleep for before beginning exponential backoff during testing
     BASE_SLEEP = 2
 
-    # Max amount to wait before timing out during exponential backoff in each iteration
-    MAX_SLEEP_PER_TRY = 30
-
     # NOTE: Based on testing, there are 45 detections couldn't generate risk/notables within single dispatch, and
     # they needed to be retried; 90s is a reasonable wait time before retrying dispatching the SavedSearch
     # Wait time before retrying dispatching the SavedSearch
@@ -954,7 +951,6 @@ class CorrelationSearch(BaseModel):
         self.dispatch()
 
         wait_time = TimeoutConfig.BASE_SLEEP
-        max_wait = TimeoutConfig.MAX_SLEEP_PER_TRY
         time_elapsed = 0
         validation_error = None
 
@@ -968,7 +964,9 @@ class CorrelationSearch(BaseModel):
             if time_elapsed > TimeoutConfig.ADD_WAIT_TIME:
                 time.sleep(wait_time)
                 elapsed_sleep_time["elapsed_sleep_time"] += wait_time
-                wait_time = min(max_wait, wait_time * 2)
+                wait_time = min(
+                    TimeoutConfig.RETRY_DISPATCH - int(time_elapsed), wait_time * 2
+                )
 
             try:
                 self.validate_ara_events()
@@ -992,7 +990,6 @@ class CorrelationSearch(BaseModel):
     #   it for completion, but that seems more tricky
     def test(
         self,
-        max_sleep: int = TimeoutConfig.MAX_SLEEP_PER_TRY,
         raise_on_exc: bool = False,
     ) -> IntegrationTestResult:
         """Execute the integration test
@@ -1001,17 +998,9 @@ class CorrelationSearch(BaseModel):
         and clear the indexes if so. Then, we force a run of the detection, wait for `sleep` seconds, and finally we
         validate that the appropriate risk/notable events seem to have been created. NOTE: assumes the data already
         exists in the instance
-        :param max_sleep: max number of seconds to sleep in each iteration for after enabling the detection before we
-            check for created events; re-checks are made upon failures using an exponential backoff until the max is reached
         :param raise_on_exc: bool flag indicating if an exception should be raised when caught by the test routine, or
             if the error state should just be recorded for the test
         """
-        # max_sleep must be greater than the base value
-        if max_sleep < TimeoutConfig.BASE_SLEEP:
-            raise ClientError(
-                f"max_sleep value of {max_sleep} is less than the base sleep required "
-                f"({TimeoutConfig.BASE_SLEEP})"
-            )
 
         # initialize result as None
         result: IntegrationTestResult | None = None

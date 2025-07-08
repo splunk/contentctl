@@ -923,6 +923,8 @@ class CorrelationSearch(BaseModel):
         """
         Validate the risk and notable events created by the saved search.
         An exception is raised if the validation fails for either risk or notable events.
+
+        :raises ValidationFailed: If the expected risk events are not found or validation fails.
         """
         # Validate risk events
         if self.has_risk_analysis_action:
@@ -967,6 +969,11 @@ class CorrelationSearch(BaseModel):
 
         Dispatches the saved search and validates the risk/notable events created by it. If any
         validation fails, raises a ValidationFailed exception.
+
+        :param elapsed_sleep_time: Dictionary tracking the total elapsed sleep time across retries.
+        :type elapsed_sleep_time: dict[str, int]
+
+        :raises ValidationFailed: If validation of risk/notable events fails after all retries.
         """
         self.dispatch()
 

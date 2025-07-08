@@ -139,7 +139,7 @@ class NewContent:
         if answers["detection_type"] not in ["TTP", "Anomaly"]:
             del output_file_answers["rba"]
             del output_file_answers["deployment"]["alert_action"]
-        
+
         if answers["deployment_override"] == "no":
             del output_file_answers["deployment"]
 

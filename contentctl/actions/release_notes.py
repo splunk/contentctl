@@ -44,7 +44,7 @@ class ReleaseNotes:
                                     file_path
                                 ).replace(str(repo_path), "")
                                 playbook_link = playbook_link.replace(
-                                    ".yml", "/"
+                                    "yml", "/"
                                 ).lower()
                                 updates.append(
                                     "- "

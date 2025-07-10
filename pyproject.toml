@@ -14,7 +14,7 @@ contentctl = 'contentctl.contentctl:main'
 [tool.poetry.dependencies]
 
 python = "^3.11,<3.14"
-pydantic = "~2.9.2"
+pydantic = ">=2.9.2,<2.12.0"
 PyYAML = "^6.0.2"
 requests = "~2.32.3"
 pycvesearch = "^1.2"

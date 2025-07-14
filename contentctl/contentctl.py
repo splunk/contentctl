@@ -68,6 +68,7 @@ def init_func(config: test):
 
 
 def validate_func(config: validate) -> DirectorOutputDto:
+    config.check_test_data_caches()
     validate = Validate()
     return validate.execute(config)
 

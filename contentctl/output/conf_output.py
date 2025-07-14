@@ -93,6 +93,10 @@ class ConfOutput:
 
         return written_files
 
+    # TODO (#339): we could have a discrepancy between detections tested and those delivered
+    #   based on the jinja2 template
+    #   {% if (detection.type == 'TTP' or detection.type == 'Anomaly' or
+    #       detection.type == 'Hunting' or detection.type == 'Correlation') %}
     def writeDetections(self, objects: list[Detection]) -> set[pathlib.Path]:
         written_files: set[pathlib.Path] = set()
         for output_app_path, template_name in [
@@ -211,7 +215,11 @@ class ConfOutput:
             # even though the MLModel info was intentionally not written to the
             # transforms.conf file as noted above.
             if isinstance(lookup, FileBackedLookup):
-                shutil.copy(lookup.filename, lookup_folder / lookup.app_filename.name)
+                with (
+                    open(lookup_folder / lookup.app_filename.name, "w") as output_file,
+                    lookup.content_file_handle as output,
+                ):
+                    output_file.write(output.read())
         return written_files
 
     def writeMacros(self, objects: list[Macro]) -> set[pathlib.Path]:

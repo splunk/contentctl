@@ -4,14 +4,13 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from contentctl.objects.config import test_common
-
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingManagerOutputDto,
 )
 from contentctl.helper.utils import Utils
-from contentctl.objects.enums import DetectionStatus
 from contentctl.objects.base_test_result import TestResultStatus
+from contentctl.objects.config import test_common
+from contentctl.objects.enums import ContentStatus
 
 
 class DetectionTestingView(BaseModel, abc.ABC):
@@ -117,11 +116,11 @@ class DetectionTestingView(BaseModel, abc.ABC):
                 total_skipped += 1
 
             # Aggregate production status metrics
-            if detection.status == DetectionStatus.production:
+            if detection.status == ContentStatus.production:
                 total_production += 1
-            elif detection.status == DetectionStatus.experimental:
+            elif detection.status == ContentStatus.experimental:
                 total_experimental += 1
-            elif detection.status == DetectionStatus.deprecated:
+            elif detection.status == ContentStatus.deprecated:
                 total_deprecated += 1
 
             # Check if the detection is manual_test

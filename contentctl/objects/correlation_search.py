@@ -1,80 +1,42 @@
-import logging
-import time
 import json
-from typing import Any
-from enum import StrEnum, IntEnum
+import logging
+import re
+import time
+from enum import IntEnum, StrEnum
 from functools import cached_property
+from typing import Any
 
-from pydantic import ConfigDict, BaseModel, computed_field, Field, PrivateAttr
-from splunklib.results import JSONResultsReader, Message  # type: ignore
-from splunklib.binding import HTTPError, ResponseReader  # type: ignore
 import splunklib.client as splunklib  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field
+from splunklib.binding import HTTPError, ResponseReader  # type: ignore
+from splunklib.results import JSONResultsReader, Message  # type: ignore
 from tqdm import tqdm  # type: ignore
 
-from contentctl.objects.risk_analysis_action import RiskAnalysisAction
-from contentctl.objects.notable_action import NotableAction
-from contentctl.objects.base_test_result import TestResultStatus
-from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.actions.detection_testing.progress_bar import (
-    format_pbar_string,  # type: ignore
-    TestReportingType,
     TestingStates,
+    TestReportingType,
+    format_pbar_string,  # type: ignore
 )
+from contentctl.helper.utils import Utils
+from contentctl.objects.base_security_event import BaseSecurityEvent
+from contentctl.objects.base_test_result import TestResultStatus
+from contentctl.objects.detection import Detection
 from contentctl.objects.errors import (
+    ClientError,
     IntegrationTestingError,
     ServerError,
-    ClientError,
     ValidationFailed,
 )
-from contentctl.objects.detection import Detection
-from contentctl.objects.risk_event import RiskEvent
+from contentctl.objects.integration_test_result import IntegrationTestResult
+from contentctl.objects.notable_action import NotableAction
 from contentctl.objects.notable_event import NotableEvent
-
+from contentctl.objects.risk_analysis_action import RiskAnalysisAction
+from contentctl.objects.risk_event import RiskEvent
 
 # Suppress logging by default; enable for local testing
 ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
-
-
-def get_logger() -> logging.Logger:
-    """
-    Gets a logger instance for the module; logger is configured if not already configured. The
-    NullHandler is used to suppress loggging when running in production so as not to conflict w/
-    contentctl's larger pbar-based logging. The StreamHandler is enabled by setting ENABLE_LOGGING
-    to True (useful for debugging/testing locally)
-    """
-    # get logger for module
-    logger = logging.getLogger(__name__)
-
-    # set propagate to False if not already set as such (needed to that we do not flow up to any
-    # root loggers)
-    if logger.propagate:
-        logger.propagate = False
-
-    # if logger has no handlers, it needs to be configured for the first time
-    if not logger.hasHandlers():
-        # set level
-        logger.setLevel(LOG_LEVEL)
-
-        # if logging enabled, use a StreamHandler; else, use the NullHandler to suppress logging
-        handler: logging.Handler
-        if ENABLE_LOGGING:
-            handler = logging.FileHandler(LOG_PATH)
-        else:
-            handler = logging.NullHandler()
-
-        # Format our output
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s:%(name)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-
-        # Set handler level and add to logger
-        handler.setLevel(LOG_LEVEL)
-        logger.addHandler(handler)
-
-    return logger
 
 
 class SavedSearchKeys(StrEnum):
@@ -106,15 +68,20 @@ class TimeoutConfig(IntEnum):
     Configuration values for the exponential backoff timer
     """
 
-    # base amount to sleep for before beginning exponential backoff during testing
-    BASE_SLEEP = 60
-
     # NOTE: Some detections take longer to generate their risk/notables than other; testing has
-    #   shown 270s to likely be sufficient for all detections in 99% of runs; however we have
-    #   encountered a handful of transient failures in the last few months. Since our success rate
-    #   is at 100% now, we will round this to a flat 300s to accomodate these outliers.
-    # Max amount to wait before timing out during exponential backoff
-    MAX_SLEEP = 300
+    #   shown that in a single run, 99% detections could generate risk/notables within 30s and less than 1%
+    #   detections (20 to 30 detections) would need 60 to 90s to wait for risk/notables.
+
+    # base amount to sleep for before beginning exponential backoff during testing
+    BASE_SLEEP = 2
+
+    # NOTE: Based on testing, there are 45 detections couldn't generate risk/notables within single dispatch, and
+    # they needed to be retried; 90s is a reasonable wait time before retrying dispatching the SavedSearch
+    # Wait time before retrying dispatching the SavedSearch
+    RETRY_DISPATCH = 90
+
+    # Time elapsed before adding additional wait time
+    ADD_WAIT_TIME = 30
 
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good
@@ -126,7 +93,7 @@ class ScheduleConfig(StrEnum):
 
     EARLIEST_TIME = "-5y@y"
     LATEST_TIME = "-1m@m"
-    CRON_SCHEDULE = "*/1 * * * *"
+    CRON_SCHEDULE = "0 0 1 1 *"
 
 
 class ResultIterator:
@@ -135,34 +102,58 @@ class ResultIterator:
     Given a ResponseReader, constructs a JSONResultsReader and iterates over it; when Message instances are encountered,
     they are logged if the message is anything other than "error", in which case an error is raised. Regular results are
     returned as expected
+
     :param response_reader: a ResponseReader object
-    :param logger: a Logger object
+    :type response_reader: :class:`splunklib.binding.ResponseReader`
+    :param error_filters: set of re Patterns used to filter out errors we're ok ignoring
+    :type error_filters: list[:class:`re.Pattern[str]`]
     """
 
-    def __init__(self, response_reader: ResponseReader) -> None:
+    def __init__(
+        self, response_reader: ResponseReader, error_filters: list[re.Pattern[str]] = []
+    ) -> None:
         # init the results reader
         self.results_reader: JSONResultsReader = JSONResultsReader(response_reader)
 
+        # the list of patterns for errors to ignore
+        self.error_filters: list[re.Pattern[str]] = error_filters
+
         # get logger
-        self.logger: logging.Logger = get_logger()
+        self.logger: logging.Logger = Utils.get_logger(
+            __name__, LOG_LEVEL, LOG_PATH, ENABLE_LOGGING
+        )
 
     def __iter__(self) -> "ResultIterator":
         return self
 
-    def __next__(self) -> dict[Any, Any]:
+    def __next__(self) -> dict[str, Any]:
         # Use a reader for JSON format so we can iterate over our results
         for result in self.results_reader:
             # log messages, or raise if error
             if isinstance(result, Message):
                 # convert level string to level int
-                level_name = result.type.strip().upper()  # type: ignore
+                level_name: str = result.type.strip().upper()  # type: ignore
+                # TODO (PEX-510): this method is deprecated; replace with our own enum
                 level: int = logging.getLevelName(level_name)
 
                 # log message at appropriate level and raise if needed
                 message = f"SPLUNK: {result.message}"  # type: ignore
                 self.logger.log(level, message)
+                filtered = False
                 if level == logging.ERROR:
-                    raise ServerError(message)
+                    # if the error matches any of the filters, flag it
+                    for filter in self.error_filters:
+                        self.logger.debug(f"Filter: {filter}; message: {message}")
+                        if filter.match(message) is not None:
+                            self.logger.debug(
+                                f"Error matched filter {filter}; continuing"
+                            )
+                            filtered = True
+                            break
+
+                    # if no filter was matched, raise
+                    if not filtered:
+                        raise ServerError(message)
 
             # if dict, just return
             elif isinstance(result, dict):
@@ -216,9 +207,17 @@ class CorrelationSearch(BaseModel):
     # cleanup of this index
     test_index: str | None = Field(default=None, min_length=1)
 
+    # The search ID of the last dispatched search; this is used to query for risk/notable events
+    sid: str | None = Field(default=None)
+
     # The logger to use (logs all go to a null pipe unless ENABLE_LOGGING is set to True, so as not
     # to conflict w/ tqdm)
-    logger: logging.Logger = Field(default_factory=get_logger, init=False)
+    logger: logging.Logger = Field(
+        default_factory=lambda: Utils.get_logger(
+            __name__, LOG_LEVEL, LOG_PATH, ENABLE_LOGGING
+        ),
+        init=False,
+    )
 
     # The set of indexes to clear on cleanup
     indexes_to_purge: set[str] = Field(default=set(), init=False)
@@ -231,6 +230,9 @@ class CorrelationSearch(BaseModel):
 
     # The list of risk events found
     _risk_events: list[RiskEvent] | None = PrivateAttr(default=None)
+
+    # The list of risk data model events found
+    _risk_dm_events: list[BaseSecurityEvent] | None = PrivateAttr(default=None)
 
     # The list of notable events found
     _notable_events: list[NotableEvent] | None = PrivateAttr(default=None)
@@ -443,6 +445,34 @@ class CorrelationSearch(BaseModel):
         if refresh:
             self.refresh()
 
+    def dispatch(self) -> splunklib.Job:
+        """Dispatches the SavedSearch
+
+        Dispatches the SavedSearch entity, returning a Job object representing the search job.
+        :return: a splunklib.Job object representing the search job when the SavedSearch is finished running
+        """
+        self.logger.debug(f"Dispatching {self.name}...")
+        try:
+            job = self.saved_search.dispatch(trigger_actions=True)
+
+            time_to_execute = 0
+            # Check if the job is finished
+            while not job.is_done():
+                self.logger.debug(f"Job {job.sid} is still running...")
+                time.sleep(1)
+                time_to_execute += 1
+            self.logger.debug(
+                f"Job {job.sid} has finished running in {time_to_execute} seconds."
+            )
+
+            self.sid = job.sid
+
+            return job  # type: ignore
+        except HTTPError as e:
+            raise ServerError(
+                f"HTTP error encountered while dispatching detection: {e}"
+            )
+
     def disable(self, refresh: bool = True) -> None:
         """Disables the SavedSearch
 
@@ -492,22 +522,6 @@ class CorrelationSearch(BaseModel):
         if refresh:
             self.refresh()
 
-    def force_run(self, refresh: bool = True) -> None:
-        """Forces a detection run
-
-        Enables the detection, adjusts the cron schedule to run every 1 minute, and widens the earliest/latest window
-        to run on test data.
-        :param refresh: a bool indicating whether to refresh the metadata for the detection (default True)
-        """
-        self.update_timeframe(refresh=False)
-        if not self.enabled:
-            self.enable(refresh=False)
-        else:
-            self.logger.warning(f"Detection '{self.name}' was already enabled")
-
-        if refresh:
-            self.refresh()
-
     def risk_event_exists(self) -> bool:
         """Whether at least one matching risk event exists
 
@@ -539,12 +553,8 @@ class CorrelationSearch(BaseModel):
             )
             return self._risk_events
 
-        # TODO (#248): Refactor risk/notable querying to pin to a single savedsearch ID
-        # Search for all risk events from a single scheduled search (indicated by orig_sid)
-        query = (
-            f'search index=risk search_name="{self.name}" [search index=risk search '
-            f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
-        )
+        # Search for all risk events from a single search (indicated by orig_sid)
+        query = f'search index=risk search_name="{self.name}" orig_sid="{self.sid}" | tojson'
         result_iterator = self._search(query)
 
         # Iterate over the events, storing them in a list and checking for any errors
@@ -564,6 +574,13 @@ class CorrelationSearch(BaseModel):
                         raise
                     events.append(event)
                     self.logger.debug(f"Found risk event for '{self.name}': {event}")
+                else:
+                    msg = (
+                        f"Found event for unexpected index ({result['index']}) in our query "
+                        f"results (expected {Indexes.RISK_INDEX})"
+                    )
+                    self.logger.error(msg)
+                    raise ValueError(msg)
         except ServerError as e:
             self.logger.error(f"Error returned from Splunk instance: {e}")
             raise e
@@ -609,11 +626,8 @@ class CorrelationSearch(BaseModel):
             )
             return self._notable_events
 
-        # Search for all notable events from a single scheduled search (indicated by orig_sid)
-        query = (
-            f'search index=notable search_name="{self.name}" [search index=notable search '
-            f'search_name="{self.name}" | tail 1 | fields orig_sid] | tojson'
-        )
+        # Search for all notable events from a single search (indicated by orig_sid)
+        query = f'search index=notable search_name="{self.name}" orig_sid="{self.sid}" | tojson'
         result_iterator = self._search(query)
 
         # Iterate over the events, storing them in a list and checking for any errors
@@ -633,6 +647,13 @@ class CorrelationSearch(BaseModel):
                         raise
                     events.append(event)
                     self.logger.debug(f"Found notable event for '{self.name}': {event}")
+                else:
+                    msg = (
+                        f"Found event for unexpected index ({result['index']}) in our query "
+                        f"results (expected {Indexes.NOTABLE_INDEX})"
+                    )
+                    self.logger.error(msg)
+                    raise ValueError(msg)
         except ServerError as e:
             self.logger.error(f"Error returned from Splunk instance: {e}")
             raise e
@@ -647,15 +668,117 @@ class CorrelationSearch(BaseModel):
 
         return events
 
+    def risk_dm_event_exists(self) -> bool:
+        """Whether at least one matching risk data model event exists
+
+        Queries the `risk` data model and returns True if at least one matching event (could come
+        from risk or notable index) exists for this search
+        :return: a bool indicating whether a risk data model event for this search exists in the
+            risk data model
+        """
+        # We always force an update on the cache when checking if events exist
+        events = self.get_risk_dm_events(force_update=True)
+        return len(events) > 0
+
+    def get_risk_dm_events(self, force_update: bool = False) -> list[BaseSecurityEvent]:
+        """Get risk data model events from the Splunk instance
+
+        Queries the `risk` data model and returns any matching events (could come from risk or
+        notable index)
+        :param force_update: whether the cached _risk_events should be forcibly updated if already
+            set
+        :return: a list of risk events
+        """
+        # Reset the list of risk data model events if we're forcing an update
+        if force_update:
+            self.logger.debug("Resetting risk data model event cache.")
+            self._risk_dm_events = None
+
+        # Use the cached risk_dm_events unless we're forcing an update
+        if self._risk_dm_events is not None:
+            self.logger.debug(
+                f"Using cached risk data model events ({len(self._risk_dm_events)} total)."
+            )
+            return self._risk_dm_events
+
+        # Search for all risk data model events from a single search (indicated by
+        # orig_sid)
+        query = (
+            f'datamodel Risk All_Risk flat | search search_name="{self.name}" orig_sid="{self.sid}" '
+            "| tojson"
+        )
+        result_iterator = self._search(query)
+
+        # Iterate over the events, storing them in a list and checking for any errors
+        events: list[BaseSecurityEvent] = []
+        risk_count = 0
+        notable_count = 0
+        try:
+            for result in result_iterator:
+                # sanity check that this result from the iterator is a risk event and not some
+                # other metadata
+                if result["index"] == Indexes.RISK_INDEX:
+                    try:
+                        parsed_raw = json.loads(result["_raw"])
+                        event = RiskEvent.model_validate(parsed_raw)
+                    except Exception:
+                        self.logger.error(
+                            f"Failed to parse RiskEvent from search result: {result}"
+                        )
+                        raise
+                    events.append(event)
+                    risk_count += 1
+                    self.logger.debug(
+                        f"Found risk event in risk data model for '{self.name}': {event}"
+                    )
+                elif result["index"] == Indexes.NOTABLE_INDEX:
+                    try:
+                        parsed_raw = json.loads(result["_raw"])
+                        event = NotableEvent.model_validate(parsed_raw)
+                    except Exception:
+                        self.logger.error(
+                            f"Failed to parse NotableEvent from search result: {result}"
+                        )
+                        raise
+                    events.append(event)
+                    notable_count += 1
+                    self.logger.debug(
+                        f"Found notable event in risk data model for '{self.name}': {event}"
+                    )
+                else:
+                    msg = (
+                        f"Found event for unexpected index ({result['index']}) in our query "
+                        f"results (expected {Indexes.NOTABLE_INDEX} or {Indexes.RISK_INDEX})"
+                    )
+                    self.logger.error(msg)
+                    raise ValueError(msg)
+        except ServerError as e:
+            self.logger.error(f"Error returned from Splunk instance: {e}")
+            raise e
+
+        # Log if no events were found
+        if len(events) < 1:
+            self.logger.debug(f"No events found in risk data model for '{self.name}'")
+        else:
+            # Set the cache if we found events
+            self._risk_dm_events = events
+            self.logger.debug(
+                f"Caching {len(self._risk_dm_events)} risk data model events."
+            )
+
+        # Log counts of risk and notable events found
+        self.logger.debug(
+            f"Found {risk_count} risk events and {notable_count} notable events in the risk data "
+            "model"
+        )
+
+        return events
+
     def validate_risk_events(self) -> None:
         """Validates the existence of any expected risk events
 
         First ensure the risk event exists, and if it does validate its risk message and make sure
-        any events align with the specified risk object. Also adds the risk index to the purge list
-        if risk events existed
-        :param elapsed_sleep_time: an int representing the amount of time slept thus far waiting to
-            check the risks/notables
-        :returns: an IntegrationTestResult on failure; None on success
+        any events align with the specified risk object.
         """
         # Ensure the rba object is defined
         if self.detection.rba is None:
@@ -745,18 +868,129 @@ class CorrelationSearch(BaseModel):
     def validate_notable_events(self) -> None:
         """Validates the existence of any expected notables
 
-        Ensures the notable exists. Also adds the notable index to the purge list if notables
-        existed
-        :param elapsed_sleep_time: an int representing the amount of time slept thus far waiting to
-            check the risks/notables
-        :returns: an IntegrationTestResult on failure; None on success
+        Check various fields within the notable to ensure alignment with the detection definition.
+        Additionally, ensure that the notable does not appear in the risk data model, as this is
+        currently undesired behavior for ESCU detections.
         """
-        raise NotImplementedError()
+        if self.notable_in_risk_dm():
+            raise ValidationFailed(
+                "One or more notables appeared in the risk data model. This could lead to risk "
+                "score doubling, and/or notable multiplexing, depending on the detection type "
+                "(e.g. TTP), or the number of risk modifiers."
+            )
+
+    def notable_in_risk_dm(self) -> bool:
+        """Check if notables are in the risk data model
+
+        Returns a bool indicating whether notables are in the risk data model or not.
+
+        :returns: a bool, True if notables are in the risk data model results; False if not
+        """
+        if self.risk_dm_event_exists():
+            for event in self.get_risk_dm_events():
+                if isinstance(event, NotableEvent):
+                    return True
+        return False
+
+    def validate_ara_events(self) -> None:
+        """
+        Validate the risk and notable events created by the saved search.
+        An exception is raised if the validation fails for either risk or notable events.
+
+        :raises ValidationFailed: If the expected risk events are not found or validation fails.
+        """
+        # Validate risk events
+        if self.has_risk_analysis_action:
+            self.logger.debug("Checking for matching risk events")
+            if self.risk_event_exists():
+                # TODO (PEX-435): should this in the retry loop? or outside it?
+                #   -> I've observed there being a missing risk event (15/16) on
+                #   the first few tries, so this does help us check for true
+                #   positives; BUT, if we have lots of failing detections, this
+                #   will definitely add to the total wait time
+                #   -> certain types of failures (e.g. risk message, or any value
+                #       checking) should fail testing automatically
+                #   -> other types, like those based on counts of risk events,
+                #       should happen should fail more slowly as more events may be
+                #       produced
+                self.validate_risk_events()
+            else:
+                raise ValidationFailed(
+                    f"TEST FAILED: No matching risk event created for: {self.name}"
+                )
+        else:
+            self.logger.debug(f"No risk action defined for '{self.name}'")
+
+        # Validate notable events
+        if self.has_notable_action:
+            self.logger.debug("Checking for matching notable events")
+            # NOTE: because we check this last, if both fail, the error message about notables will
+            # always be the last to be added and thus the one surfaced to the user
+            if self.notable_event_exists():
+                # TODO (PEX-435): should this in the retry loop? or outside it?
+                self.validate_notable_events()
+                pass
+            else:
+                raise ValidationFailed(
+                    f"TEST FAILED: No matching notable event created for: {self.name}"
+                )
+        else:
+            self.logger.debug(f"No notable action defined for '{self.name}'")
+
+    def dispatch_and_validate(self, elapsed_sleep_time: dict[str, int]) -> None:
+        """Dispatch the saved search and validate the risk/notable events
+
+        Dispatches the saved search and validates the risk/notable events created by it. If any
+        validation fails, raises a ValidationFailed exception.
+
+        :param elapsed_sleep_time: Dictionary tracking the total elapsed sleep time across retries.
+        :type elapsed_sleep_time: dict[str, int]
+
+        :raises ValidationFailed: If validation of risk/notable events fails after all retries.
+        """
+        self.dispatch()
+
+        wait_time = TimeoutConfig.BASE_SLEEP
+        time_elapsed = 0
+        validation_error = None
+
+        while time_elapsed <= TimeoutConfig.RETRY_DISPATCH:
+            validation_start_time = time.time()
+
+            # reset validation_error for each iteration
+            validation_error = None
+
+            # wait at least 30 seconds before adding to the wait time (we expect the vast majority of detections to show results w/in that window)
+            if time_elapsed > TimeoutConfig.ADD_WAIT_TIME:
+                time.sleep(wait_time)
+                elapsed_sleep_time["elapsed_sleep_time"] += wait_time
+                wait_time = min(
+                    TimeoutConfig.RETRY_DISPATCH - int(time_elapsed), wait_time * 2
+                )
+
+            try:
+                self.validate_ara_events()
+            except ValidationFailed as e:
+                self.logger.error(f"Validation failed: {e}")
+                validation_error = e
+            # break out of the loop if validation passes
+            if validation_error is None:
+                self.logger.info(
+                    f"Validation passed for {self.name} after {elapsed_sleep_time['elapsed_sleep_time']} seconds"
+                )
+                break
+
+            validation_end_time = time.time()
+            time_elapsed += validation_end_time - validation_start_time
+
+        if validation_error is not None:
+            raise validation_error
 
     # NOTE: it would be more ideal to switch this to a system which gets the handle of the saved search job and polls
     #   it for completion, but that seems more tricky
     def test(
-        self, max_sleep: int = TimeoutConfig.MAX_SLEEP, raise_on_exc: bool = False
+        self,
+        raise_on_exc: bool = False,
     ) -> IntegrationTestResult:
         """Execute the integration test
 
@@ -764,43 +998,17 @@ class CorrelationSearch(BaseModel):
         and clear the indexes if so. Then, we force a run of the detection, wait for `sleep` seconds, and finally we
         validate that the appropriate risk/notable events seem to have been created. NOTE: assumes the data already
         exists in the instance
-        :param max_sleep: max number of seconds to sleep for after enabling the detection before we check for created
-            events; re-checks are made upon failures using an exponential backoff until the max is reached
         :param raise_on_exc: bool flag indicating if an exception should be raised when caught by the test routine, or
             if the error state should just be recorded for the test
         """
-        # max_sleep must be greater than the base value we must wait for the scheduled searchjob to run (jobs run every
-        # 60s)
-        if max_sleep < TimeoutConfig.BASE_SLEEP:
-            raise ClientError(
-                f"max_sleep value of {max_sleep} is less than the base sleep required "
-                f"({TimeoutConfig.BASE_SLEEP})"
-            )
 
         # initialize result as None
         result: IntegrationTestResult | None = None
 
         # keep track of time slept and number of attempts for exponential backoff (base 2)
-        elapsed_sleep_time = 0
-        num_tries = 0
-
-        # set the initial base sleep time
-        time_to_sleep = TimeoutConfig.BASE_SLEEP
+        elapsed_sleep_time = {"elapsed_sleep_time": 0}
 
         try:
-            # first make sure the indexes are currently empty and the detection is starting from a disabled state
-            self.logger.debug("Cleaning up any pre-existing risk/notable events...")
-            self.update_pbar(TestingStates.PRE_CLEANUP)
-            if self.risk_event_exists():
-                self.logger.warning(
-                    f"Risk events matching '{self.name}' already exist; marking for deletion"
-                )
-            if self.notable_event_exists():
-                self.logger.warning(
-                    f"Notable events matching '{self.name}' already exist; marking for deletion"
-                )
-            self.cleanup()
-
             # skip test if no risk or notable action defined
             if not self.has_risk_analysis_action and not self.has_notable_action:
                 message = (
@@ -816,88 +1024,31 @@ class CorrelationSearch(BaseModel):
                 # force the detection to run
                 self.logger.info(f"Forcing a run on {self.name}")
                 self.update_pbar(TestingStates.FORCE_RUN)
-                self.force_run()
+                self.update_timeframe(refresh=False)
+                self.enable(refresh=False)
 
-                # loop so long as the elapsed time is less than max_sleep
-                while elapsed_sleep_time < max_sleep:
-                    # sleep so the detection job can finish
-                    self.logger.info(
-                        f"Waiting {time_to_sleep} for {self.name} so it can finish"
-                    )
-                    self.update_pbar(TestingStates.VALIDATING)
-                    time.sleep(time_to_sleep)
-                    elapsed_sleep_time += time_to_sleep
-
-                    self.logger.info(
-                        f"Validating detection (attempt #{num_tries + 1} - {elapsed_sleep_time} seconds elapsed of "
-                        f"{max_sleep} max)"
-                    )
-
+                attempt = 1
+                while attempt <= 3:
                     # reset the result to None on each loop iteration
                     result = None
 
+                    attempt += 1
                     try:
-                        # Validate risk events
-                        self.logger.debug("Checking for matching risk events")
-                        if self.has_risk_analysis_action:
-                            if self.risk_event_exists():
-                                # TODO (PEX-435): should this in the retry loop? or outside it?
-                                #   -> I've observed there being a missing risk event (15/16) on
-                                #   the first few tries, so this does help us check for true
-                                #   positives; BUT, if we have lots of failing detections, this
-                                #   will definitely add to the total wait time
-                                #   -> certain types of failures (e.g. risk message, or any value
-                                #       checking) should fail testing automatically
-                                #   -> other types, like those based on counts of risk events,
-                                #       should happen should fail more slowly as more events may be
-                                #       produced
-                                self.validate_risk_events()
-                            else:
-                                raise ValidationFailed(
-                                    f"TEST FAILED: No matching risk event created for: {self.name}"
-                                )
-
-                        # Validate notable events
-                        self.logger.debug("Checking for matching notable events")
-                        if self.has_notable_action:
-                            # NOTE: because we check this last, if both fail, the error message about notables will
-                            # always be the last to be added and thus the one surfaced to the user
-                            if self.notable_event_exists():
-                                # TODO (PEX-435): should this in the retry loop? or outside it?
-                                # TODO (PEX-434): implement deeper notable validation (the method
-                                #   commented out below is unimplemented)
-                                # self.validate_notable_events(elapsed_sleep_time)
-                                pass
-                            else:
-                                raise ValidationFailed(
-                                    f"TEST FAILED: No matching notable event created for: {self.name}"
-                                )
+                        self.dispatch_and_validate(elapsed_sleep_time)
                     except ValidationFailed as e:
                         self.logger.error(f"Risk/notable validation failed: {e}")
                         result = IntegrationTestResult(
                             status=TestResultStatus.FAIL,
                             message=f"TEST FAILED: {e}",
-                            wait_duration=elapsed_sleep_time,
+                            wait_duration=elapsed_sleep_time["elapsed_sleep_time"],
                         )
-
-                    # if result is still None, then all checks passed and we can break the loop
                     if result is None:
                         result = IntegrationTestResult(
                             status=TestResultStatus.PASS,
                             message=f"TEST PASSED: Expected risk and/or notable events were created for: {self.name}",
-                            wait_duration=elapsed_sleep_time,
+                            wait_duration=elapsed_sleep_time["elapsed_sleep_time"],
                         )
                         break
-
-                    # increment number of attempts to validate detection
-                    num_tries += 1
-
-                    # compute the next time to sleep for
-                    time_to_sleep = 2**num_tries
-
-                    # if the computed time to sleep will exceed max_sleep, adjust appropriately
-                    if (elapsed_sleep_time + time_to_sleep) > max_sleep:
-                        time_to_sleep = max_sleep - elapsed_sleep_time
 
             # TODO (PEX-436): should cleanup be in a finally block so it runs even on exception?
             # cleanup the created events, disable the detection and return the result
@@ -909,7 +1060,7 @@ class CorrelationSearch(BaseModel):
                 result = IntegrationTestResult(
                     status=TestResultStatus.ERROR,
                     message=f"TEST FAILED (ERROR): Exception raised during integration test: {e}",
-                    wait_duration=elapsed_sleep_time,
+                    wait_duration=elapsed_sleep_time["elapsed_sleep_time"],
                     exception=e,
                 )
                 self.logger.exception(result.message)  # type: ignore
@@ -1025,6 +1176,7 @@ class CorrelationSearch(BaseModel):
         # reset caches
         self._risk_events = None
         self._notable_events = None
+        self._risk_dm_events = None
 
     def update_pbar(self, state: str) -> str:
         """

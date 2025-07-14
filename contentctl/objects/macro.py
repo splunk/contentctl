@@ -1,14 +1,19 @@
 # Used so that we can have a staticmethod that takes the class
 # type Macro as an argument
 from __future__ import annotations
-from typing import TYPE_CHECKING, List
-import re
-from pydantic import Field, model_serializer, NonNegativeInt
-import uuid
+
 import datetime
+import pathlib
+import re
+import uuid
+from typing import TYPE_CHECKING, List
+
+from pydantic import Field, NonNegativeInt, field_validator, model_serializer
 
 if TYPE_CHECKING:
     from contentctl.input.director import DirectorOutputDto
+
+from contentctl.objects.enums import ContentStatus
 from contentctl.objects.security_content_object import SecurityContentObject
 
 # The following macros are included in commonly-installed apps.
@@ -21,6 +26,7 @@ MACROS_TO_IGNORE.add(
 )  # SA-ThreatIntelligence, part of Enterprise Security
 MACROS_TO_IGNORE.add("cim_corporate_web_domain_search")  # Part of CIM/Splunk_SA_CIM
 # MACROS_TO_IGNORE.add("prohibited_processes")
+MACROS_TO_IGNORE.add("globedistance")  # Part of SA-Utils, part of Enterprise Security
 
 
 class Macro(SecurityContentObject):
@@ -28,9 +34,19 @@ class Macro(SecurityContentObject):
     arguments: List[str] = Field([])
     # TODO: Add id field to all macro ymls
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    date: datetime.date = Field(datetime.date.today())
+    date: datetime.date = Field(default=datetime.date.today())
     author: str = Field("NO AUTHOR DEFINED", max_length=255)
     version: NonNegativeInt = 1
+    status: ContentStatus = ContentStatus.production
+
+    @field_validator("status", mode="after")
+    @classmethod
+    def NarrowStatus(cls, status: ContentStatus) -> ContentStatus:
+        return cls.NarrowStatusTemplate(status, [ContentStatus.production])
+
+    @classmethod
+    def containing_folder(cls) -> pathlib.Path:
+        return pathlib.Path("macros")
 
     @model_serializer
     def serialize_model(self):

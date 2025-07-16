@@ -1,7 +1,7 @@
 
-[defaullt]
+[default]
 definition = search *
-description = Default Macro definition, if this is being used, a macro you relied on had its definition removed.
+description = Default Macro definition, if this is being used, a macro you relied on had its description removed.
 
 {% for macro in objects %}
 [{{ macro.name }}{% if macro.arguments | length > 0 %}({{ macro.arguments|length }}){% endif %}]

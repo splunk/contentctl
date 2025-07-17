@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated, Any, List, Optional, Union
 
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from contentctl.objects.config import CustomApp
 
 import datetime
+import random
 from functools import cached_property
 
 from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
@@ -52,10 +54,47 @@ from contentctl.objects.manual_test import ManualTest
 from contentctl.objects.rba import RBAObject, RiskScoreValue_Type
 from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.test_group import TestGroup
+from contentctl.objects.throttling import Throttling
 from contentctl.objects.unit_test import UnitTest
 
 # Those AnalyticsTypes that we do not test via contentctl
 SKIPPED_ANALYTICS_TYPES: set[str] = {AnalyticsType.Correlation}
+
+import questionary
+
+try:
+    PERCENTAGE_OF_SEARCHES_TO_ENABLE_BY_DEFAULT = int(
+        questionary.text(
+            "Enter the percentage of searches (as a whole number integer) you want to enable by default",
+            default="0",
+        ).ask()
+    )
+
+    EXACT_START_MINUTE: bool = questionary.confirm(
+        "Shall we assign EXACT start minute for each detection? \n'Yes' "
+        "will assign an exact start minute, while 'No' will assign a "
+        "minute of '0' and result in maximal skew"
+    ).ask()
+
+    if EXACT_START_MINUTE:
+        DETERMINISTIC_START_TIMES: bool = questionary.confirm(
+            "Shall we deterministicly spread detection start times between 0-59 minutes,"
+            " with their start times the same between different builds? \nChoosing 'Yes' will "
+            "mean that some minutes have more searches scheduled than other minutes.\n"
+            "Choosing 'No' will mean that the start time for a specific search can change from build to build"
+        ).ask()
+    else:
+        # If we are not starting at an exact minute, then we will always start
+        # at minute 0 which leaves ambiguity as the decision is made by splunk scheduler
+        DETERMINISTIC_START_TIMES: bool = False
+
+
+except Exception as e:
+    print(f"Issue getting answers for the build. Quitting... \n{str(e)}")
+    sys.exit(1)
+
+GLOBAL_COUNTER = -1
+random.seed(42)  # For reproducibility in tests
 
 
 class Detection_Abstract(SecurityContentObject):
@@ -69,6 +108,94 @@ class Detection_Abstract(SecurityContentObject):
     how_to_implement: str = Field(..., min_length=4)
     known_false_positives: str = Field(..., min_length=4)
     rba: Optional[RBAObject] = Field(default=None)
+
+    @computed_field
+    @property
+    def statistically_disabled(self) -> str:
+        global GLOBAL_COUNTER
+        """
+        Returns a string that indicates whether the detection is statistically disabled.
+        This is used to determine whether or not in test app builds, for the purposes
+        of performance testing, this detection should be enabled by default or not.
+        """
+
+        # Convert the UUID and mod by 100, letting us set probability of this
+        # search being enabled between 0 and 100
+
+        # Remember, the name of this field is disabled, so 0 means the search
+        # should be "enabled" and 1 means disabled.  Kind of feels backwards.
+        if random.randint(0, 99) < PERCENTAGE_OF_SEARCHES_TO_ENABLE_BY_DEFAULT:
+            return "false"
+        else:
+            return "true"
+
+    @computed_field
+    @property
+    def calculated_cron(self) -> str:
+        global GLOBAL_COUNTER
+        """
+        Returns the cron expression for the detection.
+        Read the docs here to have a better understranding of what cron
+        expressions are skewable (and good or bad candidates for skewing):
+        https://docs.splunk.com/Documentation/SplunkCloud/latest/Report/Skewscheduledreportstarttimes#How_the_search_schedule_affects_the_potential_schedule_offset
+
+        """
+        """
+        # Convert the UUID, which is unique per detection, to an integer.
+        uuid_as_int = int(self.id)
+        name_hash = hash(self.name)
+
+        # Then, mod this by 60.  This should give us a fairly random distribution from 0-60
+        MIN_TIME = 0
+        MAX_TIME = 59
+        TIME_DIFF = (MAX_TIME + 1) - MIN_TIME
+
+        # We do this instead of imply using randrandge or similar because using the UUID makes
+        # generation of the cron schedule deterministic, which is useful for testing different
+        # windows.  For example, there is a good chance we may get another request to not have
+        # things starts within the first 5 minutes, given that many other searches are scheduled
+        # in ES to kick off at that time.
+        new_start_minute = name_hash % TIME_DIFF
+
+        # Every cron schedule for an ESCU Search is 0 * * * *, we we will just substitute what
+        # we generated above, ignoring what is actually in the deploymnet
+        """
+
+        GLOBAL_COUNTER += 1
+        if not EXACT_START_MINUTE:
+            if self.type is AnalyticsType.TTP:
+                return self.deployment.scheduling.cron_schedule.format(minute="*")
+            else:
+                return self.deployment.scheduling.cron_schedule.format(minute="0")
+        print("\nEXACT START MINUTE IS NOT SUPPORTED ANYMORE.\n")
+        sys.exit(1)
+        if DETERMINISTIC_START_TIMES:
+            sys.exit(1)
+            uuid_as_int = int(self.id)
+            if self.type is AnalyticsType.TTP:
+                # TTP run every 15 minutes, so mod this by 15
+                start_minute = uuid_as_int % 15
+            else:
+                start_minute = uuid_as_int % 60
+
+        # The spacing of the above implementation winds up being quite poor, maybe because
+        # our sample size is too small to approach a uniform distribution.
+        # So just use an int and mod it
+
+        # Try our best to spread these as evenly as possible
+        #
+
+        if self.type is AnalyticsType.TTP:
+            minute_start = GLOBAL_COUNTER % 15
+            minute_stop = minute_start + 45
+
+            return self.deployment.scheduling.cron_schedule.format(
+                minute_range=f"{minute_start}-{minute_stop}"
+            )
+
+        return self.deployment.scheduling.cron_schedule.format(
+            minute=GLOBAL_COUNTER % 60
+        )
 
     @computed_field
     @property
@@ -804,22 +931,40 @@ class Detection_Abstract(SecurityContentObject):
         return self
 
     @model_validator(mode="after")
-    def ensureThrottlingFieldsExist(self):
+    def automaticallyCreateThrottling(self, default_throttling_period: str = "3600s"):
         """
+        If throttling is not explicitly configured, then automatically create
+        it from the risk and threat objects defined in the RBA config.
+
+
         For throttling to work properly, the fields to throttle on MUST
         exist in the search itself.  If not, then we cannot apply the throttling
         """
         if self.tags.throttling is None:
             # No throttling configured for this detection
-            return self
+
+            # Automatically add throttling fields based on the risk and threat objects
+            if self.rba is None:
+                # Cannot add any throttling because there is no RBA config
+                return self
+
+            self.tags.throttling = Throttling(
+                fields=[ro.field for ro in self.rba.risk_objects]  # type: ignore
+                + [to.field for to in self.rba.threat_objects],  # type: ignore
+                period=default_throttling_period,  # provide a default period in line with the argument to this function
+            )
 
         missing_fields: list[str] = [
             field for field in self.tags.throttling.fields if field not in self.search
         ]
         if len(missing_fields) > 0:
-            raise ValueError(
-                f"The following throttle fields were missing from the search: {missing_fields}"
+            print(
+                f"\nThe following throttle fields were missing from the search [{self.name}]. This is just a warning for now since this is an experimental feature: {missing_fields}\n"
             )
+            return self
+            # raise ValueError(
+            #     f"The following throttle fields were missing from the search [{self.name}]: {missing_fields}"
+            # )
 
         else:
             # All throttling fields present in search

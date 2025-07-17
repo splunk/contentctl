@@ -1,6 +1,7 @@
-import yaml
+from enum import IntEnum, StrEnum
 from typing import Any
-from enum import StrEnum, IntEnum
+
+import yaml
 
 # Set the following so that we can write StrEnum and IntEnum
 # to files. Otherwise, we will get the following errors when trying

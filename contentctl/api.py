@@ -1,9 +1,10 @@
 from pathlib import Path
-from typing import Any, Union, Type
-from contentctl.input.yml_reader import YmlReader
-from contentctl.objects.config import test_common, test, test_servers
-from contentctl.objects.security_content_object import SecurityContentObject
+from typing import Any, Type, Union
+
 from contentctl.input.director import DirectorOutputDto
+from contentctl.input.yml_reader import YmlReader
+from contentctl.objects.config import test, test_common, test_servers
+from contentctl.objects.security_content_object import SecurityContentObject
 
 
 def config_from_file(
@@ -36,7 +37,7 @@ def config_from_file(
 
     except Exception as e:
         raise Exception(
-            f"Failed to load contentctl configuration from file '{path}': {str(e)}"
+            f"Failed to load contentctl configuration from file '{path}': {e!s}"
         )
 
     # Apply settings that have been overridden from the ones in the file
@@ -45,7 +46,7 @@ def config_from_file(
     except Exception as e:
         raise Exception(
             f"Failed updating dictionary of values read from file '{path}'"
-            f" with the dictionary of arguments passed: {str(e)}"
+            f" with the dictionary of arguments passed: {e!s}"
         )
 
     # The function below will throw its own descriptive exception if it fails
@@ -78,7 +79,7 @@ def config_from_dict(
     try:
         test_object = configType.model_validate(config)
     except Exception as e:
-        raise Exception(f"Failed to load contentctl configuration from dict:\n{str(e)}")
+        raise Exception(f"Failed to load contentctl configuration from dict:\n{e!s}")
 
     return test_object
 

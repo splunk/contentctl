@@ -16,7 +16,7 @@ class YmlReader:
             file_handler = open(file_path, "r", encoding="utf-8")
         except OSError as exc:
             print(
-                f"\nThere was an unrecoverable error when opening the file '{file_path}' - we will exit immediately:\n{str(exc)}"
+                f"\nThere was an unrecoverable error when opening the file '{file_path}' - we will exit immediately:\n{exc!s}"
             )
             sys.exit(1)
 
@@ -57,7 +57,7 @@ class YmlReader:
                 )
         except yaml.YAMLError as exc:
             print(
-                f"\nThere was an unrecoverable YML Parsing error when reading or parsing the file '{file_path}' - we will exit immediately:\n{str(exc)}"
+                f"\nThere was an unrecoverable YML Parsing error when reading or parsing the file '{file_path}' - we will exit immediately:\n{exc!s}"
             )
             sys.exit(1)
 

@@ -1,6 +1,8 @@
-from contentctl.objects.config import deploy_acs, StackType
-from requests import post
 import pprint
+
+from requests import post
+
+from contentctl.objects.config import StackType, deploy_acs
 
 
 class Deploy:
@@ -33,7 +35,7 @@ class Deploy:
                     raise Exception(f"Unsupported stack type: '{config.stack_type}'")
         except Exception as e:
             raise Exception(
-                f"Error installing to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS:\n{str(e)}"
+                f"Error installing to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS:\n{e!s}"
             )
 
         try:

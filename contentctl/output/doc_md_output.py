@@ -1,6 +1,5 @@
 import os
 import sys
-
 from pathlib import Path
 
 from contentctl.output.jinja_writer import JinjaWriter

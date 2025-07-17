@@ -200,7 +200,7 @@ class CustomApp(App_Base):
             raise (
                 ValueError(
                     "The specified version does not follow the semantic versioning spec "
-                    f"(https://semver.org/). {str(e)}"
+                    f"(https://semver.org/). {e!s}"
                 )
             )
         return v
@@ -1094,7 +1094,7 @@ class test_common(build):
                 f"Successfully wrote a test plan for [{len(self.mode.files)} detections] using [{len(self.apps)} apps] to [{output_file}]"
             )
         except Exception as e:
-            raise Exception(f"Error writing test plan file [{output_file}]: {str(e)}")
+            raise Exception(f"Error writing test plan file [{output_file}]: {e!s}")
 
     def getLocalAppDir(self) -> pathlib.Path:
         # docker really wants absolute paths
@@ -1189,7 +1189,7 @@ class test(test_common):
             return self
 
         except Exception as e:
-            raise ValueError(f"Error constructing container test_instances: {str(e)}")
+            raise ValueError(f"Error constructing container test_instances: {e!s}")
 
     @model_validator(mode="after")
     def ensureAppsAreGood(self) -> Self:
@@ -1213,7 +1213,7 @@ class test(test_common):
                 stage_file=False, include_custom_app=False
             )
         except Exception as e:
-            raise Exception(f"Error validating test apps: {str(e)}")
+            raise Exception(f"Error validating test apps: {e!s}")
         return self
 
     def getContainerEnvironmentString(
@@ -1363,7 +1363,7 @@ class release_notes(Config_Base):
             p.mkdir(exist_ok=True, parents=True)
         except Exception as e:
             raise Exception(
-                f"Error making the directory '{p}' to hold release_notes: {str(e)}"
+                f"Error making the directory '{p}' to hold release_notes: {e!s}"
             )
         return p / filename
 

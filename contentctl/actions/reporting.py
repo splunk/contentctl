@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
 from contentctl.input.director import DirectorOutputDto
-from contentctl.output.svg_output import SvgOutput
-from contentctl.output.attack_nav_output import AttackNavOutput
 from contentctl.objects.config import report
+from contentctl.output.attack_nav_output import AttackNavOutput
+from contentctl.output.svg_output import SvgOutput
 
 
 @dataclass(frozen=True)
@@ -24,7 +24,7 @@ class Reporting:
                 )
             else:
                 raise Exception(
-                    f"Error writing reporting : '{input_dto.config.getReportingPath()}': {str(e)}"
+                    f"Error writing reporting : '{input_dto.config.getReportingPath()}': {e!s}"
                 )
 
         print("Creating GitHub Badges...")

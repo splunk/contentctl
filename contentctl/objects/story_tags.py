@@ -45,7 +45,7 @@ class StoryTags(BaseModel):
     def getCategory_conf(self) -> str:
         # if len(self.category) > 1:
         #   print("Story with more than 1 category.  We can only have 1 category, fix it!")
-        return list(self.category)[0]
+        return next(iter(self.category))
 
     @model_serializer
     def serialize_model(self):

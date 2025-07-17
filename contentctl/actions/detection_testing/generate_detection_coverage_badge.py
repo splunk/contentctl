@@ -47,13 +47,13 @@ parser.add_argument(
 try:
     results = parser.parse_args()
 except Exception as e:
-    print(f"Error parsing arguments: {str(e)}")
+    print(f"Error parsing arguments: {e!s}")
     exit(1)
 
 try:
     summary_info = json.loads(results.input_summary_file.read())
 except Exception as e:
-    print(f"Error loading {results.input_summary_file.name} JSON file: {str(e)}")
+    print(f"Error loading {results.input_summary_file.name} JSON file: {e!s}")
     sys.exit(1)
 
 if "summary" not in summary_info:
@@ -75,7 +75,7 @@ try:
         RAW_BADGE_SVG.format(results.badge_string, "{:2.1f}%".format(pass_percent))
     )
 except Exception as e:
-    print(f"Error generating badge: {str(e)}")
+    print(f"Error generating badge: {e!s}")
     sys.exit(1)
 
 

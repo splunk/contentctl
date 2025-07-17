@@ -1,18 +1,21 @@
 from __future__ import annotations
+
 from typing import List
+
 from pydantic import (
     BaseModel,
-    Field,
-    field_validator,
-    ValidationInfo,
-    model_serializer,
     ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_serializer,
 )
-from contentctl.objects.story import Story
+
 from contentctl.objects.enums import (
     SecurityContentInvestigationProductName,
     SecurityDomain,
 )
+from contentctl.objects.story import Story
 
 
 class InvestigationTags(BaseModel):

@@ -16,6 +16,7 @@ from pydantic import (
     model_validator,
 )
 
+from contentctl.objects.base_test import TestType
 from contentctl.objects.lookup import FileBackedLookup, KVStoreLookup, Lookup
 from contentctl.objects.macro import Macro
 
@@ -512,6 +513,7 @@ class Detection_Abstract(SecurityContentObject):
             "source": self.source,
             "nes_fields": self.nes_fields,
             "rba": self.rba or {},
+            "tests": [t for t in self.tests if t.test_type == TestType.UNIT],
         }
         if self.deployment.alert_action.notable:
             model["risk_severity"] = self.severity

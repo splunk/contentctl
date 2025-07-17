@@ -528,9 +528,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 self.finish()
                 return
             except Exception as e:
-                self.pbar.write(
-                    f"Error testing detection: {type(e).__name__}: {e!s}"
-                )
+                self.pbar.write(f"Error testing detection: {type(e).__name__}: {e!s}")
                 raise e
             finally:
                 self.sync_obj.outputQueue.append(detection)

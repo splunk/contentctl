@@ -1,7 +1,7 @@
-from typing import Union, Any
 from enum import StrEnum
+from typing import Any, Union
 
-from pydantic import ConfigDict, BaseModel
+from pydantic import BaseModel, ConfigDict
 from splunklib.data import Record  # type: ignore
 
 from contentctl.helper.utils import Utils

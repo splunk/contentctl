@@ -1,7 +1,7 @@
 import json
-from typing import Optional, Collection
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Collection, Optional
 from urllib.parse import urlencode
 
 import requests

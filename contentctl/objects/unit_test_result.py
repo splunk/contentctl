@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
+
 from splunklib.data import Record
+
 from contentctl.objects.base_test_result import BaseTestResult, TestResultStatus
 
 if TYPE_CHECKING:

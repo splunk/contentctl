@@ -1,8 +1,9 @@
+import functools
+import os
+import shelve
+
 import requests
 import xmltodict
-import functools
-import shelve
-import os
 
 SPLUNKBASE_API_URL = "https://apps.splunk.com/api/apps/entriesbyid/"
 

@@ -1,8 +1,10 @@
+import pathlib
+
+import yaml
+
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
-import pathlib
-import yaml
 
 OUTPUT_FOLDER = "test_results"
 OUTPUT_FILENAME = "summary.yml"

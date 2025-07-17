@@ -1,16 +1,19 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from contentctl.objects.config import validate
 
-from contentctl.input.yml_reader import YmlReader
-from pydantic import BaseModel, model_validator, ConfigDict, FilePath, UUID4
 import dataclasses
-from typing import List, Optional, Dict, Union, Self
 import pathlib
-from enum import StrEnum, auto
 import uuid
+from enum import StrEnum, auto
+from typing import Dict, List, Optional, Self, Union
+
+from pydantic import UUID4, BaseModel, ConfigDict, FilePath, model_validator
+
+from contentctl.input.yml_reader import YmlReader
 
 
 class SupportedPlatform(StrEnum):

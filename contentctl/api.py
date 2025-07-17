@@ -1,9 +1,10 @@
 from pathlib import Path
-from typing import Any, Union, Type
-from contentctl.input.yml_reader import YmlReader
-from contentctl.objects.config import test_common, test, test_servers
-from contentctl.objects.security_content_object import SecurityContentObject
+from typing import Any, Type, Union
+
 from contentctl.input.director import DirectorOutputDto
+from contentctl.input.yml_reader import YmlReader
+from contentctl.objects.config import test, test_common, test_servers
+from contentctl.objects.security_content_object import SecurityContentObject
 
 
 def config_from_file(

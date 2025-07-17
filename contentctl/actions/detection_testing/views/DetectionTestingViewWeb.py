@@ -1,9 +1,9 @@
-from threading import Thread
-
-from bottle import template, Bottle, ServerAdapter
-from wsgiref.simple_server import make_server, WSGIRequestHandler
-import jinja2
 import webbrowser
+from threading import Thread
+from wsgiref.simple_server import WSGIRequestHandler, make_server
+
+import jinja2
+from bottle import Bottle, ServerAdapter, template
 from pydantic import ConfigDict
 
 from contentctl.actions.detection_testing.views.DetectionTestingView import (

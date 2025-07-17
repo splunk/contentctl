@@ -1,6 +1,8 @@
-from contentctl.objects.config import deploy_acs, StackType
-from requests import post
 import pprint
+
+from requests import post
+
+from contentctl.objects.config import StackType, deploy_acs
 
 
 class Deploy:

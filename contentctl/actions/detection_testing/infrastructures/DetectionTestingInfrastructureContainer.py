@@ -1,11 +1,12 @@
+import docker
+import docker.models.containers
+import docker.models.resource
+import docker.types
+
 from contentctl.actions.detection_testing.infrastructures.DetectionTestingInfrastructure import (
     DetectionTestingInfrastructure,
 )
 from contentctl.objects.config import test
-import docker.models.resource
-import docker.models.containers
-import docker
-import docker.types
 
 
 class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):

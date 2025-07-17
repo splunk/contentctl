@@ -1,8 +1,11 @@
 from __future__ import annotations
-from pycvesearch import CVESearch
-from typing import Annotated, Union, TYPE_CHECKING
-from pydantic import ConfigDict, BaseModel, Field, computed_field
+
 from decimal import Decimal
+from typing import TYPE_CHECKING, Annotated, Union
+
+from pycvesearch import CVESearch
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
 from contentctl.objects.annotated_types import CVE_TYPE
 
 if TYPE_CHECKING:

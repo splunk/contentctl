@@ -160,14 +160,17 @@ class Detection_Abstract(SecurityContentObject):
         # Every cron schedule for an ESCU Search is 0 * * * *, we we will just substitute what
         # we generated above, ignoring what is actually in the deploymnet
         """
+
         GLOBAL_COUNTER += 1
         if not EXACT_START_MINUTE:
             if self.type is AnalyticsType.TTP:
                 return self.deployment.scheduling.cron_schedule.format(minute="*")
             else:
                 return self.deployment.scheduling.cron_schedule.format(minute="0")
-
+        print("\nEXACT START MINUTE IS NOT SUPPORTED ANYMORE.\n")
+        sys.exit(1)
         if DETERMINISTIC_START_TIMES:
+            sys.exit(1)
             uuid_as_int = int(self.id)
             if self.type is AnalyticsType.TTP:
                 # TTP run every 15 minutes, so mod this by 15

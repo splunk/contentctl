@@ -16,6 +16,8 @@ from pydantic import (
 )
 
 from contentctl.objects.abstract_security_content_objects.detection_abstract import (
+    DETERMINISTIC_START_TIMES,
+    EXACT_START_MINUTE,
     GLOBAL_COUNTER,
 )
 from contentctl.objects.baseline_tags import BaselineTags
@@ -74,24 +76,37 @@ class Baseline(SecurityContentObject):
         # we generated above, ignoring what is actually in the deploymnet
         """
 
+        GLOBAL_COUNTER += 1
+        if not EXACT_START_MINUTE:
+            return self.deployment.scheduling.cron_schedule.format(minute="0")
+
+        print("\nEXACT START MINUTE IS NOT SUPPORTED ANYMORE.\n")
+        import sys
+
+        sys.exit(1)
+        if DETERMINISTIC_START_TIMES:
+            sys.exit(1)
+            uuid_as_int = int(self.id)
+            start_minute = uuid_as_int % 60
+
         # The spacing of the above implementation winds up being quite poor, maybe because
         # our sample size is too small to approach a uniform distribution.
         # So just use an int and mod it
-        MIN_TIME = 0
-        MAX_TIME = 14
-        TIME_DIFF = (MAX_TIME + 1) - MIN_TIME
-        new_start_minute = GLOBAL_COUNTER % TIME_DIFF
-        GLOBAL_COUNTER = GLOBAL_COUNTER + 1
 
-        try:
+        # Try our best to spread these as evenly as possible
+        #
+
+        if self.type is AnalyticsType.TTP:
+            minute_start = GLOBAL_COUNTER % 15
+            minute_stop = minute_start + 45
+
             return self.deployment.scheduling.cron_schedule.format(
-                minute=new_start_minute
+                minute_range=f"{minute_start}-{minute_stop}"
             )
-        except Exception as e:
-            print(e)
-            import code
 
-            code.interact(local=locals())
+        return self.deployment.scheduling.cron_schedule.format(
+            minute=GLOBAL_COUNTER % 60
+        )
 
     @field_validator("status", mode="after")
     @classmethod

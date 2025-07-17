@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated, Any, List, Optional, Union
 
@@ -59,8 +60,40 @@ from contentctl.objects.unit_test import UnitTest
 # Those AnalyticsTypes that we do not test via contentctl
 SKIPPED_ANALYTICS_TYPES: set[str] = {AnalyticsType.Correlation}
 
+import questionary
 
-GLOBAL_COUNTER = 0
+try:
+    PERCENTAGE_OF_SEARCHES_TO_ENABLE_BY_DEFAULT = int(
+        questionary.text(
+            "Enter the percentage of searches (as a whole number integer) you want to enable by default",
+            default="0",
+        ).ask()
+    )
+
+    EXACT_START_MINUTE: bool = questionary.confirm(
+        "Shall we assign EXACT start minute for each detection? \n'Yes' "
+        "will assign an exact start minute, while 'No' will assign a "
+        "minute of '0' and result in maximal skew"
+    ).ask()
+
+    if EXACT_START_MINUTE:
+        DETERMINISTIC_START_TIMES: bool = questionary.confirm(
+            "Shall we deterministicly spread detection start times between 0-59 minutes,"
+            " with their start times the same between different builds? \nChoosing 'Yes' will "
+            "mean that some minutes have more searches scheduled than other minutes.\n"
+            "Choosing 'No' will mean that the start time for a specific search can change from build to build"
+        ).ask()
+    else:
+        # If we are not starting at an exact minute, then we will always start
+        # at minute 0 which leaves ambiguity as the decision is made by splunk scheduler
+        DETERMINISTIC_START_TIMES: bool = False
+
+
+except Exception as e:
+    print(f"Issue getting answers for the build. Quitting... \n{str(e)}")
+    sys.exit(1)
+
+GLOBAL_COUNTER = -1
 random.seed(42)  # For reproducibility in tests
 
 
@@ -89,10 +122,9 @@ class Detection_Abstract(SecurityContentObject):
         # Convert the UUID and mod by 100, letting us set probability of this
         # search being enabled between 0 and 100
 
-        PERCENT_OF_SEARCHES_TO_ENABLE = 0
         # Remember, the name of this field is disabled, so 0 means the search
         # should be "enabled" and 1 means disabled.  Kind of feels backwards.
-        if random.randint(0, 99) < PERCENT_OF_SEARCHES_TO_ENABLE:
+        if random.randint(0, 99) < PERCENTAGE_OF_SEARCHES_TO_ENABLE_BY_DEFAULT:
             return "false"
         else:
             return "true"
@@ -128,27 +160,39 @@ class Detection_Abstract(SecurityContentObject):
         # Every cron schedule for an ESCU Search is 0 * * * *, we we will just substitute what
         # we generated above, ignoring what is actually in the deploymnet
         """
+        GLOBAL_COUNTER += 1
+        if not EXACT_START_MINUTE:
+            if self.type is AnalyticsType.TTP:
+                return self.deployment.scheduling.cron_schedule.format(minute="*")
+            else:
+                return self.deployment.scheduling.cron_schedule.format(minute="0")
+
+        if DETERMINISTIC_START_TIMES:
+            uuid_as_int = int(self.id)
+            if self.type is AnalyticsType.TTP:
+                # TTP run every 15 minutes, so mod this by 15
+                start_minute = uuid_as_int % 15
+            else:
+                start_minute = uuid_as_int % 60
 
         # The spacing of the above implementation winds up being quite poor, maybe because
         # our sample size is too small to approach a uniform distribution.
         # So just use an int and mod it
-        MIN_TIME = 0
-        MAX_TIME = 14
-        TIME_DIFF = (MAX_TIME + 1) - MIN_TIME
-        new_start_minute = GLOBAL_COUNTER % TIME_DIFF
-        GLOBAL_COUNTER = GLOBAL_COUNTER + 1
+
+        # Try our best to spread these as evenly as possible
+        #
 
         if self.type is AnalyticsType.TTP:
-            minute_start = new_start_minute % 15
+            minute_start = GLOBAL_COUNTER % 15
             minute_stop = minute_start + 45
 
             return self.deployment.scheduling.cron_schedule.format(
                 minute_range=f"{minute_start}-{minute_stop}"
             )
 
-        # return "0 * * * *"
-
-        return self.deployment.scheduling.cron_schedule.format(minute=new_start_minute)
+        return self.deployment.scheduling.cron_schedule.format(
+            minute=GLOBAL_COUNTER % 60
+        )
 
     @computed_field
     @property
@@ -884,7 +928,7 @@ class Detection_Abstract(SecurityContentObject):
         return self
 
     @model_validator(mode="after")
-    def automaticallyCreateThrottling(self, default_throttling_period: str = "86400s"):
+    def automaticallyCreateThrottling(self, default_throttling_period: str = "3600s"):
         """
         If throttling is not explicitly configured, then automatically create
         it from the risk and threat objects defined in the RBA config.
@@ -904,7 +948,7 @@ class Detection_Abstract(SecurityContentObject):
             self.tags.throttling = Throttling(
                 fields=[ro.field for ro in self.rba.risk_objects]  # type: ignore
                 + [to.field for to in self.rba.threat_objects],  # type: ignore
-                period=default_throttling_period,  # provide a default period of 1 day
+                period=default_throttling_period,  # provide a default period in line with the argument to this function
             )
 
         missing_fields: list[str] = [

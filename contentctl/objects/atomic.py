@@ -128,7 +128,7 @@ class AtomicTest(BaseModel):
             try:
                 atomic_files.append(cls.constructAtomicFile(obj_path))
             except Exception as e:
-                error_messages.append(f"File [{obj_path}]\n{str(e)}")
+                error_messages.append(f"File [{obj_path}]\n{e!s}")
 
         if len(error_messages) > 0:
             exceptions_string = "\n\n".join(error_messages)

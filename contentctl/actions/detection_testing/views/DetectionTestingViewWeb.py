@@ -39,8 +39,8 @@ $(document).ready(function () {
         {% for containerName, data in currentTestingQueue.items() %}
         <tr>
             <td>{{ containerName }}</td>
-            <td>{{ data["name"] }}</td>    
-            <td>{{ data["search"] }}</td>    
+            <td>{{ data["name"] }}</td>
+            <td>{{ data["search"] }}</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -69,7 +69,7 @@ $(document).ready(function () {
             {% else %}
             <td style="font-weight: bold;background-color: #ff9999"><b>False</b></td>
             {% endif %}
-            
+
         </tr>
         {% endfor %}
         {% endfor %}
@@ -118,7 +118,7 @@ class DetectionTestingViewWeb(DetectionTestingView):
         try:
             webbrowser.open(f"http://{self.server.host}:{DEFAULT_WEB_UI_PORT}")
         except Exception as e:
-            print(f"Could not open webbrowser for status page: {str(e)}")
+            print(f"Could not open webbrowser for status page: {e!s}")
 
     def stop(self):
         if self.server.server is None:

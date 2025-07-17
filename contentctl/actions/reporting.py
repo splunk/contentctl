@@ -24,7 +24,7 @@ class Reporting:
                 )
             else:
                 raise Exception(
-                    f"Error writing reporting : '{input_dto.config.getReportingPath()}': {str(e)}"
+                    f"Error writing reporting : '{input_dto.config.getReportingPath()}': {e!s}"
                 )
 
         print("Creating GitHub Badges...")

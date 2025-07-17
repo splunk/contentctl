@@ -150,5 +150,5 @@ class Test:
             return summary.get("success", False)
 
         except Exception as e:
-            print(f"Error determining if whole test was successful: {str(e)}")
+            print(f"Error determining if whole test was successful: {e!s}")
             return False

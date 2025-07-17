@@ -99,7 +99,7 @@ class GitService(BaseModel):
                             updated_detections.add(detectionObject)
                         else:
                             raise Exception(
-                                f"Error getting detection object for file {str(decoded_path)}"
+                                f"Error getting detection object for file {decoded_path!s}"
                             )
 
                     elif (
@@ -111,7 +111,7 @@ class GitService(BaseModel):
                             updated_macros.add(macroObject)
                         else:
                             raise Exception(
-                                f"Error getting macro object for file {str(decoded_path)}"
+                                f"Error getting macro object for file {decoded_path!s}"
                             )
 
                     elif (
@@ -125,7 +125,7 @@ class GitService(BaseModel):
                             updated_datasources.add(datasourceObject)
                         else:
                             raise Exception(
-                                f"Error getting data source object for file {str(decoded_path)}"
+                                f"Error getting data source object for file {decoded_path!s}"
                             )
 
                     elif decoded_path.is_relative_to(self.config.path / "lookups"):
@@ -172,7 +172,7 @@ class GitService(BaseModel):
 
                         else:
                             raise Exception(
-                                f"Detected a changed file in the lookups/ directory '{str(decoded_path)}'.\n"
+                                f"Detected a changed file in the lookups/ directory '{decoded_path!s}'.\n"
                                 "Only files ending in .csv, .yml, or .mlmodel are supported in this "
                                 "directory. This file must be removed from the lookups/ directory."
                             )

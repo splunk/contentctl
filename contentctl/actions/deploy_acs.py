@@ -35,7 +35,7 @@ class Deploy:
                     raise Exception(f"Unsupported stack type: '{config.stack_type}'")
         except Exception as e:
             raise Exception(
-                f"Error installing to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS:\n{str(e)}"
+                f"Error installing to stack '{config.splunk_cloud_stack}' (stack_type='{config.stack_type}') via ACS:\n{e!s}"
             )
 
         try:

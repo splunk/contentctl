@@ -270,7 +270,7 @@ class ConfOutput:
                     output_dir=pathlib.Path(self.config.getBuildDir()),
                 )
             except SystemExit as e:
-                raise Exception(f"Error building package with slim: {str(e)}")
+                raise Exception(f"Error building package with slim: {e!s}")
 
         except Exception as e:
             print(
@@ -278,7 +278,7 @@ class ConfOutput:
                 "Packaging app with tar instead. This should still work, but appinspect may catch "
                 "errors that otherwise would have been flagged by slim."
             )
-            raise Exception(f"slim (splunk packaging toolkit) not installed: {str(e)}")
+            raise Exception(f"slim (splunk packaging toolkit) not installed: {e!s}")
 
     def packageApp(self, method: Callable[[ConfOutput], None] = packageAppTar) -> None:
         return method(self)

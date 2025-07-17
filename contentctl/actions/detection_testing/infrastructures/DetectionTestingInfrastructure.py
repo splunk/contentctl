@@ -197,7 +197,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     self.check_for_teardown()
 
         except Exception as e:
-            msg = f"[{self.get_name()}]: {str(e)}"
+            msg = f"[{self.get_name()}]: {e!s}"
             self.finish()
             if isinstance(e, ExceptionGroup):
                 raise ExceptionGroup(msg, e.exceptions) from e  # type: ignore
@@ -310,7 +310,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             return
 
         except Exception as e:
-            raise (Exception(f"Failure creating HEC Endpoint: {str(e)}"))
+            raise (Exception(f"Failure creating HEC Endpoint: {e!s}"))
 
     def get_all_indexes(self) -> None:
         """
@@ -327,7 +327,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # Retrieve all available indexes on the splunk instance
             self.all_indexes_on_server = indexes
         except Exception as e:
-            raise (Exception(f"Failure getting indexes: {str(e)}"))
+            raise (Exception(f"Failure getting indexes: {e!s}"))
 
     def get_conn(self) -> client.Service:
         try:
@@ -382,7 +382,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 pass
             except Exception as e:
                 self.pbar.write(
-                    f"Error getting API connection (not quitting) '{type(e).__name__}': {str(e)}"
+                    f"Error getting API connection (not quitting) '{type(e).__name__}': {e!s}"
                 )
 
             for _ in range(sleep_seconds):
@@ -402,7 +402,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 pass
             else:
                 raise Exception(
-                    f"Error creating index {self.sync_obj.replay_index} - {str(e)}"
+                    f"Error creating index {self.sync_obj.replay_index} - {e!s}"
                 )
 
     def configure_imported_roles(
@@ -426,7 +426,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             )
             return
         except Exception as e:
-            msg = f"Error configuring roles: {str(e)}"
+            msg = f"Error configuring roles: {e!s}"
             self.pbar.write(msg)
             raise Exception(msg) from e
 
@@ -436,7 +436,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             self.get_conn().post(endpoint, value=";".join(self.all_indexes_on_server))
         except Exception as e:
             self.pbar.write(
-                f"Error configuring deleteIndexesAllowed with '{self.all_indexes_on_server}': [{str(e)}]"
+                f"Error configuring deleteIndexesAllowed with '{self.all_indexes_on_server}': [{e!s}]"
             )
 
     def wait_for_conf_file(self, app_name: str, conf_file_name: str):
@@ -474,12 +474,12 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             parser.read(custom_acceleration_datamodels)
             if len(parser.keys()) > 1:
                 self.pbar.write(
-                    f"Read {len(parser) - 1} custom datamodels from {str(custom_acceleration_datamodels)}!"
+                    f"Read {len(parser) - 1} custom datamodels from {custom_acceleration_datamodels!s}!"
                 )
 
         if not cim_acceleration_datamodels.is_file():
             self.pbar.write(
-                f"******************************\nDATAMODEL ACCELERATION FILE {str(cim_acceleration_datamodels)} NOT "
+                f"******************************\nDATAMODEL ACCELERATION FILE {cim_acceleration_datamodels!s} NOT "
                 "FOUND. CIM DATAMODELS NOT ACCELERATED\n******************************\n"
             )
         else:
@@ -499,7 +499,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
                 except Exception as e:
                     self.pbar.write(
-                        f"Error creating the conf Datamodel {datamodel_name} key/value {name}/{value}: {str(e)}"
+                        f"Error creating the conf Datamodel {datamodel_name} key/value {name}/{value}: {e!s}"
                     )
 
     def execute(self):
@@ -529,7 +529,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 return
             except Exception as e:
                 self.pbar.write(
-                    f"Error testing detection: {type(e).__name__}: {str(e)}"
+                    f"Error testing detection: {type(e).__name__}: {e!s}"
                 )
                 raise e
             finally:
@@ -1365,7 +1365,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except Exception as e:
                 raise (
                     Exception(
-                        f"Trouble deleting data using the search {splunk_search}: {str(e)}"
+                        f"Trouble deleting data using the search {splunk_search}: {e!s}"
                     )
                 )
 
@@ -1440,7 +1440,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except Exception as e:
                 raise (
                     Exception(
-                        f"Could not download attack data file [{attack_data_file.data}]:{str(e)}"
+                        f"Could not download attack data file [{attack_data_file.data}]:{e!s}"
                     )
                 )
 
@@ -1514,7 +1514,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             except Exception as e:
                 raise (
                     Exception(
-                        f"There was an exception sending attack_data to HEC: {str(e)}"
+                        f"There was an exception sending attack_data to HEC: {e!s}"
                     )
                 )
 
@@ -1558,7 +1558,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                         )
                     )
             except Exception as e:
-                raise (Exception(f"There was an exception in the post: {str(e)}"))
+                raise (Exception(f"There was an exception in the post: {e!s}"))
 
     def status(self):
         pass

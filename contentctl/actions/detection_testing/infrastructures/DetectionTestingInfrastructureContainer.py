@@ -35,7 +35,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
                 self.removeContainer()
                 pass
             except Exception as e:
-                raise (Exception(f"Error removing container: {str(e)}"))
+                raise (Exception(f"Error removing container: {e!s}"))
         super().finish()
 
     def get_name(self) -> str:
@@ -47,7 +47,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
 
             return c
         except Exception as e:
-            raise (Exception(f"Failed to get docker client: {str(e)}"))
+            raise (Exception(f"Failed to get docker client: {e!s}"))
 
     def check_for_teardown(self):
         try:
@@ -57,7 +57,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         except Exception as e:
             if self.sync_obj.terminate is not True:
                 self.pbar.write(
-                    f"Error: could not get container [{self.get_name()}]: {str(e)}"
+                    f"Error: could not get container [{self.get_name()}]: {e!s}"
                 )
                 self.sync_obj.terminate = True
         else:
@@ -176,6 +176,6 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         except Exception as e:
             raise (
                 Exception(
-                    f"Could not remove Docker Container [{self.get_name()}]: {str(e)}"
+                    f"Could not remove Docker Container [{self.get_name()}]: {e!s}"
                 )
             )

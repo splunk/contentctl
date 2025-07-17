@@ -49,7 +49,7 @@ class CveEnrichment(BaseModel):
                 return CveEnrichment(use_enrichment=True, cve_api_obj=cve_api_obj)
             except Exception as e:
                 raise Exception(
-                    f"Error setting CVE_SEARCH API to: {CVESSEARCH_API_URL}: {str(e)}"
+                    f"Error setting CVE_SEARCH API to: {CVESSEARCH_API_URL}: {e!s}"
                 )
 
         return CveEnrichment(use_enrichment=False, cve_api_obj=None)
@@ -60,14 +60,14 @@ class CveEnrichment(BaseModel):
         if not self.use_enrichment:
             return CveEnrichmentObj(
                 id=cve_id,
-                cvss=Decimal(5.0),
+                cvss=Decimal("5.0"),
                 summary="SUMMARY NOT AVAILABLE! ONLY THE LINK WILL BE USED AT THIS TIME",
             )
         else:
             print("WARNING - Dynamic enrichment not supported at this time.")
             return CveEnrichmentObj(
                 id=cve_id,
-                cvss=Decimal(5.0),
+                cvss=Decimal("5.0"),
                 summary="SUMMARY NOT AVAILABLE! ONLY THE LINK WILL BE USED AT THIS TIME",
             )
         # Depending on needs, we may add dynamic enrichment functionality back to the tool

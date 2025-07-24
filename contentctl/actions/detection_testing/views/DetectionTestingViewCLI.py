@@ -1,9 +1,10 @@
+import time
+
+import tqdm
+
 from contentctl.actions.detection_testing.views.DetectionTestingView import (
     DetectionTestingView,
 )
-
-import time
-import tqdm
 
 
 class DetectionTestingViewCLI(DetectionTestingView, arbitrary_types_allowed=True):

@@ -1,18 +1,19 @@
 from __future__ import annotations
+
+from typing import Any, List, Union
+
 from pydantic import (
     BaseModel,
-    Field,
-    field_validator,
-    ValidationInfo,
-    model_serializer,
     ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_serializer,
 )
-from typing import List, Any, Union
 
-from contentctl.objects.story import Story
 from contentctl.objects.detection import Detection
-from contentctl.objects.enums import SecurityContentProductName
-from contentctl.objects.enums import SecurityDomain
+from contentctl.objects.enums import SecurityContentProductName, SecurityDomain
+from contentctl.objects.story import Story
 
 
 class BaselineTags(BaseModel):

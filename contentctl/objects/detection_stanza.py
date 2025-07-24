@@ -1,6 +1,6 @@
-from typing import ClassVar
 import hashlib
 from functools import cached_property
+from typing import ClassVar
 
 from pydantic import BaseModel, Field, computed_field
 

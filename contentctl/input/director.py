@@ -315,7 +315,7 @@ class Director:
             print(f"{Colors.BOLD}{Colors.BRIGHT_MAGENTA}╚{'═' * 60}╝{Colors.END}\n")
 
             print(
-                f"{Colors.BOLD}{Colors.GREEN}{Colors.SPARKLE} Validation Completed{Colors.END} – Issues detected in {Colors.RED}{Colors.BOLD}{len(validation_errors)}{Colors.END} files.\n"
+                f"{Colors.BOLD}{Colors.GREEN}{Colors.SPARKLE} Validation Completed{Colors.END} - Issues detected in {Colors.RED}{Colors.BOLD}{len(validation_errors)}{Colors.END} files.\n"
             )
 
             for index, entry in enumerate(validation_errors, 1):
@@ -371,7 +371,7 @@ class Director:
                                 f"      {Colors.RED}{Colors.ERROR} {error_msg}{Colors.END}"
                             )
                 else:
-                    print(f"      {Colors.RED}{Colors.ERROR} {str(error)}{Colors.END}")
+                    print(f"      {Colors.RED}{Colors.ERROR} {error!s}{Colors.END}")
                 print("")
 
             # Clean footer with next steps

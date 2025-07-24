@@ -1,6 +1,8 @@
 from __future__ import annotations
-from pydantic import BaseModel, ConfigDict
+
 from typing import List
+
+from pydantic import BaseModel, ConfigDict
 
 
 class DeploymentNotable(BaseModel):

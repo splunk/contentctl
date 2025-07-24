@@ -79,7 +79,7 @@ class Dashboard(SecurityContentObject):
             try:
                 json_obj: dict[str, Any] = json.load(jsonFilePointer)
             except Exception as e:
-                raise ValueError(f"Unable to load data from {json_file_path}: {str(e)}")
+                raise ValueError(f"Unable to load data from {json_file_path}: {e!s}")
 
         name_from_file = data.get("name", None)
         name_from_json = json_obj.get("title", None)

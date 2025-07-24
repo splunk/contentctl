@@ -463,7 +463,7 @@ class Detection_Abstract(SecurityContentObject):
             )
         """
         action.risk.param._risk
-        of the conf file only contains a list of dicts. We do not eant to 
+        of the conf file only contains a list of dicts. We do not eant to
         include the message here, so we do not return it.
         """
         rba_dict = self.rba.model_dump()

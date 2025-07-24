@@ -118,7 +118,7 @@ class Validate:
                             )
                     except Exception as e:
                         errors.append(
-                            f"Error processing checking version of TA {supported_TA.name}: {str(e)}"
+                            f"Error processing checking version of TA {supported_TA.name}: {e!s}"
                         )
 
         if len(errors) > 0:

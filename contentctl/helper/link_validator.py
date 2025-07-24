@@ -1,13 +1,13 @@
-from pydantic import BaseModel, model_validator
-from typing import Union, Callable, Any
+import abc
+import os
+import shelve
+import time
+from typing import Any, Callable, Union
+
 import requests
 import urllib3
 import urllib3.exceptions
-import time
-import abc
-
-import os
-import shelve
+from pydantic import BaseModel, model_validator
 
 DEFAULT_USER_AGENT_STRING = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36"
 ALLOWED_HTTP_CODES = [200]

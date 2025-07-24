@@ -18,9 +18,8 @@ from contentctl.actions.detection_testing.views.DetectionTestingViewFile import 
 from contentctl.actions.detection_testing.views.DetectionTestingViewWeb import (
     DetectionTestingViewWeb,
 )
-from contentctl.objects.config import Changes, Selected
+from contentctl.objects.config import Changes, Selected, test_servers
 from contentctl.objects.config import test as test_
-from contentctl.objects.config import test_servers
 from contentctl.objects.detection import Detection
 from contentctl.objects.integration_test import IntegrationTest
 
@@ -151,5 +150,5 @@ class Test:
             return summary.get("success", False)
 
         except Exception as e:
-            print(f"Error determining if whole test was successful: {str(e)}")
+            print(f"Error determining if whole test was successful: {e!s}")
             return False

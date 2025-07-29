@@ -16,7 +16,7 @@ contentctl = 'contentctl.contentctl:main'
 python = "^3.11,<3.14"
 pydantic = "~2.9.2"
 PyYAML = "^6.0.2"
-requests = "~2.32.3"
+requests = ">=2.32.4"
 pycvesearch = "^1.2"
 xmltodict = ">=0.13,<0.15"
 attackcti = ">=0.5.4,<0.6"
@@ -34,7 +34,7 @@ pygit2 = "^1.15.1"
 #--mode.files command.
 tyro = "^0.9.2,<0.9.23"
 gitpython = "^3.1.43"
-setuptools = ">=69.5.1,<81.0.0"
+setuptools = ">=80.9.0"
 rich = "^14.0.0"
 
 [tool.poetry.group.dev.dependencies]

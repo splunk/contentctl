@@ -1,8 +1,7 @@
 import os
-
 from dataclasses import dataclass
 
-from contentctl.input.director import DirectorInputDto, Director, DirectorOutputDto
+from contentctl.input.director import Director, DirectorInputDto, DirectorOutputDto
 from contentctl.output.doc_md_output import DocMdOutput
 
 

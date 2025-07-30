@@ -183,7 +183,7 @@ class AttackEnrichment(BaseModel):
                 )
 
         except Exception as err:
-            raise Exception(f"Error getting MITRE Enrichment: {str(err)}")
+            raise Exception(f"Error getting MITRE Enrichment: {err!s}")
 
         print("Done!")
         return attack_lookup

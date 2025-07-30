@@ -206,7 +206,7 @@ def main():
             config_obj = YmlReader().load_file(configFile, add_fields=False)
             t = test.model_validate(config_obj)
     except Exception as e:
-        print(f"Error validating 'contentctl.yml':\n{str(e)}")
+        print(f"Error validating 'contentctl.yml':\n{e!s}")
         sys.exit(1)
 
     # For ease of generating the constructor, we want to allow construction

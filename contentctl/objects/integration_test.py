@@ -1,9 +1,9 @@
 from pydantic import Field
 
 from contentctl.objects.base_test import BaseTest, TestType
-from contentctl.objects.unit_test import UnitTest
-from contentctl.objects.integration_test_result import IntegrationTestResult
 from contentctl.objects.base_test_result import TestResultStatus
+from contentctl.objects.integration_test_result import IntegrationTestResult
+from contentctl.objects.unit_test import UnitTest
 
 
 class IntegrationTest(BaseTest):

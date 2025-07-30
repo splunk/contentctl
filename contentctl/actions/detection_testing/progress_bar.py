@@ -1,7 +1,8 @@
+import datetime
 import time
 from enum import StrEnum
+
 from tqdm import tqdm
-import datetime
 
 
 class TestReportingType(StrEnum):

@@ -200,6 +200,7 @@ class Director:
             author=self.input_dto.app.author_name,
             description="A lookup file that contains the data source objects for detections.",
             lookup_type=Lookup_Type.csv,
+            case_sensitive_match=False,
             contents=RuntimeCsvWriter.generateDatasourceCSVContent(
                 self.output_dto.data_sources
             ),

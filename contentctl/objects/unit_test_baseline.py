@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict
 from typing import Union
+
+from pydantic import BaseModel, ConfigDict
 
 
 class UnitTestBaseline(BaseModel):

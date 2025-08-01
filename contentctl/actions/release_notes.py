@@ -46,7 +46,7 @@ class ReleaseNotes:
                                     file_path
                                 ).replace(str(repo_path), "")
                                 playbook_link = playbook_link.replace(
-                                    ".yml", "/"
+                                    "yml", "/"
                                 ).lower()
                                 updates.append(
                                     "- "
@@ -155,7 +155,7 @@ class ReleaseNotes:
 
                         except yaml.YAMLError as exc:
                             raise Exception(
-                                f"Error parsing YAML file for release_notes {file_path}: {str(exc)}"
+                                f"Error parsing YAML file for release_notes {file_path}: {exc!s}"
                             )
             else:
                 warnings.append(

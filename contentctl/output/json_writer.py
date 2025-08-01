@@ -27,5 +27,5 @@ class JsonWriter:
 
         except Exception as e:
             raise Exception(
-                f"Error serializing object to Json File '{file_path}': {str(e)}"
+                f"Error serializing object to Json File '{file_path}': {e!s}"
             )

@@ -1,8 +1,9 @@
+import functools
+import os
+import shelve
+
 import requests
 import xmltodict
-import functools
-import shelve
-import os
 
 SPLUNKBASE_API_URL = "https://apps.splunk.com/api/apps/entriesbyid/"
 
@@ -75,7 +76,7 @@ class SplunkAppEnrichment:
             splunk_app_enriched["url"] = ""
         except Exception as e:
             print(
-                f"There was an unknown error enriching the Splunk TA [{splunk_ta}]: {str(e)}"
+                f"There was an unknown error enriching the Splunk TA [{splunk_ta}]: {e!s}"
             )
             splunk_app_enriched["name"] = splunk_ta
             splunk_app_enriched["url"] = ""

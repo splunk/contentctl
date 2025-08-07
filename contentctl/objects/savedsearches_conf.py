@@ -1,8 +1,8 @@
+import re
+import tarfile
+import tempfile
 from pathlib import Path
 from typing import Any, ClassVar
-import re
-import tempfile
-import tarfile
 
 from pydantic import BaseModel, Field, PrivateAttr
 

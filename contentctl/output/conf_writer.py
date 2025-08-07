@@ -339,7 +339,7 @@ class ConfWriter:
                         f"Name:{obj.name if not isinstance(obj, CustomApp) else obj.title}\n"
                         f"Type {type(obj)}: \n"
                         f"Output File: {app_output_path}\n"
-                        f"Error: {str(e)}\n"
+                        f"Error: {e!s}\n"
                     )
 
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -376,7 +376,7 @@ class ConfWriter:
         try:
             _ = configparser.RawConfigParser().read(path)
         except Exception as e:
-            raise Exception(f"Failed to validate .conf file {str(path)}: {str(e)}")
+            raise Exception(f"Failed to validate .conf file {path!s}: {e!s}")
 
     @staticmethod
     def validateXmlFile(path: pathlib.Path):
@@ -390,7 +390,7 @@ class ConfWriter:
             with open(path, "r") as xmlFile:
                 _ = ET.fromstring(xmlFile.read())
         except Exception as e:
-            raise Exception(f"Failed to validate .xml file {str(path)}: {str(e)}")
+            raise Exception(f"Failed to validate .xml file {path!s}: {e!s}")
 
     @staticmethod
     def validateManifestFile(path: pathlib.Path):
@@ -405,9 +405,9 @@ class ConfWriter:
                 _ = json.load(manifestFile)
         except Exception as e:
             raise Exception(
-                f"Failed to validate .manifest file {str(path)} (Note that .manifest files should contain only valid JSON-formatted data): {str(e)}"
+                f"Failed to validate .manifest file {path!s} (Note that .manifest files should contain only valid JSON-formatted data): {e!s}"
             )
         except Exception as e:
             raise Exception(
-                f"Failed to validate .manifest file {str(path)} (Note that .manifest files should contain only valid JSON-formatted data): {str(e)}"
+                f"Failed to validate .manifest file {path!s} (Note that .manifest files should contain only valid JSON-formatted data): {e!s}"
             )

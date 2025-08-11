@@ -90,7 +90,7 @@ class DetectionTestingInfrastructureContainer(DetectionTestingInfrastructure):
         ]
 
         environment = {}
-        environment["SPLUNK_GENERALTERMS"] = "--accept-sgt-current-at-splunk-com"
+        environment["SPLUNK_GENERAL_TERMS"] = "--accept-sgt-current-at-splunk-com"
         environment["SPLUNK_START_ARGS"] = "--accept-license"
         environment["SPLUNK_PASSWORD"] = self.infrastructure.splunk_app_password
         # Files have already been staged by the time that we call this. Files must only be staged

@@ -18,6 +18,6 @@ jobs:
         run: |
           poetry install --only=dev
       - name: Run lint
-        run: ruff check --output-format=github contentctl/
+        run: poetry run ruff check --output-format=github contentctl/
       - name: Run Formatter
-        run: ruff format --check contentctl/
+        run: poetry run ruff format --check contentctl/

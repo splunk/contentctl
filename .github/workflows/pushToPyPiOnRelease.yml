@@ -11,7 +11,7 @@ jobs:
 
       #Checkout the current branch
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       #Install the given version of Python we will test against
       - name: Install Required Python Version

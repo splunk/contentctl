@@ -21,3 +21,4 @@ jobs:
         run: poetry run ruff check --output-format=github contentctl/
       - name: Run Formatter
         run: poetry run ruff format --check contentctl/
+

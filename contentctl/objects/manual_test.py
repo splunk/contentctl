@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pydantic import Field
 
-from contentctl.objects.test_attack_data import TestAttackData
-from contentctl.objects.manual_test_result import ManualTestResult
 from contentctl.objects.base_test import BaseTest, TestType
 from contentctl.objects.base_test_result import TestResultStatus
+from contentctl.objects.manual_test_result import ManualTestResult
+from contentctl.objects.test_attack_data import TestAttackData
 
 
 class ManualTest(BaseTest):

@@ -155,7 +155,7 @@ class ReleaseNotes:
 
                         except yaml.YAMLError as exc:
                             raise Exception(
-                                f"Error parsing YAML file for release_notes {file_path}: {str(exc)}"
+                                f"Error parsing YAML file for release_notes {file_path}: {exc!s}"
                             )
             else:
                 warnings.append(

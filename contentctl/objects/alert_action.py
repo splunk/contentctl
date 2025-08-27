@@ -1,12 +1,14 @@
 from __future__ import annotations
-from pydantic import BaseModel, model_serializer, ConfigDict
+
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, model_serializer
 
 from contentctl.objects.deployment_email import DeploymentEmail
 from contentctl.objects.deployment_notable import DeploymentNotable
+from contentctl.objects.deployment_phantom import DeploymentPhantom
 from contentctl.objects.deployment_rba import DeploymentRBA
 from contentctl.objects.deployment_slack import DeploymentSlack
-from contentctl.objects.deployment_phantom import DeploymentPhantom
 
 
 class AlertAction(BaseModel):

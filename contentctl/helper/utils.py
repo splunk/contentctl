@@ -60,7 +60,7 @@ class Utils:
 
         if not path.exists() or not path.is_dir():
             raise Exception(
-                f"Unable to get security_content files, required directory '{str(path)}' does not exist or is not a directory"
+                f"Unable to get security_content files, required directory '{path!s}' does not exist or is not a directory"
             )
 
         allowedFiles: list[pathlib.Path] = []
@@ -275,7 +275,7 @@ class Utils:
                 # This is a file and we know it exists
                 return None
         except Exception as e:
-            print(f"Could not copy local file {file_path} the file because {str(e)}")
+            print(f"Could not copy local file {file_path} the file because {e!s}")
 
         # Try to make a head request to verify existence of the file
         try:
@@ -285,7 +285,7 @@ class Utils:
             if req.status_code > 400:
                 raise (Exception(f"Return code={req.status_code}"))
         except Exception as e:
-            raise (Exception(f"HTTP Resolution Failed: {str(e)}"))
+            raise (Exception(f"HTTP Resolution Failed: {e!s}"))
 
     @staticmethod
     def copy_local_file(
@@ -326,7 +326,7 @@ class Utils:
         except Exception as e:
             raise (
                 Exception(
-                    f"Error: Could not copy local file [{sourcePath}] to [{destPath}]: [{str(e)}]"
+                    f"Error: Could not copy local file [{sourcePath}] to [{destPath}]: [{e!s}]"
                 )
             )
         if verbose_print:
@@ -417,26 +417,26 @@ class Utils:
         except requests.exceptions.ConnectionError as e:
             raise (
                 Exception(
-                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Unable to connect to server. Are you sure the server exists and you have connectivity to it?): [{str(e)}]"
+                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Unable to connect to server. Are you sure the server exists and you have connectivity to it?): [{e!s}]"
                 )
             )
 
         except requests.exceptions.HTTPError as e:
             raise (
                 Exception(
-                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (The file was probably not found on the server): [{str(e)}]"
+                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (The file was probably not found on the server): [{e!s}]"
                 )
             )
         except requests.exceptions.Timeout as e:
             raise (
                 Exception(
-                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Timeout getting file): [{str(e)}]"
+                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Timeout getting file): [{e!s}]"
                 )
             )
         except Exception as e:
             raise (
                 Exception(
-                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Unknown Reason): [{str(e)}]"
+                    f"Error: Could not download file [{file_path}] to [{destinationPath}] (Unknown Reason): [{e!s}]"
                 )
             )
         finally:

@@ -27,11 +27,11 @@ jobs:
     steps:
       # Checkout the current branch of contentctl repo
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Checkout the develop (default) branch of security_content
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with: 
           path: security_content
           repository: splunk/security_content

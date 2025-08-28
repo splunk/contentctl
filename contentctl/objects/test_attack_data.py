@@ -13,6 +13,7 @@ from pydantic import (
     HttpUrl,
     ValidationInfo,
     field_validator,
+    model_serializer,
 )
 
 
@@ -46,3 +47,13 @@ class TestAttackData(BaseModel):
             raise ValueError(
                 "config not passed to TestAttackData constructor in context"
             )
+
+    @model_serializer
+    def serialize_model(self) -> dict[str, str]:
+        return {
+            "data": str(self.data),
+            "source": self.source,
+            "sourcetype": self.sourcetype,
+            "custom_index": self.custom_index or "",
+            "host": self.host or "",
+        }

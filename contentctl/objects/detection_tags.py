@@ -3,18 +3,9 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, List, Optional, Union
 
-from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    HttpUrl,
-    ValidationInfo,
-    computed_field,
-    field_validator,
-    model_serializer,
-    model_validator,
-)
+from pydantic import (UUID4, BaseModel, ConfigDict, Field, HttpUrl,
+                      ValidationInfo, computed_field, field_validator,
+                      model_serializer, model_validator)
 
 from contentctl.objects.story import Story
 from contentctl.objects.throttling import Throttling
@@ -25,24 +16,17 @@ if TYPE_CHECKING:
 from contentctl.objects.annotated_types import CVE_TYPE, MITRE_ATTACK_ID_TYPE
 from contentctl.objects.atomic import AtomicEnrichment, AtomicTest
 from contentctl.objects.constants import ATTACK_TACTICS_KILLCHAIN_MAPPING
-from contentctl.objects.enums import (
-    AssetType,
-    Cis18Value,
-    KillChainPhase,
-    NistCategory,
-    SecurityContentProductName,
-    SecurityDomain,
-)
-from contentctl.objects.mitre_attack_enrichment import (
-    MitreAttackEnrichment,
-    MitreAttackGroup,
-)
+from contentctl.objects.enums import (AssetType, Cis18Value, KillChainPhase,
+                                      NistCategory, SecurityContentProductName,
+                                      SecurityDomain)
+from contentctl.objects.mitre_attack_enrichment import (MitreAttackEnrichment,
+                                                        MitreAttackGroup)
 
 
 class DetectionTags(BaseModel):
     # detection spec
 
-    model_config = ConfigDict(validate_default=False, extra="forbid")
+    model_config = ConfigDict(validate_default=False, extra="allow")
     analytic_story: list[Story] = Field(...)
     asset_type: AssetType = Field(...)
     group: list[str] = []

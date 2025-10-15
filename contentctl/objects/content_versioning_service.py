@@ -17,7 +17,7 @@ from contentctl.objects.correlation_search import ResultIterator
 from contentctl.objects.detection import Detection
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "content_versioning_service.log"
 
@@ -186,7 +186,7 @@ class ContentVersioningService(BaseModel):
             "app_name",
             "detection_id",
             "version",
-            "action.correlationsearch.label",
+            "content",
             "sourcetype",
         ]
 
@@ -293,8 +293,8 @@ class ContentVersioningService(BaseModel):
 
         # Construct the query looking for CMS events matching the content app name
         query = (
-            f"search index=cms_main sourcetype=stash_common_detection_model "
-            f'app_name="{self.global_config.app.appid}" | fields {", ".join(self.cms_fields)}'
+            f"| inputlookup cms_content_lookup | search app_name={self.global_config.app.appid}"
+            f"| fields {', '.join(self.cms_fields)}"
         )
         self.logger.debug(
             f"[{self.infrastructure.instance_name}] Query on cms_main: {query}"
@@ -302,6 +302,27 @@ class ContentVersioningService(BaseModel):
 
         # Get the job as a blocking operation, set the cache, and return
         self._cms_main_job = self.service.search(query, exec_mode="blocking")  # type: ignore
+        result_count = int(self._cms_main_job["resultCount"])
+        self.logger.debug(
+            f"[TESTING DEBUG INFO] cms_content_lookup search returned {result_count} results"
+        )
+
+        # Log a sample of the actual results (first 3)
+        if result_count > 0:
+            sample_results = []
+            iterator = ResultIterator(
+                response_reader=self._cms_main_job.results(
+                    output_mode="json", count=3, offset=0
+                ),  # type: ignore
+                error_filters=[],
+            )
+            for result in iterator:
+                sample_results.append(result)
+
+            self.logger.debug(
+                f"[TESTING DEBUG INFO] Sample results (first {len(sample_results)}): "
+                f"{json.dumps(sample_results, indent=2)}"
+            )
         return self._cms_main_job
 
     def get_num_cms_events(self, use_cache: bool = False) -> int:
@@ -376,7 +397,15 @@ class ContentVersioningService(BaseModel):
                 offset += 1
 
                 # Get the name of the search in the CMS event
-                cms_entry_name = cms_event["action.correlationsearch.label"]
+                content = json.loads(cms_event["content"])
+                self.logger.debug(
+                    f"[TESTING DEBUG INFO] CMS Event content: {cms_event['content']}"
+                )
+                self.logger.debug(
+                    f"[TESTING DEBUG INFO] CMS Event content after json load: {type(content)}"
+                )
+                # Get the name of the search in the CMS event
+                cms_entry_name = content["action.correlationsearch.label"]
                 self.logger.info(
                     f"[{self.infrastructure.instance_name}] {offset}: Matching cms_main entry "
                     f"'{cms_entry_name}' against detections"
@@ -477,12 +506,14 @@ class ContentVersioningService(BaseModel):
             self.global_config.app
         )
 
+        content = json.loads(cms_event["content"])
+        cms_entry_name = content["action.correlationsearch.label"]
+
         # Compare the correlation search label
-        if cms_event["action.correlationsearch.label"] != rule_name_from_detection:
+        if cms_entry_name != rule_name_from_detection:
             msg = (
                 f"[{self.infrastructure.instance_name}][{detection.name}]: Correlation search "
-                f"label in cms_event ('{cms_event['action.correlationsearch.label']}') does not "
-                "match detection name"
+                f"label in cms_event ('{cms_entry_name}') does not match detection name"
             )
             self.logger.error(msg)
             return Exception(msg)

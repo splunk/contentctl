@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python_version: ['3.12', '3.13', '3.14']
+        python_version: ['3.12', '3.13', '3.14', '3.14t']
         operating_system: ['ubuntu-24.04', 'macos-15', 'windows-2022']
         #operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
 

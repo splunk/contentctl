@@ -69,7 +69,7 @@ action.sendtophantom.param.phantom_server = {{ detection.deployment.alert_action
 action.sendtophantom.param.sensitivity = {{ detection.deployment.alert_action.phantom.sensitivity | custom_jinja2_enrichment_filter(detection) }}
 action.sendtophantom.param.severity = {{ detection.deployment.alert_action.phantom.severity | custom_jinja2_enrichment_filter(detection) }}
 {% endif %}
-alert.digest_mode = 1
+alert.digest_mode = {% if detection.tags.throttling and detection.tags.throttling.fields %}0{% else %}1{% endif +%}
 disabled = {{ (not detection.enabled_by_default) | lower }}
 enableSched = 1
 allow_skew = 100%

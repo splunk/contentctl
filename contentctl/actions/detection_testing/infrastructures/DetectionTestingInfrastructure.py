@@ -37,7 +37,7 @@ from contentctl.actions.detection_testing.progress_bar import (
 from contentctl.helper.utils import Utils
 from contentctl.objects.base_test import BaseTest
 from contentctl.objects.base_test_result import TestResultStatus
-from contentctl.objects.config import All, Infrastructure, test_common
+from contentctl.objects.config import Infrastructure, test_common
 from contentctl.objects.content_versioning_service import ContentVersioningService
 from contentctl.objects.correlation_search import CorrelationSearch, PbarData
 from contentctl.objects.detection import Detection
@@ -243,13 +243,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         :return: a bool indicating whether we should test content versioning
         :rtype: bool
         """
-        es_version = self.es_version
-        return (
-            self.global_config.enable_integration_testing
-            and isinstance(self.global_config.mode, All)
-            and es_version is not None
-            and es_version >= Version("8.0.0")
-        )
+        # es_version = self.es_version
+        # return (
+        #     self.global_config.enable_integration_testing
+        #     and isinstance(self.global_config.mode, All)
+        #     and es_version is not None
+        #     and es_version >= Version("8.0.0")
+        # )
+        return False
 
     @property
     def es_version(self) -> Version | None:

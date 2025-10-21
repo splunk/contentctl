@@ -34,7 +34,7 @@ from contentctl.objects.risk_analysis_action import RiskAnalysisAction
 from contentctl.objects.risk_event import RiskEvent
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 

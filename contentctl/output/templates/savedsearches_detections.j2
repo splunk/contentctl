@@ -70,7 +70,7 @@ action.sendtophantom.param.sensitivity = {{ detection.deployment.alert_action.ph
 action.sendtophantom.param.severity = {{ detection.deployment.alert_action.phantom.severity | custom_jinja2_enrichment_filter(detection) }}
 {% endif %}
 alert.digest_mode = 1
-disabled = {{ (not detection.enabled_by_default) | lower }}
+disabled = 0
 enableSched = 1
 allow_skew = 100%
 counttype = number of events

@@ -1025,7 +1025,7 @@ class CorrelationSearch(BaseModel):
                 self.logger.info(f"Forcing a run on {self.name}")
                 self.update_pbar(TestingStates.FORCE_RUN)
                 self.update_timeframe(refresh=False)
-                self.enable(refresh=False)
+                # self.enable(refresh=False)
 
                 attempt = 1
                 while attempt <= 3:

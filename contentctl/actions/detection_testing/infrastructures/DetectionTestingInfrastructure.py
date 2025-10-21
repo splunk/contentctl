@@ -197,8 +197,15 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     self.check_for_teardown()
 
             # Wait for content versioning to be active
+            timeout_seconds = 600
+            time_wait = 0
             while not self.is_content_versioning_active():
                 time.sleep(60)
+                time_wait += 60
+                if time_wait > timeout_seconds:
+                    raise Exception(
+                        "Content versioning did not become active within timeout"
+                    )
 
         except Exception as e:
             msg = f"[{self.get_name()}]: {e!s}"

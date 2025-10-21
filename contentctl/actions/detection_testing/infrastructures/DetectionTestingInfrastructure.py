@@ -196,6 +196,10 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                     func()
                     self.check_for_teardown()
 
+            # Wait for content versioning to be active
+            while not self.is_content_versioning_active():
+                time.sleep(60)
+
         except Exception as e:
             msg = f"[{self.get_name()}]: {e!s}"
             self.finish()
@@ -232,6 +236,40 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             service=self.get_conn(),
             detections=self.sync_obj.inputQueue,
         )
+
+    def is_content_versioning_active(self) -> bool:
+        """
+        Checks if DA-ESS-ContentUpdate is active by querying the versioning apps API endpoint.
+
+        :return: a bool indicating whether DA-ESS-ContentUpdate is active
+        :rtype: bool
+        """
+        try:
+            # Query the versioning apps endpoint
+            response = self.get_conn().request(
+                method="GET",
+                path_segment="servicesNS/nobody/SA-ContentVersioning/content_versioning/versioning_apps",
+                query={"output_mode": "json", "offset": "0", "count": "0"},
+            )
+
+            # Parse the response
+            if "body" in response:
+                body = response["body"].readall()
+                data = json.loads(body)
+
+                # Check if DA-ESS-ContentUpdate exists and is active
+                if "content" in data:
+                    for app in data["content"]:
+                        if (
+                            app.get("name") == "DA-ESS-ContentUpdate"
+                            and app.get("status") == "active"
+                        ):
+                            return True
+
+            return False
+        except Exception:
+            # If we can't query the endpoint, assume versioning is not active
+            return False
 
     @property
     def should_test_content_versioning(self) -> bool:

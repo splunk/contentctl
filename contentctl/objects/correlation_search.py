@@ -437,6 +437,7 @@ class CorrelationSearch(BaseModel):
         caller may want to handle calling refresh, to avoid repeated network operations).
         :param refresh: a bool indicating whether to run refresh after enabling
         """
+        self.logger.debug(f"{self.name} is currently enabled: {self.enabled}")
         self.logger.debug(f"Enabling {self.name}...")
         try:
             self.saved_search.enable()  # type: ignore
@@ -444,6 +445,8 @@ class CorrelationSearch(BaseModel):
             raise ServerError(f"HTTP error encountered while enabling detection: {e}")
         if refresh:
             self.refresh()
+
+        self.logger.debug(f"{self.name} is enabled AFTER update: {self.enabled}")
 
     def dispatch(self) -> splunklib.Job:
         """Dispatches the SavedSearch
@@ -506,13 +509,16 @@ class CorrelationSearch(BaseModel):
         :param cron_schedule: the cron schedule for the search to run on (default: see ScheduleConfig)
         :param refresh: a bool indicating whether to run refresh after enabling
         """
+        self.logger.debug(
+            f"Current timeframe for '{self.name}' to: {self.cron_schedule}, {self.earliest_time}, {self.latest_time}"
+        )
         # update the SavedSearch accordingly
         data = {
             SavedSearchKeys.EARLIEST_TIME_KEY: earliest_time,
             SavedSearchKeys.LATEST_TIME_KEY: latest_time,
             SavedSearchKeys.CRON_SCHEDULE_KEY: cron_schedule,
         }
-        self.logger.info(data)
+        # self.logger.info(data)
         self.logger.info(f"Updating timeframe for '{self.name}': {data}")
         try:
             self.saved_search.update(**data)  # type: ignore
@@ -521,6 +527,10 @@ class CorrelationSearch(BaseModel):
 
         if refresh:
             self.refresh()
+
+        self.logger.debug(
+            f"Updated timeframe for '{self.name}' to: {self.cron_schedule}, {self.earliest_time}, {self.latest_time}"
+        )
 
     def risk_event_exists(self) -> bool:
         """Whether at least one matching risk event exists
@@ -568,12 +578,16 @@ class CorrelationSearch(BaseModel):
                         parsed_raw = json.loads(result["_raw"])
                         event = RiskEvent.model_validate(parsed_raw)
                     except Exception:
+                        # self.logger.error(
+                        #     f"Failed to parse RiskEvent from search result: {result}"
+                        # )
                         self.logger.error(
-                            f"Failed to parse RiskEvent from search result: {result}"
+                            "Failed to parse RiskEvent from search result"
                         )
                         raise
                     events.append(event)
-                    self.logger.debug(f"Found risk event for '{self.name}': {event}")
+                    # self.logger.debug(f"Found risk event for '{self.name}': {event}")
+                    self.logger.debug(f"Found risk event for '{self.name}'")
                 else:
                     msg = (
                         f"Found event for unexpected index ({result['index']}) in our query "
@@ -641,12 +655,16 @@ class CorrelationSearch(BaseModel):
                         parsed_raw = json.loads(result["_raw"])
                         event = NotableEvent.model_validate(parsed_raw)
                     except Exception:
+                        # self.logger.error(
+                        #     f"Failed to parse NotableEvent from search result: {result}"
+                        # )
                         self.logger.error(
-                            f"Failed to parse NotableEvent from search result: {result}"
+                            "Failed to parse NotableEvent from search result"
                         )
                         raise
                     events.append(event)
-                    self.logger.debug(f"Found notable event for '{self.name}': {event}")
+                    # self.logger.debug(f"Found notable event for '{self.name}': {event}")
+                    self.logger.debug(f"Found notable event for '{self.name}'")
                 else:
                     msg = (
                         f"Found event for unexpected index ({result['index']}) in our query "
@@ -722,28 +740,40 @@ class CorrelationSearch(BaseModel):
                         parsed_raw = json.loads(result["_raw"])
                         event = RiskEvent.model_validate(parsed_raw)
                     except Exception:
+                        # self.logger.error(
+                        #     f"Failed to parse RiskEvent from search result: {result}"
+                        # )
                         self.logger.error(
-                            f"Failed to parse RiskEvent from search result: {result}"
+                            "Failed to parse RiskEvent from search result"
                         )
                         raise
                     events.append(event)
                     risk_count += 1
+                    # self.logger.debug(
+                    #     f"Found risk event in risk data model for '{self.name}': {event}"
+                    # )
                     self.logger.debug(
-                        f"Found risk event in risk data model for '{self.name}': {event}"
+                        f"Found risk event in risk data model for '{self.name}'"
                     )
                 elif result["index"] == Indexes.NOTABLE_INDEX:
                     try:
                         parsed_raw = json.loads(result["_raw"])
                         event = NotableEvent.model_validate(parsed_raw)
                     except Exception:
+                        # self.logger.error(
+                        #     f"Failed to parse NotableEvent from search result: {result}"
+                        # )
                         self.logger.error(
-                            f"Failed to parse NotableEvent from search result: {result}"
+                            "Failed to parse NotableEvent from search result"
                         )
                         raise
                     events.append(event)
                     notable_count += 1
+                    # self.logger.debug(
+                    #     f"Found notable event in risk data model for '{self.name}': {event}"
+                    # )
                     self.logger.debug(
-                        f"Found notable event in risk data model for '{self.name}': {event}"
+                        f"Found notable event in risk data model for '{self.name}'"
                     )
                 else:
                     msg = (
@@ -1024,8 +1054,8 @@ class CorrelationSearch(BaseModel):
                 # force the detection to run
                 self.logger.info(f"Forcing a run on {self.name}")
                 self.update_pbar(TestingStates.FORCE_RUN)
-                self.update_timeframe(refresh=False)
-                self.enable(refresh=False)
+                self.update_timeframe(refresh=True)
+                self.enable(refresh=True)
 
                 attempt = 1
                 while attempt <= 3:
@@ -1034,6 +1064,11 @@ class CorrelationSearch(BaseModel):
 
                     attempt += 1
                     try:
+                        self.refresh()
+                        self.logger.debug(f"[{self.name}] ENABLED: {self.enabled}")
+                        self.logger.debug(
+                            f"[{self.name}] TIMEFRAME: {self.cron_schedule}, {self.earliest_time}, {self.latest_time}"
+                        )
                         self.dispatch_and_validate(elapsed_sleep_time)
                     except ValidationFailed as e:
                         self.logger.error(f"Risk/notable validation failed: {e}")

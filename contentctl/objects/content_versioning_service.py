@@ -227,7 +227,14 @@ class ContentVersioningService(BaseModel):
         """
         Checks the cms_main index until it has the expected number of events, or it times out.
         """
-        time.sleep(900)
+        for i in range(9):
+            self.logger.debug(
+                f"Waiting for kvstore parse to finish... ({i * 100}s [{i * 100 / 60}min] elapsed)"
+            )
+            time.sleep(100)
+        self.logger.debug(
+            f"kvstore parse should be done! ({9 * 100}s [{9 * 100 / 60}min] elapsed)"
+        )
         return
         # Force the cms_parser to start parsing our savedsearches.conf
         self.force_cms_parser()

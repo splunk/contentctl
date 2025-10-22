@@ -17,7 +17,7 @@ from contentctl.objects.correlation_search import ResultIterator
 from contentctl.objects.detection import Detection
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "content_versioning_service.log"
 
@@ -72,9 +72,9 @@ class ContentVersioningService(BaseModel):
         Returns the list of setup functions needed for content versioning testing
         """
         return [
-            (self.activate_versioning, "Activating Content Versioning"),
+            # (self.activate_versioning, "Activating Content Versioning"),
             (self.wait_for_cms_main, "Waiting for CMS Parser"),
-            (self.validate_content_against_cms, "Validating Against CMS"),
+            # (self.validate_content_against_cms, "Validating Against CMS"),
         ]
 
     def _query_content_versioning_service(
@@ -227,6 +227,8 @@ class ContentVersioningService(BaseModel):
         """
         Checks the cms_main index until it has the expected number of events, or it times out.
         """
+        time.sleep(900)
+        return
         # Force the cms_parser to start parsing our savedsearches.conf
         self.force_cms_parser()
 

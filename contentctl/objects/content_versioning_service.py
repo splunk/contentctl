@@ -74,8 +74,19 @@ class ContentVersioningService(BaseModel):
         return [
             # (self.activate_versioning, "Activating Content Versioning"),
             (self.wait_for_cms_main, "Waiting for CMS Parser"),
+            (self.disable_cms_parser, "Disabling CMS Parser"),
             # (self.validate_content_against_cms, "Validating Against CMS"),
         ]
+
+    def disable_cms_parser(self) -> None:
+        self.logger.debug(
+            f"Disabling CMS Parser, currently ENABLED: {self.is_cms_parser_enabled}"
+        )
+        cms_parser = self.service.input("data/inputs/cms_parser/main")  # type: ignore
+        cms_parser.disable()
+        self.logger.debug(
+            f"After disabling CMS Parser, currently ENABLED: {self.is_cms_parser_enabled}"
+        )
 
     def _query_content_versioning_service(
         self, method: str, body: dict[str, Any] = {}

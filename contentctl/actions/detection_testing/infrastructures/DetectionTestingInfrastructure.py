@@ -255,14 +255,19 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             # Query the versioning apps endpoint
             response = self.get_conn().request(
                 method="GET",
-                path_segment="servicesNS/nobody/SA-ContentVersioning/content_versioning/versioning_apps",
-                query={"output_mode": "json", "offset": "0", "count": "0"},
+                path_segment="content_versioning/versioning_apps",
+                app="SA-ContentVersioning",
             )
 
             # Parse the response
             if "body" in response:
                 body = response["body"].readall()
                 data = json.loads(body)
+
+                # Write debug info to file
+                with open("versioning_debug.json", "w") as f:
+                    json.dump(data, f, indent=2)
+                print("DEBUG: Response written to versioning_debug.json")
 
                 # Check if DA-ESS-ContentUpdate exists and is active
                 if "content" in data:

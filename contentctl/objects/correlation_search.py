@@ -937,7 +937,9 @@ class CorrelationSearch(BaseModel):
         else:
             self.logger.debug(f"No notable action defined for '{self.name}'")
 
-    def dispatch_and_validate(self, elapsed_sleep_time: dict[str, int]) -> None:
+    def dispatch_and_validate(
+        self, elapsed_sleep_time: dict[str, int], last_try: bool
+    ) -> None:
         """Dispatch the saved search and validate the risk/notable events
 
         Dispatches the saved search and validates the risk/notable events created by it. If any
@@ -954,7 +956,12 @@ class CorrelationSearch(BaseModel):
         time_elapsed = 0
         validation_error = None
 
-        while time_elapsed <= TimeoutConfig.RETRY_DISPATCH:
+        if last_try:
+            timeout = TimeoutConfig.RETRY_DISPATCH + 600
+        else:
+            timeout = TimeoutConfig.RETRY_DISPATCH
+
+        while time_elapsed <= timeout:
             validation_start_time = time.time()
 
             # reset validation_error for each iteration
@@ -964,9 +971,7 @@ class CorrelationSearch(BaseModel):
             if time_elapsed > TimeoutConfig.ADD_WAIT_TIME:
                 time.sleep(wait_time)
                 elapsed_sleep_time["elapsed_sleep_time"] += wait_time
-                wait_time = min(
-                    TimeoutConfig.RETRY_DISPATCH - int(time_elapsed), wait_time * 2
-                )
+                wait_time = min(timeout - int(time_elapsed), wait_time * 2)
 
             try:
                 self.validate_ara_events()
@@ -1034,7 +1039,14 @@ class CorrelationSearch(BaseModel):
 
                     attempt += 1
                     try:
-                        self.dispatch_and_validate(elapsed_sleep_time)
+                        if attempt == 3:
+                            self.dispatch_and_validate(
+                                elapsed_sleep_time, last_try=True
+                            )
+                        else:
+                            self.dispatch_and_validate(
+                                elapsed_sleep_time, last_try=False
+                            )
                     except ValidationFailed as e:
                         self.logger.error(f"Risk/notable validation failed: {e}")
                         result = IntegrationTestResult(

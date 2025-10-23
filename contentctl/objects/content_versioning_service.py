@@ -142,12 +142,19 @@ class ContentVersioningService(BaseModel):
 
         # Query the content versioning service
         try:
-            response = self.service.request(  # type: ignore
-                method=method,
-                path_segment="configs/conf-feature_flags/general",
-                body=body,
-                app="SA-ContentVersioning",
-            )
+            if method == "GET" and self.kvstore_content_versioning:
+                response = self.service.request(
+                    method=method,
+                    path_segment="content_versioning/versioning_apps",
+                    app="SA-ContentVersioning",
+                )
+            if self.datastore_content_versioning:
+                response = self.service.request(  # type: ignore
+                    method=method,
+                    path_segment="configs/conf-feature_flags/general",
+                    body=body,
+                    app="SA-ContentVersioning",
+                )
         except HTTPError as e:
             # Raise on any HTTP errors
             raise HTTPError(f"Error querying content versioning service: {e}") from e
@@ -186,9 +193,20 @@ class ContentVersioningService(BaseModel):
 
         # Find the versioning_activated field and report any errors
         try:
-            for entry in data["entry"]:
-                if entry["name"] == "general":
-                    return bool(int(entry["content"]["versioning_activated"]))
+            if self.kvstore_content_versioning:
+                if "content" in data:
+                    for app in data["content"]:
+                        if (
+                            app.get("name") == "DA-ESS-ContentUpdate"
+                            and app.get("status") == "active"
+                        ):
+                            return True
+                else:
+                    return False
+            if self.datastore_content_versioning:
+                for entry in data["entry"]:
+                    if entry["name"] == "general":
+                        return bool(int(entry["content"]["versioning_activated"]))
         except KeyError as e:
             raise KeyError(
                 "Cannot retrieve versioning status, unable to determine versioning status using "
@@ -204,9 +222,19 @@ class ContentVersioningService(BaseModel):
         Activate the content versioning service
         """
         # Post to the SA-ContentVersioning service to set versioning status
-        self._query_content_versioning_service(
-            method="POST", body={"versioning_activated": True}
-        )
+        if self.datastore_content_versioning:
+            self._query_content_versioning_service(
+                method="POST", body={"versioning_activated": True}
+            )
+
+        # Wait for versioning to be activated for ES 8.3.0+
+        if self.kvstore_content_versioning:
+            timeout = 600
+            while not self.is_versioning_activated:
+                time.sleep(60)
+                timeout -= 60
+                if timeout <= 0:
+                    break
 
         # Confirm versioning has been enabled
         if not self.is_versioning_activated:

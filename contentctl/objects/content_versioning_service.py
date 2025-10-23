@@ -251,11 +251,17 @@ class ContentVersioningService(BaseModel):
             if self.kvstore_content_versioning:
                 if "content" in data:
                     for app in data["content"]:
-                        if (
-                            app.get("name") == "DA-ESS-ContentUpdate"
-                            and app.get("status") == "active"
-                        ):
-                            return True
+                        if app.get("name") == "DA-ESS-ContentUpdate":
+                            # If there is error message versioning is not activated properly
+                            if "message" in app:
+                                return False
+
+                            # If the installed verion is not the same as the test version
+                            if app.get("version") != self.global_config.app.version:
+                                return False
+
+                            if app.get("status") == "active":
+                                return True
                 else:
                     return False
             if self.datastore_content_versioning:

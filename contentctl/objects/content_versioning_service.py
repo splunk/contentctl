@@ -24,7 +24,7 @@ from contentctl.objects.correlation_search import ResultIterator
 from contentctl.objects.detection import Detection
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = True
+ENABLE_LOGGING = False
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "content_versioning_service.log"
 
@@ -422,9 +422,6 @@ class ContentVersioningService(BaseModel):
         # Get the job as a blocking operation, set the cache, and return
         self._cms_main_job = self.service.search(query, exec_mode="blocking")  # type: ignore
         result_count = int(self._cms_main_job["resultCount"])
-        self.logger.debug(
-            f"[TESTING DEBUG INFO] cms_content_lookup search returned {result_count} results"
-        )
 
         # Log a sample of the actual results (first 3)
         if result_count > 0:
@@ -438,10 +435,6 @@ class ContentVersioningService(BaseModel):
             for result in iterator:
                 sample_results.append(result)
 
-            self.logger.debug(
-                f"[TESTING DEBUG INFO] Sample results (first {len(sample_results)}): "
-                f"{json.dumps(sample_results, indent=2)}"
-            )
         return self._cms_main_job
 
     def get_num_cms_events(self, use_cache: bool = False) -> int:
@@ -522,9 +515,6 @@ class ContentVersioningService(BaseModel):
 
                 # Get the name of the search in the CMS event
                 cms_entry_name = cms_event.action_correlationsearch_label
-                self.logger.debug(
-                    f"[TESTING DEBUG INFO] CMS Event content: {cms_entry_name}"
-                )
                 self.logger.info(
                     f"[{self.infrastructure.instance_name}] {offset}: Matching cms_main entry "
                     f"'{cms_entry_name}' against detections"

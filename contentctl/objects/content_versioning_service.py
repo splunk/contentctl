@@ -7,7 +7,13 @@ from functools import cached_property
 from typing import Any, Callable
 
 import splunklib.client as splunklib  # type: ignore
-from pydantic import BaseModel, Field, PrivateAttr, computed_field
+from pydantic import (
+    BaseModel,
+    Field,
+    PrivateAttr,
+    computed_field,
+    model_validator,
+)
 from semantic_version import Version
 from splunklib.binding import HTTPError, ResponseReader  # type: ignore
 from splunklib.data import Record  # type: ignore
@@ -24,6 +30,55 @@ LOG_PATH = "content_versioning_service.log"
 
 # The app name of ES; needed to check ES version
 ES_APP_NAME = "SplunkEnterpriseSecuritySuite"
+
+
+class CMSEvent(BaseModel):
+    """
+    A model representing a CMS event. This is used to validate that detections have been installed
+    in a way that is compatible with content versioning.
+    """
+
+    content: str  # JSON string
+
+    # The app name of the detection
+    app_name: str
+
+    # The detection id of the detection
+    detection_id: str
+
+    # The version of the detection
+    version: str
+
+    # The saved search name of the detection
+    action_correlationsearch_label: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_from_content(cls, data):
+        """Extract fields from content JSON if not already provided"""
+        if isinstance(data, dict) and "content" in data:
+            try:
+                content_str = data.get("content")
+                parsed = json.loads(content_str)
+
+                # Extract metadata fields - note the key has dots in it
+                metadata_str = parsed.get("action.correlationsearch.metadata", {})
+                metadata = (
+                    json.loads(metadata_str)
+                    if isinstance(metadata_str, str)
+                    else metadata_str
+                )
+                data.setdefault("app_name", metadata.get("app_name"))
+                data.setdefault("detection_id", metadata.get("detection_id"))
+                data.setdefault("version", metadata.get("version"))
+                data.setdefault(
+                    "action_correlationsearch_label",
+                    parsed.get("action.correlationsearch.label"),
+                )
+            except (json.JSONDecodeError, AttributeError, KeyError, TypeError):
+                # If parsing fails, let Pydantic handle validation errors
+                raise ValueError("Failed to parse content JSON {}".format(data))
+        return data
 
 
 class ContentVersioningService(BaseModel):
@@ -246,53 +301,6 @@ class ContentVersioningService(BaseModel):
             f"[{self.infrastructure.instance_name}] Versioning service successfully activated"
         )
 
-    @computed_field
-    @cached_property
-    def cms_fields(self) -> list[str]:
-        """
-        Property listing the fields we want to pull from the cms_main index
-
-        :returns: a list of strings, the fields we want
-        :rtype: list[str]
-        """
-        if self.kvstore_content_versioning:
-            return [
-                "app_name",
-                "detection_id",
-                "version",
-                "content",
-                "sourcetype",
-            ]
-        elif self.datastore_content_versioning:
-            return [
-                "app_name",
-                "detection_id",
-                "version",
-                "action.correlationsearch.label",
-                "sourcetype",
-            ]
-        raise Exception(f"Something went wrong with es version: {self.es_version}")
-
-    def _get_cms_entry_label(self, cms_event: dict[str, Any]) -> str:
-        """
-        Extracts the correlation search label from a CMS event.
-        Handles both old (< 8.3.0) and new (>= 8.3.0) CMS lookup structures.
-
-        :param cms_event: The event from the cms_main index
-        :type cms_event: dict[str, Any]
-        :return: The correlation search label
-        :rtype: str
-        """
-
-        if self.kvstore_content_versioning:
-            # ES 8.3.0+: Parse content JSON to get label
-            content = json.loads(cms_event["content"])
-            return content["action.correlationsearch.label"]
-        elif self.datastore_content_versioning:
-            # ES < 8.3.0 and ES >= 8.0.0: Label is at top level
-            return cms_event["action.correlationsearch.label"]
-        raise Exception("Something went wrong with es version: {self.es_version}")
-
     @property
     def is_cms_parser_enabled(self) -> bool:
         """
@@ -398,12 +406,12 @@ class ContentVersioningService(BaseModel):
         if self.kvstore_content_versioning:
             query = (
                 f"| inputlookup cms_content_lookup | search app_name={self.global_config.app.appid}"
-                f"| fields {', '.join(self.cms_fields)}"
+                f"| fields content"
             )
         elif self.datastore_content_versioning:
             query = (
                 f"search index=cms_main sourcetype=stash_common_detection_model "
-                f'app_name="{self.global_config.app.appid}" | fields {", ".join(self.cms_fields)}'
+                f'app_name="{self.global_config.app.appid}" | fields _raw'
             )
         else:
             raise Exception("Something went wrong with es version: {self.es_version}")
@@ -507,8 +515,13 @@ class ContentVersioningService(BaseModel):
                 # Increment the offset for each result
                 offset += 1
 
+                if self.kvstore_content_versioning:
+                    cms_event = CMSEvent(content=cms_event["content"])
+                elif self.datastore_content_versioning:
+                    cms_event = CMSEvent(content=cms_event["_raw"])
+
                 # Get the name of the search in the CMS event
-                cms_entry_name = self._get_cms_entry_label(cms_event)
+                cms_entry_name = cms_event.action_correlationsearch_label
                 self.logger.debug(
                     f"[TESTING DEBUG INFO] CMS Event content: {cms_entry_name}"
                 )
@@ -591,14 +604,14 @@ class ContentVersioningService(BaseModel):
         )
 
     def validate_detection_against_cms_event(
-        self, cms_event: dict[str, Any], detection: Detection
+        self, cms_event: CMSEvent, detection: Detection
     ) -> Exception | None:
         """
         Given an event from the cms_main index and the matched detection, compare fields and look
         for any inconsistencies
 
         :param cms_event: The event from the cms_main index
-        :type cms_event: dict[str, Any]
+        :type cms_event: CMSEvent
         :param detection: The matched detection
         :type detection: :class:`contentctl.objects.detection.Detection`
 
@@ -607,12 +620,12 @@ class ContentVersioningService(BaseModel):
         """
         # TODO (PEX-509): validate additional fields between the cms_event and the detection
 
-        cms_uuid = uuid.UUID(cms_event["detection_id"])
+        cms_uuid = uuid.UUID(cms_event.detection_id)
         rule_name_from_detection = detection.get_action_dot_correlationsearch_dot_label(
             self.global_config.app
         )
 
-        cms_entry_name = self._get_cms_entry_label(cms_event)
+        cms_entry_name = cms_event.action_correlationsearch_label
 
         # Compare the correlation search label
         if cms_entry_name != rule_name_from_detection:
@@ -630,12 +643,12 @@ class ContentVersioningService(BaseModel):
             )
             self.logger.error(msg)
             return Exception(msg)
-        elif cms_event["version"] != f"{detection.version}.1":
+        elif cms_event.version != f"{detection.version}.1":
             # Compare the versions (we append '.1' to the detection version to be in line w/ the
             # internal representation in ES)
             msg = (
                 f"[{self.infrastructure.instance_name}] [{detection.name}]: Version in cms_event "
-                f"('{cms_event['version']}') does not match version in detection "
+                f"('{cms_event.version}') does not match version in detection "
                 f"('{detection.version}.1')"
             )
             self.logger.error(msg)

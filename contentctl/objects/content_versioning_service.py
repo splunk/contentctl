@@ -421,19 +421,6 @@ class ContentVersioningService(BaseModel):
 
         # Get the job as a blocking operation, set the cache, and return
         self._cms_main_job = self.service.search(query, exec_mode="blocking")  # type: ignore
-        result_count = int(self._cms_main_job["resultCount"])
-
-        # Log a sample of the actual results (first 3)
-        if result_count > 0:
-            sample_results = []
-            iterator = ResultIterator(
-                response_reader=self._cms_main_job.results(
-                    output_mode="json", count=3, offset=0
-                ),  # type: ignore
-                error_filters=[],
-            )
-            for result in iterator:
-                sample_results.append(result)
 
         return self._cms_main_job
 

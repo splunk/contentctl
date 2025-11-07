@@ -10,6 +10,7 @@ from contentctl.objects.detection import Detection
 
 class PlaybookProduct(str, enum.Enum):
     SPLUNK_SOAR = "Splunk SOAR"
+    SPLUNK_ES = "Splunk Enterprise Security"
 
 
 class PlaybookUseCase(str, enum.Enum):
@@ -25,6 +26,7 @@ class PlaybookUseCase(str, enum.Enum):
 class PlaybookType(str, enum.Enum):
     INPUT = "Input"
     AUTOMATION = "Automation"
+    ES = "Enterprise Security"
 
 
 class VpeType(str, enum.Enum):

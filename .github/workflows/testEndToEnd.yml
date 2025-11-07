@@ -3,17 +3,16 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
   schedule:
-    - cron: "44 4 * * *"
+    - cron: '44 4 * * *'
 
 jobs:
   testEverything:
     strategy:
       fail-fast: false
       matrix:
-        python_version: ["3.11", "3.12", "3.13"]
-        operating_system: ["ubuntu-24.04", "macos-15", "windows-2022"]
+        python_version: ['3.12', '3.13', '3.14', '3.14t']
+        operating_system: ['ubuntu-24.04', 'macos-15', 'windows-2022']
         #operating_system: ["ubuntu-20.04", "ubuntu-22.04", "macos-latest"]
-
 
     runs-on: ${{ matrix.operating_system }}
     steps:
@@ -36,11 +35,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_version }}
-          architecture: "x64"
-          
+          architecture: 'x64'
+
       - name: Install Poetry
-        run: 
-          python -m pip install poetry
+        run: python -m pip install poetry
 
       - name: Install contentctl and activate the shell
         run: |
@@ -50,7 +48,7 @@ jobs:
       - name: Run contentctl init
         run: |
           cd my_splunk_content_pack
-          poetry run contentctl init  
+          poetry run contentctl init
 
       - name: Clone the AtomicRedTeam Repo
         run: |
@@ -73,11 +71,10 @@ jobs:
         run: |
           cd my_splunk_content_pack
           poetry run contentctl test --disable-tqdm --post-test-behavior never_pause
-      
+
       - uses: actions/upload-artifact@v4
         with:
           name: content_pack_${{ matrix.python_version }}_${{ matrix.operating_system }}
           path: |
             my_splunk_content_pack/dist/my_splunk_content_pack.tar.gz
             my_splunk_content_pack/test_results/summary.yml
-      

@@ -14,7 +14,7 @@ contentctl = 'contentctl.contentctl:main'
 [tool.poetry.dependencies]
 
 python = "^3.11,<3.15"
-pydantic = "~2.9.2"
+pydantic = "~2.12.4"
 PyYAML = "^6.0.2"
 requests = ">=2.32.4"
 pycvesearch = "^1.2"
@@ -27,7 +27,7 @@ splunk-sdk = "^2.0.2"
 semantic-version = "^2.10.0"
 bottle = ">=0.12.25,<0.14.0"
 tqdm = "^4.66.5"
-pygit2 = "^1.15.1"
+pygit2 = "^1.19.0"
 #We are pinned to this version of tyro because 0.9.23 and above
 #have an issue when parsing an extremely large number of files
 #(in our testing great than 130) when using the mode:selected

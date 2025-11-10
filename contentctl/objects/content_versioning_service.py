@@ -420,7 +420,19 @@ class ContentVersioningService(BaseModel):
                 f'app_name="{self.global_config.app.appid}" | fields _raw'
             )
         else:
-            raise Exception("Something went wrong with es version: {self.es_version}")
+            if self.kvstore_content_versioning:
+                raise Exception(
+                    f"Unable to perform search to cms_content_lookup in ES version {self.es_version}"
+                )
+            elif self.datastore_content_versioning:
+                raise Exception(
+                    f"Unable to perform search to cms_main index in ES version {self.es_version}"
+                )
+            else:
+                raise Exception(
+                    f"Unable to determine content versioning method for ES version {self.es_version}. "
+                    "Expected ES version >= 8.0.0."
+                )
         self.logger.debug(
             f"[{self.infrastructure.instance_name}] Query on cms_main: {query}"
         )

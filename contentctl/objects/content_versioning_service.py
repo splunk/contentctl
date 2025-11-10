@@ -161,13 +161,13 @@ class ContentVersioningService(BaseModel):
         return es_version is not None and es_version >= Version("8.3.0")
 
     @cached_property
-    def datastore_content_versioning(self) -> bool:
+    def indexbased_content_versioning(self) -> bool:
         """
-        Indicates whether we should test content versioning based on datastore logic. Content versioning
-        should be tested with datastore logic when ES is less than version 8.3.0 but greater than or equal
+        Indicates whether we should test content versioning based on indexbased logic. Content versioning
+        should be tested with indexbased logic when ES is less than version 8.3.0 but greater than or equal
         to version 8.0.0.
 
-        :return: a bool indicating whether we should test content versioning with datastore logic
+        :return: a bool indicating whether we should test content versioning with indexbased logic
         :rtype: bool
         """
         es_version = self.es_version
@@ -203,7 +203,7 @@ class ContentVersioningService(BaseModel):
                     path_segment="content_versioning/versioning_apps",
                     app="SA-ContentVersioning",
                 )
-            if self.datastore_content_versioning:
+            if self.indexbased_content_versioning:
                 response = self.service.request(  # type: ignore
                     method=method,
                     path_segment="configs/conf-feature_flags/general",
@@ -264,7 +264,7 @@ class ContentVersioningService(BaseModel):
                                 return True
                 else:
                     return False
-            if self.datastore_content_versioning:
+            if self.indexbased_content_versioning:
                 for entry in data["entry"]:
                     if entry["name"] == "general":
                         return bool(int(entry["content"]["versioning_activated"]))
@@ -283,7 +283,7 @@ class ContentVersioningService(BaseModel):
         Activate the content versioning service
         """
         # Post to the SA-ContentVersioning service to set versioning status
-        if self.datastore_content_versioning:
+        if self.indexbased_content_versioning:
             self._query_content_versioning_service(
                 method="POST", body={"versioning_activated": True}
             )
@@ -414,7 +414,7 @@ class ContentVersioningService(BaseModel):
                 f"| inputlookup cms_content_lookup | search app_name={self.global_config.app.appid}"
                 f"| fields content"
             )
-        elif self.datastore_content_versioning:
+        elif self.indexbased_content_versioning:
             query = (
                 f"search index=cms_main sourcetype=stash_common_detection_model "
                 f'app_name="{self.global_config.app.appid}" | fields _raw'
@@ -424,7 +424,7 @@ class ContentVersioningService(BaseModel):
                 raise Exception(
                     f"Unable to perform search to cms_content_lookup in ES version {self.es_version}"
                 )
-            elif self.datastore_content_versioning:
+            elif self.indexbased_content_versioning:
                 raise Exception(
                     f"Unable to perform search to cms_main index in ES version {self.es_version}"
                 )
@@ -515,7 +515,7 @@ class ContentVersioningService(BaseModel):
 
                 if self.kvstore_content_versioning:
                     cms_event = CMSEvent(content=cms_event["content"])
-                elif self.datastore_content_versioning:
+                elif self.indexbased_content_versioning:
                     cms_event = CMSEvent(content=cms_event["_raw"])
 
                 # Get the name of the search in the CMS event

@@ -79,7 +79,7 @@ quantity = 0
 realtime_schedule = 0
 is_visible = false
 {% if detection.tags.throttling %}
-alert.suppress = true
+alert.suppress = 1
 alert.suppress.fields = {{ detection.tags.throttling.conf_formatted_fields() }}
 alert.suppress.period = {{ detection.tags.throttling.period }}
 {% endif %}

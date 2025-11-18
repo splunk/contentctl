@@ -283,10 +283,9 @@ class ContentVersioningService(BaseModel):
         Activate the content versioning service
         """
         # Post to the SA-ContentVersioning service to set versioning status
-        if self.indexbased_content_versioning:
-            self._query_content_versioning_service(
-                method="POST", body={"versioning_activated": True}
-            )
+        self._query_content_versioning_service(
+            method="POST", body={"versioning_activated": True}
+        )
 
         # Wait for versioning to be activated for ES 8.3.0+
         if self.kvstore_content_versioning:

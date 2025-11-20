@@ -110,6 +110,63 @@ class ConfOutput:
             )
         return written_files
 
+    def writeFbds(self) -> set[pathlib.Path]:
+        written_files: set[pathlib.Path] = set()
+
+        # Path to the static FBD configuration file
+        fbd_config_path = self.config.path / "static_configs" / "savedsearches_fbd.conf"
+
+        if not fbd_config_path.exists():
+            # If the file doesn't exist, just return empty set - no FBDs to write
+            return written_files
+
+        # Read and parse the FBD configuration file
+        fbd_stanzas = self._parse_fbd_config_file(fbd_config_path)
+
+        if fbd_stanzas:  # Only write if there are actual stanzas
+            written_files.add(
+                ConfWriter.writeConfFile(
+                    pathlib.Path("default/savedsearches.conf"),
+                    "savedsearches_fbds.j2",
+                    self.config,
+                    fbd_stanzas,
+                )
+            )
+
+        return written_files
+
+    def _parse_fbd_config_file(self, file_path: pathlib.Path) -> list:
+        """Parse the FBD configuration file into individual stanza objects."""
+        stanzas = []
+        current_stanza_lines = []
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                stripped_line = line.strip()
+
+                # Skip comment lines (lines starting with # after stripping whitespace)
+                if stripped_line.startswith('#'):
+                    continue
+
+                # If we hit a blank line and have accumulated stanza content, finalize the current stanza
+                if not stripped_line:
+                    if current_stanza_lines:
+                        stanza_content = '\n'.join(current_stanza_lines)
+                        stanza_obj = type('FbdStanza', (), {'content': stanza_content})()
+                        stanzas.append(stanza_obj)
+                        current_stanza_lines = []
+                    continue
+
+                # Accumulate non-empty, non-comment lines for the current stanza
+                current_stanza_lines.append(line.rstrip())
+        # Handle the last stanza if the file doesn't end with a blank line
+        if current_stanza_lines:
+            stanza_content = '\n'.join(current_stanza_lines)
+            stanza_obj = type('FbdStanza', (), {'content': stanza_content})()
+            stanzas.append(stanza_obj)
+
+        return stanzas
+
     def writeStories(self, objects: list[Story]) -> set[pathlib.Path]:
         written_files: set[pathlib.Path] = set()
         written_files.add(

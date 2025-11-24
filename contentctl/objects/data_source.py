@@ -55,6 +55,7 @@ class DataSource(SecurityContentObject):
             "field_mappings": self.field_mappings,
             "convert_to_log_source": self.convert_to_log_source,
             "example_log": self.example_log,
+            "output_fields": self.output_fields,
         }
 
         # Combine fields from this model with fields from parent

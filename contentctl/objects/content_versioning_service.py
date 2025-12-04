@@ -197,6 +197,10 @@ class ContentVersioningService(BaseModel):
 
         # Query the content versioning service
         try:
+            # TODO: The comment out section is for validating versioning is enabled and ready to go. The validation
+            # workflow (whether to be part of wait_for_cms_main or a separate function) is planed to be implemented
+            # in later contentctl-ng.
+            # API endpoint for checking versioning status after ES 8.3.0
             # if method == "GET" and self.kvstore_content_versioning:
             #     response = self.service.request(
             #         method=method,
@@ -248,6 +252,10 @@ class ContentVersioningService(BaseModel):
 
         # Find the versioning_activated field and report any errors
         try:
+            # TODO: The comment out section is for validating versioning is enabled and ready to go. The validation
+            # workflow (whether to be part of wait_for_cms_main or a separate function) is planed to be implemented
+            # in later contentctl-ng.
+            # Validating response by checking `status` field in `DA-ESS-ContentUpdate` app
             # if self.kvstore_content_versioning:
             #     if "content" in data:
             #         for app in data["content"]:
@@ -287,7 +295,10 @@ class ContentVersioningService(BaseModel):
             method="POST", body={"versioning_activated": True}
         )
 
-        # Wait for versioning to be activated for ES 8.3.0+
+        # TODO: The comment out section is for validating versioning is enabled and ready to go. The validation
+        # workflow (whether to be part of wait_for_cms_main or a separate function) is planed to be implemented
+        # in later contentctl-ng.
+        # The versioning is expected to be ready within 10 minutes
         # if self.kvstore_content_versioning:
         #     timeout = 600
         #     while not self.is_versioning_activated:

@@ -197,19 +197,23 @@ class ContentVersioningService(BaseModel):
 
         # Query the content versioning service
         try:
-            if method == "GET" and self.kvstore_content_versioning:
-                response = self.service.request(
-                    method=method,
-                    path_segment="content_versioning/versioning_apps",
-                    app="SA-ContentVersioning",
-                )
-            if self.indexbased_content_versioning:
-                response = self.service.request(  # type: ignore
-                    method=method,
-                    path_segment="configs/conf-feature_flags/general",
-                    body=body,
-                    app="SA-ContentVersioning",
-                )
+            # TODO: The comment out section is for validating versioning is enabled and ready to go. The validation
+            # workflow (whether to be part of wait_for_cms_main or a separate function) is planed to be implemented
+            # in later contentctl-ng.
+            # API endpoint for checking versioning status after ES 8.3.0
+            # if method == "GET" and self.kvstore_content_versioning:
+            #     response = self.service.request(
+            #         method=method,
+            #         path_segment="content_versioning/versioning_apps",
+            #         app="SA-ContentVersioning",
+            #     )
+            # if self.indexbased_content_versioning:
+            response = self.service.request(  # type: ignore
+                method=method,
+                path_segment="configs/conf-feature_flags/general",
+                body=body,
+                app="SA-ContentVersioning",
+            )
         except HTTPError as e:
             # Raise on any HTTP errors
             raise HTTPError(f"Error querying content versioning service: {e}") from e
@@ -248,26 +252,30 @@ class ContentVersioningService(BaseModel):
 
         # Find the versioning_activated field and report any errors
         try:
-            if self.kvstore_content_versioning:
-                if "content" in data:
-                    for app in data["content"]:
-                        if app.get("name") == "DA-ESS-ContentUpdate":
-                            # If there is error message versioning is not activated properly
-                            if "message" in app:
-                                return False
+            # TODO: The comment out section is for validating versioning is enabled and ready to go. The validation
+            # workflow (whether to be part of wait_for_cms_main or a separate function) is planed to be implemented
+            # in later contentctl-ng.
+            # Validating response by checking `status` field in `DA-ESS-ContentUpdate` app
+            # if self.kvstore_content_versioning:
+            #     if "content" in data:
+            #         for app in data["content"]:
+            #             if app.get("name") == "DA-ESS-ContentUpdate":
+            #                 # If there is error message versioning is not activated properly
+            #                 if "message" in app:
+            #                     return False
 
-                            # If the installed verion is not the same as the test version
-                            if app.get("version") != self.global_config.app.version:
-                                return False
+            #                 # If the installed verion is not the same as the test version
+            #                 if app.get("version") != self.global_config.app.version:
+            #                     return False
 
-                            if app.get("status") == "active":
-                                return True
-                else:
-                    return False
-            if self.indexbased_content_versioning:
-                for entry in data["entry"]:
-                    if entry["name"] == "general":
-                        return bool(int(entry["content"]["versioning_activated"]))
+            #                 if app.get("status") == "active":
+            #                     return True
+            #     else:
+            #         return False
+            # if self.indexbased_content_versioning:
+            for entry in data["entry"]:
+                if entry["name"] == "general":
+                    return bool(int(entry["content"]["versioning_activated"]))
         except KeyError as e:
             raise KeyError(
                 "Cannot retrieve versioning status, unable to determine versioning status using "
@@ -283,19 +291,21 @@ class ContentVersioningService(BaseModel):
         Activate the content versioning service
         """
         # Post to the SA-ContentVersioning service to set versioning status
-        if self.indexbased_content_versioning:
-            self._query_content_versioning_service(
-                method="POST", body={"versioning_activated": True}
-            )
+        self._query_content_versioning_service(
+            method="POST", body={"versioning_activated": True}
+        )
 
-        # Wait for versioning to be activated for ES 8.3.0+
-        if self.kvstore_content_versioning:
-            timeout = 600
-            while not self.is_versioning_activated:
-                time.sleep(60)
-                timeout -= 60
-                if timeout <= 0:
-                    break
+        # TODO: The comment out section is for validating versioning is enabled and ready to go. The validation
+        # workflow (whether to be part of wait_for_cms_main or a separate function) is planed to be implemented
+        # in later contentctl-ng.
+        # The versioning is expected to be ready within 10 minutes
+        # if self.kvstore_content_versioning:
+        #     timeout = 600
+        #     while not self.is_versioning_activated:
+        #         time.sleep(60)
+        #         timeout -= 60
+        #         if timeout <= 0:
+        #             break
 
         # Confirm versioning has been enabled
         if not self.is_versioning_activated:

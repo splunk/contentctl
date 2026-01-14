@@ -91,8 +91,8 @@ class ScheduleConfig(StrEnum):
     Configuraton values for the saved search schedule
     """
 
-    EARLIEST_TIME = "-5y@y"
-    LATEST_TIME = "-1m@m"
+    EARLIEST_TIME = "0"
+    LATEST_TIME = "now"
     CRON_SCHEDULE = "0 0 1 1 *"
 
 

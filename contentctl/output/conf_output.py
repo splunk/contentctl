@@ -118,7 +118,9 @@ class ConfOutput:
 
         if not fbd_config_path.exists():
             # If the file doesn't exist, just return empty set - no FBDs to write
+            print("No FBD configuration file found; skipping FBD writing to conf.")
             return written_files
+        print(f"Reading FBD configuration from {fbd_config_path}")
 
         # Read and parse the FBD configuration file
         fbd_stanzas = self._parse_fbd_config_file(fbd_config_path)

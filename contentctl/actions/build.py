@@ -30,9 +30,7 @@ class Build:
             updated_conf_files.update(
                 conf_output.writeDetections(input_dto.director_output_dto.detections)
             )
-            updated_conf_files.update(
-                conf_output.writeFbds()
-            )
+            updated_conf_files.update(conf_output.writeFbds())
             updated_conf_files.update(
                 conf_output.writeStories(input_dto.director_output_dto.stories)
             )

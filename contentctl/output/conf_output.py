@@ -140,19 +140,21 @@ class ConfOutput:
         stanzas = []
         current_stanza_lines = []
 
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             for line in f:
                 stripped_line = line.strip()
 
                 # Skip comment lines (lines starting with # after stripping whitespace)
-                if stripped_line.startswith('#'):
+                if stripped_line.startswith("#"):
                     continue
 
                 # If we hit a blank line and have accumulated stanza content, finalize the current stanza
                 if not stripped_line:
                     if current_stanza_lines:
-                        stanza_content = '\n'.join(current_stanza_lines)
-                        stanza_obj = type('FbdStanza', (), {'content': stanza_content})()
+                        stanza_content = "\n".join(current_stanza_lines)
+                        stanza_obj = type(
+                            "FbdStanza", (), {"content": stanza_content}
+                        )()
                         stanzas.append(stanza_obj)
                         current_stanza_lines = []
                     continue
@@ -161,8 +163,8 @@ class ConfOutput:
                 current_stanza_lines.append(line.rstrip())
         # Handle the last stanza if the file doesn't end with a blank line
         if current_stanza_lines:
-            stanza_content = '\n'.join(current_stanza_lines)
-            stanza_obj = type('FbdStanza', (), {'content': stanza_content})()
+            stanza_content = "\n".join(current_stanza_lines)
+            stanza_obj = type("FbdStanza", (), {"content": stanza_content})()
             stanzas.append(stanza_obj)
 
         return stanzas

@@ -16,6 +16,7 @@ from contentctl.objects.errors import (
     DetectionMissingError,
     MetadataValidationError,
     VersionBumpingError,
+    VersionBumpingNotNeededError,
     VersionBumpingTooFarError,
     VersionDecrementedError,
 )
@@ -427,6 +428,7 @@ class Inspect:
                         rule_name=rule_name,
                         current_version=current_stanza.metadata.detection_version,
                         previous_version=previous_stanza.metadata.detection_version,
+                        expected_version=previous_stanza.metadata.detection_version + 1,
                     )
                 )
 
@@ -435,11 +437,27 @@ class Inspect:
                 current_stanza.metadata.detection_version
                 > previous_stanza.metadata.detection_version + 1
             ):
+                if current_stanza.hash != previous_stanza.hash:
+                    validation_errors[rule_name].append(
+                        VersionBumpingTooFarError(
+                            rule_name=rule_name,
+                            current_version=current_stanza.metadata.detection_version,
+                            previous_version=previous_stanza.metadata.detection_version,
+                            expected_version=previous_stanza.metadata.detection_version
+                            + 1,
+                        )
+                    )
+            # Versions should not be bumped if the stanza has not changed
+            if (current_stanza.hash == previous_stanza.hash) & (
+                current_stanza.metadata.detection_version
+                != previous_stanza.metadata.detection_version
+            ):
                 validation_errors[rule_name].append(
-                    VersionBumpingTooFarError(
+                    VersionBumpingNotNeededError(
                         rule_name=rule_name,
                         current_version=current_stanza.metadata.detection_version,
                         previous_version=previous_stanza.metadata.detection_version,
+                        expected_version=previous_stanza.metadata.detection_version,
                     )
                 )
 
@@ -451,12 +469,25 @@ class Inspect:
         # Report failure/success
         print("\nDetection Metadata Validation:")
         if len(validation_error_list) > 0:
+            with open("metadata_validation_errors.json", "w") as f:
+                fixable_errors = [
+                    x
+                    for x in validation_error_list
+                    if type(x)
+                    in [
+                        VersionBumpingError,
+                        VersionBumpingNotNeededError,
+                        VersionBumpingTooFarError,
+                    ]
+                ]
+                json.dump([x.toJSON() for x in fixable_errors], f, indent=4)
             # Iterate over each rule and report the failures
             for rule_name in validation_errors:
                 if len(validation_errors[rule_name]) > 0:
                     print(f"\t❌ {rule_name}")
                     for error in validation_errors[rule_name]:
                         print(f"\t\t🔸 {error.short_message}")
+
         else:
             # If no errors in the list, report success
             print(

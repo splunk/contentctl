@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 import re
 from functools import cached_property
 from typing import TYPE_CHECKING, List
@@ -21,8 +22,6 @@ if TYPE_CHECKING:
     from contentctl.objects.data_source import DataSource
     from contentctl.objects.detection import Detection
     from contentctl.objects.investigation import Investigation
-
-import pathlib
 
 from contentctl.objects.enums import ContentStatus
 from contentctl.objects.security_content_object import SecurityContentObject

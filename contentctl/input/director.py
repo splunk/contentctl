@@ -38,6 +38,34 @@ from contentctl.objects.security_content_object import SecurityContentObject
 from contentctl.objects.story import Story
 from contentctl.output.runtime_csv_writer import RuntimeCsvWriter
 
+# Rebuild models that have forward references to resolve circular imports.
+# These models have types imported inside TYPE_CHECKING to avoid circular imports
+# at module load time. After all modules are loaded, we rebuild the models to
+# resolve these forward references.
+# We must pass _types_namespace with the actual types so Pydantic can resolve the ForwardRefs.
+#
+# Order matters: Story must be rebuilt first since Detection depends on it via DetectionTags.
+# A common types namespace is used to ensure all forward references can be resolved.
+
+_types_namespace = {
+    "Detection": Detection,
+    "Investigation": Investigation,
+    "Baseline": Baseline,
+    "DataSource": DataSource,
+    "Story": Story,
+    "Playbook": Playbook,
+}
+
+# Story references Detection, Investigation, Baseline, and DataSource inside TYPE_CHECKING
+Story.model_rebuild(_types_namespace=_types_namespace)
+
+# Detection_Abstract (parent of Detection) references Baseline inside TYPE_CHECKING
+# DetectionTags references Story which has forward references
+Detection.model_rebuild(_types_namespace=_types_namespace)
+
+# Playbook references Detection (via PlaybookTag) which needs Baseline resolved
+Playbook.model_rebuild(_types_namespace=_types_namespace)
+
 
 @dataclass
 class DirectorOutputDto:

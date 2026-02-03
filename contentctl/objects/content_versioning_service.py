@@ -421,8 +421,9 @@ class ContentVersioningService(BaseModel):
             )
         elif self.indexbased_content_versioning:
             query = (
-                f"search index=cms_main sourcetype=stash_common_detection_model "
-                f'app_name="{self.global_config.app.appid}" | fields _raw'
+                "search index=cms_main sourcetype=stash_common_detection_model "
+                f'app_name="{self.global_config.app.appid}" '
+                "action.correlationsearch.detection_type=ebd | fields _raw"
             )
         else:
             if self.kvstore_content_versioning:

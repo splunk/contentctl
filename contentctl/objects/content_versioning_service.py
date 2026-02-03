@@ -7,13 +7,7 @@ from functools import cached_property
 from typing import Any, Callable
 
 import splunklib.client as splunklib  # type: ignore
-from pydantic import (
-    BaseModel,
-    Field,
-    PrivateAttr,
-    computed_field,
-    model_validator,
-)
+from pydantic import BaseModel, Field, PrivateAttr, computed_field, model_validator
 from semantic_version import Version
 from splunklib.binding import HTTPError, ResponseReader  # type: ignore
 from splunklib.data import Record  # type: ignore
@@ -422,7 +416,8 @@ class ContentVersioningService(BaseModel):
         if self.kvstore_content_versioning:
             query = (
                 f"| inputlookup cms_content_lookup | search app_name={self.global_config.app.appid}"
-                f"| fields content"
+                "| fields content | spath input=content "
+                "| search action.correlationsearch.detection_type=ebd | fields content"
             )
         elif self.indexbased_content_versioning:
             query = (

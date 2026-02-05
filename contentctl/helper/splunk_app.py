@@ -1,7 +1,7 @@
 import json
-from typing import Optional, Collection
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Collection, Optional
 from urllib.parse import urlencode
 
 import requests
@@ -139,7 +139,7 @@ class SplunkApp:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             raise SplunkBaseError(
-                f"Error fetching app info for app_uid {self.app_uid}: {str(e)}"
+                f"Error fetching app info for app_uid {self.app_uid}: {e!s}"
             )
 
         # parse JSON and set cache
@@ -191,7 +191,7 @@ class SplunkApp:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             raise SplunkBaseError(
-                f"Error fetching app_uid for app_name_id '{self.app_name_id}': {str(e)}"
+                f"Error fetching app_uid for app_name_id '{self.app_name_id}': {e!s}"
             )
 
         # Extract the app_uid from the redirect path
@@ -233,7 +233,7 @@ class SplunkApp:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             raise SplunkBaseError(
-                f"Error fetching app entries for app_name_id '{self.app_name_id}': {str(e)}"
+                f"Error fetching app entries for app_name_id '{self.app_name_id}': {e!s}"
             )
 
         # parse xml
@@ -269,7 +269,7 @@ class SplunkApp:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             raise SplunkBaseError(
-                f"Error fetching download info for app_name_id '{self.app_name_id}': {str(e)}"
+                f"Error fetching download info for app_name_id '{self.app_name_id}': {e!s}"
             )
 
         # parse XML and extract download URL

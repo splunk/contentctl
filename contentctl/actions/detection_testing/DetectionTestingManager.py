@@ -162,10 +162,10 @@ class DetectionTestingManager(BaseModel):
                     print()
                     print(f"[{error_type}]:")
                     for error in errors[error_type]:
-                        print(f"\t❌ {str(error)}")
+                        print(f"\t❌ {error!s}")
                         if isinstance(error, ExceptionGroup):
                             for suberror in error.exceptions:  # type: ignore
-                                print(f"\t\t❌ {str(suberror)}")  # type: ignore
+                                print(f"\t\t❌ {suberror!s}")  # type: ignore
                     print()
 
         return self.output_dto
@@ -208,7 +208,7 @@ class DetectionTestingManager(BaseModel):
                 except Exception as e:
                     raise Exception(
                         "Failed to pull docker container image "
-                        f"[{self.input_dto.config.container_settings.full_image_path}]: {str(e)}"
+                        f"[{self.input_dto.config.container_settings.full_image_path}]: {e!s}"
                     )
 
         already_staged_container_files = False

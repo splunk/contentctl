@@ -38,7 +38,7 @@ setuptools = "<81"
 rich = "^14.0.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.12.10"
+ruff = ">=0.12.10,<0.16.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

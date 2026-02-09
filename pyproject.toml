@@ -34,7 +34,7 @@ pygit2 = "^1.15.1"
 #--mode.files command.
 tyro = "^0.9.2,<0.9.23"
 gitpython = "^3.1.43"
-setuptools = ">=80.9.0"
+setuptools = "<=81"
 rich = "^14.0.0"
 
 [tool.poetry.group.dev.dependencies]

@@ -220,8 +220,6 @@ class Inspect:
             #           "\n\tpython3 -m pip install splunk-appinspect"
             #           f"\n\tsplunk-appinspect inspect {self.getPackagePath(include_version=False).relative_to(pathlib.Path('.').absolute())} --mode precert")
 
-            # else:
-            #     print("splunk-appinspect is only compatable with Python3.9 at this time.  Please see the following open issue here: https://github.com/splunk/contentctl/issues/28")
             # print("******WARNING******")
             return
 

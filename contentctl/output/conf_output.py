@@ -314,8 +314,7 @@ class ConfOutput:
 
     def packageAppSlim(self) -> None:
         raise Exception(
-            "Packaging with splunk-packaging-toolkit not currently supported as slim only supports Python 3.7. "
-            "Please raise an issue in the contentctl GitHub if you encounter this exception."
+            "Packaging with splunk-packaging-toolkit not currently supported as slim only supports Python 3.7."
         )
         try:
             import logging

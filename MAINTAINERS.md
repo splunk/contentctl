@@ -1,6 +1,6 @@
 # Overview
 
-This document contains a list of maintainers in this repo. If you're interested in contributing, see [CONTRIBUTING](CONTRIBUTING.md).
+This document contains a list of maintainers in this repo.
 
 ## Current Maintainers
 

@@ -713,6 +713,10 @@ class Infrastructure(BaseModel):
     web_ui_port: int = Field(default=8000, gt=1, lt=65536, title="Web UI Port")
     api_port: int = Field(default=8089, gt=1, lt=65536, title="REST API Port")
     instance_name: str = Field(...)
+    hec_instance_address: Optional[str] = Field(
+        default=None,
+        description="HTTP Event Collector Address. May be Edge Processor Address, if not provided instance_address will used.",
+    )
 
 
 class Container(Infrastructure):
@@ -1260,6 +1264,16 @@ class test_servers(test_common):
         "Note that these test_instances may be hosted on the same system, such as localhost/127.0.0.1 or a docker server, or different hosts.\n"
         f"This value may also be passed by setting the environment variable [{TEST_ARGS_ENV}] with the value above.",
     )
+    hec_server_overrides: Optional[str] = Field(
+        None,
+        validate_default=True,
+        description="String override servers to use for testing. The list MUST be in the format:\n"
+        "hec_address_override;hec_address_override_2"
+        "\nFor example, the following string will use 2 preconfigured hec instances:\n"
+        "127.0.0.1;1.2.3.4\n"
+        "Note that these hec_server_overrides may be hosted on the same system, such as localhost/127.0.0.1 or a docker server or different hosts.\n"
+        "Note that this assumes that Splunk hec token is valid for that server and that the hec port is the same as the hec_port for respective server.\n",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -1279,10 +1293,20 @@ class test_servers(test_common):
 
         infrastructures: List[Infrastructure] = []
 
+        split_hec_server_overrides = []
+        hec_server_overrides = data.get("hec_server_overrides")
+        if hec_server_overrides:
+            split_hec_server_overrides = hec_server_overrides.split(";")
+
         index = 0
         for server in server_info.split(";"):
             address, username, password, web_ui_port, hec_port, api_port = server.split(
                 ","
+            )
+            hec_address = (
+                split_hec_server_overrides[index]
+                if len(split_hec_server_overrides) > index
+                else address
             )
             infrastructures.append(
                 Infrastructure(
@@ -1293,6 +1317,7 @@ class test_servers(test_common):
                     web_ui_port=int(web_ui_port),
                     api_port=int(api_port),
                     instance_name=f"test_server_{index}",
+                    hec_instance_address=hec_address,
                 )
             )
             index += 1

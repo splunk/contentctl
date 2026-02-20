@@ -5,16 +5,8 @@ import re
 from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated, Any, List, Optional, Union
 
-from pydantic import (
-    Field,
-    FilePath,
-    HttpUrl,
-    ValidationInfo,
-    computed_field,
-    field_validator,
-    model_serializer,
-    model_validator,
-)
+from pydantic import (Field, FilePath, HttpUrl, ValidationInfo, computed_field,
+                      field_validator, model_serializer, model_validator)
 
 from contentctl.objects.lookup import FileBackedLookup, KVStoreLookup, Lookup
 from contentctl.objects.macro import Macro
@@ -31,22 +23,16 @@ from contentctl.enrichments.cve_enrichment import CveEnrichmentObj
 from contentctl.objects.base_test_result import TestResultStatus
 from contentctl.objects.constants import (
     CONTENTCTL_DETECTION_STANZA_NAME_FORMAT_TEMPLATE,
-    CONTENTCTL_MAX_SEARCH_NAME_LENGTH,
-    ES_MAX_STANZA_LENGTH,
-    ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE,
-)
+    CONTENTCTL_MAX_SEARCH_NAME_LENGTH, ES_MAX_STANZA_LENGTH,
+    ES_SEARCH_STANZA_NAME_FORMAT_AFTER_CLONING_IN_PRODUCT_TEMPLATE)
 from contentctl.objects.data_source import DataSource
 from contentctl.objects.deployment import Deployment
 from contentctl.objects.detection_tags import DetectionTags
-from contentctl.objects.drilldown import DRILLDOWN_SEARCH_PLACEHOLDER, Drilldown
-from contentctl.objects.enums import (
-    AnalyticsType,
-    ContentStatus,
-    DataModel,
-    NistCategory,
-    ProvidingTechnology,
-    RiskSeverity,
-)
+from contentctl.objects.drilldown import (DRILLDOWN_SEARCH_PLACEHOLDER,
+                                          Drilldown)
+from contentctl.objects.enums import (AnalyticsType, ContentStatus, DataModel,
+                                      NistCategory, ProvidingTechnology,
+                                      RiskSeverity)
 from contentctl.objects.integration_test import IntegrationTest
 from contentctl.objects.manual_test import ManualTest
 from contentctl.objects.rba import RBAObject, RiskScoreValue_Type
@@ -380,6 +366,21 @@ class Detection_Abstract(SecurityContentObject):
         # The annotations object is a superset of the mappings object.
         # So start with the mapping object.
         annotations_dict.update(self.mappings)
+
+        ##### Adding other tags in detection #####
+        # They should be referenced as a list in the yaml under tags>others
+        ### Example: 
+        ## others:
+        ## - tag1:
+        ##   - value1
+        ## - tag2:
+        ##   - value21
+        ##   - value22
+        for temp_annotation in self.tags:
+            if temp_annotation[0] == "others":
+                other_tags = temp_annotation[1]
+                for other_tag in other_tags:
+                    annotations_dict.update(other_tag)
 
         # Make sure that the results are sorted for readability/easier diffs
         return dict(sorted(annotations_dict.items(), key=lambda item: item[0]))

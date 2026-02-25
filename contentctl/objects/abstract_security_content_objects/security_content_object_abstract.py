@@ -492,7 +492,6 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         "limitations in Type Checking."
     )
 
-
     @field_validator("date", mode="after")
     @classmethod
     def ensure_date_is_not_in_future(cls, value: datetime.date) -> datetime.date:

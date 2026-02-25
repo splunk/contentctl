@@ -492,6 +492,26 @@ class SecurityContentObject_Abstract(BaseModel, abc.ABC):
         "limitations in Type Checking."
     )
 
+
+    @field_validator("date", mode="after")
+    @classmethod
+    def ensure_date_is_not_in_future(cls, value: datetime.date) -> datetime.date:
+        """Ensure that the date is not in the future.
+        Args:
+            value (datetime.date): The date of the content, read from the YML.
+        Raises:
+            ValueError: The date of the content is in the future.
+        Returns:
+            datetime.date: The validated date of the content, read from the YML.
+        """
+        todays_date = datetime.datetime.now(datetime.UTC).date()
+        if value > todays_date:
+            raise ValueError(
+                f"Content date [{value}], is in the future. The date of content must be today ({todays_date}) or earlier. "
+                "Note that this date is relative to UTC, not your current locale."
+            )
+        return value
+
     def checkDeprecationInfo(
         self, app: CustomApp, deprecation_info: DeprecationInfoInFile | None
     ):

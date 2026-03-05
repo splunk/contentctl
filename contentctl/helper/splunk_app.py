@@ -385,7 +385,7 @@ class SplunkApp:
 
                 # Validate the filename is the expected .tgz file
                 filename = Path(value.strip().strip('"'))
-                if filename.suffixes != [".tgz"]:
+                if filename.suffixes != [".tar", ".gz"]:
                     raise ValueError(
                         f"Filename has unexpected extension(s): {filename.suffixes}"
                     )

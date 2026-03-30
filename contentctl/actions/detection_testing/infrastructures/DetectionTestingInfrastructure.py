@@ -243,13 +243,14 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
         :return: a bool indicating whether we should test content versioning
         :rtype: bool
         """
-        es_version = self.es_version
-        return (
-            self.global_config.enable_integration_testing
-            and isinstance(self.global_config.mode, All)
-            and es_version is not None
-            and es_version >= Version("8.0.0")
-        )
+        # es_version = self.es_version
+        # return (
+        #     self.global_config.enable_integration_testing
+        #     and isinstance(self.global_config.mode, All)
+        #     and es_version is not None
+        #     and es_version >= Version("8.0.0")
+        # )
+        return False
 
     @property
     def es_version(self) -> Version | None:

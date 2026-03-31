@@ -18,7 +18,7 @@ from contentctl.objects.correlation_search import ResultIterator
 from contentctl.objects.detection import Detection
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "content_versioning_service.log"
 

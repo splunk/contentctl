@@ -73,15 +73,15 @@ class TimeoutConfig(IntEnum):
     #   detections (20 to 30 detections) would need 60 to 90s to wait for risk/notables.
 
     # base amount to sleep for before beginning exponential backoff during testing
-    BASE_SLEEP = 2
+    BASE_SLEEP = 4
 
     # NOTE: Based on testing, there are 45 detections couldn't generate risk/notables within single dispatch, and
     # they needed to be retried; 90s is a reasonable wait time before retrying dispatching the SavedSearch
     # Wait time before retrying dispatching the SavedSearch
-    RETRY_DISPATCH = 90
+    RETRY_DISPATCH = 3900
 
     # Time elapsed before adding additional wait time
-    ADD_WAIT_TIME = 30
+    ADD_WAIT_TIME = 60
 
 
 # TODO (#226): evaluate sane defaults for timeframe for integration testing (e.g. 5y is good

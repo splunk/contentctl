@@ -34,7 +34,7 @@ from contentctl.objects.risk_analysis_action import RiskAnalysisAction
 from contentctl.objects.risk_event import RiskEvent
 
 # Suppress logging by default; enable for local testing
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 LOG_LEVEL = logging.DEBUG
 LOG_PATH = "correlation_search.log"
 
@@ -991,6 +991,7 @@ class CorrelationSearch(BaseModel):
     def test(
         self,
         raise_on_exc: bool = False,
+        preserve_on_failure: bool = False,
     ) -> IntegrationTestResult:
         """Execute the integration test
 
@@ -1000,6 +1001,8 @@ class CorrelationSearch(BaseModel):
         exists in the instance
         :param raise_on_exc: bool flag indicating if an exception should be raised when caught by the test routine, or
             if the error state should just be recorded for the test
+        :param preserve_on_failure: bool flag indicating whether risk/notable events should be preserved (not cleaned
+            up) when the test fails, allowing post-failure inspection of the Splunk instance
         """
 
         # initialize result as None
@@ -1052,9 +1055,20 @@ class CorrelationSearch(BaseModel):
 
             # TODO (PEX-436): should cleanup be in a finally block so it runs even on exception?
             # cleanup the created events, disable the detection and return the result
-            self.logger.debug("Cleaning up any created risk/notable events...")
-            self.update_pbar(TestingStates.POST_CLEANUP)
-            self.cleanup()
+            test_passed = result is not None and result.status in (
+                TestResultStatus.PASS,
+                TestResultStatus.SKIP,
+            )
+            if preserve_on_failure and not test_passed:
+                self.logger.info(
+                    "Preserving risk/notable events for post-failure inspection "
+                    f"(preserve_on_failure=True): {self.name}"
+                )
+                self.disable()
+            else:
+                self.logger.debug("Cleaning up any created risk/notable events...")
+                self.update_pbar(TestingStates.POST_CLEANUP)
+                self.cleanup()
         except IntegrationTestingError as e:
             if not raise_on_exc:
                 result = IntegrationTestResult(

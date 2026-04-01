@@ -1032,8 +1032,13 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
                 pbar_data=pbar_data,
             )
 
-            # Run the test
-            test.result = correlation_search.test()
+            # Run the test; preserve risk/notable data on failure when the user has configured
+            # a pause behavior, so they can inspect the Splunk instance before cleanup
+            preserve_on_failure = self.global_config.post_test_behavior in (
+                PostTestBehavior.pause_on_failure,
+                PostTestBehavior.always_pause,
+            )
+            test.result = correlation_search.test(preserve_on_failure=preserve_on_failure)
         except Exception as e:
             # Catch and report and unhandled exceptions in integration testing
             test.result = IntegrationTestResult(

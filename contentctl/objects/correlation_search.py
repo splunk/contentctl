@@ -1125,7 +1125,11 @@ class CorrelationSearch(BaseModel):
             self.logger.error(message)
             raise ServerError(message)
 
-        return ResultIterator(response_reader)  # type: ignore
+        # Create a filter for a specific memory error we're ok ignoring
+        sub_second_order_pattern = re.compile(
+            r".*Events might not be returned in sub-second order due to search memory limits.*"
+        )
+        return ResultIterator(response_reader, error_filters=[sub_second_order_pattern])  # type: ignore
 
     def _delete_index(self, index: str) -> None:
         """Deletes events in a given index

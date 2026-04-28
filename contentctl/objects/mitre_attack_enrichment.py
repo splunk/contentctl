@@ -24,6 +24,8 @@ class MitreTactics(StrEnum):
     COMMAND_AND_CONTROL = "Command And Control"
     EXFILTRATION = "Exfiltration"
     IMPACT = "Impact"
+    STEALTH = "Stealth"
+    DEFENSE_IMPAIRMENT = "Defense Impairment"
 
 
 class AttackGroupMatrix(StrEnum):

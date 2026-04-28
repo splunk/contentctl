@@ -16,6 +16,8 @@ ATTACK_TACTICS_KILLCHAIN_MAPPING = {
     "Command And Control": "Command and Control",
     "Exfiltration": "Actions on Objectives",
     "Impact": "Actions on Objectives",
+    "Stealth": "Exploitation",
+    "Defense Impairment": "Exploitation",
 }
 
 SES_CONTEXT_MAPPING = {

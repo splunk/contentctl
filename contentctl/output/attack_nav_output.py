@@ -4,6 +4,8 @@ import pathlib
 from datetime import datetime
 from typing import Any, TypedDict
 
+from contentctl.objects.constants import MITRE_ATTACK_VERSION
+
 # Third-party imports
 from contentctl.objects.detection import Detection
 
@@ -88,7 +90,7 @@ class AttackNavOutput:
         layer: LayerData = {
             "name": self.layer_name,
             "versions": {
-                "attack": "17",  # Update as needed
+                "attack": MITRE_ATTACK_VERSION,
                 "navigator": "5.1.0",
                 "layer": "4.5",
             },

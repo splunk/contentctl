@@ -491,12 +491,12 @@ class validate(Config_Base):
         missing_repos: list[str] = []
         if not self.atomic_red_team_repo_path.is_dir():
             missing_repos.append(
-                f"https://github.com/redcanaryco/atomic-red-team {self.atomic_red_team_repo_path}"
+                f"--single-branch https://github.com/redcanaryco/atomic-red-team {self.atomic_red_team_repo_path}"
             )
 
         if not self.mitre_cti_repo_path.is_dir():
             missing_repos.append(
-                f"https://github.com/mitre/cti {self.mitre_cti_repo_path}"
+                f"""--depth=1 --single-branch --branch="master" https://github.com/mitre-attack/attack-stix-data {self.mitre_cti_repo_path}"""
             )
 
         if len(missing_repos) > 0:
@@ -506,10 +506,7 @@ class validate(Config_Base):
                 "Please check them out using the following commands:"
             ]
             msg_list.extend(
-                [
-                    f"git clone --single-branch {repo_string}"
-                    for repo_string in missing_repos
-                ]
+                [f"git clone {repo_string}" for repo_string in missing_repos]
             )
             msg = "\n\t".join(msg_list)
             raise FileNotFoundError(msg)

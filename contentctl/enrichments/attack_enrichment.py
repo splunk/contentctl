@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from contentctl.objects.annotated_types import MITRE_ATTACK_ID_TYPE
 from contentctl.objects.config import validate
+from contentctl.objects.constants import MITRE_ATTACK_VERSION
 from contentctl.objects.mitre_attack_enrichment import (
     MitreAttackEnrichment,
     MitreTactics,
@@ -121,8 +122,13 @@ class AttackEnrichment(BaseModel):
                 flush=True,
             )
             enterprise_path = input_path / "enterprise-attack"
-            mobile_path = input_path / "ics-attack"
-            ics_path = input_path / "mobile-attack"
+            enterprise_file = (
+                enterprise_path / f"enterprise-attack-{MITRE_ATTACK_VERSION}.json"
+            )
+            mobile_path = input_path / "mobile-attack"
+            mobile_file = mobile_path / f"mobile-attack-{MITRE_ATTACK_VERSION}.json"
+            ics_path = input_path / "ics-attack"
+            ics_file = ics_path / f"ics-attack-{MITRE_ATTACK_VERSION}.json"
             if not (
                 enterprise_path.is_dir() and mobile_path.is_dir() and ics_path.is_dir()
             ):
@@ -132,11 +138,12 @@ class AttackEnrichment(BaseModel):
                     f"Please ensure that the {input_path} directory "
                     "has been git cloned correctly."
                 )
+
             lift = attack_client(
                 local_paths={
-                    "enterprise": str(enterprise_path),
-                    "mobile": str(mobile_path),
-                    "ics": str(ics_path),
+                    "enterprise": str(enterprise_file),
+                    "mobile": str(mobile_file),
+                    "ics": str(ics_file),
                 }
             )
 

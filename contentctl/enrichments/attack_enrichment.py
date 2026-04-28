@@ -132,9 +132,10 @@ class AttackEnrichment(BaseModel):
                     f"Please ensure that the {input_path} directory "
                     "has been git cloned correctly."
                 )
+            enterprise_19_path = enterprise_path / "enterprise-attack-19.0.json"
             lift = attack_client(
                 local_paths={
-                    "enterprise": str(enterprise_path),
+                    "enterprise": str(enterprise_19_path),
                     "mobile": str(mobile_path),
                     "ics": str(ics_path),
                 }

@@ -1,9 +1,11 @@
 # contentctl
+> ## The Future of contentctl
+> We are shifting future investment from contentctl to Detection Studio as we work to bring this functionality into Splunk as an officially supported capability. This repository will remain publicly available for reference, but we are no longer accepting new pull requests or feature requests. Going forward, continued use of contentctl may require customer-managed customization to support specific environments and requirements. 
+
 <p align="center">
 <img src="https://raw.githubusercontent.com/splunk/contentctl/refs/heads/main/docs/contentctl_logo_white.png" title="In case you're wondering, it's a capybara" alt="the logo for the contentctl project, which depicts a doodled 4 legged animal that is supposed to represent a capybara, with the name of the project below it" width="250" height="250"></p>
 
-> [!NOTE]
-> Looking to migrate from an earlier release to the new contentctl v5+ ? Check out our migration guide [here](docs/contentctl_v5_migration_guide.md). 
+
 
 ## What is contentctl?
 `contentctl` is a tool developed by the Splunk Threat Research Team to help with managing the content living in [splunk/security_content](https://github.com/splunk/security_content) and producing the Enterprise Security Content Update app for Splunk. While its development is largely driven by STRT's needs, it has been somewhat genericized and can be used by customers and partners to package their own content. Simply put, `contentctl` is the workhorse that packages detections, macros, lookups, dashboards into a Splunk app that you can use, and that understands the YAML structure and project layout we've selected to keep development clean.

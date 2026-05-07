@@ -73,6 +73,9 @@ LOOKUPS_TO_IGNORE.add(
     "mitre_attack_lookup"
 )  # KVStore provided by SA-ThreatIntelligence, part of Enterprise Security
 
+LOOKUPS_TO_IGNORE.add(
+    "dnslookup"
+)  # Standard Splunk external lookup provided by default
 
 class Lookup_Type(StrEnum):
     csv = auto()

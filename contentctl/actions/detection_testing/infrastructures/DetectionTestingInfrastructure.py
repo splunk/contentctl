@@ -1479,16 +1479,19 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
             "host": attack_data_file.host or self.sync_obj.replay_host,
         }
 
-        if self.infrastructure.instance_address.strip().lower().startswith("https://"):
-            address_with_scheme = self.infrastructure.instance_address.strip().lower()
-        elif self.infrastructure.instance_address.strip().lower().startswith("http://"):
+        hec_instance_address = (
+            self.infrastructure.hec_instance_address
+            if self.infrastructure.hec_instance_address
+            else self.infrastructure.instance_address
+        )
+        if hec_instance_address.strip().lower().startswith("https://"):
+            address_with_scheme = hec_instance_address.strip().lower()
+        elif hec_instance_address.strip().lower().startswith("http://"):
             address_with_scheme = (
-                self.infrastructure.instance_address.strip()
-                .lower()
-                .replace("http://", "https://")
+                hec_instance_address.strip().lower().replace("http://", "https://")
             )
         else:
-            address_with_scheme = f"https://{self.infrastructure.instance_address}"
+            address_with_scheme = f"https://{hec_instance_address}"
 
         # Generate the full URL, including the host, the path, and the params.
         # We can be a lot smarter about this (and pulling the port from the url, checking

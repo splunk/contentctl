@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "contentctl"
 
-version = "5.6.0"
+version = "5.6.1"
 
 description = "Splunk Content Control Tool"
 authors = ["STRT <research@splunk.com>"]
@@ -16,7 +16,7 @@ contentctl = 'contentctl.contentctl:main'
 python = "^3.11,<3.14"
 pydantic = "~2.9.2"
 PyYAML = "^6.0.2"
-requests = ">=2.32.4"
+requests = ">=2.34.2"
 pycvesearch = "^1.2"
 xmltodict = ">=0.13,<0.15"
 attackcti = ">=0.5.4,<0.6"

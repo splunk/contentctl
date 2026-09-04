@@ -35,6 +35,7 @@ jobs:
         with:
           path: security_content
           repository: splunk/security_content
+          ref: 'v5.27.0'
 
       #Install the given version of Python we will test against
       - name: Install Required Python Version

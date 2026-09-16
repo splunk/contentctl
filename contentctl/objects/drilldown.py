@@ -22,14 +22,14 @@ class Drilldown(BaseModel):
         description="The text of a drilldown search. This must be valid SPL.",
         min_length=1,
     )
-    earliest_offset: None | str = Field(
+    earliest_offset: str | None = Field(
         ...,
         description="Earliest offset time for the drilldown search. "
         f"The most common value for this field is '{EARLIEST_OFFSET}', "
         "but it is NOT the default value and must be supplied explicitly.",
         min_length=1,
     )
-    latest_offset: None | str = Field(
+    latest_offset: str | None = Field(
         ...,
         description="Latest offset time for the driolldown search. "
         f"The most common value for this field is '{LATEST_OFFSET}', "

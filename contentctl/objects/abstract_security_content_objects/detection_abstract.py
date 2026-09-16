@@ -117,7 +117,7 @@ class Detection_Abstract(SecurityContentObject):
                 f"Error getting severity - risk_score must be between 0-100, but was actually {self.risk_score}"
             )
 
-    explanation: None | str = Field(
+    explanation: str | None = Field(
         default=None,
         exclude=True,  # Don't serialize this value when dumping the object
         description="Provide an explanation to be included "

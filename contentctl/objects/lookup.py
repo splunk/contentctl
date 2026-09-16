@@ -100,11 +100,11 @@ class Lookup(SecurityContentObject, abc.ABC):
     match_type: list[Annotated[str, Field(pattern=r"(^WILDCARD|CIDR)\(.+\)$")]] = Field(
         default=[]
     )
-    min_matches: None | NonNegativeInt = Field(default=None)
-    max_matches: None | Annotated[NonNegativeInt, Field(ge=1, le=1000)] = Field(
+    min_matches: NonNegativeInt | None = Field(default=None)
+    max_matches: Annotated[NonNegativeInt, Field(ge=1, le=1000)] | None = Field(
         default=None
     )
-    case_sensitive_match: None | bool = Field(default=None)
+    case_sensitive_match: bool | None = Field(default=None)
     status: ContentStatus = ContentStatus.production
 
     @field_validator("status", mode="after")

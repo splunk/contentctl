@@ -39,7 +39,7 @@ class BaseTest(BaseModel, ABC):
     latest_time: Union[str, None] = None
 
     # The test result
-    result: Union[None, BaseTestResult] = None
+    result: Union[BaseTestResult, None] = None
 
     @abstractmethod
     def skip(self, message: str) -> None:

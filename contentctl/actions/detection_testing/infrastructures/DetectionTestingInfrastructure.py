@@ -149,7 +149,7 @@ class DetectionTestingInfrastructure(BaseModel, abc.ABC):
 
         # Init the list of setup functions we always need
         primary_setup_functions: list[
-            tuple[Callable[[], None | client.Service], str]
+            tuple[Callable[[], client.Service | None], str]
         ] = [
             (self.start, "Starting"),
             (self.get_conn, "Waiting for App Installation"),

@@ -41,9 +41,9 @@ class AttackGroupType(StrEnum):
 class MitreExternalReference(BaseModel):
     model_config = ConfigDict(extra="forbid")
     source_name: str
-    external_id: None | str = None
-    url: None | HttpUrl = None
-    description: None | str = None
+    external_id: str | None = None
+    url: HttpUrl | None = None
+    description: str | None = None
 
 
 class MitreAttackGroup(BaseModel):
@@ -58,7 +58,7 @@ class MitreAttackGroup(BaseModel):
     group_id: str
     id: str
     matrix: list[AttackGroupMatrix]
-    mitre_attack_spec_version: None | str
+    mitre_attack_spec_version: str | None
     mitre_version: str
     # assume that if the deprecated field is not present, then the group is not deprecated
     mitre_deprecated: bool

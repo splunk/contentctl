@@ -19,14 +19,14 @@ class DataSource(SecurityContentObject):
     source: str = Field(...)
     sourcetype: str = Field(...)
     separator: Optional[str] = None
-    separator_value: None | str = None
+    separator_value: str | None = None
     configuration: Optional[str] = None
     supported_TA: list[TA] = []
-    fields: None | list = None
-    field_mappings: None | list = None
+    fields: list | None = None
+    field_mappings: list | None = None
     mitre_components: list[str] = []
-    convert_to_log_source: None | list = None
-    example_log: None | str = None
+    convert_to_log_source: list | None = None
+    example_log: str | None = None
     output_fields: list[str] = []
     status: ContentStatus = ContentStatus.production
 

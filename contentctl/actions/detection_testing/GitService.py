@@ -147,11 +147,13 @@ class GitService(BaseModel):
                             # Filter to find the Lookup Object the references this CSV
                             matched = list(
                                 filter(
-                                    lambda x: isinstance(x, CSVLookup)
-                                    and not isinstance(
-                                        x, RuntimeCSV
-                                    )  # RuntimeCSV is not used directly by any content
-                                    and x.filename == decoded_path,
+                                    lambda x: (
+                                        isinstance(x, CSVLookup)
+                                        and not isinstance(
+                                            x, RuntimeCSV
+                                        )  # RuntimeCSV is not used directly by any content
+                                        and x.filename == decoded_path
+                                    ),
                                     self.director.lookups,
                                 )
                             )

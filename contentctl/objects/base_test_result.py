@@ -38,7 +38,7 @@ class BaseTestResult(BaseModel):
     """
 
     # Message for the result
-    message: Union[None, str] = None
+    message: Union[str, None] = None
 
     # Any exception that was raised (may be None)
     exception: Union[Exception, None] = None
@@ -53,7 +53,7 @@ class BaseTestResult(BaseModel):
     job_content: Union[Record, None] = None
 
     # The Splunk endpoint URL
-    sid_link: Union[None, str] = None
+    sid_link: Union[str, None] = None
 
     # Needed to allow for embedding of Exceptions in the model
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)

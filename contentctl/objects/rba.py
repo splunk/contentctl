@@ -6,7 +6,7 @@ from typing import Annotated, Set
 
 from pydantic import BaseModel, Field, model_serializer
 
-RiskScoreValue_Type = Annotated[int, Field(ge=1, le=100)]
+RiskScoreValue_Type = Annotated[int, Field(ge=0, le=100)]
 
 
 class RiskObjectType(str, Enum):

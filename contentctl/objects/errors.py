@@ -134,11 +134,16 @@ class VersioningError(MetadataValidationError, ABC):
     previous_version: int
 
     def __init__(
-        self, rule_name: str, current_version: int, previous_version: int, *args: object
+        self,
+        rule_name: str,
+        current_version: int,
+        previous_version: int,
+        *args: object,
     ) -> None:
         self.rule_name = rule_name
         self.current_version = current_version
         self.previous_version = previous_version
+
         super().__init__(self.long_message, *args)
 
 
@@ -176,6 +181,20 @@ class VersionBumpingError(VersioningError):
     An error indicating the detection changed but its version wasn't bumped appropriately
     """
 
+    # The version expected in the current build, when possible
+    expected_version: int
+
+    def __init__(
+        self,
+        rule_name: str,
+        current_version: int,
+        previous_version: int,
+        expected_version: int,
+        *args: object,
+    ) -> None:
+        self.expected_version = expected_version
+        super().__init__(rule_name, current_version, previous_version, *args)
+
     @property
     def long_message(self) -> str:
         """
@@ -196,11 +215,89 @@ class VersionBumpingError(VersioningError):
         """
         return f"Detection version in current build should be bumped to {self.previous_version + 1}."
 
+    def toJSON(self) -> dict[str, object]:
+        """
+        Convert the error to a JSON-serializable dict
+        :returns: a dict, the error
+        """
+        return {
+            "rule_name": self.rule_name,
+            "message": self.short_message,
+            "current_version": self.current_version,
+            "previous_version": self.previous_version,
+            "expected_version": self.expected_version,
+        }
+
+
+class VersionBumpingNotNeededError(VersioningError):
+    """
+    An error indicating the detection did not change but its version was bumped
+    """
+
+    expected_version: int
+
+    def __init__(
+        self,
+        rule_name: str,
+        current_version: int,
+        previous_version: int,
+        expected_version: int,
+        *args: object,
+    ) -> None:
+        self.expected_version = expected_version
+        super().__init__(rule_name, current_version, previous_version, *args)
+
+    @property
+    def long_message(self) -> str:
+        """
+        A long-form error message
+        :returns: a str, the message
+        """
+        return (
+            f"Rule '{self.rule_name}' has not changed in current build compared to previous "
+            "build (stanza hashes are the same); the detection version should not be bumped."
+        )
+
+    @property
+    def short_message(self) -> str:
+        """
+        A short-form error message
+        :returns: a str, the message
+        """
+        return "Detection version in current build should not be bumped."
+
+    def toJSON(self) -> dict[str, object]:
+        """
+        Convert the error to a JSON-serializable dict
+        :returns: a dict, the error
+        """
+        return {
+            "rule_name": self.rule_name,
+            "message": self.short_message,
+            "current_version": self.current_version,
+            "previous_version": self.previous_version,
+            "expected_version": self.expected_version,
+        }
+
 
 class VersionBumpingTooFarError(VersioningError):
     """
     An error indicating the detection changed but its version was bumped too far
     """
+
+    # The version expected in the current build, when possible
+    expected_version: int
+
+    def __init__(
+        self,
+        rule_name: str,
+        current_version: int,
+        previous_version: int,
+        expected_version: int,
+        *args: object,
+    ) -> None:
+        self.expected_version = expected_version
+        super().__init__(rule_name, current_version, previous_version, *args)
 
     @property
     def long_message(self) -> str:
@@ -221,3 +318,16 @@ class VersionBumpingTooFarError(VersioningError):
         :returns: a str, the message
         """
         return f"Detection version in current build should be reduced to {self.previous_version + 1}."
+
+    def toJSON(self) -> dict[str, object]:
+        """
+        Convert the error to a JSON-serializable dict
+        :returns: a dict, the error
+        """
+        return {
+            "rule_name": self.rule_name,
+            "current_version": self.current_version,
+            "message": self.short_message,
+            "previous_version": self.previous_version,
+            "expected_version": self.expected_version,
+        }

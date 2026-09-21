@@ -72,6 +72,16 @@ class NewContentQuestions:
                 ],
                 "default": "endpoint",
             },
+            {
+                "type": "select",
+                "message": "deployment override",
+                "name": "deployment_override",
+                "choices": [
+                    "yes",
+                    "no",
+                ],
+                "default": "no",
+            },
         ]
         return questions
 

@@ -1,7 +1,26 @@
 from __future__ import annotations
 
+import sys
+import types
 from decimal import Decimal
 from typing import TYPE_CHECKING, Annotated, Union
+
+try:
+    import pkg_resources  # noqa: F401
+except ModuleNotFoundError:
+    # setuptools >= 82 no longer ships pkg_resources. pycvesearch (unmaintained,
+    # no newer release available) still does `import pkg_resources` just to read
+    # its own version for a User-Agent header. Stub out the single attribute it
+    # needs so the import succeeds, rather than pinning setuptools to a version
+    # with a known vulnerability.
+    def _get_distribution(name: str) -> types.SimpleNamespace:
+        from importlib.metadata import version
+
+        return types.SimpleNamespace(version=version(name))
+
+    _pkg_resources_shim = types.ModuleType("pkg_resources")
+    _pkg_resources_shim.get_distribution = _get_distribution  # type: ignore[attr-defined]
+    sys.modules["pkg_resources"] = _pkg_resources_shim
 
 from pycvesearch import CVESearch
 from pydantic import BaseModel, ConfigDict, Field, computed_field
